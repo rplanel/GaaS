@@ -22,30 +22,15 @@ useHead({
 useSeoMeta({
   ...appConfig?.gaasUi.seo,
 })
-
-// const { data: navigation } = await useAsyncData('navigation', () => queryCollectionNavigation('content'))
-// const { data: files } = useLazyAsyncData('search', () => queryCollectionSearchSections('content'), { server: false,
-// })
 useState('showWorkflowStepParameter', () => true)
 </script>
 
 <template>
-  <div>
-    <UApp>
-      <!-- <Banner /> -->
-      <NuxtLoadingIndicator />
-      <UMain>
-        <NuxtLayout>
-          <NuxtPage />
-        </NuxtLayout>
-      </UMain>
-
-      <!--      <template v-if="files && navigation">
-        <ClientOnly>
-          <LazyUContentSearch :files="files" :navigation="navigation" />
-        </ClientOnly>
-      </template>
--->
-    </UApp>
-  </div>
+  <UApp>
+    <!-- <Banner /> -->
+    <NuxtLoadingIndicator />
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </UApp>
 </template>

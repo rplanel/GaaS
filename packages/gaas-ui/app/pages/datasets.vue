@@ -3,9 +3,6 @@ import type { SupabaseTypes } from '#build/types/database'
 import type { BreadcrumbItem } from '#ui/types'
 import { z } from 'zod'
 
-definePageMeta({
-  layout: 'dashboard',
-})
 type Database = SupabaseTypes.Database
 
 const breadcrumbsItems = ref<BreadcrumbItem[]>([
@@ -40,14 +37,28 @@ const { data, refresh: refreshDatasets } = await useAsyncData<DatasetColumn[] | 
   'analysis-input-datasets',
   async () => {
     const userVal = toValue(user)
-    if (userVal) {
-      const { data } = await supabase
-        .schema('galaxy')
-        .from(`uploaded_datasets_with_storage_path`)
-        .select()
-        .returns<DatasetColumn[]>()
-      return data
+
+    if (!userVal) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized: User not found',
+      })
     }
+
+    const { data, error } = await supabase
+      .schema('galaxy')
+      .from(`uploaded_datasets_with_storage_path`)
+      .select()
+      .returns<DatasetColumn[]>()
+
+    if (data === null) {
+      throw createError({ statusMessage: 'No uploaded dataset found', statusCode: 404 })
+    }
+    if (error) {
+      throw createError({ statusCode: getStatusCode(error), statusMessage: getErrorMessage(error) })
+    }
+
+    return data
   },
 )
 async function uploadFile(event: any) {

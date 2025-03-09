@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import type { SupabaseTypes } from '#build/types/database'
 import type { OrderedNavigationMenuItem } from '../app.config'
-
-type Database = SupabaseTypes.Database
+import type { Database } from '../types'
 
 const supabase = useSupabaseClient<Database>()
 const { userRole } = useUserRole(supabase)

@@ -15,6 +15,5 @@ export default defineNuxtConfig({
       rootDir: fileURLToPath(new URL('..', import.meta.url)),
     },
   },
-
   compatibilityDate: '2025-01-02',
 })

@@ -1,7 +1,4 @@
 <script setup lang="ts">
-definePageMeta({
-  layout: 'dashboard',
-})
 const breadcrumbsItems = ref([
   {
     icon: 'lucide:house',

@@ -173,6 +173,12 @@ const { data: galaxyInstance } = await useAsyncData(
       if (data.length >= 1) {
         return data[0]
       }
+      else {
+        throw createError({
+          statusMessage: 'No Galaxy instance found',
+          statusCode: 404,
+        })
+      }
     }
   },
 )
