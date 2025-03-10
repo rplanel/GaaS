@@ -2,7 +2,7 @@
 import type { GalaxyState } from 'blendtype'
 
 interface Props {
-  state: GalaxyState | undefined
+  state?: GalaxyState | undefined
   size?: number | string
 }
 const props = withDefaults(defineProps<Props>(), {

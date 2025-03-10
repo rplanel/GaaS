@@ -3,7 +3,7 @@ import type { GalaxyToolParameters, WorkflowStep } from 'blendtype'
 import type { GalaxyToolInputComponent } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 
 export interface Props {
-  variant: 'form' | 'display'
+  variant?: 'form' | 'display'
   workflowStep: MaybeRef<WorkflowStep | undefined>
   toolParameters: GalaxyToolParameters[] | undefined
   parametersInputsComponent:

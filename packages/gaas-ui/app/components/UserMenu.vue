@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import type { SupabaseTypes } from '#build/types/database'
 import type { AvatarProps, DropdownMenuItem } from '@nuxt/ui'
+import type { Database } from '../types'
 
-type Database = SupabaseTypes.Database
 interface Props {
   collapsed?: boolean
   isAdmin?: boolean
@@ -146,7 +145,8 @@ const items = computed<DropdownMenuItem[][]>(() => {
           ...user,
           label: collapsed ? undefined : user?.name,
           trailingIcon: collapsed ? undefined : 'i-lucide-chevrons-up-down',
-        }" color="neutral" variant="ghost" block :square="collapsed" class="data-[state=open]:bg-(--ui-bg-elevated)" :ui="{
+        }" color="neutral" variant="ghost" block :square="collapsed" class="data-[state=open]:bg-(--ui-bg-elevated)"
+        :ui="{
           trailingIcon: 'text-(--ui-text-dimmed)',
         }"
       />

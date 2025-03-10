@@ -6,7 +6,7 @@ import { z } from 'zod'
 type AnalysisIOsWithStoratePath = GalaxyTypes.AnalysisInputsWithStoratePath | GalaxyTypes.AnalysisOutputsWithStoratePath
 
 export interface Props {
-  items: AnalysisIOsWithStoratePath[] | undefined
+  items?: AnalysisIOsWithStoratePath[] | undefined
 }
 
 type Database = SupabaseTypes.Database
@@ -71,32 +71,13 @@ async function downloadFile(storageId: string | null) {
 
 <template>
   <div>
-    <div
-      v-for="(dataset, i) in sanitizedItems" :key="dataset?.dataset_name ?? i"
-      class="w-full border-b border-[var(--ui-border)] last:border-none"
-    >
-      <div
-        v-if="dataset"
-        class="p-3 grid grid-flow-col auto-cols-max items-center justify-between rounded-[calc(var(--ui-radius))] hover:bg-[var(--ui-bg-elevated)]"
+    <UPageList>
+      <UPageCard
+        v-for="(dataset, i) in sanitizedItems" :key="dataset?.dataset_name ?? i"
+        :description="dataset?.dataset_name ? dataset.dataset_name : undefined" variant="ghost"
+        icon="i-mdi:download"
         @click="downloadFile(dataset?.storage_object_id)"
-      >
-        <div class="grid grid-flow-col auto-cols-max items-center justify-items-start gap-2">
-          <div>
-            <UAvatar icon="i-mdi:download" />
-          </div>
-
-          <div>{{ dataset.dataset_name }}</div>
-        </div>
-        <div class="grid grid-flow-col-dense gap-1">
-          <UBadge variant="soft" color="info">
-            {{ dataset.extension }}
-          </UBadge>
-          <UBadge variant="soft">
-            {{ dataset.humanFileSize }}
-          </UBadge>
-          <GalaxyStatus v-if="dataset?.state" :state="dataset.state" />
-        </div>
-      </div>
-    </div>
+      />
+    </UPageList>
   </div>
 </template>

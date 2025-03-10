@@ -1,8 +1,8 @@
-import type { MaybeRef } from '#imports'
+import type { Ref } from '#imports'
 import type { GalaxyWorkflow, WorkflowToolParameters, WorkflowToolStep } from 'blendtype'
-import { computed, ref, toValue } from '#imports'
+import { computed, ref, toValue, watch } from '#imports'
 
-export function useGalaxyWorkflow(workflowId: MaybeRef<string | undefined>) {
+export function useGalaxyWorkflow(workflowId: Ref<string | undefined>) {
   const workflow = ref<GalaxyWorkflow | undefined>(undefined)
 
   const workflowSteps = computed(() => {
@@ -75,12 +75,18 @@ export function useGalaxyWorkflow(workflowId: MaybeRef<string | undefined>) {
 
   async function fetchWorkflow() {
     const workflowIdVal = toValue(workflowId)
+
     if (workflowIdVal) {
       const data = await $fetch<GalaxyWorkflow | undefined>(`/api/galaxy/workflows/${workflowIdVal}`)
       workflow.value = data
     }
   }
-  fetchWorkflow()
+
+  watch(workflowId, () => {
+    fetchWorkflow()
+  }, { immediate: true, deep: true })
+
+  // fetchWorkflow()
   return {
     workflow,
     workflowSteps,

@@ -8,16 +8,16 @@ import { computed } from '#imports'
 export interface GalaxyMultipleSelectToolParameterProps
   extends GalaxyMultipleSelectToolParameter {
   modelValue: string[]
-  disabled: boolean
-  variant: 'form' | 'display'
+  disabled?: boolean
+  variant?: 'form' | 'display'
   isConditionalSelect: boolean
 }
 
 export interface GalaxySingleSelectToolParameterProps
   extends GalaxySingleSelectToolParameter {
   modelValue: string
-  disabled: boolean
-  variant: 'form' | 'display'
+  disabled?: boolean
+  variant?: 'form' | 'display'
   isConditionalSelect: false
 }
 export type GalaxySelectToolParameterProps =

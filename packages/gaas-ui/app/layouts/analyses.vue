@@ -47,6 +47,9 @@ const { data: analyses } = await useAsyncData(
         statusCode: Number.parseInt(error.code),
       })
     }
+    if (data === null) {
+      throw createError({ statusMessage: 'No analysis found', statusCode: 404 })
+    }
     return data
   },
 )

@@ -12,6 +12,7 @@ const props = withDefaults(defineProps<Props>(), {
   pageHeaderProps: () => ({
     title: 'Title',
     description: 'A description',
+
   }),
   breadcrumbsItems: undefined,
 

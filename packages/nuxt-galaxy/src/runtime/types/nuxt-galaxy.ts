@@ -12,6 +12,8 @@ export type RowAnalysisInput = Database['galaxy']['Tables']['analysis_inputs']['
 export type RowAnalysisOutputs = Database['galaxy']['Tables']['analysis_outputs']['Row']
 export type RowAnalysisJob = Database['galaxy']['Tables']['jobs']['Row']
 export type RowAnalaysisDataset = Database['galaxy']['Tables']['datasets']['Row']
+export type RowWorkflow = Database['galaxy']['Tables']['workflows']['Row']
+export type RowHistory = Database['galaxy']['Tables']['histories']['Row']
 export interface AnalysisInputsWithDatasets extends RowAnalysisInput {
   datasets: RowAnalaysisDataset
 }
@@ -22,8 +24,8 @@ export interface AnalysisOutputsWithDatasets extends RowAnalysisOutputs {
 export type AnalysisIOWithDatasets = AnalysisInputsWithDatasets | AnalysisOutputsWithDatasets
 
 export interface AnalysisDetail extends RowAnalysis {
-  workflows: Database['galaxy']['Tables']['workflows']['Row']
-  histories: Database['galaxy']['Tables']['histories']['Row']
+  workflows: RowWorkflow
+  histories: RowHistory
   jobs?: RowAnalysisJob[]
 }
 export interface AnalysisJobs extends RowAnalysisJob {
