@@ -11,7 +11,7 @@ useSeoMeta({
   title: 'Sign up',
 })
 
-const toast = useToast()
+// const toast = useToast()
 const supabase = useSupabaseClient<Database>()
 
 const fields = [
@@ -30,19 +30,19 @@ const fields = [
   },
 ]
 
-const providers = [{
-  label: 'Google',
-  icon: 'i-simple-icons-google',
-  onClick: () => {
-    toast.add({ title: 'Google', description: 'Login with Google' })
-  },
-}, {
-  label: 'GitHub',
-  icon: 'i-simple-icons-github',
-  onClick: () => {
-    toast.add({ title: 'GitHub', description: 'Login with GitHub' })
-  },
-}]
+// const providers = [{
+//   label: 'Google',
+//   icon: 'i-simple-icons-google',
+//   onClick: () => {
+//     toast.add({ title: 'Google', description: 'Login with Google' })
+//   },
+// }, {
+//   label: 'GitHub',
+//   icon: 'i-simple-icons-github',
+//   onClick: () => {
+//     toast.add({ title: 'GitHub', description: 'Login with GitHub' })
+//   },
+// }]
 
 const schema = z.object({
   email: z.string().email('Invalid email'),
@@ -57,15 +57,19 @@ async function handleSignUp(e: FormSubmitEvent<Schema>) {
   const { data: { email, password } } = e
   const redirectTo = '/datasets'
   if (email && password) {
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectTo,
       },
     })
+
     if (error) {
-      createError('Unable to sign up')
+      throw createError('Unable to sign up')
+    }
+    if (data?.user) {
+      await navigateTo(redirectTo, { replace: true })
     }
   }
 }
@@ -75,7 +79,6 @@ async function handleSignUp(e: FormSubmitEvent<Schema>) {
   <UAuthForm
     :fields="fields"
     :schema="schema"
-    :providers="providers"
     title="Create an account"
     :submit="{ label: 'Create account' }"
     @submit="handleSignUp"

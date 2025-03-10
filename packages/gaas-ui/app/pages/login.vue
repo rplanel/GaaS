@@ -22,7 +22,7 @@ useSeoMeta({
   title: 'Login',
 })
 
-const toast = useToast()
+// const toast = useToast()
 const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
 const { query } = useRoute()
@@ -56,7 +56,7 @@ async function handleSignIn(e: FormSubmitEvent<Schema>) {
     }
 
     if (error) {
-      createError('Unable to sign in')
+      throw createError('Unable to sign in')
     }
   }
 }
@@ -77,19 +77,19 @@ const fields = ref([
   },
 ])
 
-const providers = [{
-  label: 'Google',
-  icon: 'i-simple-icons-google',
-  onClick: () => {
-    toast.add({ title: 'Google', description: 'Login with Google' })
-  },
-}, {
-  label: 'GitHub',
-  icon: 'i-simple-icons-github',
-  onClick: () => {
-    toast.add({ title: 'GitHub', description: 'Login with GitHub' })
-  },
-}]
+// const providers = [{
+//   label: 'Google',
+//   icon: 'i-simple-icons-google',
+//   onClick: () => {
+//     toast.add({ title: 'Google', description: 'Login with Google' })
+//   },
+// }, {
+//   label: 'GitHub',
+//   icon: 'i-simple-icons-github',
+//   onClick: () => {
+//     toast.add({ title: 'GitHub', description: 'Login with GitHub' })
+//   },
+// }]
 </script>
 
 <template>
@@ -100,7 +100,6 @@ const providers = [{
     :schema
     description="Enter your credentials to access your account."
     :fields="fields"
-    :providers
     @submit="handleSignIn"
   >
     <template #description>
