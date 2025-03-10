@@ -18,7 +18,9 @@ const isOpen = ref(true)
 
 <template>
   <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')">
-    <UAlert icon="mdi:message-alert" color="warning" variant="subtle" title="Not implemented" description="The result page is not implemented. This is not the function of this layer" class="my-3" />
+    <UContainer>
+      <UAlert icon="mdi:message-alert" color="warning" variant="subtle" title="Not implemented" description="The result page is not implemented. This is not the function of this layer" class="my-3" />
+    </UContainer>
   </AnalysisHistoryPanel>
 
   <ClientOnly>

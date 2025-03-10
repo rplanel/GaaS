@@ -96,7 +96,7 @@ const pageHeaderProps = computed(() => {
       <div class="py-3">
         <TableGeneric :utable-props>
           <template #rawSize-cell="{ row }">
-            <UBadge :label="row.original.size" variant="soft" />
+            <UBadge :label="row.original.size" variant="soft" color="neutral" />
           </template>
         </TableGeneric>
         <div class="flex my-2 py-3 justify-end">

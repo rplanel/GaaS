@@ -56,19 +56,6 @@ const sanitizedDbWorkflows = computed<SanitizedWorkflowDbItem[] | null>(() => {
   }
   return null
 })
-
-// onBeforeRouteUpdate((to) => {
-//   // debugger
-//   if (to.name === 'workflows')
-//     selectedWorkflowId.value = undefined
-// })
-
-// watch(selectedWorkflowId, () => {
-//   // debugger
-//   if (selectedWorkflowId.value !== undefined) {
-//     router.push(`/workflows/${selectedWorkflowId.value}/run`)
-//   }
-// })
 </script>
 
 <template>

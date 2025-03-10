@@ -13,3 +13,5 @@ export interface SanitizedWorkflowDbItem extends Omit<RowWorkflow, 'definition'>
 }
 
 export type RowAnalysisJob = GalaxyTypes.RowAnalysisJob
+
+export type AnalysisDetail = GalaxyTypes.AnalysisDetail

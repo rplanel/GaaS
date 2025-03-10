@@ -2,7 +2,7 @@
 import type { AccordionItem } from '@nuxt/ui'
 import type { GalaxyTool } from 'blendtype'
 import type { GalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
-import type { Database, RowAnalysisJob } from '../../types'
+import type { AnalysisDetail, RowAnalysisJob } from '../../types'
 import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDecodeParameters'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
@@ -12,44 +12,22 @@ const props = withDefaults(defineProps<{
 
 const emits = defineEmits(['close'])
 // const { analysis } = toRefs(props)
-const supabase = useSupabaseClient<Database>()
-const user = useSupabaseUser()
+// const supabase = useSupabaseClient<Database>()
+// const user = useSupabaseUser()
 const workflowParametersModel = ref<
   | Record<string, Record<string, string | string[] | Record<string, any>>>
   | undefined
 >(undefined)
-const { outputs, analysis: detailedAnalysis, inputs } = useAnalysisDatasetIO(props.analysisId)
+const { analysisId } = toRefs(props)
 
-const { data: dbWorkflow } = await useAsyncData('workflow-db', async () => {
-  const userVal = toValue(user)
-  const analysisVal = toValue(detailedAnalysis)
-  if (!userVal) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Unauthorized: User not found',
-    })
-  }
-  if (!analysisVal) {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'Not Found: Analysis not found',
-    })
-  }
-  const workflowIdVal = toValue(analysisVal.workflow_id)
-  const { data } = await supabase
-    .schema('galaxy')
-    .from('workflows')
-    .select('id, name, galaxy_id, definition')
-    .eq('id', workflowIdVal)
-    .limit(1)
-    .single()
-  return data
-})
+const { outputs, analysis: detailedAnalysis, inputs, workflow: dbWorkflow } = useAnalysisDatasetIO(analysisId)
 
 const workflowGalaxyId = computed(() => {
   const dbWorkflowVal = toValue(dbWorkflow)
-  if (dbWorkflowVal)
+
+  if (dbWorkflowVal) {
     return dbWorkflowVal.galaxy_id
+  }
   return undefined
 })
 const {
@@ -57,13 +35,13 @@ const {
   workflowToolIds,
   stepToTool,
 } = useGalaxyWorkflow(workflowGalaxyId)
-const { tools, toolInputParameters } = useGalaxyTool(workflowToolIds)
-const { getToolParameters, getParametersInputComponent } = useAnalysisTools()
-const { jobsAccordionItems, jobsMap, jobDetailsAccordionItems } = useAnalysisJob()
+const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
+const { getToolParameters, getParametersInputComponent } = useAnalysisTools(toolsObj)
+const { jobs, jobsAccordionItems, jobsMap, jobDetailsAccordionItems } = useAnalysisJob(detailedAnalysis, toolsObj)
 
-function useAnalysisJob() {
+function useAnalysisJob(analysis: Ref<AnalysisDetail | null>, tools: Ref<Record<string, GalaxyTool>>) {
   const jobs = computed<RowAnalysisJob[] | undefined>(() => {
-    const analysisVal = toValue(detailedAnalysis)
+    const analysisVal = toValue(analysis)
     if (analysisVal && analysisVal?.jobs) {
       return analysisVal.jobs
     }
@@ -75,9 +53,11 @@ function useAnalysisJob() {
     const toolsVal = toValue(tools)
     if (jobsVal && toolsVal) {
       return jobsVal.map((job): AccordionItem => {
+        const item = toolsVal[job.tool_id]
         return {
-          label: `${toolsVal[job.tool_id]?.name ?? 'no tool name'} - ${
-            toolsVal[job.tool_id]?.version ?? 'no tool version'
+
+          label: `${item?.name ?? 'no tool name'} - ${
+            item?.version ?? 'no tool version'
           }`,
           icon: 'i-mdi:tools',
           value: String(job.step_id),
@@ -86,15 +66,6 @@ function useAnalysisJob() {
     }
     return undefined
   })
-
-  // const activeAccordionItem = computed(() => {
-  //   const jobsAccordionItemsVal = toValue(jobsAccordionItems)
-  //   if (jobsAccordionItemsVal) {
-  //     return jobsAccordionItemsVal.map(() => true)
-  //   }
-  //   return []
-  // })
-  // const activeAccordionItem = ref(0)
 
   const jobsMap = computed(() => {
     const jobsVal = toValue(jobs) as RowAnalysisJob[]
@@ -129,7 +100,7 @@ function useAnalysisJob() {
   return { jobs, jobsAccordionItems, jobsMap, jobDetailsAccordionItems }
 }
 
-function useAnalysisTools() {
+function useAnalysisTools(tools: Ref<Record<string, GalaxyTool>>) {
   function getToolParameters(stepId: string) {
     const stepToolsVal = toValue(stepToTool)
     const toolInputParametersVal = toValue(toolInputParameters)
@@ -215,7 +186,7 @@ watchEffect(() => {
         <UPageCard title="Inputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
           <GalaxyAnalysisIoDatasets :items="inputs" />
         </UPageCard>
-        <UPageCard title="Jobs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+        <UPageCard v-if="jobs && toolsObj" title="Jobs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
           <UPageAccordion :default-value="[jobsAccordionItems?.[0]?.value ?? '0']" :items="jobsAccordionItems">
             <template #leading="{ item }">
               <div>

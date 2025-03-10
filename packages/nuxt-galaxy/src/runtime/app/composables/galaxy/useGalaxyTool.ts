@@ -1,6 +1,8 @@
 import type { MaybeRef } from '#imports'
+import type { UseAsyncQueueResult } from '@vueuse/core'
 import type { GalaxyDataToolParameter, GalaxyTool, GalaxyToolParameters } from 'blendtype'
 import { computed, ref, toValue, watch } from '#imports'
+import { useAsyncQueue } from '@vueuse/core'
 import { encodeParam } from 'ufo'
 
 export type ToolInputParameter = Exclude<GalaxyToolParameters, GalaxyDataToolParameter>
@@ -11,10 +13,9 @@ export interface ToolQuery {
 
 export function useGalaxyTool(toolParamQueries: MaybeRef<ToolQuery[]>) {
   // State
-  const tools = ref<Record<string, GalaxyTool>>({})
+  const tools = ref<UseAsyncQueueResult<GalaxyTool>[] | undefined>(undefined)
   const isLoading = ref(false)
   const error = ref<Error | null>(null)
-
   // Computed
 
   /**
@@ -23,31 +24,51 @@ export function useGalaxyTool(toolParamQueries: MaybeRef<ToolQuery[]>) {
    */
   const toolInputParameters = computed(() => {
     const toolsVal = toValue(tools)
-    if (toolsVal) {
+    if (toolsVal && toolsVal.length > 0) {
       return Object
         .entries(toolsVal)
-        .reduce<Record<string, ToolInputParameter[]>>((acc, [toolId, tool]) => {
-          const filteredInputs = tool.inputs.filter((input): input is ToolInputParameter => input.type !== 'data')
-          acc[toolId] = filteredInputs
+        .reduce<Record<string, ToolInputParameter[]>>((acc, [_, tool]) => {
+          if (tool?.data?.inputs) {
+            const filteredInputs = tool?.data?.inputs.filter((input): input is ToolInputParameter => input.type !== 'data')
+            acc[tool.data.id] = filteredInputs
+          }
           return acc
         }, {} as Record<string, ToolInputParameter[]>)
     }
     return {}
   })
 
+  const toolsObj = computed(() => {
+    const toolsVal = toValue(tools)
+    if (toolsVal && toolsVal.length > 0) {
+      return toolsVal.reduce<Record<string, GalaxyTool>>((acc, curr) => {
+        if (curr?.data) {
+          acc[curr.data.id] = curr.data
+        }
+        return acc
+      }, {} as Record<string, GalaxyTool>)
+    }
+    return {}
+  })
   // Methods
   const fetchTools = async () => {
     isLoading.value = true
-    try {
-      const fetchedTools = await Promise.all(toValue(toolParamQueries).map((toolQuery) => {
-        const { toolId, toolVersion } = toolQuery
-        return $fetch<GalaxyTool>(`/api/galaxy/tools/${encodeParam(toolId)}/${toolVersion}`)
-      }))
 
-      tools.value = fetchedTools.reduce<Record<string, GalaxyTool>>((acc, curr) => {
-        acc[curr.id] = curr
-        return acc
-      }, {} as Record<string, GalaxyTool>)
+    try {
+      // tools.value = await $fetch<GalaxyTool>(`/api/galaxy/tools/${encodeParam(toValue(toolParamQueries)[0].toolId)}/${toValue(toolParamQueries)[0].toolVersion}`)
+
+      const promises = toValue(toolParamQueries).map((toolQuery) => {
+        const { toolId, toolVersion } = toolQuery
+        return () => $fetch<GalaxyTool>(`/api/galaxy/tools/${encodeParam(toolId)}/${toolVersion}`)
+      })
+      const { result } = useAsyncQueue<GalaxyTool[]>(promises)
+      tools.value = result
+      // tools.value = await Promise.all(promises)
+      // console.log(fetchedTools)
+      // tools.value = fetchedTools.reduce<Record<string, GalaxyTool>>((acc, curr) => {
+      //   acc[curr.id] = curr
+      //   return acc
+      // }, {} as Record<string, GalaxyTool>)
     }
     catch (err) {
       error.value = err as Error
@@ -59,11 +80,12 @@ export function useGalaxyTool(toolParamQueries: MaybeRef<ToolQuery[]>) {
 
   watch(toolParamQueries, () => {
     fetchTools()
-  })
-
+  }, { immediate: true, deep: true })
+  // fetchTools()
   return {
     // State
     tools,
+    toolsObj,
     isLoading,
     error,
     // Computed

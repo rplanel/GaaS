@@ -1,13 +1,17 @@
 import type { AsyncDataExecuteOptions } from '#app/composables/asyncData'
-import type { MaybeRef, Ref } from '#imports'
+import type { Ref } from '#imports'
 import type { Database } from '../../types/database'
-import type { AnalysisDetail, AnalysisInputsWithStoratePath, AnalysisOutputsWithStoratePath } from '../../types/nuxt-galaxy'
-import { createError, ref, toValue, useSupabaseClient, useSupabaseUser } from '#imports'
+import type { AnalysisDetail, AnalysisInputsWithStoratePath, AnalysisOutputsWithStoratePath, RowWorkflow } from '../../types/nuxt-galaxy'
+import { createError, ref, toValue, useSupabaseClient, useSupabaseUser, watch } from '#imports'
+import { getErrorMessage, getStatusCode } from 'blendtype'
 
-export function useAnalysisDatasetIO(analysisId: MaybeRef<number | undefined>): {
+export type AnalysisWorkflow = Pick<RowWorkflow, 'id' | 'name' | 'galaxy_id' | 'definition'>
+
+export function useAnalysisDatasetIO(analysisId: Ref<number | undefined>): {
   inputs: Ref<AnalysisInputsWithStoratePath[] | null>
   outputs: Ref<AnalysisOutputsWithStoratePath[] | null>
   analysis: Ref<AnalysisDetail | null>
+  workflow: Ref<AnalysisWorkflow | null>
   refresh: (opts?: AsyncDataExecuteOptions) => void
 } {
   const supabase = useSupabaseClient<Database>()
@@ -15,6 +19,7 @@ export function useAnalysisDatasetIO(analysisId: MaybeRef<number | undefined>): 
   const inputs = ref<AnalysisInputsWithStoratePath[] | null>(null)
   const outputs = ref<AnalysisOutputsWithStoratePath[] | null>(null)
   const analysis = ref<AnalysisDetail | null>(null)
+  const workflow = ref<AnalysisWorkflow | null>(null)
   // const { data: inputs } = await useAsyncData<AnalysisInputsWithStoratePath[] | null>(
   //   `analysis-inputs-${toValue(analysisId)}`,
   //   async () => {
@@ -204,7 +209,6 @@ export function useAnalysisDatasetIO(analysisId: MaybeRef<number | undefined>): 
   async function fetchAnalysis() {
     const analysisVal = toValue(analysisId)
     const userVal = toValue(user)
-
     if (!userVal) {
       throw createError({
         statusCode: 401,
@@ -228,7 +232,6 @@ export function useAnalysisDatasetIO(analysisId: MaybeRef<number | undefined>): 
         `)
       .eq('id', analysisVal)
       .returns<AnalysisDetail[]>()
-
     if (error) {
       throw createError({
         statusMessage: error.message,
@@ -245,8 +248,51 @@ export function useAnalysisDatasetIO(analysisId: MaybeRef<number | undefined>): 
       })
     }
   }
-  fetchInputs()
-  fetchOutputs()
-  fetchAnalysis()
-  return { inputs, outputs, analysis, refresh: fetchAnalysis }
+
+  async function fetchWorkflow() {
+    const userVal = toValue(user)
+    const analysisVal = toValue(analysis)
+    if (!userVal) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized: User not found',
+      })
+    }
+    if (!analysisVal) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Not Found: Analysis not found',
+      })
+    }
+    const workflowIdVal = toValue(analysisVal.workflow_id)
+    const { data, error } = await supabase
+      .schema('galaxy')
+      .from('workflows')
+      .select('id, name, galaxy_id, definition')
+      .eq('id', workflowIdVal)
+      .limit(1)
+      .single()
+    if (data === null) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Not Found: Workflow not found',
+      })
+    }
+    if (error) {
+      throw createError({ statusCode: getStatusCode(error), statusMessage: getErrorMessage(error) })
+    }
+    workflow.value = data
+  }
+
+  watch(analysisId, () => {
+    fetchInputs()
+    fetchOutputs()
+    fetchAnalysis()
+  }, { immediate: true, deep: true })
+
+  watch(analysis, () => {
+    fetchWorkflow()
+  })
+
+  return { inputs, outputs, analysis, workflow, refresh: fetchAnalysis }
 }
