@@ -3,7 +3,7 @@ const { analysesList } = inject('analysesList')
 </script>
 
 <template>
-  <UDashboardPanel id="analyses-list" title="Analyses" :default-size="25" :min-size="20" :max-size="35" resizable>
+  <UDashboardPanel id="analyses-list-panel" title="Analyses" :default-size="25" :min-size="20" :max-size="35" resizable>
     <UDashboardNavbar title="Analyses">
       <template #leading>
         <UDashboardSidebarCollapse />

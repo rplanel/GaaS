@@ -103,7 +103,7 @@ function onFileClick() {
 </script>
 
 <template>
-  <UDashboardPanel id="datasets" title="Datasets">
+  <UDashboardPanel id="datasets-panel" title="Datasets">
     <template #header>
       <UDashboardNavbar title="Datasets" :ui="{ right: 'gap-3' }">
         <template #leading>

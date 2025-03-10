@@ -10,7 +10,7 @@ const emits = defineEmits(['close'])
 </script>
 
 <template>
-  <UDashboardPanel id="workflow-run-1" class="overflow-auto">
+  <UDashboardPanel id="workflow-run-panel" class="overflow-auto">
     <UDashboardNavbar title="Invoke" :toggle="false">
       <template #leading>
         <UButton icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5" @click="emits('close')" />

@@ -155,13 +155,14 @@ watchEffect(() => {
 </script>
 
 <template>
-  <UDashboardPanel id="analysis-detail-1" class="overflow-auto">
+  <UDashboardPanel id="history-panel" class="overflow-auto">
     <UDashboardNavbar
       v-if="detailedAnalysis"
       :title="detailedAnalysis.name"
       :toggle="true"
     >
       <template #leading>
+        <UDashboardSidebarCollapse />
         <UButton icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5" @click="emits('close')" />
       </template>
 

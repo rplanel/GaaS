@@ -59,7 +59,7 @@ const sanitizedDbWorkflows = computed<SanitizedWorkflowDbItem[] | null>(() => {
 </script>
 
 <template>
-  <UDashboardPanel id="workflows-list" title="Workflows" :default-size="25" :min-size="20" :max-size="35" resizable>
+  <UDashboardPanel id="workflows-list-panel" title="Workflows" :default-size="25" :min-size="20" :max-size="35" resizable>
     <UDashboardNavbar title="Workflows">
       <template #leading>
         <UDashboardSidebarCollapse />
