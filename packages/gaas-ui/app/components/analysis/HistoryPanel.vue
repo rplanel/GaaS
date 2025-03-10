@@ -165,20 +165,13 @@ watchEffect(() => {
         <UButton icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5" @click="emits('close')" />
       </template>
 
-      <UButtonGroup orientation="horizontal">
-        <UButton variant="subtle" active-variant="solid" label="Results" :to="`/analyses/${analysisId}/results`" />
-        <UButton variant="subtle" active-variant="solid" label="parameters" :to="`/analyses/${analysisId}`" :active="$route.name === 'analyses-analysisId'" />
-      </UButtonGroup>
-
       <template #right>
         <!-- <GalaxyStatus v-if="history" :state="history.state" :size="30" /> -->
-        <UTooltip text="Rerun">
-          <UButton
-            icon="lucide:refresh-ccw"
-            color="neutral"
-            variant="ghost"
-          />
-        </UTooltip>
+
+        <UButtonGroup orientation="horizontal">
+          <UButton variant="subtle" active-variant="solid" label="Results" :to="`/analyses/${analysisId}/results`" />
+          <UButton variant="subtle" active-variant="solid" label="parameters" :to="`/analyses/${analysisId}`" :active="$route.name === 'analyses-analysisId'" />
+        </UButtonGroup>
       </template>
     </UDashboardNavbar>
     <slot>
