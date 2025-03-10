@@ -172,6 +172,9 @@ catalogs:
       specifier: ^3.4.0
       version: 3.4.0
 
+overrides:
+  ohash: 1.1.6
+
 importers:
 
   .:
@@ -425,7 +428,7 @@ importers:
         version: 17.4.3
       nuxt:
         specifier: 'catalog:'
-        version: 3.16.0(@parcel/watcher@2.5.1)(@types/node@22.13.10)(db0@0.3.1(drizzle-orm@0.40.0(gel@2.0.1)(postgres@3.4.5)))(drizzle-orm@0.40.0(gel@2.0.1)(postgres@3.4.5))(eslint@9.22.0(jiti@2.4.2))(ioredis@5.6.0)(lightningcss@1.29.2)(magicast@0.3.5)(meow@13.2.0)(optionator@0.9.4)(rollup@3.29.5)(terser@5.39.0)(typescript@5.6.3)(vite@6.2.1(@types/node@22.13.10)(jiti@2.4.2)(lightningcss@1.29.2)(terser@5.39.0)(yaml@2.7.0))(vue-tsc@2.2.8(typescript@5.6.3))(yaml@2.7.0)
+        version: 3.16.0(@parcel/watcher@2.5.1)(@types/node@22.13.10)(db0@0.3.1(drizzle-orm@0.40.0(gel@2.0.1)(postgres@3.4.5)))(drizzle-orm@0.40.0(gel@2.0.1)(postgres@3.4.5))(eslint@9.22.0(jiti@2.4.2))(ioredis@5.6.0)(lightningcss@1.29.2)(magicast@0.3.5)(meow@13.2.0)(optionator@0.9.4)(rollup@4.35.0)(terser@5.39.0)(typescript@5.6.3)(vite@6.2.1(@types/node@22.13.10)(jiti@2.4.2)(lightningcss@1.29.2)(terser@5.39.0)(yaml@2.7.0))(vue-tsc@2.2.8(typescript@5.6.3))(yaml@2.7.0)
       playwright-core:
         specifier: 'catalog:'
         version: 1.51.0
@@ -5470,9 +5473,6 @@ packages:
   ohash@1.1.6:
     resolution: {integrity: sha512-TBu7PtV8YkAZn0tSxobKY2n2aAQva936lhRrj6957aDaCf9IEtqsKbgMzXE/F/sjqYOwmrukeORHNLe5glk7Cg==}
 
-  ohash@2.0.11:
-    resolution: {integrity: sha512-RdR9FQrFwNBNXAr4GixM8YaRZRJ5PUWbKYbE5eOsrwAjJW0q2REGcf79oYPsLyskQCZG1PLN+S/K1V00joZAoQ==}
-
   on-change@5.0.1:
     resolution: {integrity: sha512-n7THCP7RkyReRSLkJb8kUWoNsxUIBxTkIp3JKno+sEz6o/9AJ3w3P9fzQkITEkMwyTKJjZciF3v/pVoouxZZMg==}
     engines: {node: '>=18'}
@@ -8341,7 +8341,7 @@ snapshots:
       listhen: 1.9.0
       nypm: 0.6.0
       ofetch: 1.4.1
-      ohash: 2.0.11
+      ohash: 1.1.6
       pathe: 2.0.3
       perfect-debounce: 1.0.0
       pkg-types: 2.1.0
@@ -8405,7 +8405,7 @@ snapshots:
       local-pkg: 1.1.1
       magicast: 0.3.5
       nypm: 0.6.0
-      ohash: 2.0.11
+      ohash: 1.1.6
       pathe: 2.0.3
       perfect-debounce: 1.0.0
       pkg-types: 2.1.0
@@ -8446,7 +8446,7 @@ snapshots:
       local-pkg: 1.1.1
       magicast: 0.3.5
       nypm: 0.6.0
-      ohash: 2.0.11
+      ohash: 1.1.6
       pathe: 2.0.3
       perfect-debounce: 1.0.0
       pkg-types: 2.1.0
@@ -8651,7 +8651,7 @@ snapshots:
       klona: 2.0.6
       knitwork: 1.2.0
       mlly: 1.7.4
-      ohash: 2.0.11
+      ohash: 1.1.6
       pathe: 2.0.3
       pkg-types: 2.1.0
       scule: 1.3.0
@@ -8815,7 +8815,7 @@ snapshots:
       dotenv: 16.4.7
       git-url-parse: 16.0.1
       ofetch: 1.4.1
-      ohash: 2.0.11
+      ohash: 1.1.6
       parse-git-config: 3.0.0
       pathe: 2.0.3
       pkg-types: 1.3.1
@@ -8893,7 +8893,7 @@ snapshots:
       knitwork: 1.2.0
       magic-string: 0.30.17
       mlly: 1.7.4
-      ohash: 2.0.11
+      ohash: 1.1.6
       pathe: 2.0.3
       reka-ui: 2.0.2(typescript@5.7.3)(vue@3.5.13(typescript@5.7.3))
       scule: 1.3.0
@@ -8943,10 +8943,10 @@ snapshots:
       - vite
       - vue
 
-  '@nuxt/vite-builder@3.16.0(@types/node@22.13.10)(eslint@9.22.0(jiti@2.4.2))(lightningcss@1.29.2)(magicast@0.3.5)(meow@13.2.0)(optionator@0.9.4)(rollup@3.29.5)(terser@5.39.0)(typescript@5.6.3)(vue-tsc@2.2.8(typescript@5.6.3))(vue@3.5.13(typescript@5.6.3))(yaml@2.7.0)':
+  '@nuxt/vite-builder@3.16.0(@types/node@22.13.10)(eslint@9.22.0(jiti@2.4.2))(lightningcss@1.29.2)(magicast@0.3.5)(meow@13.2.0)(optionator@0.9.4)(rollup@4.35.0)(terser@5.39.0)(typescript@5.6.3)(vue-tsc@2.2.8(typescript@5.6.3))(vue@3.5.13(typescript@5.6.3))(yaml@2.7.0)':
     dependencies:
       '@nuxt/kit': 3.16.0(magicast@0.3.5)
-      '@rollup/plugin-replace': 6.0.2(rollup@3.29.5)
+      '@rollup/plugin-replace': 6.0.2(rollup@4.35.0)
       '@vitejs/plugin-vue': 5.2.1(vite@6.2.1(@types/node@22.13.10)(jiti@2.4.2)(lightningcss@1.29.2)(terser@5.39.0)(yaml@2.7.0))(vue@3.5.13(typescript@5.6.3))
       '@vitejs/plugin-vue-jsx': 4.1.1(vite@6.2.1(@types/node@22.13.10)(jiti@2.4.2)(lightningcss@1.29.2)(terser@5.39.0)(yaml@2.7.0))(vue@3.5.13(typescript@5.6.3))
       autoprefixer: 10.4.21(postcss@8.5.3)
@@ -8963,12 +8963,12 @@ snapshots:
       knitwork: 1.2.0
       magic-string: 0.30.17
       mlly: 1.7.4
-      ohash: 2.0.11
+      ohash: 1.1.6
       pathe: 2.0.3
       perfect-debounce: 1.0.0
       pkg-types: 2.1.0
       postcss: 8.5.3
-      rollup-plugin-visualizer: 5.14.0(rollup@3.29.5)
+      rollup-plugin-visualizer: 5.14.0(rollup@4.35.0)
       std-env: 3.8.1
       ufo: 1.5.4
       unenv: 2.0.0-rc.14
@@ -9023,7 +9023,7 @@ snapshots:
       knitwork: 1.2.0
       magic-string: 0.30.17
       mlly: 1.7.4
-      ohash: 2.0.11
+      ohash: 1.1.6
       pathe: 2.0.3
       perfect-debounce: 1.0.0
       pkg-types: 2.1.0
@@ -9389,13 +9389,6 @@ snapshots:
       rollup: 4.35.0
 
   '@rollup/plugin-replace@5.0.7(rollup@3.29.5)':
-    dependencies:
-      '@rollup/pluginutils': 5.1.4(rollup@3.29.5)
-      magic-string: 0.30.17
-    optionalDependencies:
-      rollup: 3.29.5
-
-  '@rollup/plugin-replace@6.0.2(rollup@3.29.5)':
     dependencies:
       '@rollup/pluginutils': 5.1.4(rollup@3.29.5)
       magic-string: 0.30.17
@@ -10535,7 +10528,7 @@ snapshots:
       giget: 1.2.5
       jiti: 2.4.2
       mlly: 1.7.4
-      ohash: 2.0.11
+      ohash: 1.1.6
       pathe: 2.0.3
       perfect-debounce: 1.0.0
       pkg-types: 1.3.1
@@ -10552,7 +10545,7 @@ snapshots:
       exsolve: 1.0.4
       giget: 2.0.0
       jiti: 2.4.2
-      ohash: 2.0.11
+      ohash: 1.1.6
       pathe: 2.0.3
       perfect-debounce: 1.0.0
       pkg-types: 2.1.0
@@ -12185,16 +12178,6 @@ snapshots:
       parent-module: 1.0.1
       resolve-from: 4.0.0
 
-  impound@0.2.2(rollup@3.29.5):
-    dependencies:
-      '@rollup/pluginutils': 5.1.4(rollup@3.29.5)
-      mlly: 1.7.4
-      mocked-exports: 0.1.1
-      pathe: 2.0.3
-      unplugin: 2.2.0
-    transitivePeerDependencies:
-      - rollup
-
   impound@0.2.2(rollup@4.35.0):
     dependencies:
       '@rollup/pluginutils': 5.1.4(rollup@4.35.0)
@@ -13227,7 +13210,7 @@ snapshots:
       node-fetch-native: 1.6.6
       node-mock-http: 1.0.0
       ofetch: 1.4.1
-      ohash: 2.0.11
+      ohash: 1.1.6
       openapi-typescript: 7.6.1(typescript@5.6.3)
       pathe: 2.0.3
       perfect-debounce: 1.0.0
@@ -13331,7 +13314,7 @@ snapshots:
       node-fetch-native: 1.6.6
       node-mock-http: 1.0.0
       ofetch: 1.4.1
-      ohash: 2.0.11
+      ohash: 1.1.6
       openapi-typescript: 7.6.1(typescript@5.7.3)
       pathe: 2.0.3
       perfect-debounce: 1.0.0
@@ -13452,7 +13435,7 @@ snapshots:
 
   nuxi@3.22.5: {}
 
-  nuxt@3.16.0(@parcel/watcher@2.5.1)(@types/node@22.13.10)(db0@0.3.1(drizzle-orm@0.40.0(gel@2.0.1)(postgres@3.4.5)))(drizzle-orm@0.40.0(gel@2.0.1)(postgres@3.4.5))(eslint@9.22.0(jiti@2.4.2))(ioredis@5.6.0)(lightningcss@1.29.2)(magicast@0.3.5)(meow@13.2.0)(optionator@0.9.4)(rollup@3.29.5)(terser@5.39.0)(typescript@5.6.3)(vite@6.2.1(@types/node@22.13.10)(jiti@2.4.2)(lightningcss@1.29.2)(terser@5.39.0)(yaml@2.7.0))(vue-tsc@2.2.8(typescript@5.6.3))(yaml@2.7.0):
+  nuxt@3.16.0(@parcel/watcher@2.5.1)(@types/node@22.13.10)(db0@0.3.1(drizzle-orm@0.40.0(gel@2.0.1)(postgres@3.4.5)))(drizzle-orm@0.40.0(gel@2.0.1)(postgres@3.4.5))(eslint@9.22.0(jiti@2.4.2))(ioredis@5.6.0)(lightningcss@1.29.2)(magicast@0.3.5)(meow@13.2.0)(optionator@0.9.4)(rollup@4.35.0)(terser@5.39.0)(typescript@5.6.3)(vite@6.2.1(@types/node@22.13.10)(jiti@2.4.2)(lightningcss@1.29.2)(terser@5.39.0)(yaml@2.7.0))(vue-tsc@2.2.8(typescript@5.6.3))(yaml@2.7.0):
     dependencies:
       '@nuxt/cli': 3.22.5(magicast@0.3.5)
       '@nuxt/devalue': 2.0.2
@@ -13460,7 +13443,7 @@ snapshots:
       '@nuxt/kit': 3.16.0(magicast@0.3.5)
       '@nuxt/schema': 3.16.0
       '@nuxt/telemetry': 2.6.5(magicast@0.3.5)
-      '@nuxt/vite-builder': 3.16.0(@types/node@22.13.10)(eslint@9.22.0(jiti@2.4.2))(lightningcss@1.29.2)(magicast@0.3.5)(meow@13.2.0)(optionator@0.9.4)(rollup@3.29.5)(terser@5.39.0)(typescript@5.6.3)(vue-tsc@2.2.8(typescript@5.6.3))(vue@3.5.13(typescript@5.6.3))(yaml@2.7.0)
+      '@nuxt/vite-builder': 3.16.0(@types/node@22.13.10)(eslint@9.22.0(jiti@2.4.2))(lightningcss@1.29.2)(magicast@0.3.5)(meow@13.2.0)(optionator@0.9.4)(rollup@4.35.0)(terser@5.39.0)(typescript@5.6.3)(vue-tsc@2.2.8(typescript@5.6.3))(vue@3.5.13(typescript@5.6.3))(yaml@2.7.0)
       '@oxc-parser/wasm': 0.56.5
       '@unhead/vue': 2.0.0-rc.9(vue@3.5.13(typescript@5.6.3))
       '@vue/shared': 3.5.13
@@ -13481,7 +13464,7 @@ snapshots:
       h3: 1.15.1
       hookable: 5.5.3
       ignore: 7.0.3
-      impound: 0.2.2(rollup@3.29.5)
+      impound: 0.2.2(rollup@4.35.0)
       jiti: 2.4.2
       klona: 2.0.6
       knitwork: 1.2.0
@@ -13491,7 +13474,7 @@ snapshots:
       nitropack: 2.11.6(drizzle-orm@0.40.0(gel@2.0.1)(postgres@3.4.5))(typescript@5.6.3)
       nypm: 0.6.0
       ofetch: 1.4.1
-      ohash: 2.0.11
+      ohash: 1.1.6
       on-change: 5.0.1
       oxc-parser: 0.56.5
       pathe: 2.0.3
@@ -13612,7 +13595,7 @@ snapshots:
       nitropack: 2.11.6(drizzle-orm@0.40.0(gel@2.0.1)(postgres@3.4.5))(typescript@5.7.3)
       nypm: 0.6.0
       ofetch: 1.4.1
-      ohash: 2.0.11
+      ohash: 1.1.6
       on-change: 5.0.1
       oxc-parser: 0.56.5
       pathe: 2.0.3
@@ -13718,8 +13701,6 @@ snapshots:
       ufo: 1.5.4
 
   ohash@1.1.6: {}
-
-  ohash@2.0.11: {}
 
   on-change@5.0.1: {}
 
@@ -14439,15 +14420,6 @@ snapshots:
     optionalDependencies:
       '@babel/code-frame': 7.26.2
 
-  rollup-plugin-visualizer@5.14.0(rollup@3.29.5):
-    dependencies:
-      open: 8.4.2
-      picomatch: 4.0.2
-      source-map: 0.7.4
-      yargs: 17.7.2
-    optionalDependencies:
-      rollup: 3.29.5
-
   rollup-plugin-visualizer@5.14.0(rollup@4.35.0):
     dependencies:
       open: 8.4.2
@@ -15016,7 +14988,7 @@ snapshots:
     dependencies:
       defu: 6.1.4
       exsolve: 1.0.4
-      ohash: 2.0.11
+      ohash: 1.1.6
       pathe: 2.0.3
       ufo: 1.5.4
 
@@ -15361,7 +15333,7 @@ snapshots:
       ansis: 3.17.0
       debug: 4.4.0(supports-color@9.4.0)
       error-stack-parser-es: 1.0.5
-      ohash: 2.0.11
+      ohash: 1.1.6
       open: 10.1.0
       perfect-debounce: 1.0.0
       sirv: 3.0.1
