@@ -58,7 +58,7 @@ const state = reactive<Partial<Schema>>({
 })
 
 const toolInputParameterComponent = computed(() => {
-  const toolsVal = toValue(tools)
+  const toolsVal = toValue(toolsObj)
   if (toolsVal) {
     return Object.entries(toolsVal).reduce(
       (
@@ -93,7 +93,7 @@ const workflowStepsItems = computed<AccordionItem[] | undefined>(() => {
 })
 
 const workflowStepsToolInfo = computed(() => {
-  const toolsVal = toValue(tools)
+  const toolsVal = toValue(toolsObj)
   const stepToToolVal = toValue(stepToTool)
   const wfStepsToolInfo: {
     [stepId: string]: {
@@ -297,7 +297,7 @@ const {
   workflowParametersModel,
 } = useGalaxyWorkflow(workflowGalaxyId)
 
-const { tools, toolInputParameters } = useGalaxyTool(workflowToolIds)
+const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
 
 watchEffect(() => {
   const dbAnalysisVal = toValue(dbAnalysis) as Record<string, any>
