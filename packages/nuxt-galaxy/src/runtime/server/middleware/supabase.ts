@@ -9,9 +9,9 @@ export default defineEventHandler(async (event) => {
 
   const cookiesKeys = Object.keys(cookies)
   const hasAuthCookie = cookiesKeys.find(key => key.startsWith(authCookieName))
-  // const hasCodeVerifier = cookiesKeys.find(key => key.endsWith('auth-token-code-verifier'))
+  const hasCodeVerifier = cookiesKeys.find(key => key.endsWith('auth-token-code-verifier'))
   if (hasAuthCookie
-  // && !hasCodeVerifier
+    && !hasCodeVerifier
   ) {
     const user = await serverSupabaseUser(event)
     const client = await serverSupabaseClient<Database>(event)
