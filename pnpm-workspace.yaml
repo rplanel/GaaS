@@ -6,23 +6,22 @@ catalog:
   '@iconify-json/eos-icons': ^1.2.2
   '@iconify-json/ep': ^1.2.2
   '@iconify-json/lucide': ^1.2.20
+  '@iconify-json/majesticons': ^1.2.2
   '@iconify-json/material-symbols': ^1.2.12
   '@iconify-json/mdi': ^1.2.2
-  '@iconify-json/streamline': ^1.2.2
-  '@iconify-json/tabler': ^1.2.13
-  '@iconify-json/simple-icons': ^1.2.22
-  '@iconify-json/svg-spinners': ^1.2.2
-  '@iconify-json/majesticons': ^1.2.2
   '@iconify-json/octicon': ^1.2.5
+  '@iconify-json/simple-icons': ^1.2.22
   '@iconify-json/stash': ^1.2.2
+  '@iconify-json/streamline': ^1.2.2
+  '@iconify-json/svg-spinners': ^1.2.2
+  '@iconify-json/tabler': ^1.2.13
   '@nuxt/devtools': ^2.0.0-beta.3
   '@nuxt/eslint-config': ^1.1.0
-  '@nuxt/module-builder': ^0.8.4
-  nuxt: ^3.16.0
   '@nuxt/kit': ^3.16.0
+  '@nuxt/module-builder': ^0.8.4
   '@nuxt/schema': ^3.16.0
   '@nuxt/test-utils': ^3.16.0
-  '@nuxt/ui-pro': ^3.0.0-beta.3
+  '@nuxt/ui-pro': ^3.0.0-beta.4
   # '@nuxt/ui-pro': https://pkg.pr.new/@nuxt/ui-pro@063cda3
   '@nuxtjs/supabase': ^1.5.0
   '@release-it/conventional-changelog': ^10.0.0
@@ -41,11 +40,12 @@ catalog:
   eslint-config-unjs: ^0.4.2
   eslint-plugin-format: ^1.0.1
   fs-extra: ^11.2.0
-  happy-dom: ^17.1.8
   h3: ^1.13.0
+  happy-dom: ^17.1.8
   jiti: ^2.4.2
   jwt-decode: ^4.0.0
   lint-staged: ^15.3.0
+  nuxt: ^3.16.0
   ofetch: ^1.4.1
   playwright-core: ^1.50.0
   postgres: ^3.4.5
