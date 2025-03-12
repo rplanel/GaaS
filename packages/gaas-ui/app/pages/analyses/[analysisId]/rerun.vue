@@ -13,9 +13,9 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
 })
 
-definePageMeta({
-  middleware: 'auth',
-})
+// definePageMeta({
+//   middleware: 'auth',
+// })
 
 const { analysisId, workflowId } = toRefs(props)
 // const supabase = useSupabaseClient<Database>()

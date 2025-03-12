@@ -6,9 +6,9 @@ type Database = SupabaseTypes.Database
 
 const props = withDefaults(defineProps<Props>(), { breadcrumbsItems: undefined })
 
-definePageMeta({
-  middleware: 'auth',
-})
+// definePageMeta({
+//   middleware: 'auth',
+// })
 
 interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined

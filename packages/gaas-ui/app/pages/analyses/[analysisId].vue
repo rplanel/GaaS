@@ -5,9 +5,9 @@ import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDec
 
 type Database = SupabaseTypes.Database
 
-definePageMeta({
-  middleware: 'auth',
-})
+// definePageMeta({
+//   middleware: 'auth',
+// })
 const route = useRoute()
 const supabase = useSupabaseClient<Database>()
 const workflowParametersModel = ref<

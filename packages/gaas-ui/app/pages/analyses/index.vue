@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Database } from '../../types'
-import { definePageMeta } from '#imports'
 
 export type ListAnalysis = Pick<
   Database['galaxy']['Tables']['analyses']['Row'],
@@ -18,9 +17,9 @@ export interface SanitizedAnalysis extends ListAnalysis {
   workflows: string
 }
 
-definePageMeta({
-  middleware: 'auth',
-})
+// definePageMeta({
+//   middleware: 'auth',
+// })
 </script>
 
 <template>

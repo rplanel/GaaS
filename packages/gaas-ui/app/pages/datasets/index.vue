@@ -9,9 +9,9 @@ type Database = SupabaseTypes.Database
 const props = withDefaults(defineProps<Props>(), {
   breadcrumbsItems: undefined,
 })
-definePageMeta({
-  middleware: 'auth',
-})
+// definePageMeta({
+//   middleware: 'auth',
+// })
 type DatasetColumn = Database['galaxy']['Views']['uploaded_datasets_with_storage_path']['Row']
 
 interface Props {
