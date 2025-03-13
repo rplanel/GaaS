@@ -168,7 +168,7 @@ create policy "Authenticated users can upload files"
 on storage.objects for insert to authenticated with check (
   bucket_id = 'analysis_files' and
     owner = auth.uid() and
-    private.uuid_or_null(path_tokens[1]) is not null
+    private.uuid_or_null(split_part(name, '/', 2)) is not null
 );
 
 create policy "Users can view their own files"
