@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SupabaseTypes } from '#build/types/database'
 import type { BreadcrumbItem } from '#ui/types'
+import { NuxtErrorBoundary } from '#components'
 import { z } from 'zod'
 
 type Database = SupabaseTypes.Database
@@ -17,6 +18,7 @@ const breadcrumbsItems = ref<BreadcrumbItem[]>([
     to: '/datasets',
   },
 ])
+const toast = useToast()
 const fileRef = ref<HTMLInputElement>()
 const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
@@ -32,6 +34,26 @@ const state = reactive<Partial<Schema>>({
 })
 
 const { refreshDatasetsCount } = inject('datasetsCount')
+
+const uploadError = ref<string | null>(null)
+
+watch(uploadError, (error) => {
+  if (error) {
+    toast.add({
+      'title': 'Uh oh! Something went wrong.',
+      'description': getErrorMessage(error),
+      'icon': 'ic:baseline-error-outline',
+      'color': 'error',
+      'onUpdate:open': (isOpen) => {
+        if (!isOpen) {
+          clearError()
+          uploadError.value = null
+        }
+      },
+
+    })
+  }
+})
 
 const { data, refresh: refreshDatasets } = await useAsyncData<DatasetColumn[] | null | undefined>(
   'analysis-input-datasets',
@@ -73,9 +95,10 @@ async function uploadFile(event: any) {
 
     if (uploadError) {
       uploadingFile.value = false
-      throw createError(
-        'There was an error uploading the file. Please try again.',
-      )
+      throw createError({
+        statusCode: getStatusCode(uploadError),
+        statusMessage: getErrorMessage(uploadError),
+      })
     }
     else {
       uploadingFile.value = false
@@ -111,13 +134,15 @@ function onFileClick() {
         </template>
 
         <template #right>
-          <UForm :schema="schema" :state="state">
-            <UButton
-              icon="i-lucide-plus" size="md" class="rounded-full" :disabled="uploadingFile"
-              :loading="uploadingFile" @click="onFileClick"
-            />
-            <input ref="fileRef" type="file" class="hidden" @change="uploadFile">
-          </UForm>
+          <NuxtErrorBoundary @error="(error) => uploadError = error">
+            <UForm :schema="schema" :state="state">
+              <UButton
+                icon="i-lucide-plus" size="md" class="rounded-full" :disabled="uploadingFile"
+                :loading="uploadingFile" @click="onFileClick"
+              />
+              <input ref="fileRef" type="file" class="hidden" @change="uploadFile">
+            </UForm>
+          </NuxtErrorBoundary>
         </template>
       </UDashboardNavbar>
     </template>
