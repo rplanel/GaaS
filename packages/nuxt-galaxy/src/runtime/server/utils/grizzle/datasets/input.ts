@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { serverSupabaseClient } from '#supabase/server'
 import { createError, useRuntimeConfig } from '#imports'
 import { GalaxyClient } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
@@ -13,7 +13,7 @@ export async function getOrCreateInputDataset(
   galaxyDatasetId: string,
   analysisId: number,
   historyId: number,
-  supabase: SupabaseClient,
+  supabase: serverSupabaseClient,
   ownerId: string,
 ): Promise<{
   id: number
@@ -101,7 +101,7 @@ export async function synchronizeInputDataset(
   galaxyDatasetId: string,
   analysisId: number,
   historyId: number,
-  supabase: SupabaseClient,
+  supabase: serverSupabaseClient,
   ownerId: string,
 ): Promise<void> {
   const datasetDb = await getOrCreateInputDataset(galaxyDatasetId, analysisId, historyId, supabase, ownerId)

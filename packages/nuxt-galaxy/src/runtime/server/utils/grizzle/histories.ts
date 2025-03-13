@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { serverSupabaseClient } from '#supabase/server'
 import type { DatasetTerminalState, HistoryState } from 'blendtype'
 import type { Database } from '../../../types/database'
 import { useRuntimeConfig } from '#imports'
@@ -76,7 +76,7 @@ export async function addHistory(name: string, ownerId: string): Promise<{
   }
 }
 
-export async function synchronizeHistory(historyId: number, ownerId: string, supabase: SupabaseClient<Database>): Promise<void> {
+export async function synchronizeHistory(historyId: number, ownerId: string, supabase: serverSupabaseClient<Database>): Promise<void> {
   const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
   const galaxyClient = GalaxyClient.getInstance(apiKey, url)
   const historyDb = await useDrizzle()
@@ -134,7 +134,7 @@ export async function synchronizeJobs(
   analysisId: number,
   historyId: number,
   ownerId: string,
-  supabase: SupabaseClient<Database>,
+  supabase: serverSupabaseClient<Database>,
 ): Promise<void[] | undefined> {
   const invocationOutputs = await getInvocationOutputs(analysisId, ownerId)
   if (invocationOutputs) {

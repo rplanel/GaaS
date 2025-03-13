@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { serverSupabaseClient } from '#supabase/server'
 import type { Datamap, GalaxyInvocation, GalaxyInvocationIO, GalaxyWorkflowInput, GalaxyWorkflowParameters, InvocationState, InvocationTerminalState } from 'blendtype'
 import type { Database } from '../../../types/database'
 import { useRuntimeConfig } from '#imports'
@@ -90,7 +90,7 @@ export async function runAnalysis(
   return results
 }
 
-export async function synchronizeAnalyses(supabaseClient: SupabaseClient<Database>, ownerId: string): Promise<void[]> {
+export async function synchronizeAnalyses(supabaseClient: serverSupabaseClient<Database>, ownerId: string): Promise<void[]> {
   const analysesDb = await useDrizzle()
     .select()
     .from(analyses)
@@ -101,7 +101,7 @@ export async function synchronizeAnalyses(supabaseClient: SupabaseClient<Databas
   }))
 }
 
-export async function synchronizeAnalysis(analysisId: number, supabaseClient: SupabaseClient<Database>, ownerId: string): Promise<void> {
+export async function synchronizeAnalysis(analysisId: number, supabaseClient: serverSupabaseClient<Database>, ownerId: string): Promise<void> {
   const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
   const galaxyClient = GalaxyClient.getInstance(apiKey, url)
   const invocationDb = await useDrizzle()

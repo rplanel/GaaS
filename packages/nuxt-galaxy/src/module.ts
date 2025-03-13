@@ -241,7 +241,7 @@ export default defineNuxtModule<ModuleOptions>({
     /*********************/
     // Add server plugin
     /*********************/
-    addServerPlugin(resolver.resolve('./runtime/server/plugins/galaxy'))
+    addServerPlugin(resolver.resolve('./runtime/server/plugins/galaxy.server'))
 
     // Types
 
