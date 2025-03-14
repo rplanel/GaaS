@@ -23,7 +23,7 @@ const workflowParametersModel = ref<
 >(undefined)
 const { analysisId } = toRefs(props)
 
-const { outputs, analysis: detailedAnalysis, inputs, workflow: dbWorkflow, refresh } = useAnalysisDatasetIO(analysisId)
+const { outputs, analysis: detailedAnalysis, inputs, workflow: dbWorkflow, refresh, pendingAnalysis } = useAnalysisDatasetIO(analysisId)
 
 const workflowGalaxyId = computed(() => {
   const dbWorkflowVal = toValue(dbWorkflow)
@@ -205,7 +205,19 @@ watchEffect(() => {
         </UButtonGroup>
       </template>
     </UDashboardNavbar>
-    <slot>
+
+    <template v-if="pendingAnalysis">
+      <div class="hidden lg:flex flex-1 items-center justify-center">
+        <div class="flex items-center gap-4">
+          <USkeleton class="h-20 w-20 rounded-full" />
+          <div class="grid gap-2">
+            <USkeleton class="h-8 w-[250px]" />
+            <USkeleton class="h-8 w-[200px]" />
+          </div>
+        </div>
+      </div>
+    </template>
+    <slot v-else>
       <UPageList divide>
         <UPageCard title="Inputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
           <GalaxyAnalysisIoDatasets :items="inputs" />
