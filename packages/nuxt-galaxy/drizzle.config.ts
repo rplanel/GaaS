@@ -7,7 +7,7 @@ config({ path: '.env' })
 export default defineConfig({
   schemaFilter: ['galaxy'],
   schema: './src/runtime/server/db/schema/galaxy',
-  out: './src/runtime/supabase/migrations',
+  out: './supabase/migrations',
   dialect: 'postgresql',
   dbCredentials: {
     url: process.env.DATABASE_URL!,
