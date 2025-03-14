@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ButtonProps } from '@nuxt/ui'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { ListAnalysisWithWorkflow, SanitizedAnalysis } from '../../pages/analyses/index.vue'
 import type { Database } from '../../types'
 
@@ -10,41 +11,9 @@ const route = useRoute()
 const toast = useToast()
 const isEditingAnalyses = ref<Record<number, string>>({})
 const actionButtonProps = ref<ButtonProps>({ size: 'xs', variant: 'ghost', color: 'neutral' })
+
 const { refreshAnalysesList } = inject('analysesList')
-
-const items = [
-  [
-    {
-      label: 'Delete',
-      color: 'error' as const,
-      icon: 'i-lucide-trash',
-      slot: 'delete',
-    },
-  ],
-]
-
-const analysisId = computed(() => {
-  if (route?.params && 'analysisId' in route.params) {
-    const analysisId = route.params.analysisId
-    if (Array.isArray(analysisId))
-      return 0
-    return Number.parseInt(analysisId)
-  }
-  return undefined
-})
-
-function setEditState(id: number, name: string) {
-  const isEditingAnalysesVal = toValue(isEditingAnalyses)
-  isEditingAnalysesVal[id] = name
-}
-
-function resetEditAnalysis(id: number) {
-  const isEditingAnalysesVal = toValue(isEditingAnalyses)
-  if (isEditingAnalysesVal?.[id]) {
-    const { [id]: toRemove, ...rest } = isEditingAnalysesVal
-    isEditingAnalyses.value = rest
-  }
-}
+let realtimeChannel: RealtimeChannel
 
 const { data: analyses, refresh: refreshAnalyses } = await useAsyncData(
   'analyses',
@@ -81,6 +50,59 @@ const { data: analyses, refresh: refreshAnalyses } = await useAsyncData(
     return data || []
   },
 )
+
+onMounted(() => {
+  // Real time listener for new workouts
+  realtimeChannel = supabase
+    .channel('galaxy:analyses')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'galaxy', table: 'analyses' },
+      () => refreshAnalyses(),
+    )
+
+  realtimeChannel.subscribe()
+})
+
+// Don't forget to unsubscribe when user left the page
+onUnmounted(() => {
+  supabase.removeChannel(realtimeChannel)
+})
+
+const items = [
+  [
+    {
+      label: 'Delete',
+      color: 'error' as const,
+      icon: 'i-lucide-trash',
+      slot: 'delete',
+    },
+  ],
+]
+
+const analysisId = computed(() => {
+  if (route?.params && 'analysisId' in route.params) {
+    const analysisId = route.params.analysisId
+    if (Array.isArray(analysisId))
+      return 0
+    return Number.parseInt(analysisId)
+  }
+  return undefined
+})
+
+function setEditState(id: number, name: string) {
+  const isEditingAnalysesVal = toValue(isEditingAnalyses)
+  isEditingAnalysesVal[id] = name
+}
+
+function resetEditAnalysis(id: number) {
+  const isEditingAnalysesVal = toValue(isEditingAnalyses)
+  if (isEditingAnalysesVal?.[id]) {
+    const { [id]: toRemove, ...rest } = isEditingAnalysesVal
+    isEditingAnalyses.value = rest
+  }
+}
+
 const sanitizedAnalyses = computed<SanitizedAnalysis[]>(() => {
   const analysesVal = toValue(analyses)
   if (analysesVal && Array.isArray(analysesVal)) {
@@ -183,30 +205,25 @@ async function editAnalysisName(id: number) {
   }
 }
 
-function handleUpdates() {
-  refreshAnalyses()
-}
-
 // Listen to updates
-supabase
-  .channel('analyses')
-  .on(
-    'postgres_changes',
-    { event: 'UPDATE', schema: 'galaxy', table: 'analyses' },
-    handleUpdates,
-  )
-  .subscribe()
+// supabase
+//   .channel('analyses')
+//   .on(
+//     'postgres_changes',
+//     { event: 'UPDATE', schema: 'galaxy', table: 'analyses' },
+//     handleUpdates,
+//   )
+//   .subscribe()
 
 // Listen to delete
-supabase
-  .channel('analyses')
-  .on(
-    'postgres_changes',
-    { event: 'DELETE', schema: 'galaxy', table: 'analyses' },
-    handleUpdates,
-  )
-  .subscribe()
-$fetch('/sync')
+// supabase
+//   .channel('analyses')
+//   .on(
+//     'postgres_changes',
+//     { event: 'DELETE', schema: 'galaxy', table: 'analyses' },
+//     handleUpdates,
+//   )
+//   .subscribe()
 </script>
 
 <template>

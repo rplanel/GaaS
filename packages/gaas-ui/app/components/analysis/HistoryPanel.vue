@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { AccordionItem } from '@nuxt/ui'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { GalaxyTool } from 'blendtype'
 import type { GalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
-import type { AnalysisDetail, RowAnalysisJob } from '../../types'
+import type { AnalysisDetail, Database, RowAnalysisJob } from '../../types'
 import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDecodeParameters'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
@@ -12,15 +13,17 @@ const props = withDefaults(defineProps<{
 
 const emits = defineEmits(['close'])
 // const { analysis } = toRefs(props)
-// const supabase = useSupabaseClient<Database>()
+const client = useSupabaseClient<Database>()
 // const user = useSupabaseUser()
+let realtimeHistoriesChannel: RealtimeChannel
+let realtimeJobsChannel: RealtimeChannel
 const workflowParametersModel = ref<
   | Record<string, Record<string, string | string[] | Record<string, any>>>
   | undefined
 >(undefined)
 const { analysisId } = toRefs(props)
 
-const { outputs, analysis: detailedAnalysis, inputs, workflow: dbWorkflow } = useAnalysisDatasetIO(analysisId)
+const { outputs, analysis: detailedAnalysis, inputs, workflow: dbWorkflow, refresh } = useAnalysisDatasetIO(analysisId)
 
 const workflowGalaxyId = computed(() => {
   const dbWorkflowVal = toValue(dbWorkflow)
@@ -30,6 +33,34 @@ const workflowGalaxyId = computed(() => {
   }
   return undefined
 })
+
+onMounted(() => {
+  // Real time listener for new workouts
+  realtimeHistoriesChannel = client.channel('galaxy:histories').on(
+    'postgres_changes',
+    { event: '*', schema: 'galaxy', table: 'histories' },
+    () => {
+      refresh()
+    },
+  )
+  realtimeHistoriesChannel.subscribe()
+
+  realtimeJobsChannel = client.channel('galaxy:jobs').on(
+    'postgres_changes',
+    { event: '*', schema: 'galaxy', table: 'jobs' },
+    () => {
+      refresh()
+    },
+  )
+  realtimeJobsChannel.subscribe()
+})
+
+// Don't forget to unsubscribe when user left the page
+onUnmounted(() => {
+  client.removeChannel(realtimeHistoriesChannel)
+  client.removeChannel(realtimeJobsChannel)
+})
+
 const {
   workflowSteps,
   workflowToolIds,
@@ -162,7 +193,6 @@ watchEffect(() => {
       :toggle="true"
     >
       <template #leading>
-        <UDashboardSidebarCollapse />
         <UButton icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5" @click="emits('close')" />
       </template>
 

@@ -7,9 +7,6 @@ interface Props {
 withDefaults(defineProps<Props>(), { analysisId: undefined })
 const router = useRouter()
 
-// definePageMeta({
-//   middleware: 'auth',
-// })
 const breakpoints = useBreakpoints(breakpointsTailwind)
 const isMobile = breakpoints.smaller('lg')
 const isOpen = ref(true)

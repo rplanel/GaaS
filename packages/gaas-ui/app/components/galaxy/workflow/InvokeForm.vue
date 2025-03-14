@@ -180,7 +180,6 @@ async function runAnalysis() {
           method: 'POST',
           body: payload,
         })
-        $fetch('/sync')
         refreshAnalysesList()
 
         router.push(`/analyses/${newAnalysisId}`)

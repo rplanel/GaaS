@@ -68,8 +68,6 @@ watchEffect(() => {
     workflowParametersModel.value = toValue(decodedParameters)
   }
 })
-
-$fetch('/sync')
 </script>
 
 <template>

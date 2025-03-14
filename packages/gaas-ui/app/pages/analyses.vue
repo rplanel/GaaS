@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const { analysesList } = inject('analysesList')
+$fetch('/sync')
 </script>
 
 <template>
