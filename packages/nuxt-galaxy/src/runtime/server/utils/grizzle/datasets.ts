@@ -47,7 +47,7 @@ export async function uploadDatasets(
               sanitizedSignedUrl = withoutProtocol(stringifyParsedURL(parsedSignedUrl))
             }
 
-            sanitizedSignedUrl = 'https://dl.pasteur.fr/fop/XPbIC5YS/ESCO001.0523.00470.prt'
+            // sanitizedSignedUrl = 'https://dl.pasteur.fr/fop/XPbIC5YS/ESCO001.0523.00470.prt'
             const filename = parseFilename(sanitizedSignedUrl, { strict: false })
             return galaxyClient.histories().uploadFile(
               galaxyHistoryId,
