@@ -6,7 +6,7 @@ import { countDecimals } from '../../utils'
 export interface GalaxyFloatToolParameterProps
   extends GalaxyFloatToolParameter {
   modelValue: string
-  variant: 'form' | 'display'
+  variant?: 'form' | 'display'
 }
 const props = withDefaults(defineProps<GalaxyFloatToolParameterProps>(), {
   optional: false,

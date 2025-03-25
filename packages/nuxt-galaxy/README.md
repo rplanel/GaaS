@@ -7,7 +7,7 @@ Find and replace all on all files (CMD+SHIFT+F):
 - Description: My new Nuxt module
 -->
 
-# My Module
+# Nuxt Galaxy
 
 [![npm version][npm-version-src]][npm-version-href]
 [![npm downloads][npm-downloads-src]][npm-downloads-href]
@@ -37,6 +37,16 @@ npx nuxi module add my-module
 ```
 
 That's it! You can now use My Module in your Nuxt app ✨
+
+### Database schema
+
+If you are using kubernetes to deploy a webservices using GaaS nuxt-galaxy module, you might need to get the database schema as yaml.
+To do that you can use this script like :
+
+```bash
+# Using xclip as an example
+./scripts/kube-db-migrations.sh supabase/migrations/ | xclip -sel clipboard
+```
 
 ## Contribution
 

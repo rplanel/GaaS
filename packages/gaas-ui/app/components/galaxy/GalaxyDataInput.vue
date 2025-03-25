@@ -1,7 +1,7 @@
 <script setup lang="ts">
 export interface Props {
-  label: string
-  optional: boolean
+  label?: string
+  optional?: boolean
   tag?: string[]
   multiple: boolean
 }

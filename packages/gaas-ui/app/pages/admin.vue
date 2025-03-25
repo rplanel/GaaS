@@ -1,7 +1,4 @@
 <script setup lang="ts">
-definePageMeta({
-  layout: 'dashboard',
-})
 const breadcrumbsItems = ref([
   {
     icon: 'lucide:house',
@@ -17,7 +14,7 @@ const breadcrumbsItems = ref([
 </script>
 
 <template>
-  <UDashboardPanel id="admin" title="Admin">
+  <UDashboardPanel id="admin-panel" title="Admin">
     <template #header>
       <UDashboardNavbar title="Admin" :ui="{ right: 'gap-3' }">
         <template #leading>

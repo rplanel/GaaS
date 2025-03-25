@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { serverSupabaseClient } from '#supabase/server'
 import type { JobState, JobTerminalState } from 'blendtype'
 import type { Database } from '../../../types/database'
 import { useRuntimeConfig } from '#imports'
@@ -60,7 +60,7 @@ export async function synchronizeJob(
   historyId: number,
   galaxyDatasetIds: string[],
   ownerId: string,
-  supabase: SupabaseClient<Database>,
+  supabase: serverSupabaseClient<Database>,
 ): Promise<void> {
   const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
   const galaxyClient = GalaxyClient.getInstance(apiKey, url)
@@ -98,7 +98,7 @@ export async function synchronizeOutputDatasets(
   analysisId: number,
   historyId: number,
   ownerId: string,
-  supabase: SupabaseClient<Database>,
+  supabase: serverSupabaseClient<Database>,
 ): Promise<void[]> {
   return Promise.all(galaxyDatasetIds.map(async (galaxyDatasetId) => {
     // Check if dataset in the db

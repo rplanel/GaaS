@@ -9,9 +9,9 @@ type Database = SupabaseTypes.Database
 const props = withDefaults(defineProps<Props>(), {
   breadcrumbsItems: undefined,
 })
-definePageMeta({
-  middleware: 'auth',
-})
+// definePageMeta({
+//   middleware: 'auth',
+// })
 type DatasetColumn = Database['galaxy']['Views']['uploaded_datasets_with_storage_path']['Row']
 
 interface Props {
@@ -96,7 +96,7 @@ const pageHeaderProps = computed(() => {
       <div class="py-3">
         <TableGeneric :utable-props>
           <template #rawSize-cell="{ row }">
-            <UBadge :label="row.original.size" variant="soft" />
+            <UBadge :label="row.original.size" variant="soft" color="neutral" />
           </template>
         </TableGeneric>
         <div class="flex my-2 py-3 justify-end">

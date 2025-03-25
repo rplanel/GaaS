@@ -1,5 +1,6 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { serverSupabaseClient } from '#supabase/server'
 import type { Datamap, DatasetState, DatasetTerminalState } from 'blendtype'
+
 import type { Database } from '../../../types/database'
 import { useRuntimeConfig } from '#imports'
 import { DatasetsTerminalStates, GalaxyClient } from 'blendtype'
@@ -14,7 +15,7 @@ export async function uploadDatasets(
   galaxyHistoryId: string,
   historyId: number,
   ownerId: string,
-  supabase: SupabaseClient<Database>,
+  supabase: serverSupabaseClient<Database>,
 ): Promise<({
     step: string
     galaxyId: string

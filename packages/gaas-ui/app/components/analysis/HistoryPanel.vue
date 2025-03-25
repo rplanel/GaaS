@@ -1,0 +1,276 @@
+<script setup lang="ts">
+import type { AccordionItem } from '@nuxt/ui'
+import type { RealtimeChannel } from '@supabase/supabase-js'
+import type { GalaxyTool } from 'blendtype'
+import type { GalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
+import type { AnalysisDetail, Database, RowAnalysisJob } from '../../types'
+import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDecodeParameters'
+import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
+
+const props = withDefaults(defineProps<{
+  analysisId: number
+}>(), {})
+
+const emits = defineEmits(['close'])
+// const { analysis } = toRefs(props)
+const client = useSupabaseClient<Database>()
+// const user = useSupabaseUser()
+let realtimeHistoriesChannel: RealtimeChannel
+let realtimeJobsChannel: RealtimeChannel
+const workflowParametersModel = ref<
+  | Record<string, Record<string, string | string[] | Record<string, any>>>
+  | undefined
+>(undefined)
+const { analysisId } = toRefs(props)
+
+const { outputs, analysis: detailedAnalysis, inputs, workflow: dbWorkflow, refresh, pendingAnalysis } = useAnalysisDatasetIO(analysisId)
+
+const workflowGalaxyId = computed(() => {
+  const dbWorkflowVal = toValue(dbWorkflow)
+
+  if (dbWorkflowVal) {
+    return dbWorkflowVal.galaxy_id
+  }
+  return undefined
+})
+
+onMounted(() => {
+  // Real time listener for new workouts
+  realtimeHistoriesChannel = client.channel('galaxy:histories').on(
+    'postgres_changes',
+    { event: '*', schema: 'galaxy', table: 'histories' },
+    () => {
+      refresh()
+    },
+  )
+  realtimeHistoriesChannel.subscribe()
+
+  realtimeJobsChannel = client.channel('galaxy:jobs').on(
+    'postgres_changes',
+    { event: '*', schema: 'galaxy', table: 'jobs' },
+    () => {
+      refresh()
+    },
+  )
+  realtimeJobsChannel.subscribe()
+})
+
+// Don't forget to unsubscribe when user left the page
+onUnmounted(() => {
+  client.removeChannel(realtimeHistoriesChannel)
+  client.removeChannel(realtimeJobsChannel)
+})
+
+const {
+  workflowSteps,
+  workflowToolIds,
+  stepToTool,
+} = useGalaxyWorkflow(workflowGalaxyId)
+const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
+const { getToolParameters, getParametersInputComponent } = useAnalysisTools(toolsObj)
+const { jobs, jobsAccordionItems, jobsMap, jobDetailsAccordionItems } = useAnalysisJob(detailedAnalysis, toolsObj)
+
+function useAnalysisJob(analysis: Ref<AnalysisDetail | null>, tools: Ref<Record<string, GalaxyTool>>) {
+  const jobs = computed<RowAnalysisJob[] | undefined>(() => {
+    const analysisVal = toValue(analysis)
+    if (analysisVal && analysisVal?.jobs) {
+      return analysisVal.jobs
+    }
+    return undefined
+  })
+
+  const jobsAccordionItems = computed<AccordionItem[] | undefined>(() => {
+    const jobsVal = toValue(jobs)
+    const toolsVal = toValue(tools)
+    if (jobsVal && toolsVal) {
+      return jobsVal.map((job): AccordionItem => {
+        const item = toolsVal[job.tool_id]
+        return {
+
+          label: `${item?.name ?? 'no tool name'} - ${
+            item?.version ?? 'no tool version'
+          }`,
+          icon: 'i-mdi:tools',
+          value: String(job.step_id),
+        }
+      })
+    }
+    return undefined
+  })
+
+  const jobsMap = computed(() => {
+    const jobsVal = toValue(jobs) as RowAnalysisJob[]
+    if (jobsVal) {
+      const jobM: Record<string, RowAnalysisJob> = {}
+      for (const job of jobsVal) {
+        jobM[String(job.step_id)] = job
+      }
+      return jobM
+    }
+    return {}
+  })
+
+  const jobDetailsAccordionItems = computed(() => {
+    const jobsVal = toValue(jobs)
+    const perJobItems: Record<string, { details: AccordionItem[] }> = {}
+    if (jobsVal) {
+      for (const job of jobsVal) {
+        perJobItems[job.step_id] = {
+          details: [
+            { label: 'Parameters', slot: 'parameters' },
+            { label: 'Stdout', slot: 'stdout' },
+            { label: 'Stderr', slot: 'stderr' },
+          ],
+        }
+      }
+      return perJobItems
+    }
+    return undefined
+  })
+
+  return { jobs, jobsAccordionItems, jobsMap, jobDetailsAccordionItems }
+}
+
+function useAnalysisTools(tools: Ref<Record<string, GalaxyTool>>) {
+  function getToolParameters(stepId: string) {
+    const stepToolsVal = toValue(stepToTool)
+    const toolInputParametersVal = toValue(toolInputParameters)
+    const toolName = stepToolsVal[stepId]
+    if (toolName) {
+      return toolInputParametersVal[toolName]
+    }
+  }
+
+  const toolInputParameterComponent = computed(() => {
+    const toolsVal = toValue(tools)
+    if (toolsVal) {
+      return Object.entries(toolsVal).reduce(
+        (
+          acc: Record<string, Record<string, GalaxyToolInputComponent>>,
+          curr,
+        ) => {
+        // toolInput.
+          const [toolId, tool] = curr as [string, GalaxyTool]
+          const { inputComponentsObject } = useGalaxyToolInputComponent(
+            tool.inputs,
+          )
+          if (inputComponentsObject.value)
+            acc[toolId] = inputComponentsObject.value
+          return acc
+        },
+        {} as Record<string, Record<string, GalaxyToolInputComponent>>,
+      )
+    }
+    return undefined
+  })
+  function getParametersInputComponent(stepId: string) {
+    const toolName = toValue(stepToTool)[stepId]
+    const computedParameterInputComponentObjectVal = toValue(toolInputParameterComponent)
+    if (toolName && computedParameterInputComponentObjectVal) {
+      return computedParameterInputComponentObjectVal[toolName]
+    }
+  }
+
+  return { tools, getToolParameters, getParametersInputComponent }
+}
+
+watchEffect(() => {
+  const dbAnalysisVal = toValue(detailedAnalysis) as Record<string, any> | undefined
+  if (dbAnalysisVal) {
+    const { decodedParameters } = useGalaxyDecodeParameters(
+      dbAnalysisVal.parameters,
+    )
+    workflowParametersModel.value = toValue(decodedParameters)
+  }
+})
+</script>
+
+<template>
+  <UDashboardPanel id="history-panel" class="overflow-auto">
+    <UDashboardNavbar
+      v-if="detailedAnalysis"
+      :title="detailedAnalysis.name"
+      :toggle="true"
+    >
+      <template #leading>
+        <UButton icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5" @click="emits('close')" />
+      </template>
+
+      <template #right>
+        <!-- <GalaxyStatus v-if="history" :state="history.state" :size="30" /> -->
+
+        <UButtonGroup orientation="horizontal">
+          <UButton variant="subtle" active-variant="solid" label="Results" :to="`/analyses/${analysisId}/results`" />
+          <UButton variant="subtle" active-variant="solid" label="parameters" :to="`/analyses/${analysisId}`" :active="$route.name === 'analyses-analysisId'" />
+        </UButtonGroup>
+      </template>
+    </UDashboardNavbar>
+
+    <template v-if="pendingAnalysis">
+      <div class="hidden lg:flex flex-1 items-center justify-center">
+        <div class="flex items-center gap-4">
+          <USkeleton class="h-20 w-20 rounded-full" />
+          <div class="grid gap-2">
+            <USkeleton class="h-8 w-[250px]" />
+            <USkeleton class="h-8 w-[200px]" />
+          </div>
+        </div>
+      </div>
+    </template>
+    <slot v-else>
+      <UPageList divide>
+        <UPageCard title="Inputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+          <GalaxyAnalysisIoDatasets :items="inputs" />
+        </UPageCard>
+        <UPageCard v-if="jobs && toolsObj" title="Jobs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+          <UPageAccordion :default-value="[jobsAccordionItems?.[0]?.value ?? '0']" :items="jobsAccordionItems">
+            <template #leading="{ item }">
+              <div>
+                <GalaxyStatus :state="item?.value && jobsMap ? jobsMap[item.value]?.state : undefined" size="25" />
+              </div>
+            </template>
+            <template #body="{ item }">
+              <div v-if="jobDetailsAccordionItems && item.value" class="p-4">
+                <UPageAccordion :default-value="['0']" :items="jobDetailsAccordionItems[item.value]?.details">
+                  <template #parameters>
+                    <div
+                      v-if="
+                        workflowSteps
+                          && workflowParametersModel
+                          && item.value
+                      " class="p-2"
+                    >
+                      <GalaxyWorkflowStep
+                        variant="display" :workflow-step="workflowSteps[item.value]"
+                        :tool-parameters="getToolParameters(item.value)"
+                        :parameters-inputs-component="getParametersInputComponent(item.value)"
+                        :workflow-parameters-model=" workflowParametersModel[item.value] "
+                      />
+                    </div>
+                  </template>
+                  <template #stdout>
+                    <div class="p-1">
+                      <div class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
+                        <pre v-if="jobsMap" class="text-nowrap"> {{ jobsMap[item.value]?.stdout }}</pre>
+                      </div>
+                    </div>
+                  </template>
+                  <template #stderr>
+                    <div class="p-1">
+                      <div class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
+                        <pre v-if="jobsMap"> {{ jobsMap[item.value]?.stderr }}</pre>
+                      </div>
+                    </div>
+                  </template>
+                </UPageAccordion>
+              </div>
+            </template>
+          </UPageAccordion>
+        </UPageCard>
+        <UPageCard title="Outputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+          <GalaxyAnalysisIoDatasets :items="outputs" />
+        </UPageCard>
+      </UPageList>
+    </slot>
+  </UDashboardPanel>
+</template>

@@ -5,7 +5,7 @@ import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyT
 export interface GalaxyConditionalParameterProps
   extends GalaxyConditionalParameter {
   modelValue: { __current_case__: number } & Record<string, string>
-  variant: 'form' | 'display'
+  variant?: 'form' | 'display'
 }
 
 const props = withDefaults(defineProps<GalaxyConditionalParameterProps>(), {

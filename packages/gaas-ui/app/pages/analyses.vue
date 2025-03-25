@@ -1,39 +1,22 @@
 <script setup lang="ts">
-definePageMeta({
-  layout: 'dashboard',
-})
-const breadcrumbsItems = ref([
-  {
-    // label: 'Home',
-    disabled: false,
-    icon: 'lucide:house',
-    to: '/',
-  },
-  {
-    label: 'Analyses',
-    disabled: true,
-    to: '/analyses',
-  },
-])
+const { analysesList } = inject('analysesList')
+$fetch('/sync')
 </script>
 
 <template>
-  <UDashboardPanel id="analyses" title="Analyses">
-    <template #header>
-      <UDashboardNavbar title="Analyses" :ui="{ right: 'gap-3' }">
-        <template #leading>
-          <UDashboardSidebarCollapse />
-        </template>
-
-        <template #right>
-          <UButton icon="i-lucide-plus" size="md" class="rounded-full" to="/workflows" />
-        </template>
-      </UDashboardNavbar>
-    </template>
-    <template #body>
-      <UPage>
-        <NuxtPage :breadcrumbs-items="breadcrumbsItems" />
-      </UPage>
-    </template>
+  <UDashboardPanel id="analyses-list-panel" title="Analyses" :default-size="25" :min-size="20" :max-size="35" resizable>
+    <UDashboardNavbar title="Analyses">
+      <template #leading>
+        <UDashboardSidebarCollapse />
+      </template>
+      <template #trailing>
+        <UBadge :label="analysesList?.length ?? 0" variant="subtle" />
+      </template>
+      <template #right>
+        <UButton icon="i-lucide-plus" size="md" class="rounded-full" to="/workflows" />
+      </template>
+    </UDashboardNavbar>
+    <AnalysisListPanel />
   </UDashboardPanel>
+  <NuxtPage />
 </template>

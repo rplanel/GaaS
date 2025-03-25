@@ -1,9 +1,9 @@
-import type { SupabaseClient, User } from '@supabase/supabase-js'
 import type { Database } from '../../types/database'
-// import { createEventStream } from "h3";
+import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 import { eq } from 'drizzle-orm'
 import { defineEventHandler } from 'h3'
 import { analyses } from '../db/schema/galaxy/analyses'
+
 import { useDrizzle } from '../utils/drizzle'
 import { synchronizeAnalyses } from '../utils/grizzle/analyses'
 
@@ -24,27 +24,28 @@ function setIntervalWithPromise(target: Target) {
 }
 
 export default defineEventHandler(async (event) => {
-  if (event.context?.supabase) {
-    const { user, client }: { user: User, client: SupabaseClient<Database> } = event.context.supabase
-    let syncIntervalId: ReturnType<typeof setInterval> | undefined
-    // const body = await readBody(event)
-    if (!syncIntervalId) {
-      const setIntervalWithPromiseHandler = async (): Promise<void> => {
-        await synchronizeAnalyses(client, user.id)
-        const userAnalysesDb = await useDrizzle()
-          .select()
-          .from(analyses)
-          .where(eq(analyses.ownerId, user.id))
-        if (userAnalysesDb.every(d => d.isSync)) {
-          stopSync()
-        }
+  const client = await serverSupabaseClient<Database>(event)
+  const user = await serverSupabaseUser(event)
+  const maxRetries = 50
+  let retriesCount = 0
+  let syncIntervalId: ReturnType<typeof setInterval> | undefined
+  if (!syncIntervalId) {
+    const setIntervalWithPromiseHandler = async (): Promise<void> => {
+      await synchronizeAnalyses(client, user.id)
+      retriesCount++
+      const userAnalysesDb = await useDrizzle()
+        .select()
+        .from(analyses)
+        .where(eq(analyses.ownerId, user.id))
+      if (retriesCount >= maxRetries || userAnalysesDb.every(d => d.isSync)) {
+        stopSync()
       }
-      setIntervalWithPromiseHandler.isRunning = false
-      syncIntervalId = setInterval(setIntervalWithPromise(setIntervalWithPromiseHandler), 6000)
     }
+    setIntervalWithPromiseHandler.isRunning = false
+    syncIntervalId = setInterval(setIntervalWithPromise(setIntervalWithPromiseHandler), 6000)
+  }
 
-    function stopSync(): void {
-      clearInterval(syncIntervalId)
-    }
+  function stopSync(): void {
+    clearInterval(syncIntervalId)
   }
 })

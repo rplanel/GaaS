@@ -1,5 +1,7 @@
 import type { GalaxyClient } from 'blendtype'
+import type { Database } from '~/src/runtime/types/database'
 import { useRuntimeConfig } from '#imports'
+import { serverSupabaseClient } from '#supabase/server'
 import { createError, defineEventHandler, readBody } from 'h3'
 import { getCurrentUser } from '../../utils/grizzle/user'
 
@@ -19,9 +21,8 @@ export default defineEventHandler<
     const galaxyWorkflow = await $galaxy.workflows().exportWorkflow(galaxyId)
     const galaxyUser = await getCurrentUser(url, email)
 
-    if (galaxyUser && event.context?.supabase) {
-      const { client: supabaseClient } = event.context.supabase
-
+    const supabaseClient = await serverSupabaseClient<Database>(event)
+    if (galaxyUser) {
       const { error, data } = await supabaseClient
         .schema('galaxy')
         .from('workflows')

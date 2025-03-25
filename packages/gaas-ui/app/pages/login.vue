@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { SupabaseTypes } from '#build/types/database'
+import type { FormSubmitEvent } from '@nuxt/ui'
 
 import {
   createError,
@@ -14,20 +15,22 @@ import { z } from 'zod'
 
 type Database = SupabaseTypes.Database
 
+definePageMeta({
+  layout: 'auth',
+})
+useSeoMeta({
+  title: 'Login',
+})
+
+const toast = useToast()
 const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
 const { query } = useRoute()
-const showPassword = ref(false)
 const schema = z.object({
   email: z.string().email('Invalid email'),
   password: z.string().min(8, 'Must be at least 8 characters'),
 })
 type Schema = z.output<typeof schema>
-
-const state = reactive<Partial<Schema>>({
-  email: undefined,
-  password: undefined,
-})
 
 watchEffect(async () => {
   if (user.value) {
@@ -36,11 +39,12 @@ watchEffect(async () => {
     })
   }
 })
-async function handleSignIn() {
+async function handleSignIn(e: FormSubmitEvent<Schema>) {
+  const { data: { email, password } } = e
   const queryParams
     = query.redirectTo !== undefined ? `?redirectTo=${query.redirectTo}` : ''
   const redirectTo = `/confirm${queryParams}`
-  const { email, password } = state
+  // const { email, password } = state
   if (email && password) {
     const { error, data } = await supabase.auth.signInWithPassword({
       email,
@@ -52,33 +56,87 @@ async function handleSignIn() {
     }
 
     if (error) {
-      createError('Unable to sign in')
+      throw createError('Unable to sign in')
     }
   }
 }
+async function signInWithGithub() {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'github',
+    options: {
+      redirectTo: '/confirm',
+    },
+  })
+  if (error) {
+    throw createError('Unable to sign in with GitHub')
+  }
+}
+const fields = ref([
+  {
+    name: 'email',
+    type: 'text' as const,
+    label: 'Email',
+    placeholder: 'Enter your email',
+    required: true,
+  },
+  {
+    name: 'password',
+    label: 'Password',
+    type: 'password' as const,
+    placeholder: 'Enter your password',
+  },
+])
 
-async function handleSignUp() {
-  // const queryParams
-  //   = query.redirectTo !== undefined ? `?redirectTo=${query.redirectTo}` : ''
-  const redirectTo = `${window.location.origin}`
-  const { email, password } = state
-  if (email && password) {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectTo,
-      },
-    })
-    if (error) {
-      createError('Unable to sign up')
-    }
-  }
-}
+const providers = [
+  // {
+//   label: 'Google',
+//   icon: 'i-simple-icons-google',
+//   onClick: () => {
+//     toast.add({ title: 'Google', description: 'Login with Google' })
+//   },
+// },
+  {
+    label: 'GitHub',
+    icon: 'i-simple-icons-github',
+    onClick: () => {
+      toast.add({ title: 'GitHub', description: 'Login with GitHub' })
+      signInWithGithub()
+    },
+  },
+]
 </script>
 
 <template>
-  <UCard>
+  <UAuthForm
+    class="max-w-md"
+    icon="i-lucide-user"
+    title="Login"
+    :schema
+    description="Enter your credentials to access your account."
+    :fields="fields"
+    :providers
+    @submit="handleSignIn"
+  >
+    <template #description>
+      Don't have an account? <ULink
+        to="/signup"
+        class="text-primary-500 font-medium"
+      >
+        Sign up
+      </ULink>.
+    </template>
+
+    <template #password-hint>
+      <ULink
+        to="/"
+        class="text-primary-500 font-medium"
+      >
+        Forgot password?
+      </ULink>
+    </template>
+  </UAuthForm>
+
+  <!-- <UCard>
     <template #header>
       <h2 class="text-lg font-bold">
         Log in to
@@ -107,5 +165,5 @@ async function handleSignUp() {
         Sign Up
       </UButton>
     </UForm>
-  </UCard>
+  </UCard> -->
 </template>

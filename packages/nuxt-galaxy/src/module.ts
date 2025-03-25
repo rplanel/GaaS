@@ -3,7 +3,6 @@ import process from 'node:process'
 import {
   addImports,
   addImportsDir,
-  addRouteMiddleware,
   addServerHandler,
   addServerImportsDir,
   addServerPlugin,
@@ -115,8 +114,8 @@ export default defineNuxtModule<ModuleOptions>({
       redirectOptions: {
         login: '/login',
         callback: '/confirm',
-        include: ['/admin(/*)?'],
-        exclude: [],
+        include: [],
+        exclude: ['/', '/login', '/signup', '/confirm'],
         cookieRedirect: true,
       },
       clientOptions: {
@@ -158,18 +157,18 @@ export default defineNuxtModule<ModuleOptions>({
     addServerImportsDir(resolver.resolve('./runtime/server/db'))
 
     // add route middleware
-    addRouteMiddleware({
-      name: 'auth',
-      path: resolver.resolve('./runtime/app/middleware/auth'),
-    })
+    // addRouteMiddleware({
+    //   name: 'auth',
+    //   path: resolver.resolve('./runtime/app/middleware/auth'),
+    // })
 
     // add server routes
 
     // server middleware
-    addServerHandler({
-      middleware: true,
-      handler: resolver.resolve('./runtime/server/middleware/supabase'),
-    })
+    // addServerHandler({
+    //   middleware: true,
+    //   handler: resolver.resolve('./runtime/server/middleware/supabase'),
+    // })
 
     // Galaxy
     addServerHandler({
@@ -242,7 +241,7 @@ export default defineNuxtModule<ModuleOptions>({
     /*********************/
     // Add server plugin
     /*********************/
-    addServerPlugin(resolver.resolve('./runtime/server/plugins/galaxy'))
+    addServerPlugin(resolver.resolve('./runtime/server/plugins/galaxy.server'))
 
     // Types
 
