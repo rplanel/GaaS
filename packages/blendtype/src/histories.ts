@@ -1,7 +1,27 @@
 import type { GalaxyClient } from './GalaxyClient'
 import type { GalaxyHistoryDetailed, GalaxyUploadedDataset, HDASummary } from './types'
+import { Effect } from 'effect'
+import { GalaxyFetch, HttpError } from './GalaxyClient'
 import { delay } from './helpers'
 import { DatasetsTerminalStates } from './types'
+
+export function createHistory(name: string) {
+  return Effect.gen(function* (_) {
+    const fetchApi = yield* _(GalaxyFetch)
+    const history = Effect.tryPromise({
+      try: () => fetchApi<GalaxyHistoryDetailed>('api/histories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `name=${name}`,
+      }),
+      catch: _caughtError => new HttpError({ message: `Error creating history: ${_caughtError}` }),
+    })
+    return yield* _(history)
+  }).pipe(
+    Effect.provide(GalaxyFetch.Live),
+    Effect.runPromise,
+  )
+}
 
 export class Histories {
   private static instance: Histories

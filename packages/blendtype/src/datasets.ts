@@ -1,6 +1,9 @@
 import type { GalaxyClient } from './GalaxyClient'
 import type { GalaxyDataset } from './types'
 
+import { Effect } from 'effect'
+import { getErrorMessage } from './errors'
+
 export class Datasets {
   private static instance: Datasets
   #client: GalaxyClient
@@ -17,12 +20,15 @@ export class Datasets {
     return this.instance
   }
 
-  public async getDataset(datasetId: string, historyId: string): Promise<GalaxyDataset> {
-    return this.#client.api(
-      `api/histories/${historyId}/contents/${datasetId}`,
-      {
-        method: 'GET',
-      },
-    )
+  public getDataset(datasetId: string, historyId: string) {
+    return Effect.tryPromise({
+      try: () => this.#client.api<GalaxyDataset>(
+        `api/histories/${historyId}/contents/${datasetId}`,
+        {
+          method: 'GET',
+        },
+      ),
+      catch: _caughtError => new Error(`Error getting dataset: ${getErrorMessage(_caughtError)}`),
+    })
   }
 }
