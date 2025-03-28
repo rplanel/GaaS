@@ -1,28 +1,24 @@
-import type { GalaxyClient } from './GalaxyClient'
 import type { ShowFullJobResponse } from './types'
+import { Effect } from 'effect'
+import { runWithConfig } from './config'
+import { GalaxyFetch, HttpError } from './galaxy'
 
-export class Jobs {
-  private static instance: Jobs
-  #client: GalaxyClient
-
-  private constructor(client: GalaxyClient) {
-    this.#client = client
-  }
-
-  static getInstance(client: GalaxyClient): Jobs {
-    if (this.instance) {
-      return this.instance
-    }
-    this.instance = new Jobs(client)
-    return this.instance
-  }
-
-  public async getJob(jobId: string): Promise<ShowFullJobResponse> {
-    return this.#client.api(
-      `api/jobs/${jobId}?full=true`,
-      {
+export function getJobEffect(jobId: string) {
+  return Effect.gen(function* (_) {
+    const fetchApi = yield* _(GalaxyFetch)
+    const job = Effect.tryPromise({
+      try: () => fetchApi<ShowFullJobResponse>(`api/jobs/${jobId}?full=true`, {
         method: 'GET',
-      },
-    )
-  }
+      }),
+      catch: _caughtError => new HttpError({ message: `Error getting job ${jobId}: ${_caughtError}` }),
+    })
+    return yield* _(job)
+  })
+}
+
+export function getJob(jobId: string) {
+  return getJobEffect(jobId).pipe(
+    Effect.provide(GalaxyFetch.Live),
+    runWithConfig,
+  )
 }

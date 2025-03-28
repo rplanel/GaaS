@@ -1,14 +1,7 @@
-import type { $Fetch } from 'ofetch'
 import type { GalaxyVersion } from './types'
 import { Context, Data, Effect, Layer } from 'effect'
 import { $fetch } from 'ofetch'
 import { BlendTypeConfig, runWithConfig } from './config'
-import { Datasets } from './datasets'
-import { Histories } from './histories'
-import { Invocations } from './invocations'
-import { Jobs } from './jobs'
-import { Tools } from './tools'
-import { Workflows } from './workflows'
 
 /**
  * GalaxyFetch is a service that provides a fetch function that is configured with the Galaxy API key.
@@ -25,7 +18,6 @@ import { Workflows } from './workflows'
  * @example
  * ```ts
  * import { Effect } from 'effect'
- * import { GalaxyFetch } from './GalaxyClient'
  *
  * const myEffect = Effect.sync(() => console.log('Using GalaxyFetch layer'))
  *   .pipe(Effect.provide(GalaxyFetch.Live))
@@ -76,62 +68,4 @@ export function getVersion() {
       Effect.provide(GalaxyFetch.Live),
       runWithConfig,
     )
-}
-
-export class GalaxyClient {
-  private static instance: GalaxyClient
-  #apiKey: string
-  url: string
-  api: $Fetch
-
-  private constructor(apiKey: string, url: string) {
-    this.#apiKey = apiKey
-    this.url = url
-    const fetch = $fetch.create({
-      headers: {
-        'x-api-key': apiKey,
-        'accept': 'application/json, text/plain, */*',
-        'Content-Type': 'application/json',
-      },
-
-      baseURL: this.url,
-    })
-    this.api = fetch
-  }
-
-  static getInstance(apiKey: string, url: string): GalaxyClient {
-    if (this.instance) {
-      return this.instance
-    }
-    this.instance = new GalaxyClient(apiKey, url)
-    return this.instance
-  }
-
-  public async getVersion(): Promise<GalaxyVersion> {
-    return await this.api('/api/version')
-  }
-
-  public histories(): Histories {
-    return Histories.getInstance(this)
-  }
-
-  public workflows(): Workflows {
-    return Workflows.getInstance(this)
-  }
-
-  public tools(): Tools {
-    return Tools.getInstance(this)
-  }
-
-  public invocations(): Invocations {
-    return Invocations.getInstance(this)
-  }
-
-  public jobs(): Jobs {
-    return Jobs.getInstance(this)
-  }
-
-  public datasets(): Datasets {
-    return Datasets.getInstance(this)
-  }
 }

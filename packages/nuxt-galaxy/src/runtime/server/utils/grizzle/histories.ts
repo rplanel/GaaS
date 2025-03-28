@@ -29,8 +29,6 @@ export async function addHistory(name: string, ownerId: string): Promise<{
   const currentUser = await getCurrentUser(url, email)
   if (currentUser) {
     const { user } = currentUser
-    // get the galaxy client
-    // const galaxyClient = GalaxyClient.getInstance(apiKey, url)
     const galaxyHistory = await createHistory(name)
     if (galaxyHistory?.id) {
       try {

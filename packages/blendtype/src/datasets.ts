@@ -1,9 +1,7 @@
-import type { GalaxyClient } from './GalaxyClient'
 import type { GalaxyDataset } from './types'
-
 import { Effect } from 'effect'
 import { runWithConfig } from './config'
-import { GalaxyFetch, HttpError } from './GalaxyClient'
+import { GalaxyFetch, HttpError } from './galaxy'
 
 export function getDatasetEffect(datasetId: string, historyId: string) {
   return Effect.gen(function* (_) {
@@ -26,21 +24,4 @@ export function getDataset(datasetId: string, historyId: string) {
     Effect.provide(GalaxyFetch.Live),
     runWithConfig,
   )
-}
-
-export class Datasets {
-  private static instance: Datasets
-  #client: GalaxyClient
-
-  private constructor(client: GalaxyClient) {
-    this.#client = client
-  }
-
-  static getInstance(client: GalaxyClient): Datasets {
-    if (this.instance) {
-      return this.instance
-    }
-    this.instance = new Datasets(client)
-    return this.instance
-  }
 }

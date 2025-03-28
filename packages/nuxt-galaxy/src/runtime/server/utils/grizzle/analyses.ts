@@ -1,8 +1,7 @@
 import type { serverSupabaseClient } from '#supabase/server'
 import type { Datamap, GalaxyInvocation, GalaxyInvocationIO, GalaxyWorkflowInput, GalaxyWorkflowParameters, InvocationState, InvocationTerminalState } from 'blendtype'
 import type { Database } from '../../../types/database'
-import { useRuntimeConfig } from '#imports'
-import { deleteHistory, GalaxyClient, getDataset, InvocationTerminalStates } from 'blendtype'
+import { deleteHistory, getDataset, getInvocation, InvocationTerminalStates, invokeWorkflow } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { analyses } from '../../db/schema/galaxy/analyses'
 import { analysisInputs } from '../../db/schema/galaxy/analysisInputs'
@@ -26,9 +25,7 @@ export async function runAnalysis(
     inputIds: number[] | undefined
 
   }> {
-  const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
-  const galaxyClient = GalaxyClient.getInstance(apiKey, url)
-  const galaxyInvocation = await galaxyClient.workflows().invokeWorkflow(
+  const galaxyInvocation = await invokeWorkflow(
     galaxyHistoryId,
     galaxyWorkflowId,
     inputs,
@@ -43,7 +40,7 @@ export async function runAnalysis(
     inputIds: undefined,
 
   }
-  const invocation = await galaxyClient.invocations().getInvocation(galaxyInvocation.id)
+  const invocation = await getInvocation(galaxyInvocation.id)
   const values = {
     name: analysisName,
     historyId,
@@ -102,8 +99,6 @@ export async function synchronizeAnalyses(supabaseClient: serverSupabaseClient<D
 }
 
 export async function synchronizeAnalysis(analysisId: number, supabaseClient: serverSupabaseClient<Database>, ownerId: string): Promise<void> {
-  const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
-  const galaxyClient = GalaxyClient.getInstance(apiKey, url)
   const invocationDb = await useDrizzle()
     .select()
     .from(analyses)
@@ -119,7 +114,7 @@ export async function synchronizeAnalysis(analysisId: number, supabaseClient: se
 
   if (!isAnalysisTerminalState(invocationDb.analyses.state)) {
     const galaxyInvocationId = invocationDb.analyses.galaxyId
-    const invocation = await galaxyClient.invocations().getInvocation(galaxyInvocationId)
+    const invocation = await getInvocation(galaxyInvocationId)
     if (invocation.state !== invocationDb.analyses.state) {
       await useDrizzle()
         .update(analyses)
