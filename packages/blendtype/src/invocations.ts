@@ -1,29 +1,25 @@
-import type { GalaxyClient } from './GalaxyClient'
-
 import type { GalaxyInvocation } from './types'
 
-export class Invocations {
-  #client: GalaxyClient
-  private static instance: Invocations
+import { Effect } from 'effect'
+import { runWithConfig } from './config'
+import { GalaxyFetch, HttpError } from './galaxy'
 
-  private constructor(client: GalaxyClient) {
-    this.#client = client
-  }
-
-  static getInstance(client: GalaxyClient): Invocations {
-    if (this.instance) {
-      return this.instance
-    }
-    this.instance = new Invocations(client)
-    return this.instance
-  }
-
-  public async getInvocation(invocationId: string): Promise<GalaxyInvocation> {
-    return this.#client.api(
-      `api/invocations/${invocationId}`,
-      {
+export function getInvocationEffect(invocationId: string) {
+  return Effect.gen(function* (_) {
+    const fetchApi = yield* _(GalaxyFetch)
+    const invocation = Effect.tryPromise({
+      try: () => fetchApi<GalaxyInvocation>(`api/invocations/${invocationId}`, {
         method: 'GET',
-      },
-    )
-  }
+      }),
+      catch: _caughtError => new HttpError({ message: `Error getting invocation ${invocationId}: ${_caughtError}` }),
+    })
+    return yield* _(invocation)
+  })
+}
+
+export function getInvocation(invocationId: string) {
+  return getInvocationEffect(invocationId).pipe(
+    Effect.provide(GalaxyFetch.Live),
+    runWithConfig,
+  )
 }

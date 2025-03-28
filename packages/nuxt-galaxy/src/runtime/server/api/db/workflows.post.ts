@@ -1,7 +1,7 @@
-import type { GalaxyClient } from 'blendtype'
 import type { Database } from '~/src/runtime/types/database'
 import { useRuntimeConfig } from '#imports'
 import { serverSupabaseClient } from '#supabase/server'
+import { exportWorkflow } from 'blendtype'
 import { createError, defineEventHandler, readBody } from 'h3'
 import { getCurrentUser } from '../../utils/grizzle/user'
 
@@ -17,8 +17,7 @@ export default defineEventHandler<
     const body = await readBody(event)
     const { galaxyId } = body
     const { public: { galaxy: { url } }, galaxy: { email } } = useRuntimeConfig()
-    const $galaxy: GalaxyClient = event.context?.galaxy
-    const galaxyWorkflow = await $galaxy.workflows().exportWorkflow(galaxyId)
+    const galaxyWorkflow = await exportWorkflow(galaxyId)
     const galaxyUser = await getCurrentUser(url, email)
 
     const supabaseClient = await serverSupabaseClient<Database>(event)

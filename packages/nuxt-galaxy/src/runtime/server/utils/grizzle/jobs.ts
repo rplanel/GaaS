@@ -1,8 +1,7 @@
 import type { serverSupabaseClient } from '#supabase/server'
 import type { JobState, JobTerminalState } from 'blendtype'
 import type { Database } from '../../../types/database'
-import { useRuntimeConfig } from '#imports'
-import { GalaxyClient, JobTerminalStates } from 'blendtype'
+import { getJob, JobTerminalStates } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { jobs } from '../../db/schema/galaxy/jobs'
 import { useDrizzle } from '../drizzle'
@@ -25,10 +24,8 @@ export async function getOrCreateJob(analysisId: number, galaxyJobId: string, st
   if (jobExist)
     return jobExist
 
-  const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
   // get the galaxy client
-  const galaxyClient = GalaxyClient.getInstance(apiKey, url)
-  const galaxyJob = await galaxyClient.jobs().getJob(galaxyJobId)
+  const galaxyJob = await getJob(galaxyJobId)
   const { state, tool_id: toolId, create_time: createdAt, stderr, stdout, exit_code: exitCode } = galaxyJob
   return await useDrizzle()
     .insert(jobs)
@@ -62,8 +59,6 @@ export async function synchronizeJob(
   ownerId: string,
   supabase: serverSupabaseClient<Database>,
 ): Promise<void> {
-  const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
-  const galaxyClient = GalaxyClient.getInstance(apiKey, url)
   const jobDb = await getOrCreateJob(analysisId, galaxyJobId, stepId, ownerId)
   const isSync = await isJobSync(jobDb.id, galaxyDatasetIds, ownerId)
 
@@ -73,7 +68,7 @@ export async function synchronizeJob(
   const isJobDbterminal = isJobTerminalState(jobDb.state)
 
   if (!isJobDbterminal) {
-    const galaxyJob = await galaxyClient.jobs().getJob(galaxyJobId)
+    const galaxyJob = await getJob(galaxyJobId)
     if (jobDb.state !== galaxyJob.state) {
       await useDrizzle()
         .update(jobs)

@@ -1,28 +1,27 @@
-import type { GalaxyClient } from './GalaxyClient'
 import type { GalaxyTool } from './types'
+import { Effect } from 'effect'
+import { runWithConfig } from './config'
+import { GalaxyFetch, HttpError } from './galaxy'
 
-export class Tools {
-  private static instance: Tools
-  #client: GalaxyClient
+export function getToolEffect(toolId: string, version: string) {
+  return Effect.gen(function* (_) {
+    const fetchApi = yield* _(GalaxyFetch)
+    const tool = Effect.tryPromise({
+      try: () => fetchApi<GalaxyTool>(
+        `api/tools/${toolId}?io_details=true&version=${version}`,
+        {
+          method: 'GET',
+        },
+      ),
+      catch: _caughtError => new HttpError({ message: `Error getting tool ${toolId}: ${_caughtError}` }),
+    })
+    return yield* _(tool)
+  })
+}
 
-  private constructor(client: GalaxyClient) {
-    this.#client = client
-  }
-
-  static getInstance(client: GalaxyClient): Tools {
-    if (this.instance) {
-      return this.instance
-    }
-    this.instance = new Tools(client)
-    return this.instance
-  }
-
-  public async getTool(toolId: string, version: string): Promise<GalaxyTool> {
-    return this.#client.api(
-      `api/tools/${toolId}?io_details=true&version=${version}`,
-      {
-        method: 'GET',
-      },
-    )
-  }
+export function getTool(toolId: string, version: string) {
+  return getToolEffect(toolId, version).pipe(
+    Effect.provide(GalaxyFetch.Live),
+    runWithConfig,
+  )
 }

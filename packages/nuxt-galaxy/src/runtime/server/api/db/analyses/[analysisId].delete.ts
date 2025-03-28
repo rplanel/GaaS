@@ -1,5 +1,4 @@
-import type { GalaxyClient } from 'blendtype'
-import { getErrorMessage, getStatusCode } from 'blendtype'
+import { deleteHistory, getErrorMessage, getStatusCode } from 'blendtype'
 import { eq } from 'drizzle-orm'
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { analyses } from '../../../db/schema/galaxy/analyses'
@@ -10,8 +9,7 @@ import { takeUniqueOrThrow } from '../../../utils/grizzle/helper'
 export default defineEventHandler(
   async (event) => {
     const analysisId = (getRouterParam(event, 'analysisId'))
-    const $galaxy: GalaxyClient = event.context?.galaxy
-    if (analysisId && $galaxy) {
+    if (analysisId) {
       try {
         const analysisDb = await useDrizzle()
           .select()
@@ -21,7 +19,7 @@ export default defineEventHandler(
           .then(takeUniqueOrThrow)
 
         // delete galaxy history
-        await $galaxy.histories().deleteHistory(analysisDb.histories.galaxyId)
+        await deleteHistory(analysisDb.histories.galaxyId)
         await useDrizzle().delete(histories).where(eq(histories.id, analysisDb.histories.id)).returning()
         return analysisDb
       }

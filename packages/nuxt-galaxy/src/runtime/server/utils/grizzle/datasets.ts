@@ -3,7 +3,7 @@ import type { Datamap, DatasetState, DatasetTerminalState } from 'blendtype'
 
 import type { Database } from '../../../types/database'
 import { useRuntimeConfig } from '#imports'
-import { DatasetsTerminalStates, GalaxyClient } from 'blendtype'
+import { DatasetsTerminalStates, uploadFileToHistory } from 'blendtype'
 import { parseFilename, parseURL, stringifyParsedURL, withoutProtocol } from 'ufo'
 import { datasets } from '../../db/schema/galaxy/datasets.js'
 import { objects } from '../../db/schema/storage/objects.js'
@@ -21,8 +21,7 @@ export async function uploadDatasets(
     galaxyId: string
     insertedId: number
   } | undefined)[]> {
-  const { public: { galaxy: { url } }, galaxy: { apiKey, localDocker } } = useRuntimeConfig()
-  const galaxyClient = GalaxyClient.getInstance(apiKey, url)
+  const { galaxy: { localDocker } } = useRuntimeConfig()
   const datasetEntries = Object.entries(datamap)
   return Promise.all(
     datasetEntries.map(async ([step, { name, storage_object_id: storageObjectId }]) => {
@@ -49,7 +48,7 @@ export async function uploadDatasets(
 
             // sanitizedSignedUrl = 'https://dl.pasteur.fr/fop/XPbIC5YS/ESCO001.0523.00470.prt'
             const filename = parseFilename(sanitizedSignedUrl, { strict: false })
-            return galaxyClient.histories().uploadFile(
+            return uploadFileToHistory(
               galaxyHistoryId,
               sanitizedSignedUrl,
               filename,
