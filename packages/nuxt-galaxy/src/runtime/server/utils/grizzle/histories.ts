@@ -2,7 +2,7 @@ import type { serverSupabaseClient } from '#supabase/server'
 import type { DatasetTerminalState, HistoryState } from 'blendtype'
 import type { Database } from '../../../types/database'
 import { useRuntimeConfig } from '#imports'
-import { DatasetsTerminalStates, GalaxyClient } from 'blendtype'
+import { createHistory, DatasetsTerminalStates, deleteHistory, getHistory, initializeGalaxyClient } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 
 import { createError } from 'h3'
@@ -24,12 +24,14 @@ export async function addHistory(name: string, ownerId: string): Promise<{
   galaxyId: string
 } | undefined> {
   const { public: { galaxy: { url } }, galaxy: { apiKey, email } } = useRuntimeConfig()
+  initializeGalaxyClient({ apiKey, url })
+
   const currentUser = await getCurrentUser(url, email)
   if (currentUser) {
     const { user } = currentUser
     // get the galaxy client
-    const galaxyClient = GalaxyClient.getInstance(apiKey, url)
-    const galaxyHistory = await galaxyClient.histories().createHistory(name)
+    // const galaxyClient = GalaxyClient.getInstance(apiKey, url)
+    const galaxyHistory = await createHistory(name)
     if (galaxyHistory?.id) {
       try {
         const historiesDb = await useDrizzle().insert(histories).values(
@@ -58,7 +60,7 @@ export async function addHistory(name: string, ownerId: string): Promise<{
       catch (error) {
         // delete galaxy history
         console.error(error)
-        await galaxyClient.histories().deleteHistory(galaxyHistory.id)
+        await deleteHistory(galaxyHistory.id)
       }
     }
     else {
@@ -78,7 +80,7 @@ export async function addHistory(name: string, ownerId: string): Promise<{
 
 export async function synchronizeHistory(historyId: number, ownerId: string, supabase: serverSupabaseClient<Database>): Promise<void> {
   const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
-  const galaxyClient = GalaxyClient.getInstance(apiKey, url)
+  initializeGalaxyClient({ apiKey, url })
   const historyDb = await useDrizzle()
     .select()
     .from(histories)
@@ -117,7 +119,7 @@ export async function synchronizeHistory(historyId: number, ownerId: string, sup
     await synchronizeJobs(historyDb.analyses.id, historyDb.histories.id, ownerId, supabase)
     // Make a Galaxy request only if the state is not terminal
     if (!isHistoryTerminalState(historyDb.histories.state)) {
-      const galaxyHistory = await galaxyClient.histories().getHistory(galaxyHistoryId)
+      const galaxyHistory = await getHistory(galaxyHistoryId)
       if (historyDb.histories.state !== galaxyHistory.state) {
         await useDrizzle()
           .update(histories)

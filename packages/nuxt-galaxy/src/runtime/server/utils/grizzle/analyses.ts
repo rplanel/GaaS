@@ -2,7 +2,7 @@ import type { serverSupabaseClient } from '#supabase/server'
 import type { Datamap, GalaxyInvocation, GalaxyInvocationIO, GalaxyWorkflowInput, GalaxyWorkflowParameters, InvocationState, InvocationTerminalState } from 'blendtype'
 import type { Database } from '../../../types/database'
 import { useRuntimeConfig } from '#imports'
-import { GalaxyClient, InvocationTerminalStates } from 'blendtype'
+import { deleteHistory, GalaxyClient, InvocationTerminalStates } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { analyses } from '../../db/schema/galaxy/analyses'
 import { analysisInputs } from '../../db/schema/galaxy/analysisInputs'
@@ -71,7 +71,7 @@ export async function runAnalysis(
       Object.entries(inputs).map(([_step, { dbid, id: galaxyDatasetId }]) => {
         if (dbid) {
           // get dataset states
-          return galaxyClient.datasets().getDataset(galaxyDatasetId, galaxyHistoryId).then(({ state }) => {
+          return getDataset(galaxyDatasetId, galaxyHistoryId).then(({ state }) => {
             return useDrizzle().insert(analysisInputs).values({
               analysisId: insertedAnalysisId,
               datasetId: dbid,
@@ -136,7 +136,7 @@ export async function synchronizeAnalysis(analysisId: number, supabaseClient: se
         .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
         .returning({ updatedState: analyses.state })
         .then(takeUniqueOrThrow)
-      await galaxyClient.histories().deleteHistory(invocationDb.histories.galaxyId)
+      await deleteHistory(invocationDb.histories.galaxyId)
     }
   }
 }

@@ -1,3 +1,6 @@
+export * from './config.js'
+export * from './datasets'
 export * from './errors.js'
 export * from './GalaxyClient'
+export * from './histories'
 export * from './types'

@@ -1,9 +1,13 @@
-import type { GalaxyClient } from 'blendtype'
+import { useRuntimeConfig } from '#imports'
+import { createHistory, initializeGalaxyClient } from 'blendtype'
+
 import { defineEventHandler, readBody } from 'h3'
 
 export default defineEventHandler(async (event) => {
+  const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
+
   const body = await readBody(event)
-  const $galaxy: GalaxyClient = event.context?.galaxy
-  const galaxyHistory = await $galaxy.histories().createHistory(body.name)
-  return galaxyHistory
+  initializeGalaxyClient({ apiKey, url })
+
+  return createHistory(body.name)
 })

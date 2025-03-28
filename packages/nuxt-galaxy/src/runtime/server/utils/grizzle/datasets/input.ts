@@ -1,6 +1,6 @@
 import type { serverSupabaseClient } from '#supabase/server'
-import { createError, useRuntimeConfig } from '#imports'
-import { GalaxyClient } from 'blendtype'
+import { createError } from '#imports'
+import { downloadDataset, getDataset } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { analysisInputs } from '../../../db/schema/galaxy/analysisInputs'
 import { datasets } from '../../../db/schema/galaxy/datasets'
@@ -35,9 +35,6 @@ export async function getOrCreateInputDataset(
   if (datasetDb)
     return datasetDb.analysis_inputs
 
-  const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
-  // get the galaxy client
-  const galaxyClient = GalaxyClient.getInstance(apiKey, url)
   const historyDb = await useDrizzle()
     .select()
     .from(histories)
@@ -46,14 +43,13 @@ export async function getOrCreateInputDataset(
       eq(histories.ownerId, ownerId),
     ))
     .then(takeUniqueOrThrow)
-  const galaxyDataset = await galaxyClient.datasets().getDataset(galaxyDatasetId, historyDb.galaxyId)
+  const galaxyDataset = await getDataset(galaxyDatasetId, historyDb.galaxyId)
   const isDatasetTerminal = isDatasetTerminalState(galaxyDataset.state)
   if (isDatasetTerminal) {
-    const datasetBlob = await galaxyClient.histories()
-      .downloadDataset(
-        historyDb.galaxyId,
-        galaxyDatasetId,
-      )
+    const datasetBlob = await downloadDataset(
+      historyDb.galaxyId,
+      galaxyDatasetId,
+    )
     if (datasetBlob) {
       const { data, error } = await supabase.storage
         .from('analysis_files')
@@ -105,8 +101,6 @@ export async function synchronizeInputDataset(
   ownerId: string,
 ): Promise<void> {
   const datasetDb = await getOrCreateInputDataset(galaxyDatasetId, analysisId, historyId, supabase, ownerId)
-  const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
-  const galaxyClient = GalaxyClient.getInstance(apiKey, url)
   if (datasetDb) {
     const isSync = await isInputDatasetSync(galaxyDatasetId, ownerId)
     if (isSync)
@@ -121,7 +115,7 @@ export async function synchronizeInputDataset(
           eq(histories.ownerId, ownerId),
         ))
         .then(takeUniqueOrThrow)
-      const galaxyDataset = await galaxyClient.datasets().getDataset(galaxyDatasetId, historyDb.galaxyId)
+      const galaxyDataset = await getDataset(galaxyDatasetId, historyDb.galaxyId)
       if (datasetDb.state !== galaxyDataset.state) {
         await useDrizzle()
           .update(analysisInputs)
