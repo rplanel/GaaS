@@ -1,6 +1,5 @@
-import type { serverSupabaseClient } from '#supabase/server'
 import type { Datamap, GalaxyInvocation, GalaxyInvocationIO, GalaxyWorkflowInput, GalaxyWorkflowParameters, InvocationState, InvocationTerminalState } from 'blendtype'
-import type { Database } from '../../../types/database'
+import type { EventHandlerRequest, H3Event } from 'h3'
 import { deleteHistory, getDataset, getInvocation, InvocationTerminalStates, invokeWorkflow } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { analyses } from '../../db/schema/galaxy/analyses'
@@ -87,18 +86,18 @@ export async function runAnalysis(
   return results
 }
 
-export async function synchronizeAnalyses(supabaseClient: serverSupabaseClient<Database>, ownerId: string): Promise<void[]> {
+export async function synchronizeAnalyses(event: H3Event<EventHandlerRequest>, ownerId: string): Promise<void[]> {
   const analysesDb = await useDrizzle()
     .select()
     .from(analyses)
     .where(eq(analyses.ownerId, ownerId))
 
   return Promise.all(analysesDb.map(({ id: analysisId }) => {
-    return synchronizeAnalysis(analysisId, supabaseClient, ownerId)
+    return synchronizeAnalysis(analysisId, event, ownerId)
   }))
 }
 
-export async function synchronizeAnalysis(analysisId: number, supabaseClient: serverSupabaseClient<Database>, ownerId: string): Promise<void> {
+export async function synchronizeAnalysis(analysisId: number, event: H3Event<EventHandlerRequest>, ownerId: string): Promise<void> {
   const invocationDb = await useDrizzle()
     .select()
     .from(analyses)
@@ -110,7 +109,7 @@ export async function synchronizeAnalysis(analysisId: number, supabaseClient: se
   if (invocationDb.analyses.isSync)
     return
 
-  await synchronizeHistory(invocationDb.histories.id, ownerId, supabaseClient)
+  await synchronizeHistory(invocationDb.histories.id, ownerId, event)
 
   if (!isAnalysisTerminalState(invocationDb.analyses.state)) {
     const galaxyInvocationId = invocationDb.analyses.galaxyId

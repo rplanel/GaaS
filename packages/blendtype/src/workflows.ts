@@ -5,8 +5,8 @@ import { GalaxyFetch, HttpError } from './galaxy'
 import { galaxyWorkflowExportSchema } from './types'
 
 export function getWorkflowEffect(workflowId: string) {
-  return Effect.gen(function* (_) {
-    const fetchApi = yield* _(GalaxyFetch)
+  return Effect.gen(function* () {
+    const fetchApi = yield* GalaxyFetch
     const workflow = Effect.tryPromise({
       try: () => fetchApi<GalaxyWorkflow>(
         `api/workflows/${workflowId}`,
@@ -16,7 +16,7 @@ export function getWorkflowEffect(workflowId: string) {
       ),
       catch: _caughtError => new HttpError({ message: `Error getting workflow ${workflowId}: ${_caughtError}` }),
     })
-    return yield* _(workflow)
+    return yield* workflow
   })
 }
 
@@ -28,8 +28,8 @@ export function getWorkflow(workflowId: string) {
 }
 
 export function exportWorkflowEffect(workflowId: string, style: 'export' | 'run' | 'editor' | 'instance' = 'export') {
-  return Effect.gen(function* (_) {
-    const fetchApi = yield* _(GalaxyFetch)
+  return Effect.gen(function* () {
+    const fetchApi = yield* GalaxyFetch
     const workflowEffect = Effect.tryPromise({
       try: () => fetchApi<rawGalaxyWorkflowExport>(
         `api/workflows/${workflowId}/download?style=${style}`,
@@ -43,7 +43,7 @@ export function exportWorkflowEffect(workflowId: string, style: 'export' | 'run'
       ),
       catch: _caughtError => new HttpError({ message: `Error exporting workflow ${workflowId}: ${_caughtError}` }),
     })
-    const workflow = yield* _(workflowEffect)
+    const workflow = yield* workflowEffect
     return galaxyWorkflowExportSchema.passthrough().parse(workflow) as GalaxyWorkflowExport
   })
 }
@@ -56,8 +56,8 @@ export function exportWorkflow(workflowId: string, style: 'export' | 'run' | 'ed
 }
 
 export function getWorkflowsEffect() {
-  return Effect.gen(function* (_) {
-    const fetchApi = yield* _(GalaxyFetch)
+  return Effect.gen(function* () {
+    const fetchApi = yield* GalaxyFetch
     const workflow = Effect.tryPromise({
       try: () => fetchApi<GalaxyWorkflowsItem[]>(
         'api/workflows',
@@ -67,7 +67,7 @@ export function getWorkflowsEffect() {
       ),
       catch: _caughtError => new HttpError({ message: `Error getting workflows ${_caughtError}` }),
     })
-    return yield* _(workflow)
+    return yield* workflow
   })
 }
 
@@ -79,8 +79,8 @@ export function getWorkflows() {
 }
 
 export function invokeWorkflowEffect(historyGalaxyId: string, workflowId: string, inputs: GalaxyWorkflowInput, parameters: GalaxyWorkflowParameters) {
-  return Effect.gen(function* (_) {
-    const fetchApi = yield* _(GalaxyFetch)
+  return Effect.gen(function* () {
+    const fetchApi = yield* GalaxyFetch
     const workflow = Effect.tryPromise({
       try: () => fetchApi<GalaxyInvoke>(
         `api/workflows/${workflowId}/invocations`,
@@ -91,7 +91,7 @@ export function invokeWorkflowEffect(historyGalaxyId: string, workflowId: string
       ),
       catch: _caughtError => new HttpError({ message: `Error invoking workflow ${workflowId}: ${_caughtError}` }),
     })
-    return yield* _(workflow)
+    return yield* workflow
   })
 }
 

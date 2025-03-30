@@ -4,8 +4,8 @@ import { runWithConfig } from './config'
 import { GalaxyFetch, HttpError } from './galaxy'
 
 export function getToolEffect(toolId: string, version: string) {
-  return Effect.gen(function* (_) {
-    const fetchApi = yield* _(GalaxyFetch)
+  return Effect.gen(function* () {
+    const fetchApi = yield* GalaxyFetch
     const tool = Effect.tryPromise({
       try: () => fetchApi<GalaxyTool>(
         `api/tools/${toolId}?io_details=true&version=${version}`,
@@ -15,7 +15,7 @@ export function getToolEffect(toolId: string, version: string) {
       ),
       catch: _caughtError => new HttpError({ message: `Error getting tool ${toolId}: ${_caughtError}` }),
     })
-    return yield* _(tool)
+    return yield* tool
   })
 }
 

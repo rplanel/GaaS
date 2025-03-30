@@ -1,5 +1,8 @@
-import type { serverSupabaseClient } from '#supabase/server'
+import type { EventHandlerRequest, H3Event } from 'h3'
+import type { Database } from '../../../../types/database'
 import { createError } from '#imports'
+
+import { serverSupabaseClient } from '#supabase/server'
 import { downloadDataset, getDataset } from 'blendtype'
 import { and, eq, sql } from 'drizzle-orm'
 import { analysisOutputs, analysisOutputsToTags } from '../../../db/schema/galaxy/analysisOutputs'
@@ -15,7 +18,7 @@ export async function getOrCreateOutputDataset(
   analysisId: number,
   historyId: number,
   jobId: number,
-  supabase: serverSupabaseClient,
+  event: H3Event<EventHandlerRequest>,
   ownerId: string,
 ): Promise<{
   id: number
@@ -55,6 +58,8 @@ export async function getOrCreateOutputDataset(
       galaxyDatasetId,
     )
     if (datasetBlob) {
+      const supabase = await serverSupabaseClient<Database>(event)
+
       const { data, error } = await supabase.storage
         .from('analysis_files')
         .upload(`${crypto.randomUUID()}/${galaxyDataset.name}`, datasetBlob)
@@ -119,10 +124,10 @@ export async function synchronizeOutputDataset(
   analysisId: number,
   historyId: number,
   jobId: number,
-  supabase: serverSupabaseClient,
+  event: H3Event<EventHandlerRequest>,
   ownerId: string,
 ): Promise<void> {
-  const datasetDb = await getOrCreateOutputDataset(galaxyDatasetId, analysisId, historyId, jobId, supabase, ownerId)
+  const datasetDb = await getOrCreateOutputDataset(galaxyDatasetId, analysisId, historyId, jobId, event, ownerId)
   if (datasetDb) {
     const isSync = await isOutputDatasetSync(galaxyDatasetId, jobId, ownerId)
     if (isSync)

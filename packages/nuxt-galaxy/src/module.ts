@@ -123,8 +123,9 @@ export default defineNuxtModule<ModuleOptions>({
           schema: 'galaxy',
         },
       },
-      types: './runtime/types/supabase',
-    })
+
+      types: './runtime/types/database.ts',
+    }, nuxt)
 
     // From the runtime directory
 

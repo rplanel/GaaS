@@ -1,9 +1,7 @@
-import type { Database } from '../../types/database'
-import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseUser } from '#supabase/server'
 import { eq } from 'drizzle-orm'
 import { defineEventHandler } from 'h3'
 import { analyses } from '../db/schema/galaxy/analyses'
-
 import { useDrizzle } from '../utils/drizzle'
 import { synchronizeAnalyses } from '../utils/grizzle/analyses'
 
@@ -24,14 +22,17 @@ function setIntervalWithPromise(target: Target) {
 }
 
 export default defineEventHandler(async (event) => {
-  const client = await serverSupabaseClient<Database>(event)
+  // const serverSupabaseClient
+  // const client = await serverSupabaseClient<Database>(event)
   const user = await serverSupabaseUser(event)
+  if (!user)
+    return
   const maxRetries = 50
   let retriesCount = 0
   let syncIntervalId: ReturnType<typeof setInterval> | undefined
   if (!syncIntervalId) {
     const setIntervalWithPromiseHandler = async (): Promise<void> => {
-      await synchronizeAnalyses(client, user.id)
+      await synchronizeAnalyses(event, user.id)
       retriesCount++
       const userAnalysesDb = await useDrizzle()
         .select()

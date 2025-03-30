@@ -28,8 +28,8 @@ import { BlendTypeConfig, runWithConfig } from './config'
 export class GalaxyFetch extends Context.Tag('@blendtype/GalaxyFetch')<GalaxyFetch, ReturnType<typeof $fetch.create>>() {
   static readonly Live = Layer.effect(
     GalaxyFetch,
-    Effect.gen(function* (_) {
-      const { apiKey, url } = yield* _(BlendTypeConfig)
+    Effect.gen(function* () {
+      const { apiKey, url } = yield* BlendTypeConfig
       return $fetch.create({
         headers: {
           'x-api-key': apiKey,
@@ -47,12 +47,12 @@ export class HttpError extends Data.TaggedError('HttpError')<{
   readonly message: string
 }> {}
 
-export const getVersionEffect = Effect.gen(function* (_) {
-  const fetchApi = yield* _(GalaxyFetch)
-  return yield* _(Effect.tryPromise({
+export const getVersionEffect = Effect.gen(function* () {
+  const fetchApi = yield* GalaxyFetch
+  return yield* Effect.tryPromise({
     try: () => fetchApi<GalaxyVersion>('/api/version'),
     catch: _caughtError => new HttpError({ message: `Error getting version: ${_caughtError}` }),
-  }))
+  })
 })
 
 /**

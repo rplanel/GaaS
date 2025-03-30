@@ -1,6 +1,5 @@
-import type { serverSupabaseClient } from '#supabase/server'
 import type { JobState, JobTerminalState } from 'blendtype'
-import type { Database } from '../../../types/database'
+import type { EventHandlerRequest, H3Event } from 'h3'
 import { getJob, JobTerminalStates } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { jobs } from '../../db/schema/galaxy/jobs'
@@ -57,14 +56,14 @@ export async function synchronizeJob(
   historyId: number,
   galaxyDatasetIds: string[],
   ownerId: string,
-  supabase: serverSupabaseClient<Database>,
+  event: H3Event<EventHandlerRequest>,
 ): Promise<void> {
   const jobDb = await getOrCreateJob(analysisId, galaxyJobId, stepId, ownerId)
   const isSync = await isJobSync(jobDb.id, galaxyDatasetIds, ownerId)
 
   if (isSync)
     return
-  await synchronizeOutputDatasets(jobDb.id, galaxyDatasetIds, analysisId, historyId, ownerId, supabase)
+  await synchronizeOutputDatasets(jobDb.id, galaxyDatasetIds, analysisId, historyId, ownerId, event)
   const isJobDbterminal = isJobTerminalState(jobDb.state)
 
   if (!isJobDbterminal) {
@@ -93,11 +92,11 @@ export async function synchronizeOutputDatasets(
   analysisId: number,
   historyId: number,
   ownerId: string,
-  supabase: serverSupabaseClient<Database>,
+  event: H3Event<EventHandlerRequest>,
 ): Promise<void[]> {
   return Promise.all(galaxyDatasetIds.map(async (galaxyDatasetId) => {
     // Check if dataset in the db
-    return synchronizeOutputDataset(galaxyDatasetId, analysisId, historyId, jobId, supabase, ownerId)
+    return synchronizeOutputDataset(galaxyDatasetId, analysisId, historyId, jobId, event, ownerId)
   }))
 }
 

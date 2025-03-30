@@ -1,10 +1,10 @@
-import type { serverSupabaseClient } from '#supabase/server'
 import type { DatasetTerminalState, HistoryState } from 'blendtype'
-import type { Database } from '../../../types/database'
+import type { EventHandlerRequest, H3Event } from 'h3'
 import { useRuntimeConfig } from '#imports'
 import { createHistory, DatasetsTerminalStates, deleteHistory, getHistory, initializeGalaxyClient } from 'blendtype'
-import { and, eq } from 'drizzle-orm'
 
+import { and, eq } from 'drizzle-orm'
+import { Effect } from 'effect'
 import { createError } from 'h3'
 import { analyses } from '../../db/schema/galaxy/analyses'
 import { analysisInputs } from '../../db/schema/galaxy/analysisInputs'
@@ -76,7 +76,7 @@ export async function addHistory(name: string, ownerId: string): Promise<{
   }
 }
 
-export async function synchronizeHistory(historyId: number, ownerId: string, supabase: serverSupabaseClient<Database>): Promise<void> {
+export async function synchronizeHistory(historyId: number, ownerId: string, event: H3Event<EventHandlerRequest>): Promise<void> {
   const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
   initializeGalaxyClient({ apiKey, url })
   const historyDb = await useDrizzle()
@@ -109,12 +109,12 @@ export async function synchronizeHistory(historyId: number, ownerId: string, sup
         analysisInput.datasets.galaxyId,
         historyDb.analyses.id,
         historyId,
-        supabase,
+        event,
         ownerId,
       )
     }
     // if history not sync, need to sync jobs
-    await synchronizeJobs(historyDb.analyses.id, historyDb.histories.id, ownerId, supabase)
+    await synchronizeJobs(historyDb.analyses.id, historyDb.histories.id, ownerId, event)
     // Make a Galaxy request only if the state is not terminal
     if (!isHistoryTerminalState(historyDb.histories.state)) {
       const galaxyHistory = await getHistory(galaxyHistoryId)
@@ -134,7 +134,7 @@ export async function synchronizeJobs(
   analysisId: number,
   historyId: number,
   ownerId: string,
-  supabase: serverSupabaseClient<Database>,
+  event: H3Event<EventHandlerRequest>,
 ): Promise<void[] | undefined> {
   const invocationOutputs = await getInvocationOutputs(analysisId, ownerId)
   if (invocationOutputs) {
@@ -148,7 +148,7 @@ export async function synchronizeJobs(
           historyId,
           galaxyDatasetIds,
           ownerId,
-          supabase,
+          event,
         )
       }),
     )
@@ -205,4 +205,20 @@ export async function isHistorySync(historyId: number, analysisId: number, owner
     return historyIsSync
   }
   return false
+}
+
+export function getHistoryDb(historyId: number, ownerId: string) {
+  return Effect.gen(function* () {
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle()
+        .select()
+        .from(histories)
+        .where(and(
+          eq(histories.id, historyId),
+          eq(histories.ownerId, ownerId),
+        ))
+        .then(takeUniqueOrThrow),
+      catch: error => new Error(`Error getting history:  ${error}`),
+    })
+  })
 }

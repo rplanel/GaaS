@@ -1,8 +1,9 @@
-import type { serverSupabaseClient } from '#supabase/server'
 import type { Datamap, DatasetState, DatasetTerminalState } from 'blendtype'
+import type { EventHandlerRequest, H3Event } from 'h3'
 
 import type { Database } from '../../../types/database'
 import { useRuntimeConfig } from '#imports'
+import { serverSupabaseClient } from '#supabase/server'
 import { DatasetsTerminalStates, uploadFileToHistory } from 'blendtype'
 import { parseFilename, parseURL, stringifyParsedURL, withoutProtocol } from 'ufo'
 import { datasets } from '../../db/schema/galaxy/datasets.js'
@@ -15,7 +16,7 @@ export async function uploadDatasets(
   galaxyHistoryId: string,
   historyId: number,
   ownerId: string,
-  supabase: serverSupabaseClient<Database>,
+  event: H3Event<EventHandlerRequest>,
 ): Promise<({
     step: string
     galaxyId: string
@@ -33,6 +34,8 @@ export async function uploadDatasets(
           .then(takeUniqueOrThrow)
 
         if (storageObject && storageObject?.name) {
+          const supabase = await serverSupabaseClient<Database>(event)
+
           const { data } = await supabase.storage
             .from('analysis_files')
             .createSignedUrl(storageObject.name, 60)
