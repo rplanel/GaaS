@@ -3,7 +3,8 @@ import type { Database } from '../../../types/database'
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 import { Context, Data, Effect, Layer } from 'effect'
 
-export class ServerSupabaseClientError extends new Data.TaggedError('NoServerSupabaseClientError')<{
+// eslint-disable-next-line unicorn/throw-new-error
+export class ServerSupabaseClientError extends Data.TaggedError('NoServerSupabaseClientError')<{
   readonly message: string
 }> {}
 
@@ -12,8 +13,7 @@ export function createServerSupabaseClient(event: H3Event<EventHandlerRequest>) 
     return yield* Effect.tryPromise({
       try: () => serverSupabaseClient<Database>(event),
       catch: e => new ServerSupabaseClientError({ message: `Failed to create Supabase client: ${e}` }),
-    },
-    )
+    })
   })
 }
 export class ServerSupabaseClient extends Context.Tag('@nuxt-galaxy/ServerSupabaseClient')<
@@ -23,7 +23,7 @@ export class ServerSupabaseClient extends Context.Tag('@nuxt-galaxy/ServerSupaba
   static readonly Live = Layer.effect(
     ServerSupabaseClient,
     Effect.gen(function* () {
-      return (event: H3Event<EventHandlerRequest>) => yield* createServerSupabaseClient(event)
+      return (event: H3Event<EventHandlerRequest>) => createServerSupabaseClient(event)
     }),
   )
 }
@@ -42,7 +42,23 @@ export class ServerSupabaseUser extends Context.Tag('@nuxt-galaxy/ServerSupabase
   static readonly Live = Layer.effect(
     ServerSupabaseUser,
     Effect.gen(function* () {
-      return (event: H3Event<EventHandlerRequest>) => yield* createServerSupabaseUser(event)
+      return (event: H3Event<EventHandlerRequest>) => createServerSupabaseUser(event)
     }),
   )
+}
+
+export function uploadFileToStorage(event: H3Event<EventHandlerRequest>, datasetName: string, datasetBlob: Blob) {
+  return Effect.gen(function* () {
+    const createSupabase = yield* ServerSupabaseClient
+    const supabase = yield* createSupabase(event)
+    const { data, error } = yield* Effect.promise(
+      () => supabase.storage
+        .from('analysis_files')
+        .upload(`${crypto.randomUUID()}/${datasetName}`, datasetBlob),
+    )
+    if (error) {
+      yield* Effect.fail(new Error(error.message))
+    }
+    return data
+  })
 }

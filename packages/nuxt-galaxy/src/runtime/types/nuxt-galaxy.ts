@@ -1,4 +1,6 @@
 import type { Datamap, GalaxyToolParameters, GalaxyWorkflowParameters, HistoryState, InvocationState, JobState, WorkflowStep } from 'blendtype'
+import type { datasets } from '../server/db/schema/galaxy/datasets'
+import type { tags } from '../server/db/schema/galaxy/tags'
 import type { Database } from './database'
 
 export interface WorkflowToolsParameters {
@@ -17,6 +19,9 @@ export type RowHistory = Database['galaxy']['Tables']['histories']['Row']
 export interface AnalysisInputsWithDatasets extends RowAnalysisInput {
   datasets: RowAnalaysisDataset
 }
+
+export type NewDataset = typeof datasets.$inferInsert
+export type GetTag = typeof tags.$inferSelect
 export interface AnalysisOutputsWithDatasets extends RowAnalysisOutputs {
   datasets: RowAnalaysisDataset
 }

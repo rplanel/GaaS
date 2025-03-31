@@ -2,9 +2,11 @@ import type { Datamap, DatasetState, DatasetTerminalState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
 
 import type { Database } from '../../../types/database'
+import type { NewDataset } from '~/src/runtime/types/nuxt-galaxy'
 import { useRuntimeConfig } from '#imports'
 import { serverSupabaseClient } from '#supabase/server'
 import { DatasetsTerminalStates, uploadFileToHistory } from 'blendtype'
+import { Effect } from 'effect'
 import { parseFilename, parseURL, stringifyParsedURL, withoutProtocol } from 'ufo'
 import { datasets } from '../../db/schema/galaxy/datasets.js'
 import { objects } from '../../db/schema/storage/objects.js'
@@ -115,4 +117,13 @@ export async function uploadDatasets(
 
 export function isDatasetTerminalState(state: DatasetState): boolean {
   return DatasetsTerminalStates.includes(state as DatasetTerminalState)
+}
+
+export function insertDatasetEffect(dataset: NewDataset) {
+  return Effect.tryPromise({
+    try: () => useDrizzle().insert(datasets).values(
+      dataset,
+    ).onConflictDoNothing().returning().then(takeUniqueOrThrow),
+    catch: error => new Error(`Error inserting dataset: ${error}`),
+  })
 }

@@ -40,11 +40,11 @@
     "cleandep": "rm -rf node_modules && rm -rf dist"
   },
   "dependencies": {
-    "effect": "^3.14.1",
+    "effect": "catalog:",
     "h3": "catalog:",
     "ofetch": "catalog:",
     "ufo": "catalog:",
-    "zod": "^3.24.1"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
