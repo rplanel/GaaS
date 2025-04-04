@@ -28,10 +28,15 @@ export class ServerSupabaseClient extends Context.Tag('@nuxt-galaxy/ServerSupaba
   )
 }
 
+// eslint-disable-next-line unicorn/throw-new-error
+export class GetSupabaseUserError extends Data.TaggedError('GetSupabaseUserError')<{
+  readonly message: string
+}> {}
+
 export function createServerSupabaseUser(event: H3Event<EventHandlerRequest>) {
   return Effect.tryPromise({
     try: () => serverSupabaseUser(event),
-    catch: e => new Error(`Failed to get Supabase user: ${e}`),
+    catch: e => new GetSupabaseUserError({ message: `Failed to get Supabase user: ${e}` }),
   })
 }
 
@@ -47,6 +52,11 @@ export class ServerSupabaseUser extends Context.Tag('@nuxt-galaxy/ServerSupabase
   )
 }
 
+// eslint-disable-next-line unicorn/throw-new-error
+export class UploadFileToStorageError extends Data.TaggedError('UploadFileToStorageError')<{
+  readonly message: string
+}> {}
+
 export function uploadFileToStorage(event: H3Event<EventHandlerRequest>, datasetName: string, datasetBlob: Blob) {
   return Effect.gen(function* () {
     const createSupabase = yield* ServerSupabaseClient
@@ -57,8 +67,27 @@ export function uploadFileToStorage(event: H3Event<EventHandlerRequest>, dataset
         .upload(`${crypto.randomUUID()}/${datasetName}`, datasetBlob),
     )
     if (error) {
-      yield* Effect.fail(new Error(error.message))
+      yield* Effect.fail(new UploadFileToStorageError({ message: error.message }))
     }
     return data
+  })
+}
+
+// eslint-disable-next-line unicorn/throw-new-error
+export class CreateSignedUrlError extends Data.TaggedError('CreateSignedUrlError')<{
+  readonly message: string
+}> {}
+
+export function createSignedUrl(event: H3Event<EventHandlerRequest>, path: string) {
+  return Effect.gen(function* () {
+    const createSupabase = yield* ServerSupabaseClient
+    const supabase = yield* createSupabase(event)
+    const { data, error } = yield* Effect.promise(
+      () => supabase.storage.from('analysis_files').createSignedUrl(path, 5),
+    )
+    if (error) {
+      yield* Effect.fail(new CreateSignedUrlError({ message: error.message }))
+    }
+    return data?.signedUrl
   })
 }

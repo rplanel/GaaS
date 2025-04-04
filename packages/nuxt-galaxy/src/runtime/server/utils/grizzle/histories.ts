@@ -1,216 +1,81 @@
 import type { DatasetTerminalState, HistoryState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
-import { useRuntimeConfig } from '#imports'
-import { createHistory, DatasetsTerminalStates, deleteHistory, getHistory, initializeGalaxyClient } from 'blendtype'
+import type { NewHistory } from '~/src/runtime/types/nuxt-galaxy'
 
+import { useRuntimeConfig } from '#imports'
+import { DatasetsTerminalStates, createHistoryEffect as galaxyCreateHistoryEffect, getHistoryEffect } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
-import { Effect } from 'effect'
-import { createError } from 'h3'
+import { Data, Effect } from 'effect'
 import { analyses } from '../../db/schema/galaxy/analyses'
-import { analysisInputs } from '../../db/schema/galaxy/analysisInputs'
-import { datasets } from '../../db/schema/galaxy/datasets'
 import { histories } from '../../db/schema/galaxy/histories'
-import { useDrizzle } from '../drizzle'
-import { getInvocationOutputs } from './analyses'
-import { synchronizeInputDataset } from './datasets/input'
+import { Drizzle } from '../drizzle'
+import { getInvocationOutputsEffect, synchronizeJobsEffect } from './analyses'
+import { getAllAnalysisInputDatasets, synchronizeInputDatasetEffect } from './datasets/input'
 import { takeUniqueOrThrow } from './helper.js'
-import { getOrCreateJob, isJobSync, synchronizeJob } from './jobs'
-import { getCurrentUser } from './user'
+import { getAnalysisJobs, isJobSyncEffect } from './jobs'
+import { getCurrentUserEffect } from './user'
 
 // const supabase = useSupabaseClient();
-
-export async function addHistory(name: string, ownerId: string): Promise<{
-  id: number
-  galaxyId: string
-} | undefined> {
-  const { public: { galaxy: { url } }, galaxy: { apiKey, email } } = useRuntimeConfig()
-  initializeGalaxyClient({ apiKey, url })
-
-  const currentUser = await getCurrentUser(url, email)
-  if (currentUser) {
-    const { user } = currentUser
-    const galaxyHistory = await createHistory(name)
-    if (galaxyHistory?.id) {
-      try {
-        const historiesDb = await useDrizzle().insert(histories).values(
-          {
-            name,
-            ownerId,
-            state: 'new',
-            userId: user.id,
-            galaxyId: galaxyHistory.id,
-          },
-        ).returning({
-          id: histories.id,
-          galaxyId: histories.galaxyId,
-        })
-
-        if (historiesDb && historiesDb.length === 1) {
-          return historiesDb[0]
-        }
-        else {
-          createError({
-            statusCode: 500,
-            statusMessage: 'Should have created only one history',
-          })
-        }
-      }
-      catch (error) {
-        // delete galaxy history
-        console.error(error)
-        await deleteHistory(galaxyHistory.id)
-      }
-    }
-    else {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'No Galaxy id return',
-      })
-    }
-  }
-  else {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'No current user found',
-    })
-  }
-}
-
-export async function synchronizeHistory(historyId: number, ownerId: string, event: H3Event<EventHandlerRequest>): Promise<void> {
-  const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
-  initializeGalaxyClient({ apiKey, url })
-  const historyDb = await useDrizzle()
-    .select()
-    .from(histories)
-    .innerJoin(analyses, eq(analyses.historyId, histories.id))
-    .where(and(eq(histories.id, historyId), eq(histories.ownerId, ownerId)))
-    .then(takeUniqueOrThrow)
-
-  if (historyDb) {
-    const isSync = await isHistorySync(historyId, historyDb.analyses.id, ownerId)
-    if (isSync) {
-      return
-    }
-    const galaxyHistoryId = historyDb.histories.galaxyId
-
-    // check inputs
-    const analysisInputsDb = await useDrizzle()
-      .select()
-      .from(analysisInputs)
-      .innerJoin(datasets, eq(datasets.id, analysisInputs.datasetId))
-      .where(
-        and(
-          eq(analysisInputs.analysisId, historyDb.analyses.id),
-          eq(datasets.ownerId, ownerId),
-        ),
-      )
-    for (const analysisInput of analysisInputsDb) {
-      synchronizeInputDataset(
-        analysisInput.datasets.galaxyId,
-        historyDb.analyses.id,
-        historyId,
-        event,
-        ownerId,
-      )
-    }
-    // if history not sync, need to sync jobs
-    await synchronizeJobs(historyDb.analyses.id, historyDb.histories.id, ownerId, event)
-    // Make a Galaxy request only if the state is not terminal
-    if (!isHistoryTerminalState(historyDb.histories.state)) {
-      const galaxyHistory = await getHistory(galaxyHistoryId)
-      if (historyDb.histories.state !== galaxyHistory.state) {
-        await useDrizzle()
-          .update(histories)
-          .set({ state: galaxyHistory.state })
-          .where(eq(histories.id, historyId))
-          .returning({ historyId: histories.id, state: histories.state })
-          .then(takeUniqueOrThrow)
-      }
-    }
-  }
-}
-
-export async function synchronizeJobs(
-  analysisId: number,
-  historyId: number,
-  ownerId: string,
-  event: H3Event<EventHandlerRequest>,
-): Promise<void[] | undefined> {
-  const invocationOutputs = await getInvocationOutputs(analysisId, ownerId)
-  if (invocationOutputs) {
-    return Promise.all(Object
-      .entries(invocationOutputs)
-      .map(async ([galaxyJobId, { galaxyDatasetIds, stepId }]) => {
-        return synchronizeJob(
-          galaxyJobId,
-          stepId,
-          analysisId,
-          historyId,
-          galaxyDatasetIds,
-          ownerId,
-          event,
-        )
-      }),
-    )
-  }
-}
 
 export function isHistoryTerminalState(state: HistoryState): boolean {
   return DatasetsTerminalStates.includes(state as DatasetTerminalState)
 }
 
-export async function isHistorySync(historyId: number, analysisId: number, ownerId: string): Promise<boolean> {
-  // historydb.issync OR history in terminal state AND Job sync
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  const historyDb = await useDrizzle()
-    .select()
-    .from(analyses)
-    .innerJoin(histories, eq(histories.id, analyses.historyId))
-    .where(
-      and(
-        eq(histories.id, historyId),
-        eq(histories.ownerId, ownerId),
-      ),
-    )
-    .then(takeUniqueOrThrow)
-    // historyDb.analyses.
-
-  const isSync = historyDb.histories.isSync
-  if (isSync)
-    return true
-
-  // need to get all the jobs that have outputs and all the outputs for each job
-  const jobsWithOutputs = await getInvocationOutputs(analysisId, ownerId)
-  // console.log(jobsWithOutputs)
-  if (jobsWithOutputs) {
-    const allJobsSync = await Promise.all(
-      Object.entries(jobsWithOutputs)
-        .map(async ([galaxyJobId, { galaxyDatasetIds, stepId }]) => {
-          const jobDb = await getOrCreateJob(analysisId, galaxyJobId, stepId, ownerId)
-          return isJobSync(jobDb.id, galaxyDatasetIds, ownerId)
+export function synchronizeHistoryEffect(historyId: number, ownerId: string, event: H3Event<EventHandlerRequest>) {
+  return Effect.gen(function* () {
+    const historyDb = yield* getAnalysisHistory(historyId, ownerId)
+    if (historyDb) {
+      const isSync = yield* isHistorySyncEffect(historyId, historyDb.histories.id, ownerId)
+      if (isSync) {
+        return
+      }
+      const analysisInputsDb = yield* getAllAnalysisInputDatasets(historyDb.analyses.id, ownerId)
+      yield* Effect.all(
+        analysisInputsDb.map((analysisInput) => {
+          return Effect.gen(function* () {
+            yield* synchronizeInputDatasetEffect(
+              analysisInput.datasets.galaxyId,
+              historyDb.analyses.id,
+              historyId,
+              event,
+              ownerId,
+            )
+          })
         }),
-    )
-    const historyIsSync = isHistoryTerminalState(historyDb.histories.state) && allJobsSync.every(d => d)
-    // update history entry to set flag isSync to true
-
-    if (historyIsSync) {
-      await useDrizzle()
-        .update(histories)
-        .set({ isSync: true })
-        .where(and(
-          eq(histories.ownerId, ownerId),
-          eq(histories.id, historyId),
-        ))
+      )
+      yield* synchronizeJobsEffect(
+        historyDb.analyses.id,
+        historyDb.histories.id,
+        ownerId,
+        event,
+      )
+      if (!isHistoryTerminalState(historyDb.histories.state)) {
+        const galaxyHistoryId = historyDb.histories.galaxyId
+        const galaxyHistory = yield* getHistoryEffect(galaxyHistoryId)
+        if (historyDb.histories.state !== galaxyHistory.state) {
+          yield* updateHistoryState(historyId, galaxyHistory.state)
+        }
+      }
+      if (historyDb.histories.state === 'error') {
+        updateIsHistorySync(historyId, ownerId)
+        yield* updateHistoryState(historyId, 'running')
+      }
     }
-    return historyIsSync
-  }
-  return false
+  })
 }
+
+// eslint-disable-next-line unicorn/throw-new-error
+export class GetHistoryError extends Data.TaggedError('GetHistoryError')<{
+  readonly message: string
+}> { }
 
 export function getHistoryDb(historyId: number, ownerId: string) {
   return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
     return yield* Effect.tryPromise({
-      try: () => useDrizzle()
+      try: () => useDrizzle
         .select()
         .from(histories)
         .where(and(
@@ -218,7 +83,175 @@ export function getHistoryDb(historyId: number, ownerId: string) {
           eq(histories.ownerId, ownerId),
         ))
         .then(takeUniqueOrThrow),
-      catch: error => new Error(`Error getting history:  ${error}`),
+      catch: error => new GetHistoryError({ message: `Error getting history: ${error}` }),
+    })
+  })
+}
+
+export function getAnalysisHistory(historyId: number, ownerId: string) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .select()
+        .from(analyses)
+        .innerJoin(histories, eq(histories.id, analyses.historyId))
+        .where(and(
+          eq(histories.id, historyId),
+          eq(histories.ownerId, ownerId),
+        ))
+        .then(takeUniqueOrThrow),
+      catch: error => new GetHistoryError({ message: `Error getting history analysis: ${error}` }),
+    })
+  })
+}
+
+export function addHistoryEffect(name: string, ownerId: string) {
+  const { public: { galaxy: { url } }, galaxy: { email } } = useRuntimeConfig()
+
+  return Effect.gen(function* () {
+    const currentUser = yield* getCurrentUserEffect(url, email)
+    if (currentUser) {
+      const galaxyHistory = yield* galaxyCreateHistoryEffect(name)
+      if (galaxyHistory) {
+        const historyDb = yield* insertHistory({
+          name,
+          ownerId,
+          userId: currentUser.user.id,
+          galaxyId: galaxyHistory.id,
+          state: 'new',
+        })
+        if (historyDb) {
+          return historyDb
+        }
+      }
+    }
+  })
+}
+
+// eslint-disable-next-line unicorn/throw-new-error
+export class DeleteGalaxyHistoryError extends Data.TaggedError('DeleteGalaxyHistoryError')<{
+  readonly message: string
+}> { }
+
+export function deleteHistory(historyId: number) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .delete(histories)
+        .where(eq(histories.id, historyId)),
+      catch: error => new DeleteGalaxyHistoryError({ message: `Error deleting history: ${error}` }),
+    })
+  })
+}
+
+// eslint-disable-next-line unicorn/throw-new-error
+export class InsertHistoryError extends Data.TaggedError('InsertHistoryError')<{
+  readonly message: string
+}> { }
+export function insertHistory(history: NewHistory) {
+  const { name, ownerId, userId, galaxyId, state } = history
+
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .insert(histories)
+        .values(
+          {
+            name,
+            ownerId,
+            state,
+            userId,
+            galaxyId,
+          },
+        )
+        .returning({
+          id: histories.id,
+          galaxyId: histories.galaxyId,
+        })
+        .then(takeUniqueOrThrow),
+      catch: error => new InsertHistoryError({ message: `Error inserting history: ${error}` }),
+    })
+  })
+}
+
+export function isHistorySyncEffect(historyId: number, analysisId: number, ownerId: string) {
+  return Effect.gen(function* () {
+    const historyDb = yield* getAnalysisHistory(historyId, ownerId)
+    if (!historyDb) {
+      return false
+    }
+    const isSync = historyDb.histories.isSync
+    if (isSync) {
+      return true
+    }
+    const jobsWithOutputs = yield* getInvocationOutputsEffect(analysisId, ownerId)
+    const isAllJobsSync = yield* isSynchronizedAnalysisJobs(analysisId, jobsWithOutputs, ownerId)
+    const isHistorySync = isHistoryTerminalState(historyDb.histories.state) && isAllJobsSync
+    if (isHistorySync) {
+      yield* updateIsHistorySync(historyId, ownerId)
+      return isHistorySync
+    }
+    return false
+  })
+}
+
+export function isSynchronizedAnalysisJobs(analysisId: number, jobsWithOutputs: Record<string, {
+  galaxyDatasetIds: string[]
+  galaxyJobId: string
+  stepId: number
+}> | undefined, ownerId: string) {
+  if (!jobsWithOutputs) {
+    return Effect.succeed(false)
+  }
+  return Effect.all(
+    Object.entries(jobsWithOutputs).map(([galaxyJobId, { galaxyDatasetIds }]) => {
+      return Effect.gen(function* () {
+        const jobDb = yield* getAnalysisJobs(analysisId, galaxyJobId, ownerId)
+        if (jobDb) {
+          return yield* isJobSyncEffect(jobDb.id, jobDb.state, galaxyDatasetIds, ownerId)
+        }
+        // const jobDb = yield* getOrCreateJobEffect(analysisId, galaxyJobId, stepId, ownerId)
+        return false
+      })
+    }),
+  ).pipe(Effect.map(d => d.every(d => d)))
+}
+
+// eslint-disable-next-line unicorn/throw-new-error
+export class UpdateHistoryState extends Data.TaggedError('UpdateHistoryState')<{
+  readonly message: string
+}> { }
+
+export function updateIsHistorySync(historyId: number, ownerId: string) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .update(histories)
+        .set({ isSync: true })
+        .where(and(
+          eq(histories.ownerId, ownerId),
+          eq(histories.id, historyId),
+        )),
+      catch: error => new UpdateHistoryState({ message: `Error updating history: ${error}` }),
+    })
+  })
+}
+
+export function updateHistoryState(historyId: number, state: HistoryState) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .update(histories)
+        .set({ state })
+        .where(eq(histories.id, historyId))
+        .returning({ historyId: histories.id, state: histories.state })
+        .then(takeUniqueOrThrow),
+      catch: error => new UpdateHistoryState({ message: `Error updating history state: ${error}` }),
     })
   })
 }

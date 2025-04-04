@@ -10,6 +10,7 @@ export default defineEventHandler<
     body: {
       galaxyId: string
       userId: number
+
     }
   }
 >(

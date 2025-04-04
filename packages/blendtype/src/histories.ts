@@ -1,5 +1,5 @@
 import type { GalaxyHistoryDetailed, GalaxyUploadedDataset } from './types'
-import { Effect } from 'effect'
+import { Console, Data, Effect } from 'effect'
 import { runWithConfig } from './config'
 import { getDatasetEffect } from './datasets'
 import { GalaxyFetch, HttpError } from './galaxy'
@@ -65,6 +65,11 @@ export function getHistories() {
   )
 }
 
+// eslint-disable-next-line unicorn/throw-new-error
+export class DeleteGalaxyHistoryHttpError extends Data.TaggedError('DeleteGalaxyHistoryHttpError')<{
+  readonly message: string
+}> {}
+
 export function deleteHistoryEffect(historyId: string) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
@@ -73,9 +78,9 @@ export function deleteHistoryEffect(historyId: string) {
         method: 'DELETE',
         body: { purge: true },
       }),
-      catch: _caughtError => new HttpError({ message: `Error deleting history ${historyId}: ${_caughtError}` }),
+      catch: _caughtError => new DeleteGalaxyHistoryHttpError({ message: `Error deleting history ${historyId}: ${_caughtError}` }),
     })
-    return yield* history
+    return yield* history.pipe(Effect.tap(() => Console.log(`Deleted history ${historyId}`)))
   })
 }
 
@@ -111,9 +116,26 @@ export function uploadFileToHistoryEffect(historyId: string, srcUrl: string, nam
         method: 'POST',
         body: JSON.stringify(payload),
       }),
-      catch: _caughtError => new HttpError({ message: `Error uploading file ${name} from url ${srcUrl}: ${_caughtError}` }),
+      catch: _caughtError => new HttpError({
+        message: `Error uploading file ${name} from url ${srcUrl}: ${_caughtError}`,
+      }),
     })
+      .pipe(
+        Effect.tap(input => Console.log(`Uploaded file ${name} to history ${historyId}\n input: ${input}`)),
+        Effect.catchAllCause((cause) => {
+          return deleteHistoryEffect(historyId).pipe(
+            Effect.flatMap(() => Effect.fail(cause)),
+          )
+        }),
+      )
+
     return yield* uploadedDataset
+    // return yield* uploadedDataset.pipe(Effect.catchAll((error) => {
+    //   return deleteHistoryEffect(historyId)
+    //   // return Effect.succeed(`Recovering from ${error._tag}`)
+    // },
+    //   // deleteHistoryEffect(historyId)
+    // ))
   })
 }
 

@@ -38,14 +38,18 @@ export const BlendTypeConfigLive = Layer.effect(
 )
 
 // Helper to run Effects with the global config
-export function runWithConfig<A>(effect: Effect.Effect<A, Error, BlendTypeConfig>): Promise<A> {
+export function runWithConfig<A>(effect: Effect.Effect<A, unknown, BlendTypeConfig>): Promise<A> {
   if (!globalBlendtypeConfigLayer) {
     return Effect.runPromise(
       Effect.fail(new NoConfigError({
-        message: 'Library not initialized. Call initialize() first.',
+        message: 'Library not initialized. Call initializeGalaxyClient({apiKey: "api-key", url: "galaxy-url"}) first.',
       })),
     )
   }
-  return Effect.runPromise(Effect.provide(effect, globalBlendtypeConfigLayer),
+  return Effect.runPromise(
+    Effect.provide(
+      effect,
+      globalBlendtypeConfigLayer,
+    ),
   )
 }

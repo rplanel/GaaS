@@ -1,5 +1,8 @@
 import type { Datamap, GalaxyToolParameters, GalaxyWorkflowParameters, HistoryState, InvocationState, JobState, WorkflowStep } from 'blendtype'
+import type { analyses } from '../server/db/schema/galaxy/analyses'
 import type { datasets } from '../server/db/schema/galaxy/datasets'
+import type { histories } from '../server/db/schema/galaxy/histories'
+import type { jobs } from '../server/db/schema/galaxy/jobs'
 import type { tags } from '../server/db/schema/galaxy/tags'
 import type { Database } from './database'
 
@@ -22,6 +25,9 @@ export interface AnalysisInputsWithDatasets extends RowAnalysisInput {
 
 export type NewDataset = typeof datasets.$inferInsert
 export type GetTag = typeof tags.$inferSelect
+export type NewJob = typeof jobs.$inferInsert
+export type NewHistory = typeof histories.$inferInsert
+export type NewAnalysis = typeof analyses.$inferInsert
 export interface AnalysisOutputsWithDatasets extends RowAnalysisOutputs {
   datasets: RowAnalaysisDataset
 }

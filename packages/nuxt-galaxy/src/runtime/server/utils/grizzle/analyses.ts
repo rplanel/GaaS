@@ -1,15 +1,22 @@
 import type { Datamap, GalaxyInvocation, GalaxyInvocationIO, GalaxyWorkflowInput, GalaxyWorkflowParameters, InvocationState, InvocationTerminalState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
-import { deleteHistory, getDataset, getInvocation, InvocationTerminalStates, invokeWorkflow } from 'blendtype'
+import type { NewAnalysis } from '~/src/runtime/types/nuxt-galaxy'
+import { getDatasetEffect, getInvocationEffect, InvocationTerminalStates, invokeWorkflowEffect } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
+import { Data, Effect } from 'effect'
 import { analyses } from '../../db/schema/galaxy/analyses'
-import { analysisInputs } from '../../db/schema/galaxy/analysisInputs'
 import { histories } from '../../db/schema/galaxy/histories'
-import { useDrizzle } from '../drizzle'
+import { Drizzle } from '../drizzle'
+import { insertAnalysisInputEffect } from './datasets/input'
 import { takeUniqueOrThrow } from './helper'
-import { isHistorySync, synchronizeHistory } from './histories'
+import { isHistorySyncEffect, synchronizeHistoryEffect } from './histories'
+import { synchronizeJobEffect } from './jobs'
 
-export async function runAnalysis(
+export function isAnalysisTerminalState(state: InvocationState): boolean {
+  return InvocationTerminalStates.includes(state as InvocationTerminalState)
+}
+
+export function runAnalysisEffect(
   analysisName: string,
   galaxyHistoryId: string,
   galaxyWorkflowId: string,
@@ -19,174 +26,270 @@ export async function runAnalysis(
   inputs: GalaxyWorkflowInput,
   parameters: GalaxyWorkflowParameters,
   datamap: Datamap,
-): Promise<{
-    id: undefined | number
-    inputIds: number[] | undefined
 
-  }> {
-  const galaxyInvocation = await invokeWorkflow(
-    galaxyHistoryId,
-    galaxyWorkflowId,
-    inputs,
-    parameters,
-  )
-  const results: {
-    id: undefined | number
-    inputIds: number[] | undefined
-
-  } = {
-    id: undefined,
-    inputIds: undefined,
-
-  }
-  const invocation = await getInvocation(galaxyInvocation.id)
-  const values = {
-    name: analysisName,
-    historyId,
-    workflowId,
-    state: galaxyInvocation.state,
-    galaxyId: galaxyInvocation.id,
-    ownerId,
-    parameters,
-    datamap,
-    invocation,
-  }
-
-  // add analysis
-  const analsysis = await useDrizzle()
-    .insert(analyses)
-    .values(values)
-    .returning({
-      insertedId: analyses.id,
-    })
-    .then(takeUniqueOrThrow)
-  if (analsysis) {
-    const { insertedId: insertedAnalysisId } = analsysis
-    results.id = insertedAnalysisId
-    const inputsIds = await Promise.all(
-      Object.entries(inputs).map(([_step, { dbid, id: galaxyDatasetId }]) => {
-        if (dbid) {
-          // get dataset states
-          return getDataset(galaxyDatasetId, galaxyHistoryId).then(({ state }) => {
-            return useDrizzle().insert(analysisInputs).values({
-              analysisId: insertedAnalysisId,
-              datasetId: dbid,
-              state,
-            }).returning({ insertedId: analysisInputs.id }).then(takeUniqueOrThrow)
-          })
-        }
-        return undefined
-      }),
+) {
+  return Effect.gen(function* () {
+    const galaxyInvocation = yield* invokeWorkflowEffect (
+      galaxyHistoryId,
+      galaxyWorkflowId,
+      inputs,
+      parameters,
     )
-    results.inputIds = inputsIds
-      .filter(input => input !== undefined)
-      .map(({ insertedId }) => insertedId)
-    // $fetch('/api/db/analyses/synchronize')
-  }
-  return results
+
+    const results: {
+      id: undefined | number
+      inputIds: number[] | undefined
+
+    } = {
+      id: undefined,
+      inputIds: undefined,
+
+    }
+    const invocation = yield* getInvocationEffect(galaxyInvocation.id)
+    const newAnalysis = {
+      name: analysisName,
+      historyId,
+      workflowId,
+      state: galaxyInvocation.state,
+      galaxyId: galaxyInvocation.id,
+      ownerId,
+      parameters,
+      datamap,
+      invocation,
+    }
+    const insertedAnalysis = yield* insertAnalysis(newAnalysis)
+    if (insertedAnalysis) {
+      const { insertedId: insertedAnalysisId } = insertedAnalysis
+      results.id = insertedAnalysisId
+      const analysisInputs = yield* Effect.all(
+        Object.entries(inputs).map(([_step, { dbid, id: galaxyDatasetId }]) => {
+          return Effect.gen(function* () {
+            if (dbid) {
+              const dataset = yield* getDatasetEffect(galaxyDatasetId, galaxyHistoryId)
+              return yield* insertAnalysisInputEffect(
+                insertedAnalysisId,
+                dbid,
+                dataset.state,
+              )
+            }
+          })
+        }),
+      )
+      results.inputIds = analysisInputs
+        .filter(input => input !== undefined && input !== null)
+        .map(({ id }) => id)
+    }
+    return results
+  })
 }
 
-export async function synchronizeAnalyses(event: H3Event<EventHandlerRequest>, ownerId: string): Promise<void[]> {
-  const analysesDb = await useDrizzle()
-    .select()
-    .from(analyses)
-    .where(eq(analyses.ownerId, ownerId))
+// eslint-disable-next-line unicorn/throw-new-error
+export class InsertAnalysisError extends Data.TaggedError('InsertAnalysisError')<{
+  readonly message: string
+}> { }
 
-  return Promise.all(analysesDb.map(({ id: analysisId }) => {
-    return synchronizeAnalysis(analysisId, event, ownerId)
-  }))
+export function insertAnalysis(analysis: NewAnalysis) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .insert(analyses)
+        .values(analysis)
+        .returning({
+          insertedId: analyses.id,
+        })
+        .then(takeUniqueOrThrow),
+      catch: error => new InsertAnalysisError({ message: `Error inserting analysis: ${error}` }),
+    })
+  })
+}
+export function getInvocationOutputsEffect(analysisId: number, ownerId: string) {
+  return Effect.gen(function* () {
+    const invocationDb = yield* getAnalysis(analysisId, ownerId)
+    if (!invocationDb) {
+      return
+    }
+    const analysisInvocationDb = invocationDb.invocation as GalaxyInvocation
+    if (analysisInvocationDb?.outputs) {
+      const outputDatasetsExpected = Object.values(analysisInvocationDb.outputs) as GalaxyInvocationIO[]
+      const stepToJob = new Map(analysisInvocationDb.steps.map(s => ([s.workflow_step_id, { jobId: s.job_id, stepId: s.order_index }])))
+      const jobsWithOutputs = outputDatasetsExpected.reduce((acc, curr) => {
+        const jobInfo = stepToJob.get(curr.workflow_step_id)
+        if (jobInfo?.jobId) {
+          const { jobId, stepId } = jobInfo
+          if (!acc?.[jobId]) {
+            acc[jobId] = { galaxyDatasetIds: [curr.id], galaxyJobId: jobId, stepId }
+          }
+          else {
+            const jobIdFromAcc = acc?.[jobId]
+            if (jobIdFromAcc !== undefined)
+              jobIdFromAcc.galaxyDatasetIds.push(curr.id)
+          }
+        }
+        return acc
+      }, {} as Record<string, { galaxyDatasetIds: string[], galaxyJobId: string, stepId: number }>)
+      return jobsWithOutputs
+    }
+  })
 }
 
-export async function synchronizeAnalysis(analysisId: number, event: H3Event<EventHandlerRequest>, ownerId: string): Promise<void> {
-  const invocationDb = await useDrizzle()
-    .select()
-    .from(analyses)
-    .innerJoin(histories, eq(histories.id, analyses.historyId))
-    .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
-    .then(takeUniqueOrThrow)
+// eslint-disable-next-line unicorn/throw-new-error
+export class GetAnalysisError extends Data.TaggedError('GetAnalysisError')<{
+  readonly message: string
+}> { }
 
-  // nothing to do
-  if (invocationDb.analyses.isSync)
-    return
+export function getAnalysis(analysisId: number, ownerId: string) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .select()
+        .from(analyses)
+        .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
+        .then(takeUniqueOrThrow),
+      catch: error => new GetAnalysisError({ message: `Error getting analysis: ${error}` }),
+    })
+  })
+}
 
-  await synchronizeHistory(invocationDb.histories.id, ownerId, event)
+export function synchronizeJobsEffect(analysisId: number, historyId: number, ownerId: string, event: H3Event<EventHandlerRequest>) {
+  return Effect.gen(function* () {
+    const invocationOutputs = yield* getInvocationOutputsEffect(analysisId, ownerId)
+    if (invocationOutputs) {
+      return yield* Effect.all(
+        Object
+          .entries(invocationOutputs)
+          .map(([galaxyJobId, { galaxyDatasetIds, stepId }]) => {
+            return synchronizeJobEffect(
+              galaxyJobId,
+              stepId,
+              analysisId,
+              historyId,
+              galaxyDatasetIds,
+              ownerId,
+              event,
+            )
+          }),
+      )
+    }
+  })
+}
 
-  if (!isAnalysisTerminalState(invocationDb.analyses.state)) {
+export function synchronizeAnalysisEffect(
+  analysisId: number,
+  ownerId: string,
+  event: H3Event<EventHandlerRequest>,
+) {
+  return Effect.gen(function* () {
+    const invocationDb = yield* getHistoryAnalysis(analysisId, ownerId)
+
+    if (!invocationDb || invocationDb.analyses.isSync) {
+      return
+    }
+    yield* synchronizeHistoryEffect(invocationDb.histories.id, ownerId, event)
     const galaxyInvocationId = invocationDb.analyses.galaxyId
-    const invocation = await getInvocation(galaxyInvocationId)
-    if (invocation.state !== invocationDb.analyses.state) {
-      await useDrizzle()
+    const invocation = yield* getInvocationEffect(galaxyInvocationId)
+
+    if (!isAnalysisTerminalState(invocationDb.analyses.state)) {
+      if (invocation.state !== invocationDb.analyses.state) {
+        yield* updateAnalysisState(analysisId, invocation, ownerId)
+      }
+    }
+    else {
+      const isSync = yield* isHistorySyncEffect(invocationDb.histories.id, analysisId, ownerId)
+      if (isSync) {
+        yield* updateAnalysisIsSync(isSync, analysisId, ownerId)
+      }
+    }
+  })
+}
+
+export function updateAnalysisState(analysisId: number, invocation: GalaxyInvocation, ownerId: string) {
+  return Effect.gen(function* () {
+    const drizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => drizzle
         .update(analyses)
         .set({ state: invocation.state, invocation })
-        .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
-    }
-  }
-  else {
-    if (await isHistorySync(invocationDb.histories.id, analysisId, ownerId)) {
-      // await synchronizeHistory(invocationDb.histories.id, ownerId, supabaseClient)
-      await useDrizzle()
+        .where(
+          and(
+            eq(analyses.id, analysisId),
+            eq(analyses.ownerId, ownerId),
+          ),
+        ),
+      catch: error => new GetAnalysisError({ message: `Error updating analysis state: ${error}` }),
+    })
+  })
+}
+
+// eslint-disable-next-line unicorn/throw-new-error
+export class UpdateAnalysisIsSyncError extends Data.TaggedError('UpdateAnalysisIsSyncError')<{
+  readonly message: string
+}> { }
+
+export function updateAnalysisIsSync(isSync: boolean, analysisId: number, ownerId: string) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
         .update(analyses)
-        .set({ isSync: true })
+        .set({ isSync })
         .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
         .returning({ updatedState: analyses.state })
-        .then(takeUniqueOrThrow)
-      await deleteHistory(invocationDb.histories.galaxyId)
-    }
-  }
+        .then(takeUniqueOrThrow),
+      catch: error => new UpdateAnalysisIsSyncError({ message: `Error updating analysis state: ${error}` }),
+    })
+  })
 }
 
-export function isAnalysisTerminalState(state: InvocationState): boolean {
-  return InvocationTerminalStates.includes(state as InvocationTerminalState)
+export function synchronizeAnalysesEffect(event: H3Event<EventHandlerRequest>, ownerId: string) {
+  return Effect.gen(function* () {
+    const analysesDb = yield* getAllAnalyses(ownerId)
+    // console.log('analysesDb', analysesDb)
+    return yield* Effect.all(
+      analysesDb.map(({ id: analysisId }) => {
+        return synchronizeAnalysisEffect(analysisId, ownerId, event)
+      }),
+    )
+  })
 }
 
-export async function getJobIdsWithOutputs(analysisId: number, ownerId: string): Promise<(string | null)[] | undefined> {
-  const invocationDb = await useDrizzle()
-    .select()
-    .from(analyses)
-    .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
-    .then(takeUniqueOrThrow)
-  const analysisInvocationDb = invocationDb.invocation as GalaxyInvocation
-  if (analysisInvocationDb?.outputs) {
-    const outputDatasetsExpected = Object.values(analysisInvocationDb.outputs) as GalaxyInvocationIO[]
-    const workflowStepIdsSet = new Set(outputDatasetsExpected.map(d => d.workflow_step_id))
-    return analysisInvocationDb
-      .steps
-      .filter(step => workflowStepIdsSet
-        .has(step.workflow_step_id),
-      )
-      .map(step => step.job_id)
-  }
+export function getAllAnalyses(ownerId: string) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => {
+        return useDrizzle
+          .select()
+          .from(analyses)
+          .where(eq(analyses.ownerId, ownerId))
+      },
+      catch: error => new GetAnalysisError({ message: `Error getting all analyses: ${error}` }),
+    })
+  })
 }
 
-export async function getInvocationOutputs(analysisId: number, ownerId: string): Promise<Record<string, {
-  galaxyDatasetIds: string[]
-  galaxyJobId: string
-  stepId: number
-}> | undefined> {
-  const invocationDb = await useDrizzle()
-    .select()
-    .from(analyses)
-    .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
-    .then(takeUniqueOrThrow)
-  const analysisInvocationDb = invocationDb.invocation as GalaxyInvocation
-  if (analysisInvocationDb?.outputs) {
-    const outputDatasetsExpected = Object.values(analysisInvocationDb.outputs) as GalaxyInvocationIO[]
-    const stepToJob = new Map(analysisInvocationDb.steps.map(s => ([s.workflow_step_id, { jobId: s.job_id, stepId: s.order_index }])))
-    const jobsWithOutputs = outputDatasetsExpected.reduce((acc, curr) => {
-      const jobInfo = stepToJob.get(curr.workflow_step_id)
-      if (jobInfo?.jobId) {
-        const { jobId, stepId } = jobInfo
-        if (!acc?.[jobId]) {
-          acc[jobId] = { galaxyDatasetIds: [curr.id], galaxyJobId: jobId, stepId }
-        }
-        else {
-          const jobIdFromAcc = acc?.[jobId]
-          if (jobIdFromAcc !== undefined)
-            jobIdFromAcc.galaxyDatasetIds.push(curr.id)
-        }
-      }
-      return acc
-    }, {} as Record<string, { galaxyDatasetIds: string[], galaxyJobId: string, stepId: number }>)
-    return jobsWithOutputs
-  }
+// eslint-disable-next-line unicorn/throw-new-error
+export class GetHistoryAnalysisError extends Data.TaggedError('GetHistoryAnalysisError')<{
+  readonly message: string
+}> { }
+
+export function getHistoryAnalysis(analysisId: number, ownerId: string) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .select()
+        .from(analyses)
+        .innerJoin(histories, eq(histories.id, analyses.historyId))
+        .where(
+          and(
+            eq(analyses.id, analysisId),
+            eq(analyses.ownerId, ownerId),
+          ),
+        )
+        .then(takeUniqueOrThrow),
+      catch: error => new GetHistoryAnalysisError({ message: `Error getting history analysis: ${error}` }),
+    })
+  })
 }

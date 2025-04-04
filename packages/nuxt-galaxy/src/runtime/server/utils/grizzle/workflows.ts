@@ -1,38 +1,35 @@
 import { useRuntimeConfig } from '#imports'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
+import { Data, Effect } from 'effect'
 import { workflows } from '../../db/schema/galaxy/workflows'
-import { useDrizzle } from '../drizzle'
+import { Drizzle } from '../drizzle'
 import { takeUniqueOrThrow } from './helper'
-import { getCurrentUser } from './user'
+import { getCurrentUserEffect } from './user'
 
-export async function getCurrentGalaxyWorkflow(): Promise<typeof workflows.$inferSelect | undefined> {
-  const { public: { galaxy: { url } }, galaxy: { email } } = useRuntimeConfig()
-  const currentUser = await getCurrentUser(url, email)
-  if (currentUser) {
-    const { user } = currentUser
-    return useDrizzle().select().from(workflows).where(
-      eq(workflows.userId, user.id),
-    ).then(takeUniqueOrThrow)
-  }
-}
+// eslint-disable-next-line unicorn/throw-new-error
+export class GetWorkflowError extends Data.TaggedError('GetWorkflowError')<{
+  readonly message: string
+}> {}
 
-export async function getWorkflow(workflowId: number): Promise<typeof workflows.$inferSelect | undefined> {
+export function getWorkflowEffect(workflowId: number) {
   const { public: { galaxy: { url } }, galaxy: { email } } = useRuntimeConfig()
-  try {
-    const currentUser = await getCurrentUser(url, email)
+  return Effect.gen(function* () {
+    const currentUser = yield* getCurrentUserEffect(url, email)
+    const useDrizzle = yield* Drizzle
     if (currentUser) {
-      const { user } = currentUser
-      const galaxyWorkflows = await useDrizzle()
-        .select()
-        .from(workflows)
-        .where(
-          eq(workflows.id, workflowId),
-        )
-        .then(takeUniqueOrThrow)
-      return galaxyWorkflows.userId === user.id ? galaxyWorkflows : undefined
+      return yield* Effect.tryPromise({
+        try: () => useDrizzle
+          .select()
+          .from(workflows)
+          .where(
+            and(
+              eq(workflows.userId, currentUser.user.id),
+              eq(workflows.id, workflowId),
+            ),
+          )
+          .then(takeUniqueOrThrow),
+        catch: () => new GetWorkflowError({ message: 'Error getting workflow' }),
+      })
     }
-  }
-  catch {
-    throw new Error('User not found')
-  }
+  })
 }

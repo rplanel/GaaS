@@ -25,7 +25,10 @@ import { BlendTypeConfig, runWithConfig } from './config'
  * myEffect.run()
  * ```
  */
-export class GalaxyFetch extends Context.Tag('@blendtype/GalaxyFetch')<GalaxyFetch, ReturnType<typeof $fetch.create>>() {
+export class GalaxyFetch extends Context.Tag('@blendtype/GalaxyFetch')<
+  GalaxyFetch,
+  ReturnType<typeof $fetch.create>
+>() {
   static readonly Live = Layer.effect(
     GalaxyFetch,
     Effect.gen(function* () {
