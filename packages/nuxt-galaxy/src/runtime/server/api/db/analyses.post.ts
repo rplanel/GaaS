@@ -9,7 +9,6 @@ import { uploadDatasetsEffect } from '../../utils/grizzle/datasets'
 import { addHistoryEffect } from '../../utils/grizzle/histories'
 import { GetSupabaseUserError, ServerSupabaseClient, ServerSupabaseUser } from '../../utils/grizzle/supabase.js'
 import { getWorkflowEffect } from '../../utils/grizzle/workflows'
-// import { getErrorMessage } from '~/src/module.js'
 
 export default defineEventHandler<{ body: AnalysisBody }>(
   async (event) => {
@@ -59,11 +58,6 @@ export default defineEventHandler<{ body: AnalysisBody }>(
         yield* Effect.fail(new GetSupabaseUserError({ message: 'No user found' }))
       }
     })
-    // .pipe(
-    //   Effect.catchAll(
-    //     e => Effect.fail(new Error("in bon vieux catch all"))
-    //   ),
-    // )
     const finalLayer = Layer.mergeAll(
       ServerSupabaseClient.Live,
       ServerSupabaseUser.Live,

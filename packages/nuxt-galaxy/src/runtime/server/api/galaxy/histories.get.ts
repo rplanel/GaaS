@@ -1,23 +1,32 @@
-import type { Database } from '../../../types/database'
-import type { RowHistory } from '~/src/runtime/types/nuxt-galaxy'
-import { serverSupabaseClient } from '#supabase/server'
-import { getHistory } from 'blendtype'
+import { GalaxyFetch, getHistoryEffect, runWithConfig } from 'blendtype'
 import { Effect } from 'effect'
 import { defineEventHandler } from 'h3'
+import { ServerSupabaseClient } from '../../utils/grizzle/supabase'
 
 export default defineEventHandler(async (event) => {
-  const supabaseClient = await serverSupabaseClient<Database>(event)
-  const { data: historiesDb }: { data: RowHistory[] } = await supabaseClient
-    .schema('galaxy')
-    .from('histories')
-    .select()
-  if (historiesDb) {
-    const effects = historiesDb.map((h) => {
-      return Effect.tryPromise({
-        try: () => getHistory(h.galaxy_id),
-        catch: e => new Error(`Failed to get history ${h.galaxy_id}: ${e}`),
+  const program = Effect.gen(function* () {
+    const createServerSupabaseClient = yield* ServerSupabaseClient
+    const supabaseClient = yield* createServerSupabaseClient(event)
+    const { error, data: historiesDb } = yield* Effect.promise(() => supabaseClient
+      .schema('galaxy')
+      .from('histories')
+      .select())
+
+    if (error) {
+      Effect.fail(new Error(`supabase error: ${error.message}\ncode : ${error.code}`))
+    }
+
+    if (historiesDb) {
+      const effects = historiesDb.map((h) => {
+        return getHistoryEffect(h.galaxy_id)
       })
-    })
-    return Effect.all(effects).pipe(Effect.runPromise)
-  }
+      return yield* Effect.all(effects)
+    }
+  })
+
+  return program.pipe(
+    Effect.provide(ServerSupabaseClient.Live),
+    Effect.provide(GalaxyFetch.Live),
+    runWithConfig,
+  )
 })

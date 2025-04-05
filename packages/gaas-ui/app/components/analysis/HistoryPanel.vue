@@ -183,94 +183,112 @@ watchEffect(() => {
     workflowParametersModel.value = toValue(decodedParameters)
   }
 })
+const links = computed(() => {
+  const analysisIdVal = toValue(analysisId)
+  return [
+    [
+
+      {
+        label: 'Tool parameters',
+        icon: 'mdi:tools',
+        to: `/analyses/${analysisIdVal}`,
+        exact: true,
+      },
+      {
+        label: 'Results',
+        icon: 'material-symbols:data-array-rounded',
+        to: `/analyses/${analysisIdVal}/results`,
+        exact: true,
+      },
+
+    ],
+  ]
+})
 </script>
 
 <template>
   <UDashboardPanel id="history-panel" class="overflow-auto">
-    <UDashboardNavbar
-      v-if="detailedAnalysis"
-      :title="detailedAnalysis.name"
-      :toggle="true"
-    >
-      <template #leading>
-        <UButton icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5" @click="emits('close')" />
-      </template>
-
-      <template #right>
-        <!-- <GalaxyStatus v-if="history" :state="history.state" :size="30" /> -->
-
-        <UButtonGroup orientation="horizontal">
-          <UButton variant="subtle" active-variant="solid" label="Results" :to="`/analyses/${analysisId}/results`" />
-          <UButton variant="subtle" active-variant="solid" label="parameters" :to="`/analyses/${analysisId}`" :active="$route.name === 'analyses-analysisId'" />
-        </UButtonGroup>
-      </template>
-    </UDashboardNavbar>
-
-    <template v-if="pendingAnalysis">
-      <div class="hidden lg:flex flex-1 items-center justify-center">
-        <div class="flex items-center gap-4">
-          <USkeleton class="h-20 w-20 rounded-full" />
-          <div class="grid gap-2">
-            <USkeleton class="h-8 w-[250px]" />
-            <USkeleton class="h-8 w-[200px]" />
+    <template #header>
+      <UDashboardNavbar
+        v-if="detailedAnalysis"
+        :title="detailedAnalysis.name"
+        :toggle="true"
+      >
+        <template #leading>
+          <UButton icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5" @click="emits('close')" />
+        </template>
+      </UDashboardNavbar>
+      <UDashboardToolbar>
+        <UNavigationMenu :items="links" highlight class="-mx-1 flex-1" />
+      </UDashboardToolbar>
+    </template>
+    <template #body>
+      <template v-if="pendingAnalysis">
+        <div class="hidden lg:flex flex-1 items-center justify-center">
+          <div class="flex items-center gap-4">
+            <USkeleton class="h-20 w-20 rounded-full" />
+            <div class="grid gap-2">
+              <USkeleton class="h-8 w-[250px]" />
+              <USkeleton class="h-8 w-[200px]" />
+            </div>
           </div>
         </div>
-      </div>
+      </template>
+      <slot v-else>
+        <UPageList divide>
+          <UPageCard title="Inputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+            <GalaxyAnalysisIoDatasets :items="inputs" />
+          </UPageCard>
+          <UPageCard v-if="jobs && toolsObj" title="Jobs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+            <UPageAccordion :default-value="[jobsAccordionItems?.[0]?.value ?? '0']" :items="jobsAccordionItems">
+              <template #leading="{ item }">
+                <div>
+                  <GalaxyStatus :state="item?.value && jobsMap ? jobsMap[item.value]?.state : undefined" size="25" />
+                </div>
+              </template>
+              <template #body="{ item }">
+                <div v-if="jobDetailsAccordionItems && item.value" class="p-4">
+                  <UPageAccordion :default-value="['0']" :items="jobDetailsAccordionItems[item.value]?.details">
+                    <template #parameters>
+                      <div
+                        v-if="
+                          workflowSteps
+                            && workflowParametersModel
+                            && item.value
+                        " class="p-2"
+                      >
+                        <GalaxyWorkflowStep
+                          variant="display" :workflow-step="workflowSteps[item.value]"
+                          :tool-parameters="getToolParameters(item.value)"
+                          :parameters-inputs-component="getParametersInputComponent(item.value)"
+                          :workflow-parameters-model=" workflowParametersModel[item.value] "
+                        />
+                      </div>
+                    </template>
+                    <template #stdout>
+                      <div class="p-1">
+                        <div class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
+                          <pre v-if="jobsMap" class="text-nowrap"> {{ jobsMap[item.value]?.stdout }}</pre>
+                        </div>
+                      </div>
+                    </template>
+                    <template #stderr>
+                      <div class="p-1">
+                        <div class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
+                          <pre v-if="jobsMap"> {{ jobsMap[item.value]?.stderr }}</pre>
+                        </div>
+                      </div>
+                    </template>
+                  </UPageAccordion>
+                </div>
+              </template>
+            </UPageAccordion>
+          </UPageCard>
+          <UPageCard title="Outputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+            <GalaxyAnalysisIoDatasets :items="outputs" />
+          </UPageCard>
+        </UPageList>
+      </slot>
     </template>
-    <slot v-else>
-      <UPageList divide>
-        <UPageCard title="Inputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-          <GalaxyAnalysisIoDatasets :items="inputs" />
-        </UPageCard>
-        <UPageCard v-if="jobs && toolsObj" title="Jobs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-          <UPageAccordion :default-value="[jobsAccordionItems?.[0]?.value ?? '0']" :items="jobsAccordionItems">
-            <template #leading="{ item }">
-              <div>
-                <GalaxyStatus :state="item?.value && jobsMap ? jobsMap[item.value]?.state : undefined" size="25" />
-              </div>
-            </template>
-            <template #body="{ item }">
-              <div v-if="jobDetailsAccordionItems && item.value" class="p-4">
-                <UPageAccordion :default-value="['0']" :items="jobDetailsAccordionItems[item.value]?.details">
-                  <template #parameters>
-                    <div
-                      v-if="
-                        workflowSteps
-                          && workflowParametersModel
-                          && item.value
-                      " class="p-2"
-                    >
-                      <GalaxyWorkflowStep
-                        variant="display" :workflow-step="workflowSteps[item.value]"
-                        :tool-parameters="getToolParameters(item.value)"
-                        :parameters-inputs-component="getParametersInputComponent(item.value)"
-                        :workflow-parameters-model=" workflowParametersModel[item.value] "
-                      />
-                    </div>
-                  </template>
-                  <template #stdout>
-                    <div class="p-1">
-                      <div class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
-                        <pre v-if="jobsMap" class="text-nowrap"> {{ jobsMap[item.value]?.stdout }}</pre>
-                      </div>
-                    </div>
-                  </template>
-                  <template #stderr>
-                    <div class="p-1">
-                      <div class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
-                        <pre v-if="jobsMap"> {{ jobsMap[item.value]?.stderr }}</pre>
-                      </div>
-                    </div>
-                  </template>
-                </UPageAccordion>
-              </div>
-            </template>
-          </UPageAccordion>
-        </UPageCard>
-        <UPageCard title="Outputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-          <GalaxyAnalysisIoDatasets :items="outputs" />
-        </UPageCard>
-      </UPageList>
-    </slot>
   </UDashboardPanel>
 </template>

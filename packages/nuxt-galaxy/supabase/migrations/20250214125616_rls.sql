@@ -74,6 +74,8 @@ on galaxy.datasets for select to authenticated using (
 alter table galaxy.datasets enable row level security;
 
 
+
+
 -- WORKFLOWS
 
 alter table galaxy.workflows enable row level security;

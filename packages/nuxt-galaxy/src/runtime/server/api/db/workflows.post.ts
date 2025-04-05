@@ -1,9 +1,10 @@
-import type { Database } from '~/src/runtime/types/database'
 import { useRuntimeConfig } from '#imports'
-import { serverSupabaseClient } from '#supabase/server'
-import { exportWorkflow } from 'blendtype'
-import { createError, defineEventHandler, readBody } from 'h3'
-import { getCurrentUser } from '../../utils/grizzle/user'
+import { exportWorkflowEffect, GalaxyFetch, runWithConfig } from 'blendtype'
+import { Effect, Layer } from 'effect'
+import { defineEventHandler, readBody } from 'h3'
+import { Drizzle } from '../../utils/drizzle'
+import { ServerSupabaseClient, ServerSupabaseUser } from '../../utils/grizzle/supabase'
+import { getCurrentUserEffect } from '../../utils/grizzle/user'
 
 export default defineEventHandler<
   {
@@ -18,35 +19,54 @@ export default defineEventHandler<
     const body = await readBody(event)
     const { galaxyId } = body
     const { public: { galaxy: { url } }, galaxy: { email } } = useRuntimeConfig()
-    const galaxyWorkflow = await exportWorkflow(galaxyId)
-    const galaxyUser = await getCurrentUser(url, email)
 
-    const supabaseClient = await serverSupabaseClient<Database>(event)
-    if (galaxyUser) {
-      const { error, data } = await supabaseClient
-        .schema('galaxy')
-        .from('workflows')
-        .insert({
-          version: galaxyWorkflow.version,
-          name: galaxyWorkflow.name,
-          galaxy_id: galaxyId,
-          user_id: galaxyUser.user.id,
-          definition: galaxyWorkflow,
-        })
-      if (error) {
-        if (error.code === '42501') {
-          throw createError({ statusCode: 403, statusMessage: error.message })
-        }
-        else {
-          throw createError({ statusCode: 500, statusMessage: `${error.message}\nsupabase error code : ${error.code}` })
+    const program = Effect.gen(function* () {
+      const createServerSupabaseUser = yield* ServerSupabaseUser
+      const supabaseUser = yield* createServerSupabaseUser(event)
+      const createServerSupabaseClient = yield* ServerSupabaseClient
+      const supabaseClient = yield* createServerSupabaseClient(event)
+      if (supabaseUser) {
+        const galaxyWorkflow = yield* exportWorkflowEffect(galaxyId)
+        const galaxyUser = yield* getCurrentUserEffect(url, email)
+        const definition = galaxyWorkflow as any
+
+        if (galaxyUser) {
+          const { error, data } = yield* Effect.promise(() => supabaseClient
+            .schema('galaxy')
+            .from('workflows')
+            .insert({
+              version: galaxyWorkflow.version,
+              name: galaxyWorkflow.name,
+              galaxy_id: galaxyId,
+              user_id: galaxyUser.user.id,
+              definition,
+            })
+            .select(),
+          )
+          if (error) {
+            if (error.code === '42501') {
+              return yield* Effect.fail(new Error('Permission denied'))
+            }
+            else {
+              return yield* Effect.fail(new Error(`supabase error: ${error.message}\ncode : ${error.code}`))
+            }
+          }
+          else {
+            return data
+          }
         }
       }
-      else {
-        return data
-      }
-    }
-    else {
-      throw createError({ statusCode: 500, statusMessage: 'Could not get the galaxy user' })
-    }
+    })
+
+    const finalLayer = Layer.mergeAll(
+      ServerSupabaseClient.Live,
+      ServerSupabaseUser.Live,
+      GalaxyFetch.Live,
+      Drizzle.Live,
+    )
+    return program.pipe(
+      Effect.provide(finalLayer),
+      runWithConfig,
+    )
   },
 )

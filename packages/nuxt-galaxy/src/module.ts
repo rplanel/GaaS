@@ -156,21 +156,6 @@ export default defineNuxtModule<ModuleOptions>({
 
     addServerImportsDir(resolver.resolve('./runtime/server/utils'))
     addServerImportsDir(resolver.resolve('./runtime/server/db'))
-
-    // add route middleware
-    // addRouteMiddleware({
-    //   name: 'auth',
-    //   path: resolver.resolve('./runtime/app/middleware/auth'),
-    // })
-
-    // add server routes
-
-    // server middleware
-    // addServerHandler({
-    //   middleware: true,
-    //   handler: resolver.resolve('./runtime/server/middleware/supabase'),
-    // })
-
     // Galaxy
     addServerHandler({
       route: '/sync',
@@ -178,7 +163,7 @@ export default defineNuxtModule<ModuleOptions>({
       method: 'get',
     })
     addServerHandler({
-      route: '/api/galaxyinstance',
+      route: '/api/galaxy/instance',
       handler: resolver.resolve('./runtime/server/api/galaxy/instance.get'),
 
     })
@@ -187,13 +172,6 @@ export default defineNuxtModule<ModuleOptions>({
       handler: resolver.resolve('./runtime/server/api/galaxy/histories.get'),
       method: 'get',
     })
-
-    addServerHandler({
-      route: '/api/galaxy/histories',
-      handler: resolver.resolve('./runtime/server/api/galaxy/histories.post'),
-      method: 'post',
-    })
-
     addServerHandler({
       route: '/api/galaxy/workflows',
       handler: resolver.resolve('./runtime/server/api/galaxy/workflows.get'),

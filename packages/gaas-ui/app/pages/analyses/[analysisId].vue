@@ -39,7 +39,7 @@ supabase
   .channel('histories')
   .on(
     'postgres_changes',
-    { event: 'UPDATE', schema: 'galaxy', table: 'histories' },
+    { event: '*', schema: 'galaxy', table: 'histories' },
     handleUpdates,
   )
   .subscribe()
@@ -48,8 +48,19 @@ supabase
   .channel('jobs')
   .on(
     'postgres_changes',
-    { event: 'UPDATE', schema: 'galaxy', table: 'jobs' },
+    { event: '*', schema: 'galaxy', table: 'jobs' },
     handleUpdates,
+  )
+  .subscribe()
+
+supabase
+  .channel('analysis_outputs')
+  .on(
+    'postgres_changes',
+    { event: '*', schema: 'galaxy', table: 'analysis_outputs' },
+    () => {
+      handleUpdates()
+    },
   )
   .subscribe()
 

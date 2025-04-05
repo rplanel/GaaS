@@ -42,6 +42,4 @@ export default defineEventHandler(async (event) => {
     Effect.provide(finalLayer),
     runWithConfig,
   )
-},
-
-)
+})
