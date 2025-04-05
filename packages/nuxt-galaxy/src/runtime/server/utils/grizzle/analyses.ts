@@ -1,7 +1,7 @@
 import type { Datamap, GalaxyInvocation, GalaxyInvocationIO, GalaxyWorkflowInput, GalaxyWorkflowParameters, InvocationState, InvocationTerminalState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
 import type { NewAnalysis } from '~/src/runtime/types/nuxt-galaxy'
-import { getDatasetEffect, getInvocationEffect, InvocationTerminalStates, invokeWorkflowEffect } from 'blendtype'
+import { deleteHistoryEffect, getDatasetEffect, getInvocationEffect, InvocationTerminalStates, invokeWorkflowEffect } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { Data, Effect } from 'effect'
 import { analyses } from '../../db/schema/galaxy/analyses'
@@ -16,7 +16,7 @@ export function isAnalysisTerminalState(state: InvocationState): boolean {
   return InvocationTerminalStates.includes(state as InvocationTerminalState)
 }
 
-export function runAnalysisEffect(
+export function runAnalysis(
   analysisName: string,
   galaxyHistoryId: string,
   galaxyWorkflowId: string,
@@ -84,6 +84,34 @@ export function runAnalysisEffect(
 }
 
 // eslint-disable-next-line unicorn/throw-new-error
+export class DeleteAnalysisError extends Data.TaggedError('DeleteAnalysisError')<{
+  readonly message: string
+}> { }
+export function deleteAnalysis(
+  analysisId: number,
+  ownerId: string,
+) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* getHistoryAnalysis(analysisId, ownerId).pipe(
+      Effect.flatMap((historyAnalysis) => {
+        if (historyAnalysis) {
+          return deleteHistoryEffect(historyAnalysis.histories.galaxyId)
+            .pipe(Effect.flatMap(() => Effect.tryPromise({
+              try: () => useDrizzle
+                .delete(analyses)
+                .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
+                .returning(),
+              catch: error => new DeleteAnalysisError({ message: `Error deleting analysis: ${error}` }),
+            })))
+        }
+        return Effect.fail(new DeleteAnalysisError({ message: `Error deleting analysis: Analysis not found` }))
+      }),
+    )
+  })
+}
+
+// eslint-disable-next-line unicorn/throw-new-error
 export class InsertAnalysisError extends Data.TaggedError('InsertAnalysisError')<{
   readonly message: string
 }> { }
@@ -103,7 +131,7 @@ export function insertAnalysis(analysis: NewAnalysis) {
     })
   })
 }
-export function getInvocationOutputsEffect(analysisId: number, ownerId: string) {
+export function getInvocationOutputs(analysisId: number, ownerId: string) {
   return Effect.gen(function* () {
     const invocationDb = yield* getAnalysis(analysisId, ownerId)
     if (!invocationDb) {
@@ -154,7 +182,7 @@ export function getAnalysis(analysisId: number, ownerId: string) {
 
 export function synchronizeJobsEffect(analysisId: number, historyId: number, ownerId: string, event: H3Event<EventHandlerRequest>) {
   return Effect.gen(function* () {
-    const invocationOutputs = yield* getInvocationOutputsEffect(analysisId, ownerId)
+    const invocationOutputs = yield* getInvocationOutputs(analysisId, ownerId)
     if (invocationOutputs) {
       return yield* Effect.all(
         Object

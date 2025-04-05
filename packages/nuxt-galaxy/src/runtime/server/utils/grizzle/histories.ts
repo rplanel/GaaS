@@ -9,7 +9,7 @@ import { Data, Effect } from 'effect'
 import { analyses } from '../../db/schema/galaxy/analyses'
 import { histories } from '../../db/schema/galaxy/histories'
 import { Drizzle } from '../drizzle'
-import { getInvocationOutputsEffect, synchronizeJobsEffect } from './analyses'
+import { getInvocationOutputs, synchronizeJobsEffect } from './analyses'
 import { getAllAnalysisInputDatasets, synchronizeInputDatasetEffect } from './datasets/input'
 import { takeUniqueOrThrow } from './helper.js'
 import { getAnalysisJobs, isJobSyncEffect } from './jobs'
@@ -187,7 +187,7 @@ export function isHistorySyncEffect(historyId: number, analysisId: number, owner
     if (isSync) {
       return true
     }
-    const jobsWithOutputs = yield* getInvocationOutputsEffect(analysisId, ownerId)
+    const jobsWithOutputs = yield* getInvocationOutputs(analysisId, ownerId)
     const isAllJobsSync = yield* isSynchronizedAnalysisJobs(analysisId, jobsWithOutputs, ownerId)
     const isHistorySync = isHistoryTerminalState(historyDb.histories.state) && isAllJobsSync
     if (isHistorySync) {
