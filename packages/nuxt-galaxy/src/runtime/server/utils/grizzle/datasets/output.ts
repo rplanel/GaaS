@@ -99,7 +99,8 @@ export function getOrCreateOutputDatasetEffect(
             const instertedOutputs = yield* insertAnalysisOutputEffect(analysisId, insertedDataset.id, jobId, galaxyDataset.state)
             if (instertedOutputs) {
               const insertedTags = yield* insertTags(galaxyDataset.tags)
-              yield* insertAnalysisOutputTags(insertedTags, insertedDataset.id)
+              const insertedAnalysisOutputTags = yield* insertAnalysisOutputTags(insertedTags, instertedOutputs.id)
+              return insertedAnalysisOutputTags
             }
           }
         }
@@ -116,13 +117,16 @@ export class InsertAnalysisOutputTagsError extends Data.TaggedError('InsertAnaly
 export function insertAnalysisOutputTags(datasetTags: GetTag[], analysisOutputId: number) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
+    const values = datasetTags.map(tagDb => ({
+      tagId: tagDb.id,
+      analysisOutputId,
+    }))
     return yield* Effect.tryPromise({
       try: () => useDrizzle
         .insert(analysisOutputsToTags)
-        .values(datasetTags.map(tagDb => ({
-          tagId: tagDb.id,
-          analysisOutputId,
-        }))),
+        .values(values)
+        .onConflictDoNothing()
+        .returning(),
       catch: error => new InsertAnalysisOutputTagsError({ message: `Error inserting analysis Output tags: ${error}` }),
     })
   })
