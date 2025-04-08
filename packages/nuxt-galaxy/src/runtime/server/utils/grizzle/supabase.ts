@@ -83,7 +83,7 @@ export function createSignedUrl(event: H3Event<EventHandlerRequest>, path: strin
     const createSupabase = yield* ServerSupabaseClient
     const supabase = yield* createSupabase(event)
     const { data, error } = yield* Effect.promise(
-      () => supabase.storage.from('analysis_files').createSignedUrl(path, 5),
+      () => supabase.storage.from('analysis_files').createSignedUrl(path, 60),
     )
     if (error) {
       yield* Effect.fail(new CreateSignedUrlError({ message: error.message }))
