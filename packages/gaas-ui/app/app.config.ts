@@ -28,6 +28,12 @@ export default defineAppConfig({
         children: [],
       },
     ],
+    resultsMenuItems: [{
+      label: 'Tool parameters',
+      icon: 'mdi:tools',
+      to: '',
+      exact: true,
+    }],
     footerItems: [
       {
         label: 'Issues',

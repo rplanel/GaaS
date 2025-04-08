@@ -33,6 +33,7 @@ const workflowGalaxyId = computed(() => {
   }
   return undefined
 })
+const { gaasUi: { resultsMenuItems } } = useAppConfig()
 
 onMounted(() => {
   // Real time listener for new workouts
@@ -185,24 +186,13 @@ watchEffect(() => {
     workflowParametersModel.value = toValue(decodedParameters)
   }
 })
-const links = computed(() => {
+
+const computedResultsMenuItems = computed(() => {
   const analysisIdVal = toValue(analysisId)
-  return [
-    [
-
-      {
-        label: 'Tool parameters',
-        icon: 'mdi:tools',
-        to: `/analyses/${analysisIdVal}`,
-      },
-      {
-        label: 'Results',
-        icon: 'material-symbols:data-array-rounded',
-        to: `/analyses/${analysisIdVal}/results`,
-      },
-
-    ],
-  ]
+  return resultsMenuItems.map(item => ({
+    ...item,
+    to: `/analyses/${analysisIdVal}/${item.to}`,
+  }))
 })
 </script>
 
@@ -219,7 +209,9 @@ const links = computed(() => {
         </template>
       </UDashboardNavbar>
       <UDashboardToolbar>
-        <UNavigationMenu :items="links" highlight class="-mx-1 flex-1" />
+        <template #left>
+          <UNavigationMenu :items="computedResultsMenuItems" highlight class="-mx-1 flex-1" />
+        </template>
       </UDashboardToolbar>
     </template>
     <template #body>
