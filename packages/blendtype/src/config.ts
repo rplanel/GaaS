@@ -1,4 +1,5 @@
 import { Context, Data, Effect, Layer } from 'effect'
+import { toGalaxyServiceUnavailable } from './galaxy'
 
 // const API_KEY = Config.string('API_KEY')
 // const GALAXY_URL = Config.string('GALAXY_URL')
@@ -38,7 +39,7 @@ export const BlendTypeConfigLive = Layer.effect(
 )
 
 // Helper to run Effects with the global config
-export function runWithConfig<A>(effect: Effect.Effect<A, unknown, BlendTypeConfig>): Promise<A> {
+export function runWithConfig<A, E>(effect: Effect.Effect<A, E, BlendTypeConfig>) {
   if (!globalBlendtypeConfigLayer) {
     return Effect.runPromise(
       Effect.fail(new NoConfigError({
@@ -46,9 +47,32 @@ export function runWithConfig<A>(effect: Effect.Effect<A, unknown, BlendTypeConf
       })),
     )
   }
+
+  const sanitizeEffect = effect.pipe(
+    toGalaxyServiceUnavailable,
+  )
   return Effect.runPromise(
     Effect.provide(
-      effect,
+      sanitizeEffect,
+      globalBlendtypeConfigLayer,
+    ),
+  )
+}
+
+export function runWithConfigExit<A, E>(effect: Effect.Effect<A, E, BlendTypeConfig>) {
+  if (!globalBlendtypeConfigLayer) {
+    return Effect.runPromise(
+      Effect.fail(new NoConfigError({
+        message: 'Library not initialized. Call initializeGalaxyClient({apiKey: "api-key", url: "galaxy-url"}) first.',
+      })),
+    )
+  }
+  const sanitizeEffect = effect.pipe(
+    toGalaxyServiceUnavailable,
+  )
+  return Effect.runPromiseExit(
+    Effect.provide(
+      sanitizeEffect,
       globalBlendtypeConfigLayer,
     ),
   )

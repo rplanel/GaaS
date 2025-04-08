@@ -134,7 +134,6 @@ export function useAnalysisDatasetIO(analysisId: Ref<number | undefined>): {
       })
     }
   }
-
   async function fetchWorkflow() {
     const userVal = toValue(user)
     const analysisVal = toValue(analysis)
@@ -180,5 +179,12 @@ export function useAnalysisDatasetIO(analysisId: Ref<number | undefined>): {
     fetchWorkflow()
   })
 
-  return { inputs, outputs, analysis, workflow, refresh: fetchAnalysis, pendingAnalysis }
+  return {
+    inputs,
+    outputs,
+    analysis,
+    workflow,
+    refresh: fetchAnalysis,
+    pendingAnalysis,
+  }
 }

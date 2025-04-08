@@ -65,7 +65,9 @@ const {
   workflowSteps,
   workflowToolIds,
   stepToTool,
+  error: workflowError,
 } = useGalaxyWorkflow(workflowGalaxyId)
+
 const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
 const { getToolParameters, getParametersInputComponent } = useAnalysisTools(toolsObj)
 const { jobs, jobsAccordionItems, jobsMap, jobDetailsAccordionItems } = useAnalysisJob(detailedAnalysis, toolsObj)
@@ -192,13 +194,11 @@ const links = computed(() => {
         label: 'Tool parameters',
         icon: 'mdi:tools',
         to: `/analyses/${analysisIdVal}`,
-        exact: true,
       },
       {
         label: 'Results',
         icon: 'material-symbols:data-array-rounded',
         to: `/analyses/${analysisIdVal}/results`,
-        exact: true,
       },
 
     ],
@@ -234,8 +234,11 @@ const links = computed(() => {
           </div>
         </div>
       </template>
+
       <slot v-else>
-        <UPageList divide>
+        <UAlert v-if="workflowError" :description="workflowError.message" color="error" variant="soft" icon="i-mdi:alert-circle-outline" />
+
+        <UPageList v-else divide>
           <UPageCard title="Inputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
             <GalaxyAnalysisIoDatasets :items="inputs" />
           </UPageCard>

@@ -2,7 +2,7 @@ import type { DatasetState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
 
 import type { GetTag } from '~/src/runtime/types/nuxt-galaxy'
-import { downloadDatasetEffect, getDatasetEffect } from 'blendtype'
+import * as bt from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { Data, Effect } from 'effect'
 import { analysisOutputs, analysisOutputsToTags } from '../../../db/schema/galaxy/analysisOutputs'
@@ -28,7 +28,7 @@ export function synchronizeOutputDatasetEffect(galaxyDatasetId: string, analysis
         if (!historyDb) {
           return
         }
-        const galaxyDataset = yield* getDatasetEffect(galaxyDatasetId, historyDb.galaxyId)
+        const galaxyDataset = yield* bt.getDatasetEffect(galaxyDatasetId, historyDb.galaxyId)
         if (datasetDb.state !== galaxyDataset.state) {
           yield* updateAnalysisOuputStateEffect(galaxyDataset.state, galaxyDatasetId, ownerId)
         }
@@ -78,10 +78,10 @@ export function getOrCreateOutputDatasetEffect(
     if (!historyDb) {
       return
     }
-    const galaxyDataset = yield* getDatasetEffect(galaxyDatasetId, historyDb.galaxyId)
+    const galaxyDataset = yield* bt.getDatasetEffect(galaxyDatasetId, historyDb.galaxyId)
     const isDatasetTerminal = isDatasetTerminalState(galaxyDataset.state)
     if (isDatasetTerminal) {
-      const datasetBlob = yield* downloadDatasetEffect(historyDb.galaxyId, galaxyDatasetId)
+      const datasetBlob = yield* bt.downloadDatasetEffect(historyDb.galaxyId, galaxyDatasetId)
       if (datasetBlob) {
         const data = yield* uploadFileToStorage(event, galaxyDataset.name, datasetBlob)
         if (data) {

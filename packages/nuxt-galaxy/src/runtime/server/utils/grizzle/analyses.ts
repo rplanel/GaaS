@@ -1,7 +1,7 @@
 import type { Datamap, GalaxyInvocation, GalaxyInvocationIO, GalaxyWorkflowInput, GalaxyWorkflowParameters, InvocationState, InvocationTerminalState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
 import type { NewAnalysis } from '~/src/runtime/types/nuxt-galaxy'
-import { deleteHistoryEffect, getDatasetEffect, getInvocationEffect, InvocationTerminalStates, invokeWorkflowEffect } from 'blendtype'
+import * as bt from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { Data, Effect } from 'effect'
 import { analyses } from '../../db/schema/galaxy/analyses'
@@ -13,7 +13,7 @@ import { isHistorySyncEffect, synchronizeHistoryEffect } from './histories'
 import { synchronizeJobEffect } from './jobs'
 
 export function isAnalysisTerminalState(state: InvocationState): boolean {
-  return InvocationTerminalStates.includes(state as InvocationTerminalState)
+  return bt.InvocationTerminalStates.includes(state as InvocationTerminalState)
 }
 
 export function runAnalysis(
@@ -29,7 +29,7 @@ export function runAnalysis(
 
 ) {
   return Effect.gen(function* () {
-    const galaxyInvocation = yield* invokeWorkflowEffect (
+    const galaxyInvocation = yield* bt.invokeWorkflowEffect (
       galaxyHistoryId,
       galaxyWorkflowId,
       inputs,
@@ -45,7 +45,7 @@ export function runAnalysis(
       inputIds: undefined,
 
     }
-    const invocation = yield* getInvocationEffect(galaxyInvocation.id)
+    const invocation = yield* bt.getInvocationEffect(galaxyInvocation.id)
     const newAnalysis = {
       name: analysisName,
       historyId,
@@ -65,7 +65,7 @@ export function runAnalysis(
         Object.entries(inputs).map(([_step, { dbid, id: galaxyDatasetId }]) => {
           return Effect.gen(function* () {
             if (dbid) {
-              const dataset = yield* getDatasetEffect(galaxyDatasetId, galaxyHistoryId)
+              const dataset = yield* bt.getDatasetEffect(galaxyDatasetId, galaxyHistoryId)
               return yield* insertAnalysisInputEffect(
                 insertedAnalysisId,
                 dbid,
@@ -96,7 +96,7 @@ export function deleteAnalysis(
     return yield* getHistoryAnalysis(analysisId, ownerId).pipe(
       Effect.flatMap((historyAnalysis) => {
         if (historyAnalysis) {
-          return deleteHistoryEffect(historyAnalysis.histories.galaxyId)
+          return bt.deleteHistoryEffect(historyAnalysis.histories.galaxyId)
             .pipe(Effect.flatMap(() => Effect.tryPromise({
               try: () => useDrizzle
                 .delete(analyses)
@@ -216,7 +216,7 @@ export function synchronizeAnalysisEffect(
     }
     yield* synchronizeHistoryEffect(invocationDb.histories.id, ownerId, event)
     const galaxyInvocationId = invocationDb.analyses.galaxyId
-    const invocation = yield* getInvocationEffect(galaxyInvocationId)
+    const invocation = yield* bt.getInvocationEffect(galaxyInvocationId)
 
     if (!isAnalysisTerminalState(invocationDb.analyses.state)) {
       if (invocation.state !== invocationDb.analyses.state) {
