@@ -192,7 +192,7 @@ const computedResultsMenuItems = computed(() => {
   return resultsMenuItems.map(item => ({
     ...item,
     to: `/analyses/${analysisIdVal}/${item.to}`,
-  }))
+  })).reverse()
 })
 </script>
 

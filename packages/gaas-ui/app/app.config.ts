@@ -29,7 +29,7 @@ export default defineAppConfig({
       },
     ],
     resultsMenuItems: [{
-      label: 'Tool parameters',
+      label: 'Analysis parameters',
       icon: 'mdi:tools',
       to: '',
       exact: true,
