@@ -100,9 +100,33 @@ export type RoleType = typeof RoleTypes[number]
 
 export const RolePermissions = [
   'workflows.insert',
+  'workflows.update',
+  'workflows.select',
   'workflows.delete',
   'instances.insert',
   'instances.delete',
+  'instances.update',
+  'instances.select',
+  'user.select',
+  'user.insert',
+  'user.update',
+  'user.delete',
+  'roles.select',
+  'roles.insert',
+  'roles.update',
+  'roles.delete',
+  'role_permissions.select',
+  'role_permissions.insert',
+  'role_permissions.update',
+  'role_permissions.delete',
+  'tags.select',
+  'tags.insert',
+  'tags.update',
+  'tags.delete',
+  'user_roles.select',
+  'user_roles.insert',
+  'user_roles.update',
+  'user_roles.delete',
 ] as const
 export type RolePermission = typeof RolePermissions[number]
 

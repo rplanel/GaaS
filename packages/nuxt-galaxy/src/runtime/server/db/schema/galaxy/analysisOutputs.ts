@@ -1,6 +1,6 @@
 import type { DatasetState } from 'blendtype'
 import { relations } from 'drizzle-orm'
-import { integer, primaryKey, serial, unique } from 'drizzle-orm/pg-core'
+import { index, integer, primaryKey, serial, unique } from 'drizzle-orm/pg-core'
 import { datasetStateEnum, galaxy } from '../galaxy'
 import { analyses } from './analyses'
 import { datasets } from './datasets'
@@ -13,9 +13,12 @@ export const analysisOutputs = galaxy.table('analysis_outputs', {
   datasetId: integer('dataset_id').references(() => datasets.id, { onDelete: 'cascade' }).notNull(),
   analysisId: integer('analysis_id').references(() => analyses.id, { onDelete: 'cascade' }).notNull(),
   jobId: integer('job_id').references(() => jobs.id).notNull(),
-}, t => ({
-  unique: unique().on(t.datasetId, t.jobId),
-}))
+}, table => [
+  unique().on(table.datasetId, table.jobId),
+  index().on(table.datasetId),
+  index().on(table.analysisId),
+  index().on(table.jobId),
+])
 
 /**
  * outputAnalysis tags

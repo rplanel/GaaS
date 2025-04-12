@@ -1,5 +1,5 @@
 import { eq, getTableColumns, relations } from 'drizzle-orm'
-import { serial, text, uuid } from 'drizzle-orm/pg-core'
+import { index, serial, text, uuid } from 'drizzle-orm/pg-core'
 import { users as owners } from '../auth/users'
 import { galaxy } from '../galaxy'
 import { objects } from '../storage/objects'
@@ -13,7 +13,10 @@ export const uploadedDatasets = galaxy.table('uploaded_datasets', {
     { onDelete: 'cascade' },
   ).unique(),
 
-})
+}, table => [
+  index().on(table.ownerId),
+  index().on(table.storageObjectId),
+])
 
 export const uploadedDatasetsRelations = relations(uploadedDatasets, ({ one }) => {
   return {

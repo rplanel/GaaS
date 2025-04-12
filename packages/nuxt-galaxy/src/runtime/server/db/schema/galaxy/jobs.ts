@@ -1,6 +1,6 @@
 import type { JobState } from 'blendtype'
 import { relations } from 'drizzle-orm'
-import { boolean, integer, serial, text, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core'
+import { boolean, index, integer, serial, text, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core'
 import { users as owners } from '../auth/users'
 import { galaxy, jobStateEnum } from '../galaxy'
 import { analyses } from './analyses'
@@ -19,9 +19,12 @@ export const jobs = galaxy.table('jobs', {
   stepId: integer('step_id').notNull(),
   analysisId: integer('analysis_id').notNull().references(() => analyses.id, { onDelete: 'cascade' }),
   isSync: boolean('is_sync').notNull().default(false),
-}, t => ({
-  unq: unique().on(t.galaxyId, t.analysisId),
-}))
+}, t => [
+  unique().on(t.galaxyId, t.analysisId),
+  index().on(t.ownerId),
+  index().on(t.analysisId),
+  index().on(t.galaxyId),
+])
 
 export const jobsRelations = relations(jobs, ({ many, one }) => {
   return {

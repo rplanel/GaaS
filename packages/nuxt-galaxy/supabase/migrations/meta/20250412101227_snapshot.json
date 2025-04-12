@@ -1,5 +1,5 @@
 {
-  "id": "3389fdb2-b2a9-4c8b-9b45-c2fa3bf0b296",
+  "id": "930f9838-28b9-45ba-98fc-1fe58722d2d4",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -96,7 +96,68 @@
           "default": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "analyses_owner_id_index": {
+          "name": "analyses_owner_id_index",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "analyses_history_id_index": {
+          "name": "analyses_history_id_index",
+          "columns": [
+            {
+              "expression": "history_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "analyses_workflow_id_index": {
+          "name": "analyses_workflow_id_index",
+          "columns": [
+            {
+              "expression": "workflow_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "analyses_galaxy_id_index": {
+          "name": "analyses_galaxy_id_index",
+          "columns": [
+            {
+              "expression": "galaxy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "analyses_owner_id_users_id_fk": {
           "name": "analyses_owner_id_users_id_fk",
@@ -185,7 +246,38 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "analysis_inputs_dataset_id_index": {
+          "name": "analysis_inputs_dataset_id_index",
+          "columns": [
+            {
+              "expression": "dataset_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "analysis_inputs_analysis_id_index": {
+          "name": "analysis_inputs_analysis_id_index",
+          "columns": [
+            {
+              "expression": "analysis_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "analysis_inputs_dataset_id_datasets_id_fk": {
           "name": "analysis_inputs_dataset_id_datasets_id_fk",
@@ -266,7 +358,53 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "analysis_outputs_dataset_id_index": {
+          "name": "analysis_outputs_dataset_id_index",
+          "columns": [
+            {
+              "expression": "dataset_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "analysis_outputs_analysis_id_index": {
+          "name": "analysis_outputs_analysis_id_index",
+          "columns": [
+            {
+              "expression": "analysis_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "analysis_outputs_job_id_index": {
+          "name": "analysis_outputs_job_id_index",
+          "columns": [
+            {
+              "expression": "job_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "analysis_outputs_dataset_id_datasets_id_fk": {
           "name": "analysis_outputs_dataset_id_datasets_id_fk",
@@ -460,7 +598,68 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "datasets_owner_id_index": {
+          "name": "datasets_owner_id_index",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "datasets_history_id_index": {
+          "name": "datasets_history_id_index",
+          "columns": [
+            {
+              "expression": "history_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "datasets_storage_object_id_index": {
+          "name": "datasets_storage_object_id_index",
+          "columns": [
+            {
+              "expression": "storage_object_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "datasets_galaxy_id_index": {
+          "name": "datasets_galaxy_id_index",
+          "columns": [
+            {
+              "expression": "galaxy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "datasets_owner_id_users_id_fk": {
           "name": "datasets_owner_id_users_id_fk",
@@ -658,7 +857,53 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "histories_user_id_index": {
+          "name": "histories_user_id_index",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "histories_owner_id_index": {
+          "name": "histories_owner_id_index",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "histories_galaxy_id_index": {
+          "name": "histories_galaxy_id_index",
+          "columns": [
+            {
+              "expression": "galaxy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "histories_user_id_user_id_fk": {
           "name": "histories_user_id_user_id_fk",
@@ -814,7 +1059,53 @@
           "default": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "jobs_owner_id_index": {
+          "name": "jobs_owner_id_index",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "jobs_analysis_id_index": {
+          "name": "jobs_analysis_id_index",
+          "columns": [
+            {
+              "expression": "analysis_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "jobs_galaxy_id_index": {
+          "name": "jobs_galaxy_id_index",
+          "columns": [
+            {
+              "expression": "galaxy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "jobs_owner_id_users_id_fk": {
           "name": "jobs_owner_id_users_id_fk",
@@ -891,7 +1182,38 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "role_permissions_role_id_index": {
+          "name": "role_permissions_role_id_index",
+          "columns": [
+            {
+              "expression": "role_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "role_permissions_permission_index": {
+          "name": "role_permissions_permission_index",
+          "columns": [
+            {
+              "expression": "permission",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "role_permissions_role_id_roles_id_fk": {
           "name": "role_permissions_role_id_roles_id_fk",
@@ -1011,7 +1333,38 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "uploaded_datasets_owner_id_index": {
+          "name": "uploaded_datasets_owner_id_index",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "uploaded_datasets_storage_object_id_index": {
+          "name": "uploaded_datasets_storage_object_id_index",
+          "columns": [
+            {
+              "expression": "storage_object_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "uploaded_datasets_owner_id_users_id_fk": {
           "name": "uploaded_datasets_owner_id_users_id_fk",
@@ -1398,9 +1751,33 @@
       "schema": "galaxy",
       "values": [
         "workflows.insert",
+        "workflows.update",
+        "workflows.select",
         "workflows.delete",
         "instances.insert",
-        "instances.delete"
+        "instances.delete",
+        "instances.update",
+        "instances.select",
+        "user.select",
+        "user.insert",
+        "user.update",
+        "user.delete",
+        "roles.select",
+        "roles.insert",
+        "roles.update",
+        "roles.delete",
+        "role_permissions.select",
+        "role_permissions.insert",
+        "role_permissions.update",
+        "role_permissions.delete",
+        "tags.select",
+        "tags.insert",
+        "tags.update",
+        "tags.delete",
+        "user_roles.select",
+        "user_roles.insert",
+        "user_roles.update",
+        "user_roles.delete"
       ]
     },
     "galaxy.role_type": {

@@ -26,4 +26,5 @@ values
   ('workflows.insert', (select id from galaxy.roles where name = 'admin')),
   ('workflows.delete', (select id from galaxy.roles where name = 'admin')),
   ('instances.insert', (select id from galaxy.roles where name = 'admin')),
-  ('instances.delete', (select id from galaxy.roles where name = 'admin'));
+  ('instances.delete', (select id from galaxy.roles where name = 'admin')),
+  ('user.select', (select id from galaxy.roles where name = 'admin'));
