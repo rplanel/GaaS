@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { SupabaseTypes } from '#build/types/database'
 import type { BreadcrumbItem } from '#ui/types'
-import { NuxtErrorBoundary } from '#components'
 import { z } from 'zod'
 
 type Database = SupabaseTypes.Database
@@ -83,42 +82,20 @@ const { data, refresh: refreshDatasets } = await useAsyncData<DatasetColumn[] | 
     return data
   },
 )
+const selectedFile = ref<File | null>(null)
+
+const { uploadFileToStorage, pending } = useUploadFileToStorage({ bucket: 'analysis_files' })
+
 async function uploadFile(event: any) {
-  const selectedFile = event.target.files?.[0]
-  const userVal = toValue(user)
-
-  if (selectedFile && userVal) {
-    uploadingFile.value = true
-    const { data: uploadedFile, error: uploadError } = await supabase.storage
-      .from('analysis_files')
-      .upload(`${crypto.randomUUID()}/${selectedFile.name}`, selectedFile)
-
-    if (uploadError) {
-      uploadingFile.value = false
-      throw createError({
-        statusCode: getStatusCode(uploadError),
-        statusMessage: getErrorMessage(uploadError),
-      })
-    }
-    else {
-      uploadingFile.value = false
-      refreshDatasets()
-      refreshDatasetsCount()
-    }
-    if (uploadedFile) {
-      await supabase
-        .schema('galaxy')
-        .from('uploaded_datasets')
-        .insert({
-          owner_id: userVal.id,
-          storage_object_id: uploadedFile.id,
-          dataset_name: selectedFile.name,
-        })
-        .select()
-      refreshDatasets()
-      refreshDatasetsCount()
-    }
+  const file = event.target.files?.[0] as File | null
+  selectedFile.value = file
+  if (!file) {
+    return
   }
+  return uploadFileToStorage(file).then(() => {
+    refreshDatasets()
+    refreshDatasetsCount()
+  })
 }
 function onFileClick() {
   fileRef.value?.click()
@@ -134,15 +111,15 @@ function onFileClick() {
         </template>
 
         <template #right>
-          <NuxtErrorBoundary @error="(error) => uploadError = error">
-            <UForm :schema="schema" :state="state">
-              <UButton
-                icon="i-lucide-plus" size="md" class="rounded-full" :disabled="uploadingFile"
-                :loading="uploadingFile" @click="onFileClick"
-              />
-              <input ref="fileRef" type="file" class="hidden" @change="uploadFile">
-            </UForm>
-          </NuxtErrorBoundary>
+          <!-- <NuxtErrorBoundary @error="(error) => uploadError = error"> -->
+          <UForm :schema="schema" :state="state">
+            <UButton
+              icon="i-lucide-plus" size="md" class="rounded-full" :disabled="uploadingFile"
+              :loading="pending" @click="onFileClick"
+            />
+            <input ref="fileRef" type="file" class="hidden" @change="uploadFile">
+          </UForm>
+          <!-- </NuxtErrorBoundary> -->
         </template>
       </UDashboardNavbar>
     </template>

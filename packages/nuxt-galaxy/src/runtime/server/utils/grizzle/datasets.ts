@@ -82,6 +82,20 @@ export function uploadDatasetsEffect(datamap: Datamap, galaxyHistoryId: string, 
   )
 }
 
+export function uploadFileToSupabase() {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .select()
+        .from(objects)
+        .where(eq(objects.id, ''))
+        .then(takeUniqueOrThrow),
+      catch: error => new NoStorageObjectError({ message: `Error getting storage object: ${error}` }),
+    })
+  })
+}
+
 // eslint-disable-next-line unicorn/throw-new-error
 export class NotDefinedInsertedDatasetError extends Data.TaggedError('NotDefinedInsertedDatasetError')<{
   readonly message: string

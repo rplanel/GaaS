@@ -6,19 +6,17 @@ import type { jobs } from '../server/db/schema/galaxy/jobs'
 import type { tags } from '../server/db/schema/galaxy/tags'
 import type { Database } from './database'
 
-export interface WorkflowToolsParameters {
-  step: WorkflowStep
-  parameters?: GalaxyToolParameters[] | undefined
-  id: string
-}
-
 export type RowAnalysis = Database['galaxy']['Tables']['analyses']['Row']
 export type RowAnalysisInput = Database['galaxy']['Tables']['analysis_inputs']['Row']
 export type RowAnalysisOutputs = Database['galaxy']['Tables']['analysis_outputs']['Row']
 export type RowAnalysisJob = Database['galaxy']['Tables']['jobs']['Row']
 export type RowAnalaysisDataset = Database['galaxy']['Tables']['datasets']['Row']
+export type RowUploadedDataset = Database['galaxy']['Tables']['uploaded_datasets']['Row']
 export type RowWorkflow = Database['galaxy']['Tables']['workflows']['Row']
 export type RowHistory = Database['galaxy']['Tables']['histories']['Row']
+export type AnalysisInputsWithStoratePath = Database['galaxy']['Views']['analysis_inputs_with_storage_path']['Row']
+export type AnalysisOutputsWithStoratePath = Database['galaxy']['Views']['analysis_outputs_with_storage_path']['Row']
+
 export interface AnalysisInputsWithDatasets extends RowAnalysisInput {
   datasets: RowAnalaysisDataset
 }
@@ -34,6 +32,12 @@ export interface AnalysisOutputsWithDatasets extends RowAnalysisOutputs {
 
 export type AnalysisIOWithDatasets = AnalysisInputsWithDatasets | AnalysisOutputsWithDatasets
 
+export interface WorkflowToolsParameters {
+  step: WorkflowStep
+  parameters?: GalaxyToolParameters[] | undefined
+  id: string
+}
+
 export interface AnalysisDetail extends RowAnalysis {
   workflows: RowWorkflow
   histories: RowHistory
@@ -43,8 +47,6 @@ export interface AnalysisJobs extends RowAnalysisJob {
   analysis: RowAnalysis
 }
 
-export type AnalysisInputsWithStoratePath = Database['galaxy']['Views']['analysis_inputs_with_storage_path']['Row']
-export type AnalysisOutputsWithStoratePath = Database['galaxy']['Views']['analysis_outputs_with_storage_path']['Row']
 // export type AnalysisDetail = Database['galaxy']['Views']['analyses_details']['Row']
 
 export interface Sync {

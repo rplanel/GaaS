@@ -149,7 +149,6 @@ on galaxy.uploaded_datasets for select to authenticated using (
   auth.uid() = owner_id
 );
 
-alter table galaxy.uploaded_datasets enable row level security;
 
 
 -- Jobs

@@ -339,7 +339,12 @@ watchEffect(() => {
           /> -->
       <div v-if="datasets && workflowInputDatasetsModel" class="mt-5">
         <h3 class="font-bold text-lg ">
-          Select Datasets
+          <template v-if="Object.values(workflowInputs).length > 1">
+            Select workflow inputs
+          </template>
+          <template v-else>
+            Select workflow input
+          </template>
         </h3>
 
         <UFormField
@@ -355,6 +360,7 @@ watchEffect(() => {
               placeholder: 'Filter...',
               icon: 'i-lucide-search',
             }"
+            :create-item="{ position: 'top', when: 'always' }"
             icon="i-material-symbols:dataset"
             :items="datasets"
             label-key="dataset_name"
