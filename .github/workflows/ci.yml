@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - use-effect
   pull_request:
     branches:
       - main

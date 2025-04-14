@@ -4,7 +4,7 @@ CREATE TYPE "galaxy"."dataset_state" AS ENUM('ok', 'empty', 'error', 'discarded'
 CREATE TYPE "galaxy"."history_state" AS ENUM('new', 'upload', 'queued', 'running', 'ok', 'empty', 'error', 'paused', 'setting_metadata', 'failed_metadata', 'deferred', 'discarded');--> statement-breakpoint
 CREATE TYPE "galaxy"."invocation_state" AS ENUM('cancelled', 'failed', 'scheduled', 'new', 'ready', 'cancelling');--> statement-breakpoint
 CREATE TYPE "galaxy"."job_state" AS ENUM('deleted', 'deleting', 'error', 'ok', 'new', 'resubmitted', 'upload', 'waiting', 'queued', 'running', 'failed', 'paused', 'stop', 'stopped', 'skipped');--> statement-breakpoint
-CREATE TYPE "galaxy"."role_permissions_type" AS ENUM('workflows.insert', 'workflows.delete', 'instances.insert', 'instances.delete');--> statement-breakpoint
+CREATE TYPE "galaxy"."role_permissions_type" AS ENUM('workflows.insert', 'workflows.update', 'workflows.select', 'workflows.delete', 'instances.insert', 'instances.delete', 'instances.update', 'instances.select', 'user.select', 'user.insert', 'user.update', 'user.delete', 'roles.select', 'roles.insert', 'roles.update', 'roles.delete', 'role_permissions.select', 'role_permissions.insert', 'role_permissions.update', 'role_permissions.delete', 'tags.select', 'tags.insert', 'tags.update', 'tags.delete', 'user_roles.select', 'user_roles.insert', 'user_roles.update', 'user_roles.delete');--> statement-breakpoint
 CREATE TYPE "galaxy"."role_type" AS ENUM('admin', 'user');--> statement-breakpoint
 CREATE TABLE "galaxy"."analyses" (
 	"id" serial PRIMARY KEY NOT NULL,
@@ -191,6 +191,29 @@ ALTER TABLE "galaxy"."user" ADD CONSTRAINT "user_instance_id_instances_id_fk" FO
 ALTER TABLE "galaxy"."workflows" ADD CONSTRAINT "workflows_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "galaxy"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "galaxy"."workflows_to_tags" ADD CONSTRAINT "workflows_to_tags_workflow_id_workflows_id_fk" FOREIGN KEY ("workflow_id") REFERENCES "galaxy"."workflows"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "galaxy"."workflows_to_tags" ADD CONSTRAINT "workflows_to_tags_tag_id_tags_id_fk" FOREIGN KEY ("tag_id") REFERENCES "galaxy"."tags"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "analyses_owner_id_index" ON "galaxy"."analyses" USING btree ("owner_id");--> statement-breakpoint
+CREATE INDEX "analyses_history_id_index" ON "galaxy"."analyses" USING btree ("history_id");--> statement-breakpoint
+CREATE INDEX "analyses_workflow_id_index" ON "galaxy"."analyses" USING btree ("workflow_id");--> statement-breakpoint
+CREATE INDEX "analyses_galaxy_id_index" ON "galaxy"."analyses" USING btree ("galaxy_id");--> statement-breakpoint
+CREATE INDEX "analysis_inputs_dataset_id_index" ON "galaxy"."analysis_inputs" USING btree ("dataset_id");--> statement-breakpoint
+CREATE INDEX "analysis_inputs_analysis_id_index" ON "galaxy"."analysis_inputs" USING btree ("analysis_id");--> statement-breakpoint
+CREATE INDEX "analysis_outputs_dataset_id_index" ON "galaxy"."analysis_outputs" USING btree ("dataset_id");--> statement-breakpoint
+CREATE INDEX "analysis_outputs_analysis_id_index" ON "galaxy"."analysis_outputs" USING btree ("analysis_id");--> statement-breakpoint
+CREATE INDEX "analysis_outputs_job_id_index" ON "galaxy"."analysis_outputs" USING btree ("job_id");--> statement-breakpoint
+CREATE INDEX "datasets_owner_id_index" ON "galaxy"."datasets" USING btree ("owner_id");--> statement-breakpoint
+CREATE INDEX "datasets_history_id_index" ON "galaxy"."datasets" USING btree ("history_id");--> statement-breakpoint
+CREATE INDEX "datasets_storage_object_id_index" ON "galaxy"."datasets" USING btree ("storage_object_id");--> statement-breakpoint
+CREATE INDEX "datasets_galaxy_id_index" ON "galaxy"."datasets" USING btree ("galaxy_id");--> statement-breakpoint
+CREATE INDEX "histories_user_id_index" ON "galaxy"."histories" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "histories_owner_id_index" ON "galaxy"."histories" USING btree ("owner_id");--> statement-breakpoint
+CREATE INDEX "histories_galaxy_id_index" ON "galaxy"."histories" USING btree ("galaxy_id");--> statement-breakpoint
+CREATE INDEX "jobs_owner_id_index" ON "galaxy"."jobs" USING btree ("owner_id");--> statement-breakpoint
+CREATE INDEX "jobs_analysis_id_index" ON "galaxy"."jobs" USING btree ("analysis_id");--> statement-breakpoint
+CREATE INDEX "jobs_galaxy_id_index" ON "galaxy"."jobs" USING btree ("galaxy_id");--> statement-breakpoint
+CREATE INDEX "role_permissions_role_id_index" ON "galaxy"."role_permissions" USING btree ("role_id");--> statement-breakpoint
+CREATE INDEX "role_permissions_permission_index" ON "galaxy"."role_permissions" USING btree ("permission");--> statement-breakpoint
+CREATE INDEX "uploaded_datasets_owner_id_index" ON "galaxy"."uploaded_datasets" USING btree ("owner_id");--> statement-breakpoint
+CREATE INDEX "uploaded_datasets_storage_object_id_index" ON "galaxy"."uploaded_datasets" USING btree ("storage_object_id");--> statement-breakpoint
 CREATE VIEW "galaxy"."analysis_inputs_with_storage_path" AS (select "galaxy"."datasets"."id", "galaxy"."analysis_inputs"."state", "galaxy"."analysis_inputs"."dataset_id", "galaxy"."analysis_inputs"."analysis_id", "galaxy"."datasets"."owner_id", "galaxy"."datasets"."history_id", "galaxy"."datasets"."storage_object_id", "galaxy"."datasets"."created_at", "galaxy"."datasets"."uuid", "galaxy"."datasets"."extension", "galaxy"."datasets"."data_lines", "galaxy"."datasets"."dataset_name", "galaxy"."datasets"."galaxy_id", "galaxy"."datasets"."annotation", "storage"."objects"."name", "storage"."objects"."metadata" from "galaxy"."analysis_inputs" inner join "galaxy"."datasets" on "galaxy"."analysis_inputs"."dataset_id" = "galaxy"."datasets"."id" inner join "storage"."objects" on "galaxy"."datasets"."storage_object_id" = "storage"."objects"."id");--> statement-breakpoint
 CREATE VIEW "galaxy"."analysis_outputs_with_storage_path" AS (select "galaxy"."datasets"."id", "galaxy"."analysis_outputs"."state", "galaxy"."analysis_outputs"."dataset_id", "galaxy"."analysis_outputs"."analysis_id", "galaxy"."analysis_outputs"."job_id", "galaxy"."datasets"."owner_id", "galaxy"."datasets"."history_id", "galaxy"."datasets"."storage_object_id", "galaxy"."datasets"."created_at", "galaxy"."datasets"."uuid", "galaxy"."datasets"."extension", "galaxy"."datasets"."data_lines", "galaxy"."datasets"."dataset_name", "galaxy"."datasets"."galaxy_id", "galaxy"."datasets"."annotation", "storage"."objects"."name", "storage"."objects"."metadata" from "galaxy"."analysis_outputs" inner join "galaxy"."datasets" on "galaxy"."analysis_outputs"."dataset_id" = "galaxy"."datasets"."id" inner join "storage"."objects" on "galaxy"."datasets"."storage_object_id" = "storage"."objects"."id");--> statement-breakpoint
 CREATE VIEW "galaxy"."datasets_with_storage_path" AS (select "galaxy"."datasets"."owner_id", "galaxy"."datasets"."history_id", "galaxy"."datasets"."storage_object_id", "storage"."objects"."created_at", "galaxy"."datasets"."uuid", "galaxy"."datasets"."extension", "galaxy"."datasets"."data_lines", "galaxy"."datasets"."dataset_name", "galaxy"."datasets"."galaxy_id", "galaxy"."datasets"."annotation", "storage"."objects"."id", "storage"."objects"."name", "storage"."objects"."metadata" from "galaxy"."datasets" inner join "storage"."objects" on "galaxy"."datasets"."storage_object_id" = "storage"."objects"."id");--> statement-breakpoint

@@ -49,6 +49,7 @@
     "defu": "catalog:",
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
+    "effect": "catalog:",
     "jwt-decode": "catalog:",
     "postgres": "catalog:",
     "supabase": "catalog:"

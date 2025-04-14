@@ -1,5 +1,6 @@
 import { eq, getTableColumns, relations } from 'drizzle-orm'
 import {
+  index,
   integer,
   primaryKey,
   serial,
@@ -37,9 +38,13 @@ export const datasets = galaxy.table('datasets', {
   dataLines: integer('data_lines'),
   datasetName: varchar('dataset_name', { length: 256 }).notNull(),
   ...galaxyItemNoName,
-}, t => ({
-  unique: unique().on(t.historyId, t.galaxyId),
-}))
+}, t => ([
+  unique().on(t.historyId, t.galaxyId),
+  index().on(t.ownerId),
+  index().on(t.historyId),
+  index().on(t.storageObjectId),
+  index().on(t.galaxyId),
+]))
 
 /**
  * Datasets tags

@@ -1,51 +1,45 @@
-import type { Database } from '../../types/database'
-import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
-import { eq } from 'drizzle-orm'
+import { serverSupabaseUser } from '#supabase/server'
+import { GalaxyFetch, runWithConfig } from 'blendtype'
+import { Console, Duration, Effect, Layer, Schedule } from 'effect'
 import { defineEventHandler } from 'h3'
-import { analyses } from '../db/schema/galaxy/analyses'
+import { Drizzle } from '../utils/drizzle'
+import { getAllAnalyses, synchronizeAnalysesEffect } from '../utils/grizzle/analyses'
+import { ServerSupabaseClient } from '../utils/grizzle/supabase'
 
-import { useDrizzle } from '../utils/drizzle'
-import { synchronizeAnalyses } from '../utils/grizzle/analyses'
+// Define a schedule that repeats the action 2 more times with a delay
 
-interface Target {
-  (): Promise<void>
-  isRunning: boolean
-}
+// Repeat the action according to the schedule
 
-function setIntervalWithPromise(target: Target) {
-  return async function () {
-    if (target.isRunning)
-      return
-    // if we are here, we can invoke our callback!
-    target.isRunning = true
-    await target()
-    target.isRunning = false
-  }
-}
+// Run the program and log the number of repetitions
 
 export default defineEventHandler(async (event) => {
-  const client = await serverSupabaseClient<Database>(event)
   const user = await serverSupabaseUser(event)
-  const maxRetries = 50
-  let retriesCount = 0
-  let syncIntervalId: ReturnType<typeof setInterval> | undefined
-  if (!syncIntervalId) {
-    const setIntervalWithPromiseHandler = async (): Promise<void> => {
-      await synchronizeAnalyses(client, user.id)
-      retriesCount++
-      const userAnalysesDb = await useDrizzle()
-        .select()
-        .from(analyses)
-        .where(eq(analyses.ownerId, user.id))
-      if (retriesCount >= maxRetries || userAnalysesDb.every(d => d.isSync)) {
-        stopSync()
-      }
-    }
-    setIntervalWithPromiseHandler.isRunning = false
-    syncIntervalId = setInterval(setIntervalWithPromise(setIntervalWithPromiseHandler), 6000)
-  }
+  if (!user)
+    return
+  const policy = Schedule.addDelay(Schedule.recurs(50), () => Duration.seconds(5))
 
-  function stopSync(): void {
-    clearInterval(syncIntervalId)
-  }
+  const finalLayer = Layer.mergeAll(ServerSupabaseClient.Live, GalaxyFetch.Live, Drizzle.Live)
+  // Define an effect that logs a message to the console
+  // synchronizeAnalyses(event, user.id)
+  const action = Effect.gen(function* () {
+    yield* synchronizeAnalysesEffect(event, user.id)
+
+    const analysisDb = yield* getAllAnalyses(user.id)
+
+    if (analysisDb.every(d => d.isSync)) {
+      yield* Effect.interrupt
+    }
+  }).pipe(Effect.catchAll(() => Effect.succeed('All analyses are synchronized')))
+
+  const program = Effect.gen(function* () {
+    yield* Effect.addFinalizer(exit =>
+      Console.log(`Finalizer executed. Exit status: ${exit._tag}`),
+    )
+    yield* Effect.repeat(action, policy)
+  })
+  const runnable = Effect.scoped(program)
+  runnable.pipe(
+    Effect.provide(finalLayer),
+    runWithConfig,
+  )
 })

@@ -73,6 +73,41 @@ on galaxy.datasets for select to authenticated using (
 
 alter table galaxy.datasets enable row level security;
 
+-- analysis inputs
+alter table galaxy.analysis_inputs enable row level security;
+
+create policy "User can see their own input data"
+on galaxy.analysis_inputs for select to authenticated using (
+  dataset_id IN ( SELECT datasets.id
+  FROM galaxy.datasets
+  WHERE datasets.owner_id = (SELECT auth.uid()))
+);
+
+create policy "Users can insert input datasets"
+on galaxy.analysis_inputs for insert to authenticated with check (
+  dataset_id IN ( SELECT datasets.id
+  FROM galaxy.datasets
+  WHERE datasets.owner_id = ( SELECT auth.uid()))
+);
+
+-- analysis outputs
+alter table galaxy.analysis_outputs enable row level security;
+
+create policy "User can see their own input data"
+on galaxy.analysis_outputs for select to authenticated using (
+  dataset_id IN ( SELECT datasets.id
+  FROM galaxy.datasets
+  WHERE datasets.owner_id = (SELECT auth.uid()))
+);
+
+create policy "Users can insert input datasets"
+on galaxy.analysis_outputs for insert to authenticated with check (
+  dataset_id IN ( SELECT datasets.id
+  FROM galaxy.datasets
+  WHERE datasets.owner_id = ( SELECT auth.uid()))
+);
+
+
 
 -- WORKFLOWS
 
@@ -90,6 +125,14 @@ on galaxy.workflows for insert to authenticated with check (
 );
 
 
+-- GALAXY USER
+alter table galaxy.user enable row level security;
+
+create policy "Admin can view user"
+on galaxy.user for select to authenticated using (
+  (SELECT galaxy.authorize('user.select')) = TRUE
+);
+
 
 -- UPLOAD datasets
 
@@ -106,7 +149,6 @@ on galaxy.uploaded_datasets for select to authenticated using (
   auth.uid() = owner_id
 );
 
-alter table galaxy.uploaded_datasets enable row level security;
 
 
 -- Jobs
@@ -185,3 +227,23 @@ create policy "Users can delete their own files"
 on storage.objects for delete to authenticated using (
   bucket_id = 'analysis_files' and owner = auth.uid()
 );
+
+
+ALTER VIEW IF EXISTS "galaxy"."uploaded_datasets_with_storage_path"
+SET
+  (security_invoker = true);
+
+ALTER VIEW IF EXISTS
+  "galaxy"."analysis_outputs_with_storage_path"
+SET
+  (security_invoker = true);
+
+ALTER VIEW IF EXISTS
+  "galaxy"."datasets_with_storage_path"
+SET
+  (security_invoker = true);
+
+ALTER VIEW IF EXISTS
+  "galaxy"."uploaded_datasets_with_storage_path"
+SET
+  (security_invoker = true);

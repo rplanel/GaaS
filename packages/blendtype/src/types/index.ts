@@ -12,6 +12,12 @@ export interface ErrorWithMessage {
   message: string
 }
 
+export interface ErrorWithData {
+  data: {
+    message: string
+  }
+}
+
 export interface ErrorWithStatus {
   statusCode: number
 }

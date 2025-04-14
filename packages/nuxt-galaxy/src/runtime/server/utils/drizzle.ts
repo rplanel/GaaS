@@ -1,6 +1,7 @@
 import process from 'node:process'
 import { config } from 'dotenv'
 import { drizzle } from 'drizzle-orm/postgres-js'
+import { Context, Layer } from 'effect'
 import postgres from 'postgres'
 import * as analyses from '../db/schema/galaxy/analyses'
 import * as analysisInputs from '../db/schema/galaxy/analysisInputs.js'
@@ -42,4 +43,31 @@ export function useDrizzle() {
       ...userRoles,
     },
   })
+}
+
+export class Drizzle extends Context.Tag('@nuxt-galaxy/Drizzle')<
+  Drizzle,
+  ReturnType<typeof drizzle>
+>() {
+  static readonly Live = Layer.succeed(
+    Drizzle,
+    drizzle(client, {
+      schema: {
+        ...histories,
+        ...analyses,
+        ...datasets,
+        ...instances,
+        ...users,
+        ...tags,
+        ...workflows,
+        ...analysisInputs,
+        ...analysisOutputs,
+        ...uploadedDatasets,
+        ...jobs,
+        ...rolePermissions,
+        ...roles,
+        ...userRoles,
+      },
+    }),
+  )
 }

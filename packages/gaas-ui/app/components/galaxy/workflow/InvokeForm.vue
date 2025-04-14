@@ -8,6 +8,7 @@ import type {
 } from 'blendtype'
 import type { Props as WorkflowStepProps } from '../../../components/galaxy/workflow/Step.vue'
 import type { GalaxyToolInputComponent } from '../../../composables/galaxy/useGalaxyToolInputComponent'
+import { NuxtErrorBoundary } from '#components'
 import { computed, ref, toValue } from '#imports'
 import { getErrorMessage, getStatusCode } from 'blendtype'
 import { z } from 'zod'
@@ -317,109 +318,120 @@ watchEffect(() => {
 </script>
 
 <template>
-  <UForm :schema="schema" :state="state" @submit.prevent="runAnalysis">
-    <UFormField
-      label="Name of the analysis"
-      name="analysisName"
-      required
-    >
-      <UInput
-        v-model="state.analysisName"
-        type="text"
-        name="name"
-        placeholder="Enter the name of the analysis"
-        class="w-full"
-      />
-    </UFormField>
-    <!-- <USeparator
+  <NuxtErrorBoundary>
+    <UForm :schema="schema" :state="state" @submit.prevent="runAnalysis">
+      <UFormField
+        label="Name of the analysis"
+        name="analysisName"
+        required
+      >
+        <UInput
+          v-model="state.analysisName"
+          type="text"
+          name="name"
+          placeholder="Enter the name of the analysis"
+          class="w-full"
+        />
+      </UFormField>
+      <!-- <USeparator
             icon="i-lucide-files"
             class="mt-5 mb-3"
           /> -->
-    <div v-if="datasets && workflowInputDatasetsModel" class="mt-5">
-      <h3 class="font-bold text-lg ">
-        Select Datasets
-      </h3>
+      <div v-if="datasets && workflowInputDatasetsModel" class="mt-5">
+        <h3 class="font-bold text-lg ">
+          <template v-if="Object.values(workflowInputs).length > 1">
+            Select workflow inputs
+          </template>
+          <template v-else>
+            Select workflow input
+          </template>
+        </h3>
 
-      <UFormField
-        v-for="(input, stepId) in workflowInputs"
-        :key="stepId"
-        :label="input.label"
-        required
-        :name="input.uuid"
-      >
-        <USelectMenu
-          v-model="workflowInputDatasetsModel[stepId]"
-          :search-input="{
-            placeholder: 'Filter...',
-            icon: 'i-lucide-search',
-          }"
-          icon="i-material-symbols:dataset"
-          :items="datasets"
-          label-key="dataset_name"
-          class="w-full"
+        <UFormField
+          v-for="(input, stepId) in workflowInputs"
+          :key="stepId"
+          :label="input.label"
+          required
           :name="input.uuid"
-        />
-      </UFormField>
-    </div>
+        >
+          <USelectMenu
+            v-model="workflowInputDatasetsModel[stepId]"
+            :search-input="{
+              placeholder: 'Filter...',
+              icon: 'i-lucide-search',
+            }"
+            :create-item="{ position: 'top', when: 'always' }"
+            icon="i-material-symbols:dataset"
+            :items="datasets"
+            label-key="dataset_name"
+            class="w-full"
+            :name="input.uuid"
+          />
+        </UFormField>
+      </div>
 
-    <USeparator
-      icon="i-lucide:workflow"
-      class="mt-5 mb-3"
-    />
-    <h3 class="font-bold text-lg">
-      Select workflow parameters
-    </h3>
-    <div v-if="workflowStepsToolInfo">
-      <UAccordion
-        :items="workflowStepsItems"
-        :ui="{
-          header:
-            'hover:bg-[var(--ui-bg-elevated)] px-2 rounded-[calc(var(--ui-radius))]',
+      <USeparator
+        icon="i-lucide:workflow"
+        class="mt-5 mb-3"
+      />
+      <h3 class="font-bold text-lg">
+        Select workflow parameters
+      </h3>
+      <div v-if="workflowStepsToolInfo">
+        <UAccordion
+          :items="workflowStepsItems"
+          :ui="{
+            header:
+              'hover:bg-[var(--ui-bg-elevated)] px-2 rounded-[calc(var(--ui-radius))]',
 
-        }"
-      >
-        <template #default="{ item: { value: stepId } }">
-          <div
-            v-if="stepId !== undefined"
-            class="grid grid-flow-col auto-cols-auto items-center justify-between w-full gap-5 break-words"
-          >
-            <div class="grid grid-flow-row auto-rows-auto break-words">
-              <div class="font-bold text-[var(--ui-info)] grow break-all">
-                {{ workflowStepsToolInfo[stepId]?.name }}
-              </div>
-              <div class="font-medium text-sm opacity-60 grow break-words">
-                {{ workflowStepsToolInfo[stepId]?.description }}
-              </div>
-            </div>
-            <div>
-              <VersionBadge
-                :version="workflowStepsToolInfo[stepId]?.version"
-              />
-            </div>
-          </div>
-        </template>
-        <template #body="{ item: { value: stepId } }">
-          <div class="p-2">
+          }"
+        >
+          <template #default="{ item: { value: stepId } }">
             <div
-              class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)]"
+              v-if="stepId !== undefined"
+              class="grid grid-flow-col auto-cols-auto items-center justify-between w-full gap-5 break-words"
             >
-              <GalaxyWorkflowStep
-                v-if="stepId !== undefined && galaxyWorkflowStepProps?.[stepId]"
-                v-bind="galaxyWorkflowStepProps[stepId]"
-                variant="form"
-              />
+              <div class="grid grid-flow-row auto-rows-auto break-words">
+                <div class="font-bold text-[var(--ui-info)] grow break-all">
+                  {{ workflowStepsToolInfo[stepId]?.name }}
+                </div>
+                <div class="font-medium text-sm opacity-60 grow break-words">
+                  {{ workflowStepsToolInfo[stepId]?.description }}
+                </div>
+              </div>
+              <div>
+                <VersionBadge
+                  :version="workflowStepsToolInfo[stepId]?.version"
+                />
+              </div>
             </div>
-          </div>
-        </template>
-      </UAccordion>
-      <USeparator class="mt-5 mb-3" />
-    </div>
+          </template>
+          <template #body="{ item: { value: stepId } }">
+            <div class="p-2">
+              <div
+                class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)]"
+              >
+                <GalaxyWorkflowStep
+                  v-if="stepId !== undefined && galaxyWorkflowStepProps?.[stepId]"
+                  v-bind="galaxyWorkflowStepProps[stepId]"
+                  variant="form"
+                />
+              </div>
+            </div>
+          </template>
+        </UAccordion>
+        <USeparator class="mt-5 mb-3" />
+      </div>
 
-    <UButton
-      type="submit"
-      :loading="startingAnalysis"
-    >
-      Run
-    </UButton>
-  </UForm>
+      <UButton
+        type="submit"
+        :loading="startingAnalysis"
+      >
+        Run
+      </UButton>
+    </UForm>
+    <template #error="{ error }">
+      <pre>{{ error }}</pre>
+    </template>
+  </NuxtErrorBoundary>
 </template>

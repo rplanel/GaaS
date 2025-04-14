@@ -1,6 +1,6 @@
 import { createError } from 'h3'
 
-export function takeUniqueOrThrow<T extends unknown[]>(values: T): T[number] {
+export function takeUniqueOrThrow<T extends unknown[]>(values: T) {
   // if (values.length === 0) throw createError({
   //     statusCode: 404,
   //     statusMessage: "inexistent value"
@@ -17,6 +17,7 @@ export function takeUniqueOrThrow<T extends unknown[]>(values: T): T[number] {
     })
   }
   if (values.length === 1) {
-    return values[0]!
+    return values[0]! as T[0]
   }
+  return null
 }

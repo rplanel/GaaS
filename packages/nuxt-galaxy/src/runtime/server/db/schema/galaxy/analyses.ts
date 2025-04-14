@@ -3,6 +3,7 @@ import type { InvocationState } from 'blendtype'
 import { relations } from 'drizzle-orm'
 import {
   boolean,
+  index,
   integer,
   json,
   serial,
@@ -35,8 +36,12 @@ export const analyses = galaxy.table('analyses', {
   stdout: text('stdout'),
   invocation: json('invocation').notNull(),
   isSync: boolean('is_sync').notNull().default(false),
-
-})
+}, table => [
+  index().on(table.ownerId),
+  index().on(table.historyId),
+  index().on(table.workflowId),
+  index().on(table.galaxyId),
+])
 
 export const analysesRelations = relations(analyses, ({ one, many }) => {
   return {

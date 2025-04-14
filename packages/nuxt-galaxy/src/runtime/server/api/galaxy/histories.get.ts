@@ -1,18 +1,32 @@
-import type { GalaxyClient } from 'blendtype'
-import type { Database } from '../../../types/database'
-import { serverSupabaseClient } from '#supabase/server'
+import { GalaxyFetch, getHistoryEffect, runWithConfig } from 'blendtype'
+import { Effect } from 'effect'
 import { defineEventHandler } from 'h3'
+import { ServerSupabaseClient } from '../../utils/grizzle/supabase'
 
 export default defineEventHandler(async (event) => {
-  const supabaseClient = await serverSupabaseClient<Database>(event)
-  const $galaxy: GalaxyClient = event.context?.galaxy
-  const { data: historiesDb } = await supabaseClient
-    .schema('galaxy')
-    .from('histories')
-    .select()
-  if (historiesDb) {
-    return Promise.all(historiesDb.map((h) => {
-      return $galaxy.histories().getHistory(h.galaxy_id)
-    }))
-  }
+  const program = Effect.gen(function* () {
+    const createServerSupabaseClient = yield* ServerSupabaseClient
+    const supabaseClient = yield* createServerSupabaseClient(event)
+    const { error, data: historiesDb } = yield* Effect.promise(() => supabaseClient
+      .schema('galaxy')
+      .from('histories')
+      .select())
+
+    if (error) {
+      Effect.fail(new Error(`supabase error: ${error.message}\ncode : ${error.code}`))
+    }
+
+    if (historiesDb) {
+      const effects = historiesDb.map((h) => {
+        return getHistoryEffect(h.galaxy_id)
+      })
+      return yield* Effect.all(effects)
+    }
+  })
+
+  return program.pipe(
+    Effect.provide(ServerSupabaseClient.Live),
+    Effect.provide(GalaxyFetch.Live),
+    runWithConfig,
+  )
 })

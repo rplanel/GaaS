@@ -135,28 +135,31 @@ const items = computed<DropdownMenuItem[][]>(() => {
 </script>
 
 <template>
-  <div>
-    <UDropdownMenu
-      v-if="items" :items="items" :content="{ align: 'center', collisionPadding: 12 }"
-      :ui="{ content: collapsed ? 'w-48' : 'w-(--reka-dropdown-menu-trigger-width)' }"
-    >
-      <UButton
-        v-bind="{
-          ...user,
-          label: collapsed ? undefined : user?.name,
-          trailingIcon: collapsed ? undefined : 'i-lucide-chevrons-up-down',
-        }" color="neutral" variant="ghost" block :square="collapsed" class="data-[state=open]:bg-(--ui-bg-elevated)"
-        :ui="{
-          trailingIcon: 'text-(--ui-text-dimmed)',
-        }"
-      />
+  <UDropdownMenu
+    v-if="items" :items="items" :content="{ align: 'center', collisionPadding: 12 }"
+    :ui="{ content: collapsed ? 'w-48' : 'w-(--reka-dropdown-menu-trigger-width)' }"
+  >
+    <UButton
+      v-bind="{
+        ...user,
+        label: collapsed ? undefined : user?.name,
+        trailingIcon: collapsed ? undefined : 'i-lucide-chevrons-up-down',
+      }"
+      color="neutral"
+      variant="ghost"
+      block
+      :square="collapsed"
+      class="data-[state=open]:bg-(--ui-bg-elevated)"
+      :ui="{
+        trailingIcon: 'text-(--ui-text-dimmed)',
+      }"
+    />
 
-      <template #chip-leading="{ item }">
-        <span
-          :style="{ '--chip': `var(--color-${(item as any).chip}-400)` }"
-          class="ms-0.5 size-2 rounded-full bg-(--chip)"
-        />
-      </template>
-    </UDropdownMenu>
-  </div>
+    <template #chip-leading="{ item }">
+      <span
+        :style="{ '--chip': `var(--color-${(item as any).chip}-400)` }"
+        class="ms-0.5 size-2 rounded-full bg-(--chip)"
+      />
+    </template>
+  </UDropdownMenu>
 </template>

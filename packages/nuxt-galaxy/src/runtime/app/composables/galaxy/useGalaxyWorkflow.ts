@@ -1,10 +1,10 @@
 import type { Ref } from '#imports'
 import type { GalaxyWorkflow, WorkflowToolParameters, WorkflowToolStep } from 'blendtype'
-import { computed, ref, toValue, watch } from '#imports'
+import { computed, createError, ref, showError, toValue, watch } from '#imports'
 
 export function useGalaxyWorkflow(workflowId: Ref<string | undefined>) {
   const workflow = ref<GalaxyWorkflow | undefined>(undefined)
-
+  const error = ref<Error | null>(null)
   const workflowSteps = computed(() => {
     const workflowVal = toValue(workflow)
     if (workflowVal) {
@@ -73,13 +73,36 @@ export function useGalaxyWorkflow(workflowId: Ref<string | undefined>) {
     return stepToToolMap
   })
 
+  // function fetchWorkflowEffect() {
+  //   Effect.tryPromise({
+  //     try: () => $fetch<GalaxyWorkflow | undefined>(`/api/galaxy/workflows/${workflowIdVal}`),
+  //     catch: (err) => {
+
+  //     }
+
+  //   })
+
+  // }
+
   async function fetchWorkflow() {
     const workflowIdVal = toValue(workflowId)
-
-    if (workflowIdVal) {
-      const data = await $fetch<GalaxyWorkflow | undefined>(`/api/galaxy/workflows/${workflowIdVal}`)
-      workflow.value = data
+    if (!workflowIdVal) {
+      return
     }
+    const { error: getWorkflowError, data } = await $fetch<{ error: { message: string, statusMessage: string, statusCode: number } | string | undefined, data: GalaxyWorkflow | undefined }>(`/api/galaxy/workflows/${workflowIdVal}`)
+    if (getWorkflowError) {
+      if (typeof getWorkflowError === 'string') {
+        throw showError(getWorkflowError)
+      }
+      else {
+        throw showError({ ...getWorkflowError })
+      }
+    }
+
+    if (data === undefined) {
+      throw createError('Workflow not found')
+    }
+    workflow.value = data
   }
 
   watch(workflowId, () => {
@@ -95,5 +118,6 @@ export function useGalaxyWorkflow(workflowId: Ref<string | undefined>) {
     workflowToolIds,
     workflowParametersModel,
     stepToTool,
+    error,
   }
 }
