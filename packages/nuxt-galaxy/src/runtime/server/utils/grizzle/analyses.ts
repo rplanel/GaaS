@@ -297,6 +297,24 @@ export function getAllAnalyses(ownerId: string) {
   })
 }
 
+export function getWorkflowAnalyses(workflowId: number, ownerId: string) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .select()
+        .from(analyses)
+        .where(
+          and(
+            eq(analyses.workflowId, workflowId),
+            eq(analyses.ownerId, ownerId),
+          ),
+        ),
+      catch: error => new GetAnalysisError({ message: `Error getting workflow analyses: ${error}` }),
+    })
+  })
+}
+
 // eslint-disable-next-line unicorn/throw-new-error
 export class GetHistoryAnalysisError extends Data.TaggedError('GetHistoryAnalysisError')<{
   readonly message: string

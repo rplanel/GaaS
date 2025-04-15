@@ -1,11 +1,13 @@
+import type { EventHandlerRequest, H3Event } from 'h3'
 import { useRuntimeConfig } from '#imports'
+import * as bt from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { Data, Effect } from 'effect'
 import { workflows } from '../../db/schema/galaxy/workflows'
 import { Drizzle } from '../drizzle'
 import { takeUniqueOrThrow } from './helper'
+import { ServerSupabaseClient, ServerSupabaseUser } from './supabase'
 import { getCurrentUserEffect } from './user'
-
 // eslint-disable-next-line unicorn/throw-new-error
 export class GetWorkflowError extends Data.TaggedError('GetWorkflowError')<{
   readonly message: string
@@ -33,3 +35,67 @@ export function getWorkflowEffect(workflowId: number) {
     }
   })
 }
+
+export function insertWorkflow(
+  galaxyWorkflowId: string,
+  galaxyUrl: string,
+  galaxyEmail: string,
+  event: H3Event<EventHandlerRequest>,
+) {
+  return Effect.gen(function* () {
+    const createServerSupabaseUser = yield* ServerSupabaseUser
+    const supabaseUser = yield* createServerSupabaseUser(event)
+    const createServerSupabaseClient = yield* ServerSupabaseClient
+    const supabaseClient = yield* createServerSupabaseClient(event)
+    if (supabaseUser) {
+      const galaxyWorkflow = yield* bt.exportWorkflowEffect(galaxyWorkflowId)
+      const galaxyUser = yield* getCurrentUserEffect(galaxyUrl, galaxyEmail)
+      const tagVersion = yield* bt.getWorkflowTagVersion(galaxyWorkflow.tags)
+
+      const definition = galaxyWorkflow as any
+      if (!tagVersion) {
+        return yield* Effect.fail(new GetWorkflowError({ message: 'No tag version found' }))
+      }
+      if (!galaxyUser) {
+        return yield* Effect.fail(new GetWorkflowError({ message: 'No galaxy user found' }))
+      }
+      // use supabaseClient to insert the workflow instead of drizzle because
+      // need to be sure that not anybody can insert a workflow
+      const { error, data } = yield* Effect.promise(() => supabaseClient
+        .schema('galaxy')
+        .from('workflows')
+        .insert({
+          version: tagVersion,
+          auto_version: galaxyWorkflow.version,
+          name: galaxyWorkflow.name,
+          galaxy_id: galaxyWorkflowId,
+          user_id: galaxyUser.user.id,
+          definition,
+        })
+        .select(),
+      )
+      if (error) {
+        if (error.code === '42501') {
+          return yield* Effect.fail(new Error('Permission denied'))
+        }
+
+        if (error.code === '23505') {
+          Effect.fail(new WorkflowAlreadyExistsError(
+            { message: `Workflow ${galaxyWorkflowId} already exits in the database`, statusCode: 506 },
+          ))
+        }
+
+        return yield* Effect.fail(new Error(`supabase error: ${error.message}\ncode : ${error.code}`))
+      }
+      else {
+        return data
+      }
+    }
+  })
+}
+
+// eslint-disable-next-line unicorn/throw-new-error
+export class WorkflowAlreadyExistsError extends Data.TaggedError('WorkflowAlreadyExistsError')<{
+  readonly message: string
+  readonly statusCode: number
+}> {}

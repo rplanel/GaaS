@@ -1,4 +1,4 @@
-import type { GalaxyInvoke, GalaxyWorkflow, GalaxyWorkflowExport, GalaxyWorkflowInput, GalaxyWorkflowParameters, GalaxyWorkflowsItem, rawGalaxyWorkflowExport } from './types'
+import type { GalaxyInvoke, GalaxyWorkflow, GalaxyWorkflowExport, GalaxyWorkflowInput, GalaxyWorkflowParameters, GalaxyWorkflowsItem, rawGalaxyWorkflowExport, TagCollection } from './types'
 import { Effect } from 'effect'
 import { runWithConfig } from './config'
 import { GalaxyFetch, HttpError } from './galaxy'
@@ -100,4 +100,15 @@ export function invokeWorkflow(historyGalaxyId: string, workflowId: string, inpu
     Effect.provide(GalaxyFetch.Live),
     runWithConfig,
   )
+}
+
+export function getWorkflowTagVersion(tags: TagCollection) {
+  return Effect.gen(function* () {
+    const tag = tags?.find(tag => tag.startsWith('version:'))
+    if (tag) {
+      const tagVersion = tag.replace('version:', '')
+      return yield* Effect.succeed(tagVersion)
+    }
+    return yield* Effect.fail(new Error('No tag version found'))
+  })
 }

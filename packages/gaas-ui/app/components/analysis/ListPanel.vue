@@ -204,26 +204,6 @@ async function editAnalysisName(id: number) {
     refreshAnalyses()
   }
 }
-
-// Listen to updates
-// supabase
-//   .channel('analyses')
-//   .on(
-//     'postgres_changes',
-//     { event: 'UPDATE', schema: 'galaxy', table: 'analyses' },
-//     handleUpdates,
-//   )
-//   .subscribe()
-
-// Listen to delete
-// supabase
-//   .channel('analyses')
-//   .on(
-//     'postgres_changes',
-//     { event: 'DELETE', schema: 'galaxy', table: 'analyses' },
-//     handleUpdates,
-//   )
-//   .subscribe()
 </script>
 
 <template>

@@ -32,6 +32,7 @@
     "@nuxt/ui-pro": "catalog:",
     "@vueuse/core": "catalog:",
     "drizzle-kit": "catalog:",
+    "effect": "catalog:",
     "jwt-decode": "catalog:",
     "nuxt-galaxy": "workspace:*",
     "zod": "catalog:",
@@ -50,5 +51,4 @@
     "vue": "latest",
     "vue-tsc": "^2.2.0"
   }
-
 }
