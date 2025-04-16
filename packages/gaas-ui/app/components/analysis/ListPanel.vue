@@ -115,7 +115,8 @@ const sanitizedAnalyses = computed<SanitizedAnalysis[]>(() => {
         is_sync,
         workflows: {
           name: a.workflows.name,
-          version: a.workflows.version,
+          version: a.workflows.version_key,
+          name_key: a.workflows.name_key,
         },
       }
     })

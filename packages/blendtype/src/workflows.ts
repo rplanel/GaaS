@@ -1,5 +1,5 @@
 import type { GalaxyInvoke, GalaxyWorkflow, GalaxyWorkflowExport, GalaxyWorkflowInput, GalaxyWorkflowParameters, GalaxyWorkflowsItem, rawGalaxyWorkflowExport, TagCollection } from './types'
-import { Effect } from 'effect'
+import { Effect, Exit } from 'effect'
 import { runWithConfig } from './config'
 import { GalaxyFetch, HttpError } from './galaxy'
 import { galaxyWorkflowExportSchema } from './types'
@@ -103,23 +103,31 @@ export function invokeWorkflow(historyGalaxyId: string, workflowId: string, inpu
 }
 
 export function getWorkflowTagVersion(tags: TagCollection) {
-  return Effect.gen(function* () {
+  const workflowVersionTagExit = Effect.runSyncExit(Effect.gen(function* () {
     const tag = tags?.find(tag => tag.startsWith('version:'))
     if (tag) {
       const tagVersion = tag.replace('version:', '')
       return yield* Effect.succeed(tagVersion)
     }
     return yield* Effect.fail(new Error('No tag version found'))
+  }))
+  return Exit.match(workflowVersionTagExit, {
+    onFailure: _ => null,
+    onSuccess: value => value,
   })
 }
 
 export function getWorkflowTagName(tags: TagCollection) {
-  return Effect.gen(function* () {
+  const workflowTagNameExit = Effect.runSyncExit(Effect.gen(function* () {
     const tag = tags?.find(tag => tag.startsWith('name:'))
     if (tag) {
       const tagName = tag.replace('name:', '')
       return yield* Effect.succeed(tagName)
     }
     return yield* Effect.fail(new Error('No tag name found'))
+  }))
+  return Exit.match(workflowTagNameExit, {
+    onFailure: _ => null,
+    onSuccess: value => value,
   })
 }

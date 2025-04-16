@@ -579,8 +579,9 @@ export interface Database {
           galaxy_id: string
           id: number
           name: string
+          name_key: string
           user_id: number
-          version: string
+          version_key: string
         }
         Insert: {
           annotation?: string | null
@@ -589,8 +590,9 @@ export interface Database {
           galaxy_id: string
           id?: number
           name: string
+          name_key: string
           user_id: number
-          version: string
+          version_key: string
         }
         Update: {
           annotation?: string | null
@@ -599,8 +601,9 @@ export interface Database {
           galaxy_id?: string
           id?: number
           name?: string
+          name_key?: string
           user_id?: number
-          version?: string
+          version_key?: string
         }
         Relationships: [
           {

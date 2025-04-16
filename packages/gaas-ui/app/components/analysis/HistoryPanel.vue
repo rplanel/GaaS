@@ -5,7 +5,6 @@ import type { GalaxyTool } from 'blendtype'
 import type { GalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 import type { AnalysisDetail, Database, RowAnalysisJob } from '../../types'
 import * as bt from 'blendtype'
-import { Effect, Exit } from 'effect'
 import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDecodeParameters'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
@@ -202,16 +201,8 @@ const computedResultsMenuItems = computed(() => {
   if (!workflowVal) {
     return items
   }
-  const workflowVersionTagExit = Effect.runSyncExit(bt.getWorkflowTagVersion(workflowVal.tags))
-  const workflowTagNameExit = Effect.runSyncExit(bt.getWorkflowTagName(workflowVal.tags))
-  const workflowTagVersion = Exit.match(workflowVersionTagExit, {
-    onFailure: _ => null,
-    onSuccess: value => value,
-  })
-  const workflowTagName = Exit.match(workflowTagNameExit, {
-    onFailure: _ => null,
-    onSuccess: value => value,
-  })
+  const workflowTagVersion = bt.getWorkflowTagVersion(workflowVal.tags)
+  const workflowTagName = bt.getWorkflowTagName(workflowVal.tags)
 
   if (workflowTagVersion === null || workflowTagName === null) {
     return items

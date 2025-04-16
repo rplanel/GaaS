@@ -4,7 +4,6 @@ import type { BreadcrumbItem, TableColumn } from '@nuxt/ui'
 import type { GalaxyWorkflowsItem } from 'blendtype'
 import { USwitch } from '#components'
 import * as bt from 'blendtype'
-import { Effect, Exit } from 'effect'
 
 type Database = SupabaseTypes.Database
 
@@ -158,26 +157,16 @@ const computedWorkflows = computed(() => {
   if (allWorkflowsVal) {
     return allWorkflowsVal
       .map((workflow) => {
-        const tagVersionExit = Effect.runSyncExit(bt.getWorkflowTagVersion(workflow.tags))
-        const tagNameExit = Effect.runSyncExit(bt.getWorkflowTagName(workflow.tags))
-        const tagVersion = Exit.match(tagVersionExit, {
-          onFailure: _ => false,
-          onSuccess: value => value,
-        })
-
-        const tagName = Exit.match(tagNameExit, {
-          onFailure: _ => false,
-          onSuccess: value => value,
-        })
-
+        const version = bt.getWorkflowTagVersion(workflow.tags)
+        const tagName = bt.getWorkflowTagName(workflow.tags)
         return {
           ...workflow,
-          version: tagVersion,
+          version,
           tagName,
           activated: dbWorkflowsMap.value.has(workflow.id),
         }
       })
-      .filter(({ version, tagName }) => version !== false && tagName !== false)
+      .filter(({ version, tagName }) => version !== null && tagName !== null)
   }
   return []
 })

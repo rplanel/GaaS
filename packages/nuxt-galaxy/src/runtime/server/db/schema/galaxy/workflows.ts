@@ -11,12 +11,14 @@ import { users } from './users'
 export const workflows = galaxy.table('workflows', {
   id: serial('id').primaryKey(),
   autoVersion: integer('auto_version').notNull().default(1),
-  version: varchar('version', { length: 255 }).notNull(),
+  versionKey: varchar('version_key', { length: 255 }).notNull(),
+  nameKey: varchar('name_key', { length: 255 }).notNull(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   definition: json('definition').notNull(),
   ...galaxyItem,
 }, t => ({
-  unique: unique().on(t.galaxyId, t.version),
+  unique: unique().on(t.versionKey, t.nameKey),
+  galaxyIdUnique: unique().on(t.galaxyId),
 }))
 
 /**

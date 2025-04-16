@@ -50,11 +50,15 @@ export function insertWorkflow(
     if (supabaseUser) {
       const galaxyWorkflow = yield* bt.exportWorkflowEffect(galaxyWorkflowId)
       const galaxyUser = yield* getCurrentUserEffect(galaxyUrl, galaxyEmail)
-      const tagVersion = yield* bt.getWorkflowTagVersion(galaxyWorkflow.tags)
+      const tagVersion = bt.getWorkflowTagVersion(galaxyWorkflow.tags)
+      const tagName = bt.getWorkflowTagName(galaxyWorkflow.tags)
 
       const definition = galaxyWorkflow as any
       if (!tagVersion) {
         return yield* Effect.fail(new GetWorkflowError({ message: 'No tag version found' }))
+      }
+      if (!tagName) {
+        return yield* Effect.fail(new GetWorkflowError({ message: 'No tag name found' }))
       }
       if (!galaxyUser) {
         return yield* Effect.fail(new GetWorkflowError({ message: 'No galaxy user found' }))
@@ -65,7 +69,8 @@ export function insertWorkflow(
         .schema('galaxy')
         .from('workflows')
         .insert({
-          version: tagVersion,
+          version_key: tagVersion,
+          name_key: tagName,
           auto_version: galaxyWorkflow.version,
           name: galaxyWorkflow.name,
           galaxy_id: galaxyWorkflowId,
