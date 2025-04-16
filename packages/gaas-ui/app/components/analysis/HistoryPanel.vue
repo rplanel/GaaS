@@ -4,6 +4,8 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { GalaxyTool } from 'blendtype'
 import type { GalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 import type { AnalysisDetail, Database, RowAnalysisJob } from '../../types'
+import * as bt from 'blendtype'
+import { Effect, Exit } from 'effect'
 import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDecodeParameters'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
@@ -33,7 +35,7 @@ const workflowGalaxyId = computed(() => {
   }
   return undefined
 })
-const { gaasUi: { resultsMenuItems } } = useAppConfig()
+const { gaasUi: { resultsMenuItems, analyisParametersMenuItems } } = useAppConfig()
 
 onMounted(() => {
   // Real time listener for new workouts
@@ -63,6 +65,7 @@ onUnmounted(() => {
 })
 
 const {
+  workflow,
   workflowSteps,
   workflowToolIds,
   stepToTool,
@@ -189,10 +192,42 @@ watchEffect(() => {
 
 const computedResultsMenuItems = computed(() => {
   const analysisIdVal = toValue(analysisId)
-  return resultsMenuItems.map(item => ({
-    ...item,
-    to: `/analyses/${analysisIdVal}/${item.to}`,
-  })).reverse()
+  const workflowVal = toValue(workflow)
+  const items = [{ ...analyisParametersMenuItems, to: {
+    name: 'analyses-analysisId',
+    params: {
+      analysisId: analysisIdVal,
+    },
+  } }]
+  if (!workflowVal) {
+    return items
+  }
+  const workflowVersionTagExit = Effect.runSyncExit(bt.getWorkflowTagVersion(workflowVal.tags))
+  const workflowTagNameExit = Effect.runSyncExit(bt.getWorkflowTagName(workflowVal.tags))
+  const workflowTagVersion = Exit.match(workflowVersionTagExit, {
+    onFailure: _ => null,
+    onSuccess: value => value,
+  })
+  const workflowTagName = Exit.match(workflowTagNameExit, {
+    onFailure: _ => null,
+    onSuccess: value => value,
+  })
+
+  if (workflowTagVersion === null || workflowTagName === null) {
+    return items
+  }
+  const resultItems = resultsMenuItems?.[workflowTagName]?.[workflowTagVersion]
+  if (!Array.isArray(resultItems)) {
+    return items
+  }
+  return [
+
+    ...items,
+    ...resultItems.map(item => ({
+      ...item,
+      to: `/analyses/${analysisIdVal}/${item.to}`,
+    })).reverse(),
+  ]
 })
 </script>
 

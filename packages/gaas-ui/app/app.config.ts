@@ -28,12 +28,23 @@ export default defineAppConfig({
         children: [],
       },
     ],
-    resultsMenuItems: [{
+    analyisParametersMenuItems: {
       label: 'Analysis parameters',
       icon: 'mdi:tools',
-      to: '',
       exact: true,
-    }],
+    },
+    resultsMenuItems: {
+      satelliteFinder: {
+        0.9: [
+          {
+            label: 'Accepted',
+            icon: 'lucide:list-check',
+            to: `results/results`,
+            exact: true,
+          },
+        ],
+      },
+    } as Record<string, Record<string, unknown>>,
     footerItems: [
       {
         label: 'Issues',
