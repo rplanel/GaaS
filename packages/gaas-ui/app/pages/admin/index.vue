@@ -26,12 +26,6 @@ const adminItems = ref([
     id: 'workflows',
     description: 'Manage galaxy workflows',
   },
-  {
-    label: 'Users',
-    id: 'users',
-    icon: 'i-lucide:user',
-    description: 'Manage application users',
-  },
 ])
 
 function goToAdminPanel(name: string) {

@@ -113,7 +113,10 @@ const sanitizedAnalyses = computed<SanitizedAnalysis[]>(() => {
         name,
         state,
         is_sync,
-        workflows: a.workflows.name,
+        workflows: {
+          name: a.workflows.name,
+          version: a.workflows.version,
+        },
       }
     })
   }
@@ -253,7 +256,7 @@ async function editAnalysisName(id: number) {
                   {{ analysis.name }}
                 </div>
                 <div class="text-(--ui-text-muted) text-sm">
-                  {{ analysis.workflows }}
+                  {{ analysis.workflows.name }} <UBadge :label="analysis.workflows.version" size="sm" variant="subtle" color="neutral" />
                 </div>
               </div>
             </div>

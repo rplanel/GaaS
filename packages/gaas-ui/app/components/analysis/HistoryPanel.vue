@@ -120,9 +120,9 @@ function useAnalysisJob(analysis: Ref<AnalysisDetail | null>, tools: Ref<Record<
       for (const job of jobsVal) {
         perJobItems[job.step_id] = {
           details: [
-            { label: 'Parameters', slot: 'parameters' },
-            { label: 'Stdout', slot: 'stdout' },
-            { label: 'Stderr', slot: 'stderr' },
+            { label: 'Parameters', slot: 'parameters', icon: 'i-lucide:settings-2' },
+            { label: 'Stdout', slot: 'stdout', icon: 'i-material-symbols:output' },
+            { label: 'Stderr', slot: 'stderr', icon: 'i-material-symbols:error-outline-rounded' },
           ],
         }
       }
@@ -243,7 +243,7 @@ const computedResultsMenuItems = computed(() => {
               </template>
               <template #body="{ item }">
                 <div v-if="jobDetailsAccordionItems && item.value" class="p-4">
-                  <UPageAccordion :default-value="['0']" :items="jobDetailsAccordionItems[item.value]?.details">
+                  <UPageAccordion :items="jobDetailsAccordionItems[item.value]?.details">
                     <template #parameters>
                       <div
                         v-if="
