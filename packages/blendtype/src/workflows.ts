@@ -112,3 +112,14 @@ export function getWorkflowTagVersion(tags: TagCollection) {
     return yield* Effect.fail(new Error('No tag version found'))
   })
 }
+
+export function getWorkflowTagName(tags: TagCollection) {
+  return Effect.gen(function* () {
+    const tag = tags?.find(tag => tag.startsWith('name:'))
+    if (tag) {
+      const tagName = tag.replace('name:', '')
+      return yield* Effect.succeed(tagName)
+    }
+    return yield* Effect.fail(new Error('No tag name found'))
+  })
+}

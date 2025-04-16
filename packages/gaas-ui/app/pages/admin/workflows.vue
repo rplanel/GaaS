@@ -74,7 +74,7 @@ const galaxyWorkflowGalaxyColumns = ref<TableColumn<ComputedGalaxyWorklowItem>[]
   },
 
   {
-    id: 'Activated',
+    header: 'Activated',
     cell: ({ row }) => {
       return h(
         USwitch,
@@ -158,18 +158,26 @@ const computedWorkflows = computed(() => {
   if (allWorkflowsVal) {
     return allWorkflowsVal
       .map((workflow) => {
-        const tagExit = Effect.runSyncExit(bt.getWorkflowTagVersion(workflow.tags))
-        const tag = Exit.match(tagExit, {
+        const tagVersionExit = Effect.runSyncExit(bt.getWorkflowTagVersion(workflow.tags))
+        const tagNameExit = Effect.runSyncExit(bt.getWorkflowTagName(workflow.tags))
+        const tagVersion = Exit.match(tagVersionExit, {
           onFailure: _ => false,
           onSuccess: value => value,
         })
+
+        const tagName = Exit.match(tagNameExit, {
+          onFailure: _ => false,
+          onSuccess: value => value,
+        })
+
         return {
           ...workflow,
-          version: tag,
+          version: tagVersion,
+          tagName,
           activated: dbWorkflowsMap.value.has(workflow.id),
         }
       })
-      .filter(({ version }) => version !== false)
+      .filter(({ version, tagName }) => version !== false && tagName !== false)
   }
   return []
 })
