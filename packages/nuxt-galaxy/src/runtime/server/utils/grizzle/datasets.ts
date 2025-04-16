@@ -25,8 +25,8 @@ export function uploadDatasetsEffect(datamap: Datamap, galaxyHistoryId: string, 
         if (storageObjectId) {
           const storageObject = yield* getStorageObject(storageObjectId)
           if (storageObject && storageObject?.name) {
-            let signedUrl = yield* createSignedUrl(event, storageObject.name)
-            signedUrl = 'https://dl.pasteur.fr/fop/9kG35Wvc/ESCO001.0523.00075.prt'
+            const signedUrl = yield* createSignedUrl(event, storageObject.name)
+            // signedUrl = 'https://dl.pasteur.fr/fop/9kG35Wvc/ESCO001.0523.00075.prt'
             if (signedUrl) {
               const filename = parseFilename(signedUrl, { strict: false })
               const historyDataset = yield* uploadFileToHistoryEffect(galaxyHistoryId, signedUrl, filename).pipe(
