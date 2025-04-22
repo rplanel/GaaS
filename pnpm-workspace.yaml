@@ -15,6 +15,7 @@ catalog:
   '@iconify-json/streamline': ^1.2.2
   '@iconify-json/svg-spinners': ^1.2.2
   '@iconify-json/tabler': ^1.2.13
+  '@nuxt/content': ^3.4.0
   '@nuxt/devtools': ^2.0.0-beta.3
   '@nuxt/eslint-config': ^1.1.0
   '@nuxt/kit': ^3.16.1

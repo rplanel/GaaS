@@ -109,6 +109,8 @@ export default defineNuxtModule<ModuleOptions>({
       log.warn('Missing galaxy email, set it either in `nuxt.config.js` or via env variable')
     }
 
+    // Install supabase module
+
     await installModule('@nuxtjs/supabase', {
       // module configuration
       redirectOptions: {
@@ -126,6 +128,9 @@ export default defineNuxtModule<ModuleOptions>({
 
       types: './runtime/types/database.ts',
     }, nuxt)
+
+    // Install nuxt content module
+    await installModule('@nuxt/content', { }, nuxt)
 
     // From the runtime directory
 

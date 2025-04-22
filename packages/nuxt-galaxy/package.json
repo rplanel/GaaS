@@ -43,6 +43,7 @@
     "drizzle:generate": "pnpm drizzle-kit generate"
   },
   "dependencies": {
+    "@nuxt/content": "catalog:",
     "@nuxt/kit": "catalog:",
     "@nuxtjs/supabase": "catalog:",
     "blendtype": "workspace:*",
