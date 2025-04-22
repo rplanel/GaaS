@@ -4,6 +4,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { GalaxyTool } from 'blendtype'
 import type { GalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 import type { AnalysisDetail, Database, RowAnalysisJob } from '../../types'
+import * as bt from 'blendtype'
 import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDecodeParameters'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
@@ -33,7 +34,7 @@ const workflowGalaxyId = computed(() => {
   }
   return undefined
 })
-const { gaasUi: { resultsMenuItems } } = useAppConfig()
+const { gaasUi: { resultsMenuItems, analyisParametersMenuItems } } = useAppConfig()
 
 onMounted(() => {
   // Real time listener for new workouts
@@ -63,6 +64,7 @@ onUnmounted(() => {
 })
 
 const {
+  workflow,
   workflowSteps,
   workflowToolIds,
   stepToTool,
@@ -120,9 +122,9 @@ function useAnalysisJob(analysis: Ref<AnalysisDetail | null>, tools: Ref<Record<
       for (const job of jobsVal) {
         perJobItems[job.step_id] = {
           details: [
-            { label: 'Parameters', slot: 'parameters' },
-            { label: 'Stdout', slot: 'stdout' },
-            { label: 'Stderr', slot: 'stderr' },
+            { label: 'Parameters', slot: 'parameters', icon: 'i-lucide:settings-2' },
+            { label: 'Stdout', slot: 'stdout', icon: 'i-material-symbols:output' },
+            { label: 'Stderr', slot: 'stderr', icon: 'i-material-symbols:error-outline-rounded' },
           ],
         }
       }
@@ -189,10 +191,34 @@ watchEffect(() => {
 
 const computedResultsMenuItems = computed(() => {
   const analysisIdVal = toValue(analysisId)
-  return resultsMenuItems.map(item => ({
-    ...item,
-    to: `/analyses/${analysisIdVal}/${item.to}`,
-  })).reverse()
+  const workflowVal = toValue(workflow)
+  const items = [{ ...analyisParametersMenuItems, to: {
+    name: 'analyses-analysisId',
+    params: {
+      analysisId: analysisIdVal,
+    },
+  } }]
+  if (!workflowVal) {
+    return items
+  }
+  const workflowTagVersion = bt.getWorkflowTagVersion(workflowVal.tags)
+  const workflowTagName = bt.getWorkflowTagName(workflowVal.tags)
+
+  if (workflowTagVersion === null || workflowTagName === null) {
+    return items
+  }
+  const resultItems = resultsMenuItems?.[workflowTagName]?.[workflowTagVersion]
+  if (!Array.isArray(resultItems)) {
+    return items
+  }
+  return [
+
+    ...items,
+    ...resultItems.map(item => ({
+      ...item,
+      to: `/analyses/${analysisIdVal}/${item.to}`,
+    })).reverse(),
+  ]
 })
 </script>
 
@@ -243,7 +269,7 @@ const computedResultsMenuItems = computed(() => {
               </template>
               <template #body="{ item }">
                 <div v-if="jobDetailsAccordionItems && item.value" class="p-4">
-                  <UPageAccordion :default-value="['0']" :items="jobDetailsAccordionItems[item.value]?.details">
+                  <UPageAccordion :items="jobDetailsAccordionItems[item.value]?.details">
                     <template #parameters>
                       <div
                         v-if="

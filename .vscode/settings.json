@@ -92,5 +92,6 @@
   ],
   "nuxtr.defaultPackageManager": "pnpm",
   "nuxtr.vueFiles.style.addStyleTag": false,
-  "eslint.format.enable": true
+  "eslint.format.enable": true,
+  "nuxtr.openItemsAfterCreation": true
 }

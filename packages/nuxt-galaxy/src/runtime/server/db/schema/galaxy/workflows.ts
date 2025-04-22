@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm'
-import { integer, json, primaryKey, serial, unique } from 'drizzle-orm/pg-core'
+import { integer, json, primaryKey, serial, unique, varchar } from 'drizzle-orm/pg-core'
 
 import { galaxy, galaxyItem } from '../galaxy'
 import { analyses } from './analyses'
@@ -10,12 +10,15 @@ import { users } from './users'
  */
 export const workflows = galaxy.table('workflows', {
   id: serial('id').primaryKey(),
-  version: integer('version').notNull().default(1),
+  autoVersion: integer('auto_version').notNull().default(1),
+  versionKey: varchar('version_key', { length: 255 }).notNull(),
+  nameKey: varchar('name_key', { length: 255 }).notNull(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   definition: json('definition').notNull(),
   ...galaxyItem,
 }, t => ({
-  unique: unique().on(t.galaxyId, t.version),
+  unique: unique().on(t.versionKey, t.nameKey),
+  galaxyIdUnique: unique().on(t.galaxyId),
 }))
 
 /**

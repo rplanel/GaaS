@@ -14,7 +14,10 @@ export interface ListAnalysisWithWorkflow extends ListAnalysis {
 }
 
 export interface SanitizedAnalysis extends ListAnalysis {
-  workflows: string
+  workflows: {
+    name: string
+    version: string
+  }
 }
 
 // definePageMeta({

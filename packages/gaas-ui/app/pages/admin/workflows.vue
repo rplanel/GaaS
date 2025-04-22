@@ -1,17 +1,16 @@
 <script setup lang="ts">
 import type { SupabaseTypes } from '#build/types/database'
 import type { BreadcrumbItem, TableColumn } from '@nuxt/ui'
-import type { Row } from '@tanstack/vue-table'
-
 import type { GalaxyWorkflowsItem } from 'blendtype'
-import {
-
-  getErrorMessage,
-  getStatusCode,
-} from 'blendtype'
+import { USwitch } from '#components'
+import * as bt from 'blendtype'
 
 type Database = SupabaseTypes.Database
 
+interface ComputedGalaxyWorklowItem extends GalaxyWorkflowsItem {
+  version: string | boolean
+  activated: boolean
+}
 interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined
 }
@@ -21,8 +20,6 @@ const { breadcrumbsItems } = toRefs(props)
 
 const toast = useToast()
 const UBadge = resolveComponent('UBadge')
-const UDropdownMenu = resolveComponent('UDropdownMenu')
-const UButton = resolveComponent('UButton')
 
 const supabase = useSupabaseClient<Database>()
 const {
@@ -50,8 +47,9 @@ const computedBreadcrumbsItems = computed(() => {
   return breadcrumbsItemsVal
 })
 
-const galaxyWorkflowGalaxyColumns = ref<TableColumn<GalaxyWorkflowsItem>[]>([
+const galaxyWorkflowGalaxyColumns = ref<TableColumn<ComputedGalaxyWorklowItem>[]>([
   { accessorKey: 'name', header: 'Name' },
+  { accessorKey: 'version', header: 'Version' },
   {
     accessorKey: 'number_of_steps',
     header: 'Number of steps',
@@ -73,54 +71,30 @@ const galaxyWorkflowGalaxyColumns = ref<TableColumn<GalaxyWorkflowsItem>[]>([
       })
     },
   },
+
   {
-    id: 'actions',
+    header: 'Activated',
     cell: ({ row }) => {
       return h(
-        'div',
-        { class: 'text-right' },
-        h(
-          UDropdownMenu,
-          {
-            content: {
-              align: 'end',
-            },
-            items: getRowItems(row),
+        USwitch,
+        {
+          class: 'text-right',
+          modelValue: row.original.activated,
+          disabled: row.original.activated,
+          onChange() {
+            addToDb({ id: row.original.id })
+
+            toast.add({
+              title: 'Workflow added to the webservice',
+              color: 'success',
+              icon: 'i-lucide-circle-check',
+            })
           },
-          () =>
-            h(UButton, {
-              icon: 'i-lucide-ellipsis-vertical',
-              color: 'neutral',
-              variant: 'ghost',
-              class: 'ml-auto',
-            }),
-        ),
+        },
       )
     },
   },
 ])
-
-function getRowItems(row: Row<GalaxyWorkflowsItem>) {
-  return [
-    {
-      type: 'label',
-      label: 'Actions',
-    },
-    {
-      icon: 'i-lucide:plus',
-      label: 'Add to webservice',
-      onSelect() {
-        addToDb({ id: row.original.id })
-
-        toast.add({
-          title: 'Workflow added to the webservice',
-          color: 'success',
-          icon: 'i-lucide-circle-check',
-        })
-      },
-    },
-  ]
-}
 
 async function addToDb(workflow: { id: string }) {
   const { id: galaxyId } = workflow
@@ -134,7 +108,7 @@ async function addToDb(workflow: { id: string }) {
     router.push('/workflows')
   }
   catch (error) {
-    throw createError({
+    showError({
       statusCode: getStatusCode(error),
       statusMessage: getErrorMessage(error),
     })
@@ -150,6 +124,52 @@ if (toValue(errorWorklows)) {
     statusMessage: toValue(errorMessage),
   })
 }
+
+const { data: dbWorkflows } = useAsyncData('all-db-workflows', async () => {
+  const { data, error } = await supabase
+    .schema('galaxy')
+    .from('workflows')
+    .select()
+
+  if (error) {
+    throw createError({
+      statusMessage: error.message,
+      statusCode: Number.parseInt(error.code),
+    })
+  }
+  return data
+})
+
+const dbWorkflowsMap = computed(() => {
+  const dbWorkflowsVal = toValue(dbWorkflows)
+  if (dbWorkflowsVal) {
+    return new Map(
+      dbWorkflowsVal
+        .map(workflow => [workflow.galaxy_id, workflow]),
+    )
+  }
+  return new Map()
+})
+
+const computedWorkflows = computed(() => {
+  const allWorkflowsVal = toValue(allWorkflows)
+
+  if (allWorkflowsVal) {
+    return allWorkflowsVal
+      .map((workflow) => {
+        const version = bt.getWorkflowTagVersion(workflow.tags)
+        const tagName = bt.getWorkflowTagName(workflow.tags)
+        return {
+          ...workflow,
+          version,
+          tagName,
+          activated: dbWorkflowsMap.value.has(workflow.id),
+        }
+      })
+      .filter(({ version, tagName }) => version !== null && tagName !== null)
+  }
+  return []
+})
 
 const { data: galaxyInstance } = await useAsyncData(
   'current-galaxy-instance',
@@ -208,11 +228,16 @@ const pageHeaderProps = computed(() => {
           </UBadge>
         </template>
       </PageHeader>
-
-      <UTable
-        v-if="allWorkflows" sticky :data="allWorkflows" :columns="galaxyWorkflowGalaxyColumns"
-        class="flex-1 max-h-[500px]"
-      />
+      <NuxtErrorBoundary>
+        <UTable
+          v-if="allWorkflows" sticky :data="computedWorkflows" :columns="galaxyWorkflowGalaxyColumns"
+          class="flex-1 max-h-[500px]"
+        />
+        <template #error="error">
+          une erroeureropere
+          <pre>{{ error }}</pre>
+        </template>
+      </NuxtErrorBoundary>
     </div>
     <div v-else>
       <UAlert title="No Galaxy instance defined" />

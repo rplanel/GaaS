@@ -73,23 +73,14 @@ export function useGalaxyWorkflow(workflowId: Ref<string | undefined>) {
     return stepToToolMap
   })
 
-  // function fetchWorkflowEffect() {
-  //   Effect.tryPromise({
-  //     try: () => $fetch<GalaxyWorkflow | undefined>(`/api/galaxy/workflows/${workflowIdVal}`),
-  //     catch: (err) => {
-
-  //     }
-
-  //   })
-
-  // }
-
   async function fetchWorkflow() {
     const workflowIdVal = toValue(workflowId)
     if (!workflowIdVal) {
       return
     }
-    const { error: getWorkflowError, data } = await $fetch<{ error: { message: string, statusMessage: string, statusCode: number } | string | undefined, data: GalaxyWorkflow | undefined }>(`/api/galaxy/workflows/${workflowIdVal}`)
+    const { error: getWorkflowError, data } = await $fetch<{ error: { message: string, statusMessage: string, statusCode: number } | string | undefined, data: GalaxyWorkflow | undefined }>(
+      `/api/galaxy/workflows/${workflowIdVal}`,
+    )
     if (getWorkflowError) {
       if (typeof getWorkflowError === 'string') {
         throw showError(getWorkflowError)

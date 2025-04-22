@@ -4,6 +4,7 @@ import type { datasets } from '../server/db/schema/galaxy/datasets'
 import type { histories } from '../server/db/schema/galaxy/histories'
 import type { jobs } from '../server/db/schema/galaxy/jobs'
 import type { tags } from '../server/db/schema/galaxy/tags'
+import type { workflows } from '../server/db/schema/galaxy/workflows'
 import type { Database } from './database'
 
 export type RowAnalysis = Database['galaxy']['Tables']['analyses']['Row']
@@ -26,6 +27,7 @@ export type GetTag = typeof tags.$inferSelect
 export type NewJob = typeof jobs.$inferInsert
 export type NewHistory = typeof histories.$inferInsert
 export type NewAnalysis = typeof analyses.$inferInsert
+export type NewWorkflow = typeof workflows.$inferInsert
 export interface AnalysisOutputsWithDatasets extends RowAnalysisOutputs {
   datasets: RowAnalaysisDataset
 }

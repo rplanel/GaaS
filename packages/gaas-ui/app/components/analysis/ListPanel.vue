@@ -113,7 +113,11 @@ const sanitizedAnalyses = computed<SanitizedAnalysis[]>(() => {
         name,
         state,
         is_sync,
-        workflows: a.workflows.name,
+        workflows: {
+          name: a.workflows.name,
+          version: a.workflows.version_key,
+          name_key: a.workflows.name_key,
+        },
       }
     })
   }
@@ -204,26 +208,6 @@ async function editAnalysisName(id: number) {
     refreshAnalyses()
   }
 }
-
-// Listen to updates
-// supabase
-//   .channel('analyses')
-//   .on(
-//     'postgres_changes',
-//     { event: 'UPDATE', schema: 'galaxy', table: 'analyses' },
-//     handleUpdates,
-//   )
-//   .subscribe()
-
-// Listen to delete
-// supabase
-//   .channel('analyses')
-//   .on(
-//     'postgres_changes',
-//     { event: 'DELETE', schema: 'galaxy', table: 'analyses' },
-//     handleUpdates,
-//   )
-//   .subscribe()
 </script>
 
 <template>
@@ -273,7 +257,7 @@ async function editAnalysisName(id: number) {
                   {{ analysis.name }}
                 </div>
                 <div class="text-(--ui-text-muted) text-sm">
-                  {{ analysis.workflows }}
+                  {{ analysis.workflows.name }} <UBadge :label="analysis.workflows.version" size="sm" variant="subtle" color="neutral" />
                 </div>
               </div>
             </div>

@@ -28,12 +28,12 @@ export default defineAppConfig({
         children: [],
       },
     ],
-    resultsMenuItems: [{
+    analyisParametersMenuItems: {
       label: 'Analysis parameters',
       icon: 'mdi:tools',
-      to: '',
       exact: true,
-    }],
+    },
+    resultsMenuItems: { } as Record<string, Record<string, unknown>>,
     footerItems: [
       {
         label: 'Issues',
