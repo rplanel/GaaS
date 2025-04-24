@@ -10,6 +10,7 @@ definePageMeta({
 useSeoMeta({
   title: 'Sign up',
 })
+const error = ref<AuthError | null>(null)
 
 const toast = useToast()
 const supabase = useSupabaseClient<Database>()
@@ -65,14 +66,13 @@ const schema = z.object({
 })
 
 type Schema = z.output<typeof schema>
-
 async function handleSignUp(e: FormSubmitEvent<Schema>) {
   // const queryParams
   //   = query.redirectTo !== undefined ? `?redirectTo=${query.redirectTo}` : ''
   const { data: { email, password } } = e
   const redirectTo = '/datasets'
   if (email && password) {
-    const { error, data } = await supabase.auth.signUp({
+    const { error: err, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -80,8 +80,9 @@ async function handleSignUp(e: FormSubmitEvent<Schema>) {
       },
     })
 
-    if (error) {
-      throw createError('Unable to sign up')
+    if (err) {
+      error.value = err
+      // throw showError({ message: error.message })
     }
     if (data?.user) {
       await navigateTo(redirectTo, { replace: true })
@@ -108,4 +109,14 @@ async function handleSignUp(e: FormSubmitEvent<Schema>) {
       </ULink>.
     </template>
   </UAuthForm>
+  <UAlert
+    v-if="error"
+    title="Signup failed"
+    :description="error.message"
+    color="error"
+    variant="subtle"
+    icon="i-lucide-terminal"
+    close
+    @update:open="() => error = null"
+  />
 </template>

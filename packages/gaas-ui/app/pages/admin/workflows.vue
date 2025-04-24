@@ -234,7 +234,6 @@ const pageHeaderProps = computed(() => {
           class="flex-1 max-h-[500px]"
         />
         <template #error="error">
-          une erroeureropere
           <pre>{{ error }}</pre>
         </template>
       </NuxtErrorBoundary>

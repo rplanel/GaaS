@@ -22,6 +22,7 @@ useSeoMeta({
   title: 'Login',
 })
 
+const loginError = ref<AuthError | null>(null)
 const toast = useToast()
 const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
@@ -56,7 +57,9 @@ async function handleSignIn(e: FormSubmitEvent<Schema>) {
     }
 
     if (error) {
-      throw createError('Unable to sign in')
+      loginError.value = error
+
+      // throw createError('Unable to sign in')
     }
   }
 }
@@ -68,6 +71,8 @@ async function signInWithGithub() {
     },
   })
   if (error) {
+    loginError.value = error
+
     throw createError('Unable to sign in with GitHub')
   }
 }
@@ -135,6 +140,16 @@ const providers = [
       </ULink>
     </template>
   </UAuthForm>
+  <UAlert
+    v-if="loginError"
+    title="Login failed"
+    :description="loginError.message"
+    color="error"
+    variant="subtle"
+    icon="i-lucide-terminal"
+    close
+    @update:open="() => loginError = null"
+  />
 
   <!-- <UCard>
     <template #header>

@@ -146,6 +146,7 @@ export default defineNuxtModule<ModuleOptions>({
       { name: 'useGalaxyWorkflow', path: './runtime/app/composables/galaxy/useGalaxyWorkflow' },
       { name: 'useUploadFileToStorage', path: './runtime/app/composables/useUploadFileToStorage' },
       { name: 'useWorkflowAnalyses', path: './runtime/app/composables/workflow/analysis/useWorkflowAnalyses' },
+      { name: 'useDiskUsage', path: './runtime/app/composables/useDiskUsage' },
 
     ]
 

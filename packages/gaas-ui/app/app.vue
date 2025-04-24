@@ -1,34 +1,55 @@
 <script setup lang="ts">
-import { useState } from '#imports'
+const { data: navigation } = await useAsyncData('navigation', () => queryCollectionNavigation('content'))
+const { data: files } = useLazyAsyncData('search', () => queryCollectionSearchSections('content'), {
+  server: false,
+})
+const { gaasUi: { seo } } = useAppConfig()
+const { navigationMenuItems } = useNavigationMenuItems()
 
-const appConfig = useAppConfig()
-
-// const highlight = ref(true)
 useHead({
   meta: [
-    { charset: 'utf-8' },
-
     { name: 'viewport', content: 'width=device-width, initial-scale=1' },
   ],
   link: [
-    { rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' },
+    { rel: 'icon', href: '/favicon.ico' },
   ],
-
   htmlAttrs: {
     lang: 'en',
   },
 })
-
 useSeoMeta({
-  ...appConfig?.gaasUi.seo,
+  ...seo,
 })
-useState('showWorkflowStepParameter', () => true)
+
+const links = computed(() => {
+  return toValue(navigationMenuItems).map((item) => {
+    return {
+      label: item.label,
+      icon: item.icon,
+      to: item.to,
+    }
+  })
+})
+
+const searchTerm = ref('')
+
+provide('navigation', navigation)
 </script>
 
 <template>
   <UApp>
-    <!-- <Banner /> -->
     <NuxtLoadingIndicator />
+    <ClientOnly>
+      <LazyUContentSearch
+        v-model:search-term="searchTerm"
+        :files="files"
+        shortcut="meta_k"
+        :navigation="navigation"
+        :links="links"
+        :fuse="{ resultLimit: 42 }"
+      />
+    </ClientOnly>
+
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>

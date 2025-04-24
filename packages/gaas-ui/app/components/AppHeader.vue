@@ -1,42 +1,13 @@
 <script setup lang="ts">
-import type { OrderedNavigationMenuItem } from '../app.config'
 import type { Database } from '../types'
+import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
 
 const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
-const { userRole } = useUserRole(supabase)
-const { gaasUi: { navigationMenuItems, name } } = useAppConfig()
-const navigationMenuItemsRef = toRef(navigationMenuItems)
-const computedItems = computed<OrderedNavigationMenuItem[]>(() => {
-  const userRoleVal = toValue(userRole)
-  const itemsVal = toValue(navigationMenuItemsRef)
-  if (userRoleVal === 'admin') {
-    return [
-      ...itemsVal,
-      {
-        label: 'Admin',
-        icon: 'i-material-symbols:admin-panel-settings',
-        to: '/admin',
-        order: itemsVal.length + 1,
-        children: [
-          {
-            icon: 'i-lucide:workflow',
-            label: 'Workflows',
-            description: 'Manage workflows',
-            to: '/admin/workflows',
-          },
-          {
-            label: 'User',
-            icon: 'i-lucide:user',
-            description: 'Manage users and roles',
-            to: '/admin/users',
-          },
-        ],
-      },
-    ].sort((a, b) => a.order - b.order)
-  }
-  return itemsVal.sort((a, b) => a.order - b.order)
-})
+const { gaasUi: { name } } = useAppConfig()
+
+const { navigationMenuItems } = useNavigationMenuItems()
+
 async function logout() {
   const { error } = await supabase.auth.signOut()
   if (error) {
@@ -65,7 +36,7 @@ const userItems = ref([
         {{ name }}
       </NuxtLink>
     </template>
-    <UNavigationMenu :items="computedItems" variant="link" />
+    <UNavigationMenu :items="navigationMenuItems" variant="link" />
 
     <template #right>
       <UColorModeButton />
@@ -98,7 +69,7 @@ const userItems = ref([
       </template>
     </template>
     <template #content>
-      <UNavigationMenu orientation="vertical" :items="computedItems" class="-mx-2.5" />
+      <UNavigationMenu orientation="vertical" :items="navigationMenuItems" class="-mx-2.5" />
     </template>
   </UHeader>
 </template>

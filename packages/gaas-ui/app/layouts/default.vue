@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import type { SupabaseTypes } from '#build/types/database'
 
-import type { CommandPaletteGroup, CommandPaletteItem, NavigationMenuItem } from '@nuxt/ui'
+import type { NavigationMenuItem } from '@nuxt/ui'
 import type { OrderedNavigationMenuItem } from '../app.config'
 import { useAsyncData } from 'nuxt/app'
+import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
 
 type Database = SupabaseTypes.Database
 
-const { gaasUi: { navigationMenuItems, footerItems, name } } = useAppConfig()
-const navigationMenuItemsRef: Ref<OrderedNavigationMenuItem[]> = toRef(navigationMenuItems)
+const { gaasUi: { footerItems, name } } = useAppConfig()
+const { navigationMenuItems } = useNavigationMenuItems()
+
 const footerItemsRef: Ref<NavigationMenuItem[]> = toRef(footerItems)
 const supabase = useSupabaseClient<Database>()
 const { userRole } = useUserRole(supabase)
@@ -52,27 +54,28 @@ const { data: datasetsCount, refresh: refreshDatasetsCount } = await useAsyncDat
 
 const sanitizedNavigationMenuItems = computed<OrderedNavigationMenuItem[]>(() => {
   const analysesVal = toValue(analyses)
-  const navigationMenuItemsVal = toValue(navigationMenuItemsRef)
+  const navigationMenuItemsVal = toValue(navigationMenuItems)
   if (!analysesVal)
     return navigationMenuItemsVal
 
-  return navigationMenuItemsVal.map((item) => {
-    if (item.label === 'Analyses') {
-      return {
-        ...item,
-        defaultOpen: true,
-        badge: analysesVal.length,
+  return navigationMenuItemsVal
+    .map((item) => {
+      if (item.label === 'Analyses') {
+        return {
+          ...item,
+          defaultOpen: true,
+          badge: analysesVal.length,
 
+        }
       }
-    }
-    if (item.label === 'Datasets') {
-      return {
-        ...item,
-        badge: datasetsCount.value,
+      if (item.label === 'Datasets') {
+        return {
+          ...item,
+          badge: datasetsCount.value,
+        }
       }
-    }
-    return item
-  })
+      return item
+    })
 })
 const computedLinks = computed<OrderedNavigationMenuItem[][]>(() => {
   const itemsVal = toValue(sanitizedNavigationMenuItems)
@@ -82,27 +85,6 @@ const computedLinks = computed<OrderedNavigationMenuItem[][]>(() => {
       [
         ...links,
         ...itemsVal,
-        {
-          label: 'Admin',
-          icon: 'i-material-symbols:admin-panel-settings',
-          to: '/admin',
-          order: itemsVal.length + 1,
-          children: [
-            {
-              icon: 'i-lucide:workflow',
-              label: 'Workflows',
-              description: 'Manage workflows',
-              to: '/admin/workflows',
-            },
-            {
-              label: 'User',
-              icon: 'i-lucide:user',
-              description: 'Manage users and roles',
-              to: '/admin/users',
-            },
-          ],
-        },
-
       ].sort((a, b) => a.order - b.order),
       [...footerItemsRef.value],
     ]
@@ -110,22 +92,22 @@ const computedLinks = computed<OrderedNavigationMenuItem[][]>(() => {
   return [itemsVal]
 })
 
-const analysesSearchGroups = computed<CommandPaletteGroup<CommandPaletteItem>>(() => {
-  const analysesVal = toValue(analyses)
-  return {
-    id: 'analyses',
-    label: 'Analyses',
-    items: analysesVal
-      ? analysesVal?.map(({ name, id }) => {
-        return { label: name, to: `/analyses/${id}/results` }
-      })
-      : [],
-  }
-})
+// const analysesSearchGroups = computed<CommandPaletteGroup<CommandPaletteItem>>(() => {
+//   const analysesVal = toValue(analyses)
+//   return {
+//     id: 'analyses',
+//     label: 'Analyses',
+//     items: analysesVal
+//       ? analysesVal?.map(({ name, id }) => {
+//         return { label: name, to: `/analyses/${id}/results` }
+//       })
+//       : [],
+//   }
+// })
 
-const searchGroups = computed(() => {
-  return [analysesSearchGroups.value]
-})
+// const searchGroups = computed(() => {
+//   return [analysesSearchGroups.value]
+// })
 
 provide('datasetsCount', {
   datasetsCount,
@@ -139,7 +121,7 @@ provide('analysesList', {
 
 <template>
   <UDashboardGroup>
-    <UDashboardSearch v-if="searchGroups" :groups="searchGroups" />
+    <!-- <UDashboardSearch v-if="searchGroups" :groups="searchGroups" /> -->
     <UDashboardSidebar
       collapsible resizable class="bg-(--ui-bg-elevated)/25"
       :ui="{ footer: 'lg:border-t lg:border-(--ui-border)' }"
@@ -153,7 +135,8 @@ provide('analysesList', {
       </template>
 
       <template #default="{ collapsed }">
-        <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-(--ui-border)" />
+        <!-- <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-(--ui-border)" /> -->
+        <UContentSearchButton :collapsed="false" />
 
         <UNavigationMenu
           v-if="computedLinks?.[0]" :collapsed="collapsed" :items="computedLinks[0]"

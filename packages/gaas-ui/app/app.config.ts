@@ -3,6 +3,7 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 export default defineAppConfig({
   gaasUi: {
     name: 'GaaS',
+    wiki: true,
     seo: {
       title: 'GaaS',
       titleTemplate: '%s - GaaS',
@@ -27,6 +28,33 @@ export default defineAppConfig({
         order: 3,
         children: [],
       },
+      {
+        label: 'Wiki',
+        icon: 'mdi:wikipedia',
+        to: '/wiki',
+        order: 4,
+      },
+      {
+        label: 'Admin',
+        icon: 'i-material-symbols:admin-panel-settings',
+        to: '/admin',
+        order: 5,
+        children: [
+          {
+            icon: 'i-lucide:workflow',
+            label: 'Workflows',
+            description: 'Manage workflows',
+            to: '/admin/workflows',
+          },
+          {
+            label: 'User',
+            icon: 'i-lucide:user',
+            description: 'Manage users and roles',
+            to: '/admin/users',
+          },
+        ],
+      },
+
     ],
     analyisParametersMenuItems: {
       label: 'Analysis parameters',
