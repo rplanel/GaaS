@@ -1,0 +1,26 @@
+{
+  "name": "my-nuxt-layer",
+  "type": "module",
+  "version": "0.0.1",
+  "main": "./nuxt.config.ts",
+  "scripts": {
+    "dev": "nuxi dev .playground",
+    "dev:prepare": "nuxt prepare .playground",
+    "build": "nuxt build .playground",
+    "generate": "nuxt generate .playground",
+    "preview": "nuxt preview .playground",
+    "lint": "eslint .",
+    "test": "vitest",
+    "release:publish": "pnpm publish --access public",
+    "typecheck": "vue-tsc --noEmit",
+    "cleandep": "rm -rf node_modules && rm -rf .data && rm -rf .nuxt && rm -rf .playground/.nuxt && rm -rf .playground/.output && rm -rf .playground/node_modules && rm -rf .playground/.data"
+  },
+  "devDependencies": {
+    "@nuxt/content": "catalog:",
+    "@nuxt/eslint": "latest",
+    "eslint": "catalog:",
+    "nuxt": "catalog:",
+    "typescript": "catalog:",
+    "vue": "latest"
+  }
+}
