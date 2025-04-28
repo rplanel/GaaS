@@ -1,6 +1,18 @@
 export default defineAppConfig({
-  myLayer: {
-    name: 'Hello from Nuxt layer',
+  gaasWiki: {
+    name: 'GaaS Wiki',
+    seo: {
+      title: 'GaaS Wiki',
+      titleTemplate: '%s - GaaS Wiki',
+    },
+    navigationMenuItems: [
+      {
+        label: 'Wiki',
+        icon: 'mdi:wikipedia',
+        to: '/wiki',
+        order: 4,
+      },
+    ],
   },
 })
 

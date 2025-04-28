@@ -2,8 +2,7 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 
 export default defineAppConfig({
   gaasUi: {
-    name: 'GaaS',
-    wiki: true,
+    name: 'GaaS UI',
     seo: {
       title: 'GaaS',
       titleTemplate: '%s - GaaS',

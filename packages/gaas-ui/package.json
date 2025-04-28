@@ -29,7 +29,6 @@
     "@iconify-json/streamline": "catalog:",
     "@iconify-json/svg-spinners": "catalog:",
     "@iconify-json/tabler": "catalog:",
-    "@nuxt/content": "catalog:",
     "@nuxt/ui-pro": "catalog:",
     "@vueuse/core": "catalog:",
     "drizzle-kit": "catalog:",

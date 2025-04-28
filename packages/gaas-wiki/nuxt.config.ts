@@ -4,5 +4,12 @@ export default defineNuxtConfig({
   future: {
     compatibilityVersion: 4,
   },
-  modules: ['@nuxt/content', '@nuxt/eslint'],
+  modules: [
+    '@nuxt/ui-pro',
+    '@nuxt/test-utils/module',
+    '@nuxt/eslint',
+    '@nuxt/content',
+  ],
+  css: ['../app/assets/css/main.css', './app/assets/css/main.css'],
+
 })

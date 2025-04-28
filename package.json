@@ -20,7 +20,7 @@
   "dependencies": {
     "@nuxt/ui-pro": "catalog:",
     "blendtype": "workspace:*",
-    "nuxt": "^3.16.2",
+    "nuxt": "catalog:",
     "supabase": "catalog:"
   },
   "devDependencies": {
