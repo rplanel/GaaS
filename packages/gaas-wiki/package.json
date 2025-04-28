@@ -1,7 +1,8 @@
 {
-  "name": "my-nuxt-layer",
+  "name": "gaas-wiki",
   "type": "module",
   "version": "0.0.1",
+  "packageManager": "pnpm@10.4.1",
   "main": "./nuxt.config.ts",
   "scripts": {
     "dev": "nuxi dev .playground",
