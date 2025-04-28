@@ -11,7 +11,6 @@ export default defineNuxtConfig({
     '@nuxt/ui-pro',
     '@nuxt/test-utils/module',
     'nuxt-galaxy',
-
   ],
   css: ['../app/assets/css/main.css', './app/assets/css/main.css'],
   future: {
@@ -20,4 +19,10 @@ export default defineNuxtConfig({
   experimental: {
     typedPages: true,
   },
+  vite: {
+    optimizeDeps: {
+      include: ['@vueuse/core', '@nuxt/ui-pro', 'zod', 'jwt-decode', 'effect'],
+    },
+  },
+
 })

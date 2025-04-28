@@ -85,7 +85,8 @@ export default defineAppConfig({
 
 })
 
-// should use extends NavigationMenuItem from @nuxt/ui but it is not working right now
+// should use extends NavigationMenuItem
+// from @nuxt/ui but it is not working right now
 export interface OrderedNavigationMenuItem extends NavigationMenuItem {
   order: number
 }

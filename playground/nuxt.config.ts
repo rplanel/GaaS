@@ -8,4 +8,7 @@ export default defineNuxtConfig({
   },
   css: ['./app/assets/css/main.css'],
   devtools: { enabled: true },
+  // build: {
+  //   transpile: ['../packages/gaas-ui', '../packages/gaas-wiki'],
+  // },
 })
