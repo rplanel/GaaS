@@ -7,6 +7,7 @@ export default defineAppConfig({
       title: 'GaaS',
       titleTemplate: '%s - GaaS',
     },
+    wiki: false,
     navigationMenuItems: [
       {
         label: 'Datasets',
