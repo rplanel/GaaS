@@ -5,8 +5,9 @@ import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
 const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
 const { gaasUi: { name, navigationMenuItems: navigationMenuItemsFromConfig, wiki } } = useAppConfig()
+const { userRole } = useUserRole(supabase)
 
-const { navigationMenuItems } = useNavigationMenuItems({ wiki, navigationMenuItems: navigationMenuItemsFromConfig })
+const { navigationMenuItems } = useNavigationMenuItems({ wiki, navigationMenuItems: navigationMenuItemsFromConfig, userRole })
 
 async function logout() {
   const { error } = await supabase.auth.signOut()

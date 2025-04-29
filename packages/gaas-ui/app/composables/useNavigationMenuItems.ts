@@ -1,18 +1,17 @@
 import type { NavigationMenuItem } from '@nuxt/ui'
 
-import type { Database } from '../types'
-
 interface NavigationMenuItemParameters {
   wiki: boolean
   navigationMenuItems: NavigationMenuItem[]
+  userRole: MaybeRef<string | undefined>
 }
 
-export function useNavigationMenuItems({ wiki, navigationMenuItems: navigationMenuItemsFromConfig }: NavigationMenuItemParameters) {
+export function useNavigationMenuItems(parameters: NavigationMenuItemParameters) {
+  const { wiki, navigationMenuItems, userRole } = parameters
   // const { gaasUi: { navigationMenuItems: navigationMenuItemsFromConfig, wiki } } = useAppConfig()
-  const supabase = useSupabaseClient<Database>()
+  // const supabase = useSupabaseClient<Database>()
 
-  const { userRole } = useUserRole(supabase)
-  const navigationMenuItemsRef = toRef(navigationMenuItemsFromConfig)
+  // const { userRole } = useUserRole(supabase)
 
   const isAdmin = computed(() => {
     const userRoleVal = toValue(userRole)
@@ -21,16 +20,14 @@ export function useNavigationMenuItems({ wiki, navigationMenuItems: navigationMe
     return userRoleVal === 'admin'
   })
 
-  const navigationMenuItems = computed(() => {
-    const navigationMenuItemsVal = toValue(navigationMenuItemsRef)
-
-    return navigationMenuItemsVal
-      .filter(item => item?.label !== 'Admin' || isAdmin.value)
+  const computedNavigationMenuItems = computed(() => {
+    return navigationMenuItems
+      .filter(item => item?.label !== 'Admin' || isAdmin)
       .filter(item => item?.label !== 'Wiki' || wiki)
       .sort((a, b) => a.order - b.order)
   })
 
   return {
-    navigationMenuItems,
+    navigationMenuItems: computedNavigationMenuItems,
   }
 }
