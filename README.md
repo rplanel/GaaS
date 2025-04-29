@@ -43,6 +43,10 @@ The monorepo consists of three main packages:
   - Job monitoring dashboards
   - Tool interfaces
 
+### **gaas-wiki**
+
+- Nuxt layer
+
 ## Resources
 
 - [Galaxy Project Documentation](https://docs.galaxyproject.org)
