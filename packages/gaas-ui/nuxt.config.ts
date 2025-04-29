@@ -1,3 +1,7 @@
+import { createResolver } from '@nuxt/kit'
+
+const { resolve } = createResolver(import.meta.url)
+
 // import { dirname, join } from 'node:path'
 // import { fileURLToPath } from 'node:url'
 // https://nuxt.com/docs/api/configuration/nuxt-config
@@ -12,7 +16,8 @@ export default defineNuxtConfig({
     '@nuxt/test-utils/module',
     'nuxt-galaxy',
   ],
-  css: ['../app/assets/css/main.css', './app/assets/css/main.css'],
+  alias: { '~gaasUi': resolve('./') },
+  css: ['~gaasUi/app/assets/css/main.css'],
   future: {
     compatibilityVersion: 4,
   },

@@ -1,4 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+
+import { createResolver } from '@nuxt/kit'
+
+const { resolve } = createResolver(import.meta.url)
+
 // import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
@@ -6,12 +11,14 @@ export default defineNuxtConfig({
   future: {
     compatibilityVersion: 4,
   },
+  alias: { '~gaasWiki': resolve('./') },
+
   modules: [
     '@nuxt/ui-pro',
     '@nuxt/test-utils/module',
     '@nuxt/eslint',
     '@nuxt/content',
   ],
-  css: ['../app/assets/css/main.css', './app/assets/css/main.css'],
+  css: ['~gaasWiki/app/assets/css/main.css'],
 
 })
