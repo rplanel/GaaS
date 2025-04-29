@@ -1,7 +1,7 @@
 // import { dirname, join } from 'node:path'
 // import { fileURLToPath } from 'node:url'
 // https://nuxt.com/docs/api/configuration/nuxt-config
-import { defineNuxtConfig } from 'nuxt/config'
+// import { defineNuxtConfig } from 'nuxt/config'
 
 // const currentDir = dirname(fileURLToPath(import.meta.url))
 
