@@ -29,12 +29,6 @@ export default defineAppConfig({
         children: [],
       },
       {
-        label: 'Wiki',
-        icon: 'mdi:wikipedia',
-        to: '/wiki',
-        order: 4,
-      },
-      {
         label: 'Admin',
         icon: 'i-material-symbols:admin-panel-settings',
         to: '/admin',
