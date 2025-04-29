@@ -1,4 +1,6 @@
 import type { NavigationMenuItem } from '@nuxt/ui'
+import type { MaybeRef } from 'vue'
+import { computed, toValue } from 'vue'
 
 interface NavigationMenuItemParameters {
   wiki: boolean
