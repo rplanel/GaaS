@@ -82,7 +82,6 @@ async function handleSignUp(e: FormSubmitEvent<Schema>) {
 
     if (err) {
       error.value = err
-      // throw showError({ message: error.message })
     }
     if (data?.user) {
       await navigateTo(redirectTo, { replace: true })

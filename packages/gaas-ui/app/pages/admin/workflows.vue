@@ -108,7 +108,7 @@ async function addToDb(workflow: { id: string }) {
     router.push('/workflows')
   }
   catch (error) {
-    showError({
+    throw createError({
       statusCode: getStatusCode(error),
       statusMessage: getErrorMessage(error),
     })
