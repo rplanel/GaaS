@@ -8,7 +8,7 @@ const { data: navigation } = await useAsyncData('navigation', () => queryCollect
 const { data: files } = useLazyAsyncData('search', () => queryCollectionSearchSections('content'), {
   server: false,
 })
-// const { navigationMenuItems } = useNavigationMenuItems()
+// const { navigationMenuItems } = useNavigationMenuItems({ wiki, navigationMenuItems: navigationMenuItemsFromConfig })
 
 useHead({
   meta: [

@@ -8,8 +8,8 @@ import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
 
 type Database = SupabaseTypes.Database
 
-const { gaasUi: { footerItems, name } } = useAppConfig()
-const { navigationMenuItems } = useNavigationMenuItems()
+const { gaasUi: { footerItems, name, navigationMenuItems: navigationMenuItemsFromConfig, wiki } } = useAppConfig()
+const { navigationMenuItems } = useNavigationMenuItems({ wiki, navigationMenuItems: navigationMenuItemsFromConfig })
 
 const footerItemsRef: Ref<NavigationMenuItem[]> = toRef(footerItems)
 const supabase = useSupabaseClient<Database>()
