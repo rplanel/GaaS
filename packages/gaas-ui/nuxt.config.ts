@@ -2,9 +2,6 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { createResolver } from '@nuxt/kit'
-
-const { resolve } = createResolver(import.meta.url)
 const currentDir = dirname(fileURLToPath(import.meta.url))
 
 // import { defineNuxtConfig } from 'nuxt/config'
@@ -18,7 +15,6 @@ export default defineNuxtConfig({
     '@nuxt/test-utils/module',
     'nuxt-galaxy',
   ],
-  alias: { '~gaasUi': resolve('./') },
   css: [
     join(currentDir, './app/assets/css/main.css'),
 

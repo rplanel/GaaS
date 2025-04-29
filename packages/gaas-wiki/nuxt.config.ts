@@ -4,9 +4,6 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { createResolver } from '@nuxt/kit'
-
-const { resolve } = createResolver(import.meta.url)
 const currentDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineNuxtConfig({
@@ -14,7 +11,6 @@ export default defineNuxtConfig({
   future: {
     compatibilityVersion: 4,
   },
-  alias: { '~gaasWiki': resolve('./') },
 
   modules: [
     '@nuxt/ui-pro',
