@@ -1,10 +1,12 @@
+// https://nuxt.com/docs/api/configuration/nuxt-config
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { createResolver } from '@nuxt/kit'
 
 const { resolve } = createResolver(import.meta.url)
+const currentDir = dirname(fileURLToPath(import.meta.url))
 
-// import { dirname, join } from 'node:path'
-// import { fileURLToPath } from 'node:url'
-// https://nuxt.com/docs/api/configuration/nuxt-config
 // import { defineNuxtConfig } from 'nuxt/config'
 
 // const currentDir = dirname(fileURLToPath(import.meta.url))
@@ -17,7 +19,12 @@ export default defineNuxtConfig({
     'nuxt-galaxy',
   ],
   alias: { '~gaasUi': resolve('./') },
-  css: ['~gaasUi/app/assets/css/main.css'],
+  css: [
+    join(currentDir, './app/assets/css/main.css'),
+
+    // '../app/assets/css/main.css',
+    // './app/assets/css/main.css',
+  ],
   future: {
     compatibilityVersion: 4,
   },
@@ -26,7 +33,16 @@ export default defineNuxtConfig({
   },
   vite: {
     optimizeDeps: {
-      include: ['@vueuse/core', '@nuxt/ui-pro', 'zod', 'jwt-decode', 'effect'],
+      include: [
+        '@vueuse/core',
+        '@nuxt/ui-pro',
+        'zod',
+        'jwt-decode',
+        'effect',
+        '@vueuse/integrations/useJwt',
+        '@tanstack/vue-table',
+        'zod-validation-error',
+      ],
     },
   },
 

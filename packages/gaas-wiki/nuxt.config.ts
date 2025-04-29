@@ -1,10 +1,13 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+// import { defineNuxtConfig } from 'nuxt/config'
+
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { createResolver } from '@nuxt/kit'
 
 const { resolve } = createResolver(import.meta.url)
-
-// import { defineNuxtConfig } from 'nuxt/config'
+const currentDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
@@ -19,6 +22,9 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@nuxt/content',
   ],
-  css: ['~gaasWiki/app/assets/css/main.css'],
+  css: [
+    join(currentDir, './app/assets/css/main.css'),
+    // '~gaasWiki/app/assets/css/main.css'
+  ],
 
 })
