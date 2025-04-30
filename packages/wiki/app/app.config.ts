@@ -16,14 +16,6 @@ export default defineAppConfig({
       title: 'GaaS Wiki',
       titleTemplate: '%s - GaaS Wiki',
     },
-    navigationMenuItems: [
-      {
-        label: 'Wiki',
-        icon: 'mdi:wikipedia',
-        to: '/wiki',
-        order: 4,
-      },
-    ],
   },
 })
 
