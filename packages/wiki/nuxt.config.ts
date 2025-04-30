@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const currentDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineNuxtConfig({
+  extends: ['@gaas/ui'],
   devtools: { enabled: true },
   future: {
     compatibilityVersion: 4,

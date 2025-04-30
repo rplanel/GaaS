@@ -1,7 +1,7 @@
 {
-  "name": "gaas-ui",
+  "name": "@gaas/ui",
   "type": "module",
-  "version": "0.0.3-alpha.5",
+  "version": "0.0.1-alpha.0",
   "packageManager": "pnpm@10.4.1",
   "main": "./nuxt.config.ts",
   "scripts": {
@@ -29,7 +29,7 @@
     "@iconify-json/streamline": "catalog:",
     "@iconify-json/svg-spinners": "catalog:",
     "@iconify-json/tabler": "catalog:",
-    "@nuxt/ui-pro": "catalog:",
+    "@nuxt/ui-pro": "catalog:nuxt",
     "@vueuse/core": "catalog:",
     "drizzle-kit": "catalog:",
     "effect": "catalog:",
@@ -40,11 +40,11 @@
   },
   "devDependencies": {
     "@nuxt/eslint": "latest",
-    "@nuxt/test-utils": "catalog:",
+    "@nuxt/test-utils": "catalog:nuxt",
     "@vue/test-utils": "catalog:",
     "eslint": "catalog:",
     "happy-dom": "catalog:",
-    "nuxt": "catalog:",
+    "nuxt": "catalog:nuxt",
     "playwright-core": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",

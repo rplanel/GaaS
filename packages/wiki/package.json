@@ -1,7 +1,7 @@
 {
-  "name": "gaas-wiki",
+  "name": "@gaas/wiki",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.0.1-alpha.0",
   "packageManager": "pnpm@10.4.1",
   "main": "./nuxt.config.ts",
   "scripts": {
@@ -17,18 +17,19 @@
     "cleandep": "rm -rf node_modules && rm -rf .data && rm -rf .nuxt && rm -rf .playground/.nuxt && rm -rf .playground/.output && rm -rf .playground/node_modules && rm -rf .playground/.data"
   },
   "dependencies": {
-    "@nuxt/content": "catalog:",
-    "@nuxt/ui-pro": "catalog:",
+    "@gaas/ui": "workspace:^",
+    "@nuxt/content": "catalog:nuxt",
+    "@nuxt/ui-pro": "catalog:nuxt",
     "zod": "catalog:",
     "zod-validation-error": "catalog:"
   },
   "devDependencies": {
     "@nuxt/eslint": "latest",
-    "@nuxt/test-utils": "catalog:",
+    "@nuxt/test-utils": "catalog:nuxt",
     "@vue/test-utils": "catalog:",
     "eslint": "catalog:",
     "happy-dom": "catalog:",
-    "nuxt": "catalog:",
+    "nuxt": "catalog:nuxt",
     "playwright-core": "catalog:",
     "typescript": "catalog:",
     "vue": "latest",

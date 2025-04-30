@@ -13,7 +13,7 @@
 @source "../../../node_modules/@nuxt/ui-pro"; */
 
 /* this work */
-@source "../../../../../node_modules/gaas-ui";
+@source "../../../../../node_modules/@gaas/ui";
 
 @theme {
   --font-sans: 'Public Sans', sans-serif;
