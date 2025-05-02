@@ -45,4 +45,5 @@ jobs:
             --no-template --pnpm
             './packages/blendtype'
             './packages/nuxt-galaxy'
-            './packages/gaas-ui'
+            './packages/ui'
+            './packages/wiki'

@@ -1,6 +1,6 @@
 import type { Ref } from '#imports'
 import type { GalaxyWorkflow, WorkflowToolParameters, WorkflowToolStep } from 'blendtype'
-import { computed, createError, ref, showError, toValue, watch } from '#imports'
+import { computed, createError, ref, toValue, watch } from '#imports'
 
 export function useGalaxyWorkflow(workflowId: Ref<string | undefined>) {
   const workflow = ref<GalaxyWorkflow | undefined>(undefined)
@@ -83,10 +83,10 @@ export function useGalaxyWorkflow(workflowId: Ref<string | undefined>) {
     )
     if (getWorkflowError) {
       if (typeof getWorkflowError === 'string') {
-        throw showError(getWorkflowError)
+        throw createError(getWorkflowError)
       }
       else {
-        throw showError({ ...getWorkflowError })
+        throw createError({ ...getWorkflowError })
       }
     }
 
