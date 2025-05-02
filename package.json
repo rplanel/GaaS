@@ -18,8 +18,9 @@
     "release": "pnpm run lint && pnpm run typecheck && pnpm run test && changelogen --output CHANGELOG.md && jiti scripts/release.ts && pnpm -r run release:publish && git push --follow-tags"
   },
   "dependencies": {
-    "@nuxt/ui-pro": "catalog:",
+    "@nuxt/ui-pro": "catalog:nuxt",
     "blendtype": "workspace:*",
+    "nuxt": "catalog:nuxt",
     "supabase": "catalog:"
   },
   "devDependencies": {
@@ -40,6 +41,7 @@
       "esbuild",
       "simple-git-hooks",
       "supabase",
+      "unrs-resolver",
       "vue-demi"
     ]
   },

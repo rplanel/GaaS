@@ -1,0 +1,38 @@
+{
+  "name": "@gaas/wiki",
+  "type": "module",
+  "version": "0.0.1-alpha.0",
+  "packageManager": "pnpm@10.4.1",
+  "main": "./nuxt.config.ts",
+  "scripts": {
+    "dev": "nuxi dev .playground",
+    "dev:prepare": "nuxt prepare .playground",
+    "build": "nuxt build .playground",
+    "generate": "nuxt generate .playground",
+    "preview": "nuxt preview .playground",
+    "lint": "eslint .",
+    "test": "vitest",
+    "release:publish": "pnpm publish --access public",
+    "typecheck": "vue-tsc --noEmit",
+    "cleandep": "rm -rf node_modules && rm -rf .data && rm -rf .nuxt && rm -rf .playground/.nuxt && rm -rf .playground/.output && rm -rf .playground/node_modules && rm -rf .playground/.data"
+  },
+  "dependencies": {
+    "@gaas/ui": "workspace:^",
+    "@nuxt/content": "catalog:nuxt",
+    "@nuxt/ui-pro": "catalog:nuxt",
+    "zod": "catalog:",
+    "zod-validation-error": "catalog:"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "latest",
+    "@nuxt/test-utils": "catalog:nuxt",
+    "@vue/test-utils": "catalog:",
+    "eslint": "catalog:",
+    "happy-dom": "catalog:",
+    "nuxt": "catalog:nuxt",
+    "playwright-core": "catalog:",
+    "typescript": "catalog:",
+    "vue": "latest",
+    "vue-tsc": "^2.2.0"
+  }
+}
