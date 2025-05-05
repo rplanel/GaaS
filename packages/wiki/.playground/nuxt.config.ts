@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 const currentDir = dirname(fileURLToPath(import.meta.url))
 export default defineNuxtConfig({
   extends: [
-    // '../../ui',
+    '../../ui',
     '..',
   ],
   modules: [
