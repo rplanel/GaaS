@@ -9,12 +9,7 @@ interface NavigationMenuItemParameters {
 }
 
 export function useNavigationMenuItems(parameters: NavigationMenuItemParameters) {
-  const { wiki, navigationMenuItems, userRole } = parameters
-  // const { gaasUi: { navigationMenuItems: navigationMenuItemsFromConfig, wiki } } = useAppConfig()
-  // const supabase = useSupabaseClient<Database>()
-
-  // const { userRole } = useUserRole(supabase)
-
+  const { navigationMenuItems, userRole } = parameters
   const isAdmin = computed(() => {
     const userRoleVal = toValue(userRole)
     if (!userRoleVal)
@@ -25,7 +20,7 @@ export function useNavigationMenuItems(parameters: NavigationMenuItemParameters)
   const computedNavigationMenuItems = computed(() => {
     return navigationMenuItems
       .filter(item => item?.label !== 'Admin' || isAdmin)
-      .filter(item => item?.label !== 'Wiki' || wiki)
+      // .filter(item => item?.label !== 'Wiki' || wiki)
       .sort((a, b) => a.order - b.order)
   })
 

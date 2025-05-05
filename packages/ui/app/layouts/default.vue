@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SupabaseTypes } from '#build/types/database'
 
-import type { NavigationMenuItem } from '@nuxt/ui'
+import type { CommandPaletteGroup, CommandPaletteItem, NavigationMenuItem } from '@nuxt/ui'
 import type { OrderedNavigationMenuItem } from '../app.config'
 import { useAsyncData } from 'nuxt/app'
 import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
@@ -52,6 +52,17 @@ const { data: datasetsCount, refresh: refreshDatasetsCount } = await useAsyncDat
   return count
 })
 
+const { data: workfows } = await useAsyncData('search-workflows', async () => {
+  const { data } = await supabase
+    .schema('galaxy')
+    .from('workflows')
+    .select('id, name_key, version_key')
+  if (data === null) {
+    throw createError({ statusMessage: 'No workflows found', statusCode: 404 })
+  }
+  return data
+})
+
 const sanitizedNavigationMenuItems = computed<OrderedNavigationMenuItem[]>(() => {
   const analysesVal = toValue(analyses)
   const navigationMenuItemsVal = toValue(navigationMenuItems)
@@ -92,22 +103,33 @@ const computedLinks = computed<OrderedNavigationMenuItem[][]>(() => {
   return [itemsVal]
 })
 
-// const analysesSearchGroups = computed<CommandPaletteGroup<CommandPaletteItem>>(() => {
-//   const analysesVal = toValue(analyses)
-//   return {
-//     id: 'analyses',
-//     label: 'Analyses',
-//     items: analysesVal
-//       ? analysesVal?.map(({ name, id }) => {
-//         return { label: name, to: `/analyses/${id}/results` }
-//       })
-//       : [],
-//   }
-// })
-
-// const searchGroups = computed(() => {
-//   return [analysesSearchGroups.value]
-// })
+const analysesSearchGroups = computed<CommandPaletteGroup<CommandPaletteItem>>(() => {
+  const analysesVal = toValue(analyses)
+  return {
+    id: 'analyses',
+    label: 'Analyses',
+    items: analysesVal
+      ? analysesVal?.map(({ name, id }) => {
+        return { label: name, to: `/analyses/${id}/results` }
+      })
+      : [],
+  }
+})
+const workflowsSearchGroups = computed<CommandPaletteGroup<CommandPaletteItem>>(() => {
+  const workflowsVal = toValue(workfows)
+  return {
+    id: 'workflows',
+    label: 'Workflows',
+    items: workflowsVal
+      ? workflowsVal?.map(({ name_key, version_key, id }) => {
+        return { label: `${name_key} - ${version_key}`, to: `/workflows/${id}/run` }
+      })
+      : [],
+  }
+})
+const searchGroups = computed(() => {
+  return [analysesSearchGroups.value, workflowsSearchGroups.value]
+})
 
 provide('datasetsCount', {
   datasetsCount,
@@ -135,9 +157,8 @@ provide('analysesList', {
       </template>
 
       <template #default="{ collapsed }">
-        <!-- <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-(--ui-border)" /> -->
-        <UContentSearchButton :collapsed="false" />
-
+        <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-(--ui-border)" />
+        <!-- <UContentSearchButton :collapsed="false" /> -->
         <UNavigationMenu
           v-if="computedLinks?.[0]" :collapsed="collapsed" :items="computedLinks[0]"
           orientation="vertical"
@@ -153,6 +174,7 @@ provide('analysesList', {
         <UserMenu :collapsed="collapsed" :is-admin="isAdmin" />
       </template>
     </UDashboardSidebar>
+    <UDashboardSearch :groups="searchGroups" />
 
     <slot />
   </UDashboardGroup>

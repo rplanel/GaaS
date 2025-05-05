@@ -1,5 +1,5 @@
 {
-  "name": "nuxt-app",
+  "name": "gaas-playground",
   "type": "module",
   "private": true,
   "scripts": {
@@ -11,8 +11,13 @@
     "cleandep": "rm -rf node_modules && rm -rf .nuxt && rm -rf .output && rm -rf .data"
   },
   "dependencies": {
+    "@nuxt/content": "catalog:nuxt",
+    "@nuxt/ui-pro": "catalog:nuxt",
     "nuxt": "catalog:nuxt",
     "vue": "latest",
     "vue-router": "latest"
+  },
+  "devDependencies": {
+    "@nuxt/devtools": "catalog:nuxt"
   }
 }

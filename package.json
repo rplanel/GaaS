@@ -2,7 +2,7 @@
   "name": "gaas",
   "version": "0.0.3-alpha.5",
   "private": true,
-  "packageManager": "pnpm@10.4.1",
+  "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39",
   "description": "",
   "author": "",
   "license": "ISC",
@@ -16,12 +16,6 @@
     "dev:prepare": "pnpm --filter './packages/**' run dev:prepare",
     "typecheck": "pnpm --filter './packages/**' run typecheck",
     "release": "pnpm run lint && pnpm run typecheck && pnpm run test && changelogen --output CHANGELOG.md && jiti scripts/release.ts && pnpm -r run release:publish && git push --follow-tags"
-  },
-  "dependencies": {
-    "@nuxt/ui-pro": "catalog:nuxt",
-    "blendtype": "workspace:*",
-    "nuxt": "catalog:nuxt",
-    "supabase": "catalog:"
   },
   "devDependencies": {
     "@antfu/eslint-config": "catalog:",

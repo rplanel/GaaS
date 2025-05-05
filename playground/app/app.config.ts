@@ -5,6 +5,6 @@ export default defineAppConfig({
     duration: 5000,
   },
   gaasUi: {
-    wiki: true,
+    name: 'GaaS Playground',
   },
 })
