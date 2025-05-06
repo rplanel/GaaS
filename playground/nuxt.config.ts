@@ -9,6 +9,11 @@ export default defineNuxtConfig({
     '../packages/ui',
     '../packages/wiki',
   ],
+  modules: [
+    '@nuxt/ui',
+    '@nuxt/devtools',
+    '@nuxt/content',
+  ],
   compatibilityDate: '2024-11-01',
   future: {
     compatibilityVersion: 4,
