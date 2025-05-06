@@ -1,5 +1,8 @@
 packages:
-  - packages/*
+  - packages/blendtype
+  - packages/nuxt-galaxy
+  - packages/ui
+  - packages/wiki
   - playground
 
 catalog:
