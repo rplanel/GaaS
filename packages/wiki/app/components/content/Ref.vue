@@ -15,21 +15,31 @@ const doisList = computed(() => {
       .split(',')
       .map(doi => doi.trim())
       .filter(doi => doi !== '' && doi)
-      .map(doi => ({
-        doi,
-        href: `https://doi.org/${doi}`,
-      }))
   }
   return []
 })
+
+const { data: articles } = await useAsyncData(`biblio-${toValue(dois)}`, () => {
+  return queryCollection('bibliography')
+    .where('DOI', 'IN', toValue(doisList))
+    .all()
+})
+
+// const { countBiblio } = await useBiblio(doisList)
+const { citations } = useCitations(articles)
 </script>
 
 <template>
   (
-  <template v-if="doisList.length > 0">
-    <template v-for="doiObj, i in doisList" :key="doiObj.doi">
-      <ULink :href="doiObj.href">
-        {{ doiObj.doi }}
+  <template v-if="articles && articles.length > 0">
+    <template v-for="article, i in articles" :key="article.DOI">
+      <ULink :href="`https://doi.org/${article.DOI}`">
+        <template v-if="citations && citations[i]">
+          {{ citations[i].label }}
+        </template>
+        <template v-else>
+          {{ article.title }}
+        </template>
       </ULink>
       <span v-if="i !== doisList.length - 1">, </span>
     </template>

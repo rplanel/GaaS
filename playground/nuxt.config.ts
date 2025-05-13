@@ -10,7 +10,7 @@ export default defineNuxtConfig({
     '../packages/wiki',
   ],
   modules: [
-    '@nuxt/ui',
+    '@nuxt/ui-pro',
     '@nuxt/devtools',
     '@nuxt/content',
   ],
@@ -22,4 +22,5 @@ export default defineNuxtConfig({
     join(currentDir, './app/assets/css/main.css'),
   ],
   devtools: { enabled: true },
+
 })
