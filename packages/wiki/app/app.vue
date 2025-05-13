@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import type { SupabaseTypes } from '#build/types/database'
 import { useAppConfig, useAsyncData, useHead, useLazyAsyncData, useSeoMeta } from 'nuxt/app'
 import { computed, provide, ref } from 'vue'
 
-const { gaasWiki: { seo } } = useAppConfig()
+type Database = SupabaseTypes.Database
+
+const { gaasUi: { seo, navigationMenuItems: navigationMenuItemsFromConf } } = useAppConfig()
 
 const { data: navigation } = await useAsyncData('navigation', () => queryCollectionNavigation('content'))
 const { data: files } = useLazyAsyncData('search', () => queryCollectionSearchSections('content'), {
@@ -23,16 +26,18 @@ useHead({
 useSeoMeta({
   ...seo,
 })
+const supabase = useSupabaseClient<Database>()
+const { userRole } = useUserRole(supabase)
+const { navigationMenuItems } = useNavigationMenuItems({ navigationMenuItems: navigationMenuItemsFromConf, userRole })
 
 const links = computed(() => {
-  return []
-  // return toValue(navigationMenuItems).map((item) => {
-  //   return {
-  //     label: item.label,
-  //     icon: item.icon,
-  //     to: item.to,
-  //   }
-  // })
+  return toValue(navigationMenuItems).map((item) => {
+    return {
+      label: item.label,
+      icon: item.icon,
+      to: item.to,
+    }
+  })
 })
 
 const searchTerm = ref('')
