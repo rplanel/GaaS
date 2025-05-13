@@ -7,9 +7,14 @@ description: "this in wiki in GaaS playground"
 
 Section where you can test the references components
 
-::ref{dois="10/100,11/200, 11/201"}
-::
-
 ## the different callout
 
 Section where you can test the Nuxt/ui callout components
+
+::note
+a note
+::
+
+::tip
+blabla
+::
