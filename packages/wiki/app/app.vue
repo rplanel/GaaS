@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { SupabaseTypes } from '#build/types/database'
+import { useNavigationMenuItems } from '@gaas/ui/app/composables/useNavigationMenuItems'
 import { useAppConfig, useAsyncData, useHead, useLazyAsyncData, useSeoMeta } from 'nuxt/app'
 import { computed, provide, ref } from 'vue'
 
