@@ -4,6 +4,7 @@ export default defineAppConfig({
   gaasUi: {
     name: 'GaaS UI',
     seo: {
+      siteName: 'GaaS',
       title: 'GaaS',
       titleTemplate: '%s - GaaS',
     },
