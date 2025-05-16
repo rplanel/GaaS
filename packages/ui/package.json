@@ -30,6 +30,7 @@
     "@iconify-json/svg-spinners": "catalog:",
     "@iconify-json/tabler": "catalog:",
     "@nuxt/ui-pro": "catalog:nuxt",
+    "@nuxtjs/supabase": "catalog:nuxt",
     "@vueuse/core": "catalog:",
     "drizzle-kit": "catalog:",
     "effect": "catalog:",

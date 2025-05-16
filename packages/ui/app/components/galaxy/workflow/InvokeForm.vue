@@ -277,7 +277,7 @@ const { data: datasets } = await useAsyncData(
       .schema('galaxy')
       .from('uploaded_datasets_with_storage_path')
       .select()
-      .returns<UploadedDatasetDb[]>()
+      .overrideTypes<UploadedDatasetDb[]>()
 
     if (error) {
       throw createError({ statusCode: getStatusCode(error), statusMessage: getErrorMessage(error) })

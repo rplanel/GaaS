@@ -40,7 +40,7 @@ const { data: analyses, refresh: refreshAnalyses } = await useAsyncData(
         `,
       )
       .order('id', { ascending: true })
-      .returns<ListAnalysisWithWorkflow[]>()
+      .overrideTypes<ListAnalysisWithWorkflow[]>()
     if (error) {
       throw createError({
         statusMessage: error.message,

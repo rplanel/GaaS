@@ -181,8 +181,6 @@ const { data: galaxyInstance } = await useAsyncData(
         .select()
         .eq('url', galaxyInstanceUrl)
         .limit(1)
-        // .returns<GalaxyInstanceRow[]>()
-        // .then(takeUniqueOrThrow)
 
       if (error) {
         throw createError({

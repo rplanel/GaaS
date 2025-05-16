@@ -41,7 +41,7 @@ const workflowId = computed(() => {
             <div class="flex items-center gap-3 font-bold">
               {{ workflow.name }}
             </div>
-            <span><VersionBadge :version="workflow.version_key.toString()" /></span>
+            <span><VersionBadge :version="workflow?.version_key?.toString()" /></span>
           </div>
           <p class="text-(--ui-text-dimmed) text-sm">
             {{ workflow.definition.annotation }}

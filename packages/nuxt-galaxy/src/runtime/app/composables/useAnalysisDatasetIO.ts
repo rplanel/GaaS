@@ -43,7 +43,7 @@ export function useAnalysisDatasetIO(analysisId: Ref<number | undefined>): {
       .from('analysis_inputs_with_storage_path')
       .select('*')
       .eq('analysis_id', analysisVal)
-      .returns<AnalysisInputsWithStoratePath[]>()
+      .overrideTypes<AnalysisInputsWithStoratePath[]>()
 
     if (error) {
       throw createError({
@@ -76,7 +76,7 @@ export function useAnalysisDatasetIO(analysisId: Ref<number | undefined>): {
       .from('analysis_outputs_with_storage_path')
       .select('*')
       .eq('analysis_id', analysisVal)
-      .returns<AnalysisOutputsWithStoratePath[]>()
+      .overrideTypes<AnalysisOutputsWithStoratePath[]>()
 
     if (error) {
       throw createError({
@@ -115,7 +115,7 @@ export function useAnalysisDatasetIO(analysisId: Ref<number | undefined>): {
         workflows(*)
         `)
       .eq('id', analysisVal)
-      .returns<AnalysisDetail[]>()
+      .overrideTypes<AnalysisDetail[]>()
     pendingAnalysis.value = false
 
     if (error) {
