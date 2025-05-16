@@ -38,6 +38,7 @@
     "effect": "catalog:",
     "jwt-decode": "catalog:",
     "nuxt-galaxy": "workspace:*",
+    "vitest": "catalog:",
     "zod": "catalog:",
     "zod-validation-error": "catalog:"
   },
@@ -49,7 +50,6 @@
     "nuxt": "catalog:nuxt",
     "playwright-core": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "vue": "latest",
     "vue-tsc": "^2.2.0"
   }
