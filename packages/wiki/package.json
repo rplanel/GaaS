@@ -19,12 +19,12 @@
   "dependencies": {
     "@gaas/ui": "workspace:^",
     "@nuxt/content": "catalog:nuxt",
+    "@nuxt/eslint": "latest",
     "@nuxt/ui-pro": "catalog:nuxt",
     "zod": "catalog:",
     "zod-validation-error": "catalog:"
   },
   "devDependencies": {
-    "@nuxt/eslint": "latest",
     "@nuxt/test-utils": "catalog:nuxt",
     "@vue/test-utils": "catalog:",
     "eslint": "catalog:",

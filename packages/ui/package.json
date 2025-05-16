@@ -29,6 +29,7 @@
     "@iconify-json/streamline": "catalog:",
     "@iconify-json/svg-spinners": "catalog:",
     "@iconify-json/tabler": "catalog:",
+    "@nuxt/eslint": "latest",
     "@nuxt/test-utils": "catalog:nuxt",
     "@nuxt/ui": "catalog:nuxt",
     "@nuxt/ui-pro": "catalog:nuxt",
@@ -43,7 +44,6 @@
     "zod-validation-error": "catalog:"
   },
   "devDependencies": {
-    "@nuxt/eslint": "latest",
     "@vue/test-utils": "catalog:",
     "eslint": "catalog:",
     "happy-dom": "catalog:",
