@@ -288,14 +288,14 @@ const computedResultsMenuItems = computed(() => {
                     </template>
                     <template #stdout>
                       <div class="p-1">
-                        <div class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
+                        <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
                           <pre v-if="jobsMap" class="text-nowrap"> {{ jobsMap[item.value]?.stdout }}</pre>
                         </div>
                       </div>
                     </template>
                     <template #stderr>
                       <div class="p-1">
-                        <div class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
+                        <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
                           <pre v-if="jobsMap"> {{ jobsMap[item.value]?.stderr }}</pre>
                         </div>
                       </div>

@@ -211,7 +211,7 @@ async function editAnalysisName(id: number) {
 </script>
 
 <template>
-  <div class="overflow-y-auto divide-y divide-(--ui-border)">
+  <div class="overflow-y-auto divide-y divide-default">
     <div
       v-for="(analysis, index) in sanitizedAnalyses" :key="index"
       :ref="el => { mailsRefs[analysis.id] = el as Element }"
@@ -221,7 +221,7 @@ async function editAnalysisName(id: number) {
       >
         <div
           class="p-4 sm:px-6 cursor-pointer border-l-2 transition-colors"
-          :class="[analysisId && analysisId === analysis.id ? 'border-(--ui-primary) bg-(--ui-primary)/20' : 'border-(--ui-bg) hover:border-(--ui-primary) hover:bg-(--ui-primary)/5']"
+          :class="[analysisId && analysisId === analysis.id ? 'border-primary bg-primary/10' : 'border-(--ui-bg) hover:border-primary hover:bg-primary/5']"
         >
           <div class="flex flex-row items-center justify-between">
             <div class="flex flex-row justify-start gap-4 items-center">
