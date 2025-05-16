@@ -43,7 +43,7 @@ const workflowId = computed(() => {
             </div>
             <span><VersionBadge :version="workflow?.version_key?.toString()" /></span>
           </div>
-          <p class="text-(--ui-text-dimmed) text-sm">
+          <p class="text-dimmed text-sm">
             {{ workflow.definition.annotation }}
           </p>
         </div>

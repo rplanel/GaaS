@@ -62,7 +62,7 @@
   "devDependencies": {
     "@antfu/eslint-config": "catalog:",
     "@nuxt/devtools": "catalog:nuxt",
-    "@nuxt/eslint-config": "catalog:nuxt",
+    "@nuxt/eslint": "catalog:nuxt",
     "@nuxt/module-builder": "catalog:nuxt",
     "@nuxt/schema": "catalog:nuxt",
     "@nuxt/test-utils": "catalog:nuxt",

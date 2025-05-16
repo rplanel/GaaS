@@ -253,10 +253,10 @@ async function editAnalysisName(id: number) {
                     />
                   </div>
                 </div>
-                <div v-else class="font-medium text-(--ui-text-highlighted) text-base">
+                <div v-else class="font-medium text-highlighted text-base">
                   {{ analysis.name }}
                 </div>
-                <div class="text-(--ui-text-muted) text-sm">
+                <div class="text-muted text-sm">
                   {{ analysis.workflows.name }} <UBadge :label="analysis.workflows.version" size="sm" variant="subtle" color="neutral" />
                 </div>
               </div>
@@ -289,9 +289,6 @@ async function editAnalysisName(id: number) {
               </UDropdownMenu>
             </div>
           </div>
-        <!-- <p class="text-(--ui-text-dimmed) text-sm">
-          {{  }} -->
-        <!-- </p> -->
         </div>
       </NuxtLink>
     </div>
