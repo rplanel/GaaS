@@ -30,7 +30,8 @@ pages:
   artifacts:
     paths:
       # The directory that contains the built files to be published
-      - .output/public
+      - docs/.output/public
+  publish: docs/.output/public
   rules:
     # This ensures that only pushes to the default branch will trigger
     # a pages deploy
