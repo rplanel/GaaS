@@ -14,7 +14,7 @@
     "test": "vitest",
     "release:publish": "pnpm publish --access public",
     "typecheck": "vue-tsc --noEmit",
-    "cleandep": "rm -rf node_modules && rm -rf .data && rm -rf .nuxt && rm -rf .playground/.nuxt && rm -rf .playground/.output && rm -rf .playground/node_modules && rm -rf .playground/.data"
+    "cleandep": "rm -rf node_modules .data .nuxt .playground/.nuxt .playground/.output .playground/node_modules .playground/.data"
   },
   "dependencies": {
     "@iconify-json/eos-icons": "catalog:",

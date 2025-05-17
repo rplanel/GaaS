@@ -13,7 +13,8 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "cleandep": "rm -rf node_modules dist .output .data pnpm-lock.yaml"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.40",
@@ -29,19 +30,9 @@
   },
   "devDependencies": {
     "@nuxt/eslint": "catalog:nuxt",
+    "embla-carousel": "catalog:",
     "eslint": "^9.26.0",
     "typescript": "^5.8.3",
     "vue-tsc": "^2.2.10"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3"
-    ],
-    "ignoredBuiltDependencies": [
-      "vue-demi"
-    ]
-  },
-  "resolutions": {
-    "unimport": "4.1.1"
   }
 }

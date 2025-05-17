@@ -36,7 +36,7 @@
     "test": "vitest run",
     "test:watch": "vitest watch",
     "typecheck": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit",
-    "cleandep": "rm -rf node_modules && rm -rf .nuxt && rm -rf dist && rm -rf playground/node_modules && rm -rf playground/.nuxt && rm -rf playground/.output",
+    "cleandep": "rm -rf node_modules .nuxt dist playground/node_modules playground/.nuxt playground/.output",
     "supabase:status": "pnpm supabase status",
     "supabase:start": "pnpm supabase start",
     "supabase:stop": "pnpm supabase stop",
