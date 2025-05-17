@@ -19,6 +19,9 @@ pages:
     - cd docs
     - echo "Generating the static files..."
     - export NUXT_UI_PRO_LICENSE=${NUXT_UI_PRO_LICENSE} pnpm run generate
+    - pwd
+    - ls -l
+    - ls -l ../
     - echo "Copying the generated files to the public folder..."
     - mv dist ../public
   cache:
