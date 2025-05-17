@@ -8,13 +8,23 @@ workflow:
 image: node:22.15.1-bookworm
 # Functions that should be executed before the build script is run
 before_script:
-  - pnpm i
+  - npm install --global corepack@latest
+  - corepack enable
+  - corepack prepare pnpm@latest-10 --activate
+  - pnpm config set store-dir .pnpm-store
 pages:
   script:
+    - pnpm install
     - echo "Building the docs..."
     - cd docs
     - pnpm run build
     - mv dist ../public
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+    paths:
+      - .pnpm-store
   artifacts:
     paths:
       # The folder that contains the files to be exposed at the Page URL
