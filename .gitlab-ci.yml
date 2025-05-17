@@ -20,18 +20,17 @@ pages:
     - echo "Generating the static files..."
     - export NUXT_UI_PRO_LICENSE=${NUXT_UI_PRO_LICENSE} && pnpm run generate
     - echo "Copying the generated files to the public folder..."
-    - mv dist ../public
+    # - mv dist ../public
   cache:
     key:
       files:
         - pnpm-lock.yaml
     paths:
       - .pnpm-store
-  pages: true
-  # artifacts:
-  #   paths:
-  #     # The folder that contains the files to be exposed at the Page URL
-  #     - public
+  artifacts:
+    paths:
+      # The directory that contains the built files to be published
+      - docs/.output/public
   rules:
     # This ensures that only pushes to the default branch will trigger
     # a pages deploy
