@@ -31,7 +31,7 @@ const userItems = ref([
     <template #left>
       <NuxtLink
         to="/"
-        class="flex items-end gap-2 font-bold text-xl text-[var(--ui-text-highlighted)] min-w-0 focus-visible:outline-[var(--ui-primary)] shrink-0"
+        class="flex items-end gap-2 font-bold text-xl text-highlighted min-w-0 focus-visible:outline-[var(--ui-primary)] shrink-0"
         aria-label="Gass"
       >
         {{ name }}
