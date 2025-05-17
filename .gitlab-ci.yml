@@ -1,0 +1,19 @@
+# The Docker image that will be used to build your app
+image: node:22.15.1-bookworm
+# Functions that should be executed before the build script is run
+before_script:
+  - pnpm i
+pages:
+  script:
+    - echo "Building the docs..."
+    - cd docs
+    - pnpm run build
+    - mv dist ../public
+  artifacts:
+    paths:
+      # The folder that contains the files to be exposed at the Page URL
+      - public
+  rules:
+    # This ensures that only pushes to the default branch will trigger
+    # a pages deploy
+    - if: $CI_COMMIT_REF_NAME == docs
