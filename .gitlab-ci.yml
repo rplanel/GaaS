@@ -17,7 +17,7 @@ pages:
     - pnpm install
     - echo "Building the docs..."
     - cd docs
-    - pnpm run build
+    - export NUXT_UI_PRO_LICENSE=${NUXT_UI_PRO_LICENSE} pnpm run build
     - mv dist ../public
   cache:
     key:
