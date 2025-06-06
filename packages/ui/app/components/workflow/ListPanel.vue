@@ -23,7 +23,7 @@ const workflowId = computed(() => {
 </script>
 
 <template>
-  <div class="overflow-y-auto divide-y divide-(--ui-border)">
+  <div class="overflow-y-auto divide-y divide-default">
     <div
       v-for="(workflow, index) in workflows" :key="index"
     >
@@ -34,16 +34,16 @@ const workflowId = computed(() => {
         <div
           class="p-4 sm:px-6 cursor-pointer border-l-2 transition-colors"
           :class="[
-            workflowId && workflowId === workflow.id ? 'border-(--ui-primary) bg-(--ui-primary)/10' : 'border-(--ui-bg) hover:border-(--ui-primary) hover:bg-(--ui-primary)/5',
+            workflowId && workflowId === workflow.id ? 'border-primary bg-primary/10' : 'border-(--ui-bg) hover:border-primary hover:bg-primary/5',
           ]"
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3 font-bold">
               {{ workflow.name }}
             </div>
-            <span><VersionBadge :version="workflow.version_key.toString()" /></span>
+            <span><VersionBadge :version="workflow?.version_key?.toString()" /></span>
           </div>
-          <p class="text-(--ui-text-dimmed) text-sm">
+          <p class="text-dimmed text-sm">
             {{ workflow.definition.annotation }}
           </p>
         </div>

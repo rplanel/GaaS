@@ -7,7 +7,7 @@ const items = toRef(footerItems)
 <template>
   <UFooter>
     <template #left>
-      <p class="text-(--ui-text-muted) text-sm">
+      <p class="text-muted text-sm">
         Copyright © {{ new Date().getFullYear() }}
       </p>
     </template>

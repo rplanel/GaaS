@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ButtonProps } from '@nuxt/ui'
-import type { RealtimeChannel } from '@supabase/supabase-js'
+// import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { ListAnalysisWithWorkflow, SanitizedAnalysis } from '../../pages/analyses/index.vue'
 import type { Database } from '../../types'
 
@@ -13,7 +13,7 @@ const isEditingAnalyses = ref<Record<number, string>>({})
 const actionButtonProps = ref<ButtonProps>({ size: 'xs', variant: 'ghost', color: 'neutral' })
 
 const { refreshAnalysesList } = inject('analysesList')
-let realtimeChannel: RealtimeChannel
+// let realtimeChannel: RealtimeChannel
 
 const { data: analyses, refresh: refreshAnalyses } = await useAsyncData(
   'analyses',
@@ -40,7 +40,7 @@ const { data: analyses, refresh: refreshAnalyses } = await useAsyncData(
         `,
       )
       .order('id', { ascending: true })
-      .returns<ListAnalysisWithWorkflow[]>()
+      .overrideTypes<ListAnalysisWithWorkflow[]>()
     if (error) {
       throw createError({
         statusMessage: error.message,
@@ -51,23 +51,7 @@ const { data: analyses, refresh: refreshAnalyses } = await useAsyncData(
   },
 )
 
-onMounted(() => {
-  // Real time listener for new workouts
-  realtimeChannel = supabase
-    .channel('galaxy:analyses')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'galaxy', table: 'analyses' },
-      () => refreshAnalyses(),
-    )
-
-  realtimeChannel.subscribe()
-})
-
-// Don't forget to unsubscribe when user left the page
-onUnmounted(() => {
-  supabase.removeChannel(realtimeChannel)
-})
+useSupabaseRealtime('galaxy:analyses', 'analyses', refreshAnalyses)
 
 const items = [
   [
@@ -81,6 +65,7 @@ const items = [
 ]
 
 const analysisId = computed(() => {
+  // debugger
   if (route?.params && 'analysisId' in route.params) {
     const analysisId = route.params.analysisId
     if (Array.isArray(analysisId))
@@ -123,16 +108,17 @@ const sanitizedAnalyses = computed<SanitizedAnalysis[]>(() => {
   }
   return []
 })
-const mailsRefs = ref<Element[]>([])
+const analysisRefs = ref<Element[]>([])
 watch(analysisId, () => {
   const analysisIdVal = toValue(analysisId)
   if (!analysisIdVal) {
     return
   }
-  const ref = mailsRefs.value[analysisIdVal]
+  const ref = analysisRefs.value[analysisIdVal]
   if (ref) {
     ref.scrollIntoView({ block: 'nearest' })
   }
+  // debugger
 })
 
 defineShortcuts({
@@ -211,17 +197,17 @@ async function editAnalysisName(id: number) {
 </script>
 
 <template>
-  <div class="overflow-y-auto divide-y divide-(--ui-border)">
+  <div class="overflow-y-auto divide-y divide-default">
     <div
       v-for="(analysis, index) in sanitizedAnalyses" :key="index"
-      :ref="el => { mailsRefs[analysis.id] = el as Element }"
+      :ref="el => { analysisRefs[analysis.id] = el as Element }"
     >
       <NuxtLink
         :to="`/analyses/${analysis.id}`"
       >
         <div
           class="p-4 sm:px-6 cursor-pointer border-l-2 transition-colors"
-          :class="[analysisId && analysisId === analysis.id ? 'border-(--ui-primary) bg-(--ui-primary)/20' : 'border-(--ui-bg) hover:border-(--ui-primary) hover:bg-(--ui-primary)/5']"
+          :class="[analysisId && analysisId === analysis.id ? 'border-primary bg-primary/10' : 'border-(--ui-bg) hover:border-primary hover:bg-primary/5']"
         >
           <div class="flex flex-row items-center justify-between">
             <div class="flex flex-row justify-start gap-4 items-center">
@@ -253,10 +239,10 @@ async function editAnalysisName(id: number) {
                     />
                   </div>
                 </div>
-                <div v-else class="font-medium text-(--ui-text-highlighted) text-base">
+                <div v-else class="font-medium text-highlighted text-base">
                   {{ analysis.name }}
                 </div>
-                <div class="text-(--ui-text-muted) text-sm">
+                <div class="text-muted text-sm">
                   {{ analysis.workflows.name }} <UBadge :label="analysis.workflows.version" size="sm" variant="subtle" color="neutral" />
                 </div>
               </div>
@@ -289,9 +275,6 @@ async function editAnalysisName(id: number) {
               </UDropdownMenu>
             </div>
           </div>
-        <!-- <p class="text-(--ui-text-dimmed) text-sm">
-          {{  }} -->
-        <!-- </p> -->
         </div>
       </NuxtLink>
     </div>

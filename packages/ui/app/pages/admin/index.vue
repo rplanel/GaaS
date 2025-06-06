@@ -51,7 +51,7 @@ const pageHeaderProps = computed(() => {
       <div class="grid grid-flow-col gap-5 p-2">
         <UCard
           v-for="item in adminItems" :key="item.id"
-          class="hover:bg-[var(--ui-bg-elevated)] divide-y-0 border-l-6 border-[var(--ui-primary)]"
+          class="hover:bg-elevated divide-y-0 border-l-6 border-primary"
           @click="goToAdminPanel(item.id)"
         >
           <template #header>

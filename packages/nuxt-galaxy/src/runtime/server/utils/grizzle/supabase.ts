@@ -8,6 +8,12 @@ export class ServerSupabaseClientError extends Data.TaggedError('NoServerSupabas
   readonly message: string
 }> {}
 
+/**
+ * Effect to create a server-side Supabase client.
+ * @param event - The H3 event object containing the HTTP request context and server-side utilities
+ * @returns An Effect that resolves to a Supabase client instance or fails with ServerSupabaseClientError
+ */
+
 export function createServerSupabaseClient(event: H3Event<EventHandlerRequest>) {
   return Effect.gen(function* () {
     return yield* Effect.tryPromise({
@@ -16,6 +22,12 @@ export function createServerSupabaseClient(event: H3Event<EventHandlerRequest>) 
     })
   })
 }
+
+/**
+ * Effect layer for the server-side Supabase client.
+ * This layer provides access to the Supabase client instance
+ * which can be used to interact with the Supabase database and storage.
+ */
 export class ServerSupabaseClient extends Context.Tag('@nuxt-galaxy/ServerSupabaseClient')<
   ServerSupabaseClient,
   typeof createServerSupabaseClient
@@ -40,6 +52,11 @@ export function createServerSupabaseUser(event: H3Event<EventHandlerRequest>) {
   })
 }
 
+/**
+ * Effect layer for the server-side Supabase user.
+ * This layer provides access to the current authenticated user,
+ * which can be used to perform user-specific operations.
+ */
 export class ServerSupabaseUser extends Context.Tag('@nuxt-galaxy/ServerSupabaseUser')<
   ServerSupabaseUser,
  typeof createServerSupabaseUser

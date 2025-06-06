@@ -11,10 +11,13 @@
     "test": "pnpm --filter './packages/**' test",
     "dev": "pnpm --filter ./playground dev",
     "lint": "eslint .",
-    "cleandep": "rm -rf node_modules && rm -rf pnpm-lock.yaml && pnpm --filter '**' run cleandep",
+    "cleandep": "rm -rf node_modules pnpm-lock.yaml && pnpm --filter '**' run cleandep && pnpm install",
     "build": "pnpm --filter './packages/**' prepack",
     "dev:prepare": "pnpm --filter './packages/**' run dev:prepare",
     "typecheck": "pnpm --filter './packages/**' run typecheck",
+    "docs:dev": "pnpm --filter ./docs dev",
+    "docs:build": "pnpm --filter ./docs build",
+    "docs:generate": "pnpm --filter ./docs generate",
     "release": "pnpm run lint && pnpm run typecheck && pnpm run test && changelogen --output CHANGELOG.md && jiti scripts/release.ts && pnpm -r run release:publish && git push --follow-tags"
   },
   "devDependencies": {
@@ -31,17 +34,22 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@parcel/watcher",
+      "@tailwindcss/oxide",
       "better-sqlite3",
       "esbuild",
+      "sharp",
       "simple-git-hooks",
       "supabase",
-      "unrs-resolver",
+      "unrs-resolver"
+    ],
+    "ignoredBuiltDependencies": [
       "vue-demi"
     ]
   },
   "resolutions": {
     "cookie": "0.7.2",
-    "ohash": "1.1.6"
+    "ohash": "1.1.6",
+    "unimport": "4.1.1"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"

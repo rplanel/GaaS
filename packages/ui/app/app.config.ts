@@ -4,10 +4,10 @@ export default defineAppConfig({
   gaasUi: {
     name: 'GaaS UI',
     seo: {
+      siteName: 'GaaS',
       title: 'GaaS',
       titleTemplate: '%s - GaaS',
     },
-    wiki: false,
     navigationMenuItems: [
       {
         label: 'Datasets',
@@ -28,7 +28,6 @@ export default defineAppConfig({
         order: 3,
         children: [],
       },
-
       {
         label: 'Admin',
         icon: 'i-material-symbols:admin-panel-settings',

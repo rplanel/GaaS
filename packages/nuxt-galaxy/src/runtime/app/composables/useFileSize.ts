@@ -1,6 +1,13 @@
 import type { ComputedRef, MaybeRef } from 'vue'
 import { computed, toValue } from 'vue'
 
+/**
+ * A composable function to format file sizes in a human-readable format.
+ * It takes a number of bytes and returns a formatted string with appropriate units.
+ *
+ * @param {MaybeRef<number | undefined>} bytesRef - A reference to the number of bytes.
+ * @returns {{fileSize: ComputedRef<string | undefined>}} An object containing the formatted file size.
+ */
 export function useFileSize(bytesRef: MaybeRef<number | undefined>): {
   fileSize: ComputedRef<string | undefined>
 } {

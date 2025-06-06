@@ -1,21 +1,9 @@
 @import 'tailwindcss' theme(static);
 @import '@nuxt/ui-pro';
-
-/* @source "../../../.playground/.nuxt/ui";
-@source "../../../.playground/.nuxt/ui-pro";
-
-@source "../../../node_modules/@nuxt/ui-pro";
-@source "../../../node_modules/@nuxt/ui-pro/.nuxt/ui-pro";
-
-@source " ../../../../../node_modules/@nuxt/ui";
-@source " ../../../../../node_modules/@nuxt/ui-pro";
-@source "../../../node_modules/@nuxt/ui";
-@source "../../../node_modules/@nuxt/ui-pro"; */
-
 /* this work */
 @source "../../../../../node_modules/@gaas/ui";
 
-@theme {
+/* @theme {
   --font-sans: 'Public Sans', sans-serif;
   --header-height: 5rem;
-}
+} */

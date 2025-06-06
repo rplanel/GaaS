@@ -14,7 +14,7 @@
     "test": "vitest",
     "release:publish": "pnpm publish --access public",
     "typecheck": "vue-tsc --noEmit",
-    "cleandep": "rm -rf node_modules && rm -rf .data && rm -rf .nuxt && rm -rf .playground/.nuxt && rm -rf .playground/.output && rm -rf .playground/node_modules && rm -rf .playground/.data"
+    "cleandep": "rm -rf node_modules .data .nuxt .playground/.nuxt .playground/.output .playground/node_modules .playground/.data"
   },
   "dependencies": {
     "@iconify-json/eos-icons": "catalog:",
@@ -29,25 +29,27 @@
     "@iconify-json/streamline": "catalog:",
     "@iconify-json/svg-spinners": "catalog:",
     "@iconify-json/tabler": "catalog:",
+    "@nuxt/eslint": "latest",
+    "@nuxt/test-utils": "catalog:nuxt",
+    "@nuxt/ui": "catalog:nuxt",
     "@nuxt/ui-pro": "catalog:nuxt",
+    "@nuxtjs/supabase": "catalog:nuxt",
     "@vueuse/core": "catalog:",
     "drizzle-kit": "catalog:",
     "effect": "catalog:",
     "jwt-decode": "catalog:",
     "nuxt-galaxy": "workspace:*",
+    "vitest": "catalog:",
     "zod": "catalog:",
     "zod-validation-error": "catalog:"
   },
   "devDependencies": {
-    "@nuxt/eslint": "latest",
-    "@nuxt/test-utils": "catalog:nuxt",
     "@vue/test-utils": "catalog:",
     "eslint": "catalog:",
     "happy-dom": "catalog:",
     "nuxt": "catalog:nuxt",
     "playwright-core": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "vue": "latest",
     "vue-tsc": "^2.2.0"
   }

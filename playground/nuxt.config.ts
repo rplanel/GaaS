@@ -6,7 +6,7 @@ const currentDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineNuxtConfig({
   extends: [
-    '../packages/ui',
+    // '../packages/ui',
     '../packages/wiki',
   ],
   modules: [

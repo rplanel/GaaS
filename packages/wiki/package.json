@@ -14,19 +14,20 @@
     "test": "vitest",
     "release:publish": "pnpm publish --access public",
     "typecheck": "vue-tsc --noEmit",
-    "cleandep": "rm -rf node_modules && rm -rf .data && rm -rf .nuxt && rm -rf .playground/.nuxt && rm -rf .playground/.output && rm -rf .playground/node_modules && rm -rf .playground/.data"
+    "cleandep": "rm -rf node_modules .data .nuxt .playground/.nuxt .playground/.output .playground/node_modules .playground/.data"
   },
   "dependencies": {
     "@gaas/ui": "workspace:^",
     "@nuxt/content": "catalog:nuxt",
+    "@nuxt/eslint": "latest",
     "@nuxt/ui-pro": "catalog:nuxt",
     "zod": "catalog:",
     "zod-validation-error": "catalog:"
   },
   "devDependencies": {
-    "@nuxt/eslint": "latest",
     "@nuxt/test-utils": "catalog:nuxt",
     "@vue/test-utils": "catalog:",
+    "embla-carousel": "catalog:",
     "eslint": "catalog:",
     "happy-dom": "catalog:",
     "nuxt": "catalog:nuxt",

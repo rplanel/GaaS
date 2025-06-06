@@ -1,13 +1,12 @@
-# packageName
+# blendtype
 
-<!-- automd:badges color=yellow -->
+Blendtype is a TypeScript client library for interacting with the [Galaxy](https://galaxyproject.org/) REST API. It provides strongly-typed functions and models for running workflows on Galaxy server.
 
-[![npm version](https://img.shields.io/npm/v/packageName?color=yellow)](https://npmjs.com/package/packageName)
-[![npm downloads](https://img.shields.io/npm/dm/packageName?color=yellow)](https://npm.chart.dev/packageName)
+## Features
 
-<!-- /automd -->
-
-This is my package description.
+- Type-safe API
+- Effect-based API for composable and robust workflows
+- Handles authentication and error management
 
 ## Usage
 
