@@ -3,7 +3,6 @@ import type { JwtPayload } from 'jwt-decode'
 import type { Ref } from 'vue'
 import type { Database } from '../../types/database'
 import type { RoleType } from '../../types/nuxt-galaxy'
-import { createError } from '#imports'
 import { useJwt } from '@vueuse/integrations/useJwt'
 import { ref, toValue } from 'vue'
 
@@ -26,9 +25,8 @@ export function useUserRole(supabase: SupabaseClient<Database>): { userRole: Ref
       const payloadVal = toValue(payload) as JwtPayloadWithRole | null
       userRole.value = payloadVal?.user_role
     }
-    else {
-      throw createError('No supabase session has been found')
-    }
+    // should not throw an error if no session is found,
+    // just return undefined otherwise the app will not work
   })
   return { userRole }
 }
