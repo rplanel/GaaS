@@ -20,9 +20,9 @@ export interface GalaxySingleSelectToolParameterProps
   variant?: 'form' | 'display'
   isConditionalSelect: false
 }
-export type GalaxySelectToolParameterProps =
-  | GalaxySingleSelectToolParameterProps
-  | GalaxyMultipleSelectToolParameterProps
+export type GalaxySelectToolParameterProps
+  = | GalaxySingleSelectToolParameterProps
+    | GalaxyMultipleSelectToolParameterProps
 
 const props = withDefaults(defineProps<GalaxySelectToolParameterProps>(), {
   label: 'Select',

@@ -29,10 +29,10 @@ export interface Props {
 const props = withDefaults(defineProps<Props>(), {})
 const router = useRouter()
 
-export type WorkflowParameterValue =
-  | string
-  | string[]
-  | Record<string | number, WorkflowParameterConditionalValue>
+export type WorkflowParameterValue
+  = | string
+    | string[]
+    | Record<string | number, WorkflowParameterConditionalValue>
 
 interface WorkflowParameterConditionalValue {
   [key: string]: WorkflowParameterValue
