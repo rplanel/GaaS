@@ -18,10 +18,11 @@ export class BlendTypeConfig extends Context.Tag('@blendtype/Config')<BlendTypeC
 
 let globalBlendtypeConfigLayer: Layer.Layer<BlendTypeConfig> | null = null
 
-export function initializeGalaxyClient(config: BlendTypeConfigImpl): void {
+export function initializeGalaxyClient(config: BlendTypeConfigImpl): Layer.Layer<BlendTypeConfig> {
   if (!globalBlendtypeConfigLayer) {
     globalBlendtypeConfigLayer = makeConfigLayer(config)
   }
+  return globalBlendtypeConfigLayer
 }
 
 export function makeConfigLayer(config: BlendTypeConfigImpl) {

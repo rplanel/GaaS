@@ -24,7 +24,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "supabase"
   ],
   "scripts": {
     "prepack": "pnpm run dev:prepare && nuxt-module-build build",

@@ -18,7 +18,7 @@ export function useNavigationMenuItems(parameters: NavigationMenuItemParameters)
 
   const computedNavigationMenuItems = computed(() => {
     return navigationMenuItems
-      .filter(item => item?.label !== 'Admin' || isAdmin)
+      .filter(item => item?.label !== 'Admin' || toValue(isAdmin))
       .sort((a, b) => a.order - b.order)
   })
 

@@ -110,8 +110,8 @@ const analysesSearchGroups = computed<CommandPaletteGroup<CommandPaletteItem>>((
     label: 'Analyses',
     items: analysesVal
       ? analysesVal?.map(({ name, id }) => {
-        return { label: name, to: `/analyses/${id}/results` }
-      })
+          return { label: name, to: `/analyses/${id}/results` }
+        })
       : [],
   }
 })
@@ -122,8 +122,8 @@ const workflowsSearchGroups = computed<CommandPaletteGroup<CommandPaletteItem>>(
     label: 'Workflows',
     items: workflowsVal
       ? workflowsVal?.map(({ name_key, version_key, id }) => {
-        return { label: `${name_key} - ${version_key}`, to: `/workflows/${id}/run` }
-      })
+          return { label: `${name_key} - ${version_key}`, to: `/workflows/${id}/run` }
+        })
       : [],
   }
 })
@@ -149,8 +149,8 @@ provide('analysesList', {
       :ui="{ footer: 'lg:border-t lg:border-(--ui-border)' }"
     >
       <template #header="{ collapsed }">
-        <NuxtLink v-if="!collapsed" to="/">
-          <h1 class="text-2xl antialiased font-bold font-mono">
+        <NuxtLink v-if="!collapsed" to="/" class="truncate">
+          <h1 class="text-2xl antialiased font-bold font-mono truncate">
             {{ name }}
           </h1>
         </NuxtLink>

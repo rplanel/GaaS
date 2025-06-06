@@ -22,7 +22,7 @@ export { and, eq, or, sql } from 'drizzle-orm'
 
 config({ path: '.env' })
 
-const client = postgres(process.env.DATABASE_URL!)
+const client = postgres(process.env.GALAXY_DRIZZLE_DATABASE_URL!)
 
 export function useDrizzle() {
   return drizzle(client, {

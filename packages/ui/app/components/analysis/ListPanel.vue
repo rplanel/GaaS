@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ButtonProps } from '@nuxt/ui'
-import type { RealtimeChannel } from '@supabase/supabase-js'
+// import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { ListAnalysisWithWorkflow, SanitizedAnalysis } from '../../pages/analyses/index.vue'
 import type { Database } from '../../types'
 
@@ -13,7 +13,7 @@ const isEditingAnalyses = ref<Record<number, string>>({})
 const actionButtonProps = ref<ButtonProps>({ size: 'xs', variant: 'ghost', color: 'neutral' })
 
 const { refreshAnalysesList } = inject('analysesList')
-let realtimeChannel: RealtimeChannel
+// let realtimeChannel: RealtimeChannel
 
 const { data: analyses, refresh: refreshAnalyses } = await useAsyncData(
   'analyses',
@@ -51,23 +51,7 @@ const { data: analyses, refresh: refreshAnalyses } = await useAsyncData(
   },
 )
 
-onMounted(() => {
-  // Real time listener for new workouts
-  realtimeChannel = supabase
-    .channel('galaxy:analyses')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'galaxy', table: 'analyses' },
-      () => refreshAnalyses(),
-    )
-
-  realtimeChannel.subscribe()
-})
-
-// Don't forget to unsubscribe when user left the page
-onUnmounted(() => {
-  supabase.removeChannel(realtimeChannel)
-})
+useSupabaseRealtime('galaxy:analyses', 'analyses', refreshAnalyses)
 
 const items = [
   [
@@ -81,6 +65,7 @@ const items = [
 ]
 
 const analysisId = computed(() => {
+  // debugger
   if (route?.params && 'analysisId' in route.params) {
     const analysisId = route.params.analysisId
     if (Array.isArray(analysisId))
@@ -123,16 +108,17 @@ const sanitizedAnalyses = computed<SanitizedAnalysis[]>(() => {
   }
   return []
 })
-const mailsRefs = ref<Element[]>([])
+const analysisRefs = ref<Element[]>([])
 watch(analysisId, () => {
   const analysisIdVal = toValue(analysisId)
   if (!analysisIdVal) {
     return
   }
-  const ref = mailsRefs.value[analysisIdVal]
+  const ref = analysisRefs.value[analysisIdVal]
   if (ref) {
     ref.scrollIntoView({ block: 'nearest' })
   }
+  // debugger
 })
 
 defineShortcuts({
@@ -214,7 +200,7 @@ async function editAnalysisName(id: number) {
   <div class="overflow-y-auto divide-y divide-default">
     <div
       v-for="(analysis, index) in sanitizedAnalyses" :key="index"
-      :ref="el => { mailsRefs[analysis.id] = el as Element }"
+      :ref="el => { analysisRefs[analysis.id] = el as Element }"
     >
       <NuxtLink
         :to="`/analyses/${analysis.id}`"

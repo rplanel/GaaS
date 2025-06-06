@@ -28,7 +28,6 @@ export default defineAppConfig({
         order: 3,
         children: [],
       },
-
       {
         label: 'Admin',
         icon: 'i-material-symbols:admin-panel-settings',

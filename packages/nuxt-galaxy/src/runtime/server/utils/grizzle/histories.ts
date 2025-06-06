@@ -1,9 +1,8 @@
 import type { DatasetTerminalState, HistoryState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
 import type { NewHistory } from '~/src/runtime/types/nuxt-galaxy'
-
 import { useRuntimeConfig } from '#imports'
-import { DatasetsTerminalStates, createHistoryEffect as galaxyCreateHistoryEffect, getHistoryEffect } from 'blendtype'
+import * as bt from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { Data, Effect } from 'effect'
 import { analyses } from '../../db/schema/galaxy/analyses'
@@ -18,10 +17,8 @@ import { getCurrentUserEffect } from './user'
 // const supabase = useSupabaseClient();
 
 export function isHistoryTerminalState(state: HistoryState): boolean {
-  return DatasetsTerminalStates.includes(state as DatasetTerminalState)
+  return bt.DatasetsTerminalStates.includes(state as DatasetTerminalState)
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 export function synchronizeHistoryEffect(historyId: number, ownerId: string, event: H3Event<EventHandlerRequest>) {
   return Effect.gen(function* () {
@@ -53,7 +50,7 @@ export function synchronizeHistoryEffect(historyId: number, ownerId: string, eve
       )
       if (!isHistoryTerminalState(historyDb.histories.state)) {
         const galaxyHistoryId = historyDb.histories.galaxyId
-        const galaxyHistory = yield* getHistoryEffect(galaxyHistoryId)
+        const galaxyHistory = yield* bt.getHistoryEffect(galaxyHistoryId)
         if (historyDb.histories.state !== galaxyHistory.state) {
           yield* updateHistoryState(historyId, galaxyHistory.state)
         }
@@ -112,7 +109,7 @@ export function addHistoryEffect(name: string, ownerId: string) {
   return Effect.gen(function* () {
     const currentUser = yield* getCurrentUserEffect(url, email)
     if (currentUser) {
-      const galaxyHistory = yield* galaxyCreateHistoryEffect(name)
+      const galaxyHistory = yield* bt.createHistoryEffect(name)
       if (galaxyHistory) {
         const historyDb = yield* insertHistory({
           name,
