@@ -4,10 +4,10 @@ import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
 
 const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
-const { gaasUi: { name, navigationMenuItems: navigationMenuItemsFromConfig, wiki } } = useAppConfig()
+const { gaasUi: { name, navigationMenuItems: navigationMenuItemsFromConfig } } = useAppConfig()
 const { userRole } = useUserRole(supabase)
 
-const { navigationMenuItems } = useNavigationMenuItems({ wiki, navigationMenuItems: navigationMenuItemsFromConfig, userRole })
+const { navigationMenuItems } = useNavigationMenuItems({ navigationMenuItems: navigationMenuItemsFromConfig, userRole })
 
 async function logout() {
   const { error } = await supabase.auth.signOut()
@@ -31,7 +31,7 @@ const userItems = ref([
     <template #left>
       <NuxtLink
         to="/"
-        class="flex items-end gap-2 font-bold text-xl text-[var(--ui-text-highlighted)] min-w-0 focus-visible:outline-[var(--ui-primary)] shrink-0"
+        class="flex items-end gap-2 font-bold text-xl text-highlighted min-w-0 focus-visible:outline-[var(--ui-primary)] shrink-0"
         aria-label="Gass"
       >
         {{ name }}

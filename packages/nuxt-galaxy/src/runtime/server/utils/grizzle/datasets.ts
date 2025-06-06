@@ -2,7 +2,7 @@ import type { Datamap, DatasetState, DatasetTerminalState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
 
 import type { NewDataset } from '~/src/runtime/types/nuxt-galaxy'
-import { DatasetsTerminalStates, deleteHistoryEffect as deleteGalaxyHistory, uploadFileToHistoryEffect } from 'blendtype'
+import * as bt from 'blendtype'
 import { Console, Data, Effect } from 'effect'
 import { parseFilename } from 'ufo'
 import { datasets } from '../../db/schema/galaxy/datasets.js'
@@ -17,7 +17,17 @@ export class NoStorageObjectError extends Data.TaggedError('NoStorageObjectError
   readonly message: string
 }> {}
 
-export function uploadDatasetsEffect(datamap: Datamap, galaxyHistoryId: string, historyId: number, ownerId: string, event: H3Event<EventHandlerRequest>) {
+export interface UploadDatasetParams {
+  datamap: Datamap
+  galaxyHistoryId: string
+  historyId: number
+  ownerId: string
+  event: H3Event<EventHandlerRequest>
+  file: boolean
+}
+
+export function uploadDatasetsEffect(params: UploadDatasetParams) {
+  const { datamap, galaxyHistoryId, historyId, ownerId, event, file = true } = params
   const datasetEntries = Object.entries(datamap)
   return Effect.all(
     datasetEntries.map(([step, { storage_object_id: storageObjectId }]) => {
@@ -25,21 +35,53 @@ export function uploadDatasetsEffect(datamap: Datamap, galaxyHistoryId: string, 
         if (storageObjectId) {
           const storageObject = yield* getStorageObject(storageObjectId)
           if (storageObject && storageObject?.name) {
-            const signedUrl = yield* createSignedUrl(event, storageObject.name)
-            // signedUrl = 'https://dl.pasteur.fr/fop/9kG35Wvc/ESCO001.0523.00075.prt'
+            let signedUrl = yield* createSignedUrl(event, storageObject.name)
+            signedUrl = 'https://raw.githubusercontent.com/mdmparis/defense-finder/refs/heads/master/tests/data/prot/df_test_prot.faa'
+
             if (signedUrl) {
-              const filename = parseFilename(signedUrl, { strict: false })
-              const historyDataset = yield* uploadFileToHistoryEffect(galaxyHistoryId, signedUrl, filename).pipe(
+              const filename = parseFilename(signedUrl, { strict: false }) || 'gaas_input_file'
+              let historyDatasetEffect: ReturnType<typeof bt.uploadFileToHistoryEffect>
+              if (file) {
+                const response = yield* bt.fetchDatasetEffect(signedUrl)
+                // const contentType = response.headers.get('content-type') || 'application/octet-stream'
+                // const body = response.body
+                const blob = yield* Effect.tryPromise({
+                  try: () => response.blob(),
+                  catch: _caughtError => new bt.HttpError({ message: `Error fetching dataset from ${signedUrl}: ${_caughtError}` }),
+                })
+                // const form = new FormData()
+                // form.append('files', body, { filename, contentType })
+                // Galaxy-specific fields
+                // form.append('file_type', 'auto')
+                // form.append('dbkey', '?')
+                if (blob.size === 0) {
+                  yield* Effect.fail(new bt.HttpError({ message: `Dataset at ${signedUrl} is empty` }))
+                }
+                historyDatasetEffect = bt.uploadFileToHistoryEffect({
+                  historyId: galaxyHistoryId,
+                  blob,
+                  name: filename,
+                })
+              }
+              else {
+                historyDatasetEffect = bt.uploadFileToHistoryEffect({
+                  historyId: galaxyHistoryId,
+                  srcUrl: signedUrl,
+                  name: filename,
+                })
+              }
+              historyDatasetEffect.pipe(
                 Effect.tap(input => Console.log(`Uploaded file ${filename} to history ${historyId}\n input: ${input}`)),
                 Effect.catchAllCause((cause) => {
-                  return deleteGalaxyHistory(galaxyHistoryId).pipe(
+                  return bt.deleteHistoryEffect(galaxyHistoryId).pipe(
                     Effect.flatMap(() => deleteHistory(historyId)),
                     Effect.flatMap(() => Effect.fail(cause)),
                   )
                 }),
               )
-
+              const historyDataset = yield* historyDatasetEffect
               const uploadedDatasets = historyDataset.outputs
+
               if (uploadedDatasets.length === 1 && uploadedDatasets[0]) {
                 const {
                   id: uploadedGalaxyId,
@@ -121,7 +163,7 @@ export function getStorageObject(storageObjectId: string) {
 }
 
 export function isDatasetTerminalState(state: DatasetState): boolean {
-  return DatasetsTerminalStates.includes(state as DatasetTerminalState)
+  return bt.DatasetsTerminalStates.includes(state as DatasetTerminalState)
 }
 
 // eslint-disable-next-line unicorn/throw-new-error

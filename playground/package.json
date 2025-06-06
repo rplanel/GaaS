@@ -18,6 +18,7 @@
     "vue-router": "latest"
   },
   "devDependencies": {
-    "@nuxt/devtools": "catalog:nuxt"
+    "@nuxt/devtools": "catalog:nuxt",
+    "embla-carousel": "catalog:"
   }
 }

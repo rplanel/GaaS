@@ -13,6 +13,7 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/ui-pro',
     '@nuxt/test-utils/module',
+    '@nuxt/eslint',
     'nuxt-galaxy',
   ],
   css: [

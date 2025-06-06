@@ -2,10 +2,9 @@
 import type { ContentNavigationItem } from '@nuxt/content'
 import { findPageHeadline } from '#ui-pro/utils/content'
 
-const route = useRoute()
-
 definePageMeta({ layout: 'wiki' })
 
+const route = useRoute()
 const navigation = inject<Ref<ContentNavigationItem[]>>('navigation')
 
 const { data: page } = await useAsyncData(route.path, () => {

@@ -277,7 +277,7 @@ const { data: datasets } = await useAsyncData(
       .schema('galaxy')
       .from('uploaded_datasets_with_storage_path')
       .select()
-      .returns<UploadedDatasetDb[]>()
+      .overrideTypes<UploadedDatasetDb[]>()
 
     if (error) {
       throw createError({ statusCode: getStatusCode(error), statusMessage: getErrorMessage(error) })
@@ -382,7 +382,7 @@ watchEffect(() => {
           :items="workflowStepsItems"
           :ui="{
             header:
-              'hover:bg-[var(--ui-bg-elevated)] px-2 rounded-[calc(var(--ui-radius))]',
+              'hover:bg-elevated px-2 rounded-[calc(var(--ui-radius))]',
 
           }"
         >
@@ -392,7 +392,7 @@ watchEffect(() => {
               class="grid grid-flow-col auto-cols-auto items-center justify-between w-full gap-5 break-words"
             >
               <div class="grid grid-flow-row auto-rows-auto break-words">
-                <div class="font-bold text-[var(--ui-info)] grow break-all">
+                <div class="font-bold text-info grow break-all">
                   {{ workflowStepsToolInfo[stepId]?.name }}
                 </div>
                 <div class="font-medium text-sm opacity-60 grow break-words">
@@ -409,7 +409,7 @@ watchEffect(() => {
           <template #body="{ item: { value: stepId } }">
             <div class="p-2">
               <div
-                class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)]"
+                class="ring ring-default rounded-[calc(var(--ui-radius)*2)]"
               >
                 <GalaxyWorkflowStep
                   v-if="stepId !== undefined && galaxyWorkflowStepProps?.[stepId]"

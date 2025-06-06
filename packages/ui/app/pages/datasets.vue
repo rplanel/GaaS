@@ -70,7 +70,7 @@ const { data, refresh: refreshDatasets } = await useAsyncData<DatasetColumn[] | 
       .schema('galaxy')
       .from(`uploaded_datasets_with_storage_path`)
       .select()
-      .returns<DatasetColumn[]>()
+      .overrideTypes<DatasetColumn[]>()
 
     if (data === null) {
       throw createError({ statusMessage: 'No uploaded dataset found', statusCode: 404 })

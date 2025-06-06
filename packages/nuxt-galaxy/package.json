@@ -24,7 +24,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "supabase"
   ],
   "scripts": {
     "prepack": "pnpm run dev:prepare && nuxt-module-build build",
@@ -36,7 +37,7 @@
     "test": "vitest run",
     "test:watch": "vitest watch",
     "typecheck": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit",
-    "cleandep": "rm -rf node_modules && rm -rf .nuxt && rm -rf dist && rm -rf playground/node_modules && rm -rf playground/.nuxt && rm -rf playground/.output",
+    "cleandep": "rm -rf node_modules .nuxt dist playground/node_modules playground/.nuxt playground/.output",
     "supabase:status": "pnpm supabase status",
     "supabase:start": "pnpm supabase start",
     "supabase:stop": "pnpm supabase stop",
@@ -53,7 +54,6 @@
     "@nuxtjs/supabase": "catalog:nuxt",
     "blendtype": "workspace:*",
     "defu": "catalog:",
-    "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "jwt-decode": "catalog:",
@@ -63,7 +63,7 @@
   "devDependencies": {
     "@antfu/eslint-config": "catalog:",
     "@nuxt/devtools": "catalog:nuxt",
-    "@nuxt/eslint-config": "catalog:nuxt",
+    "@nuxt/eslint": "catalog:nuxt",
     "@nuxt/module-builder": "catalog:nuxt",
     "@nuxt/schema": "catalog:nuxt",
     "@nuxt/test-utils": "catalog:nuxt",
@@ -75,8 +75,7 @@
     "happy-dom": "catalog:",
     "nuxt": "catalog:nuxt",
     "playwright-core": "catalog:",
-    "supabase": "catalog:",
-    "typescript": "~5.6.3",
+    "typescript": "catalog:",
     "vitest": "catalog:",
     "vue-tsc": "catalog:"
   }

@@ -91,9 +91,116 @@ export function deleteHistory(historyId: string) {
   )
 }
 
-export function uploadFileToHistoryEffect(historyId: string, srcUrl: string, name: string | undefined) {
+interface UploadFileBaseParams {
+  historyId: string
+  name: string
+}
+interface uploadFileFromUrl extends UploadFileBaseParams {
+  srcUrl: string
+}
+
+interface uploadFileFromFile extends UploadFileBaseParams {
+  blob: Blob
+}
+
+export function uploadFileToHistoryEffect(params: uploadFileFromUrl | uploadFileFromFile) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
+    // let payload: Record<string, any> = {}
+    if ('blob' in params) {
+      const { historyId, blob, name } = params
+      const file = new File([blob], name)
+      // console.log('Uploading file name', name)
+      // console.log('Uploading file from blob', blob)
+      // console.log('Blob size:', blob.size)
+      // console.log('Blob type:', blob.type)
+      // console.log(typeof blob)
+      // console.log('File to upload:', file)
+      const formData = new FormData()
+      // formData.append('history_id', historyId)
+      formData.append('history_id', 'e4d3a344ef26d9ea')
+      formData.append('targets', JSON.stringify([{
+        destination: { type: 'hdas' },
+        elements: [{
+          src: 'files',
+          name,
+          dbkey: '?',
+          ext: 'auto',
+          space_to_tab: false,
+          to_posix_lines: true,
+        }],
+      }]))
+
+      // [{"destination":{"type":"hdas"},"elements":[{"src":"files","name":"","dbkey":"?","ext":"auto","space_to_tab":false,"to_posix_lines":true}]}]
+      formData.append('auto_decompress', 'true')
+      formData.append('files', file)
+
+      // payload = {
+      //   history_id: historyId,
+      //   targets: [{
+      //     destination: {
+      //       type: 'hdas',
+      //     },
+      //     elements: [{
+      //       src: 'files',
+      //       name,
+      //       dbkey: '?',
+      //       ext: 'auto',
+      //       space_to_tab: false,
+      //       to_posix_lines: true,
+      //       deferred: false,
+
+      //     }],
+      //   }],
+      //   auto_decompress: true,
+      //   files: [blob],
+      // }
+      //
+      const uploadedDataset = Effect.tryPromise({
+        try: () => fetchApi<GalaxyUploadedDataset>('api/tools/fetch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'multipart/form-data' },
+          // body: payload,
+          body: formData,
+        }),
+        catch: _caughtError => new HttpError({
+          message: `Error uploading file ${name}: ${_caughtError}`,
+        }),
+      }).pipe(
+        Effect.tap(input => Console.log(`Uploaded file ${name} to history ${historyId}\n input: ${input}`)),
+        Effect.catchAllCause((cause) => {
+          return deleteHistoryEffect(historyId).pipe(
+            Effect.flatMap(() => Effect.fail(cause)),
+          )
+        }),
+      )
+      return yield* uploadedDataset
+    }
+    else {
+      const uploadedDataset = uploadFileToHistoryFromUrlEffect(params)
+      return yield* uploadedDataset
+    }
+
+    // return yield* uploadedDataset.pipe(Effect.catchAll((error) => {
+    //   return deleteHistoryEffect(historyId)
+    //   // return Effect.succeed(`Recovering from ${error._tag}`)
+    // },
+    //   // deleteHistoryEffect(historyId)
+    // ))
+  })
+}
+
+export function uploadFileToHistory(params: uploadFileFromUrl | uploadFileFromFile) {
+  return uploadFileToHistoryEffect(params).pipe(
+    Effect.provide(GalaxyFetch.Live),
+    runWithConfig,
+  )
+}
+
+export function uploadFileToHistoryFromUrlEffect(params: uploadFileFromUrl) {
+  return Effect.gen(function* () {
+    const fetchApi = yield* GalaxyFetch
+    const { historyId, srcUrl, name } = params
     const payload: Record<string, any> = {
       history_id: historyId,
       targets: [{
@@ -111,7 +218,8 @@ export function uploadFileToHistoryEffect(historyId: string, srcUrl: string, nam
       auto_decompress: true,
       files: [],
     }
-    const uploadedDataset = Effect.tryPromise({
+
+    return yield* Effect.tryPromise({
       try: () => fetchApi<GalaxyUploadedDataset>('api/tools/fetch', {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -119,31 +227,15 @@ export function uploadFileToHistoryEffect(historyId: string, srcUrl: string, nam
       catch: _caughtError => new HttpError({
         message: `Error uploading file ${name} from url ${srcUrl}: ${_caughtError}`,
       }),
-    })
-      .pipe(
-        Effect.tap(input => Console.log(`Uploaded file ${name} to history ${historyId}\n input: ${input}`)),
-        Effect.catchAllCause((cause) => {
-          return deleteHistoryEffect(historyId).pipe(
-            Effect.flatMap(() => Effect.fail(cause)),
-          )
-        }),
-      )
-
-    return yield* uploadedDataset
-    // return yield* uploadedDataset.pipe(Effect.catchAll((error) => {
-    //   return deleteHistoryEffect(historyId)
-    //   // return Effect.succeed(`Recovering from ${error._tag}`)
-    // },
-    //   // deleteHistoryEffect(historyId)
-    // ))
+    }).pipe(
+      Effect.tap(input => Console.log(`Uploaded file ${name} to history ${historyId}\n input: ${input}`)),
+      Effect.catchAllCause((cause) => {
+        return deleteHistoryEffect(historyId).pipe(
+          Effect.flatMap(() => Effect.fail(cause)),
+        )
+      }),
+    )
   })
-}
-
-export function uploadFileToHistory(historyId: string, srcUrl: string, name: string | undefined) {
-  return uploadFileToHistoryEffect(historyId, srcUrl, name).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
-  )
 }
 
 // downloadDataset

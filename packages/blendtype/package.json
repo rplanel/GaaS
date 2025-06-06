@@ -37,7 +37,7 @@
     "release:publish": "pnpm publish --access public",
     "test": "pnpm lint && pnpm typecheck && vitest run --coverage",
     "typecheck": "tsc --noEmit --skipLibCheck",
-    "cleandep": "rm -rf node_modules && rm -rf dist"
+    "cleandep": "rm -rf node_modules dist"
   },
   "dependencies": {
     "effect": "catalog:",

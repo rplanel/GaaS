@@ -1,7 +1,7 @@
 import type { RowAnalysis, RowWorkflow } from '../../types/nuxt-galaxy'
 import { Data, Effect } from 'effect'
 import { toValue } from 'vue'
-import { ClientSupabaseClient, ClientSupabaseUser, NoSupabaseUserError } from './supabase'
+import { NoSupabaseUserError, SupabaseClientLayer, SupabaseUserLayer } from './supabase'
 
 export interface WorkflowAnalysis extends RowAnalysis {
   workflows: RowWorkflow
@@ -12,10 +12,18 @@ export class GetWorkflowAnalysesError extends Data.TaggedError('GetWorkflowAnaly
   readonly message: string
 }> {}
 
+/**
+ * Fetches analyses for a given workflow ID from the Supabase database.
+ * Returns a single analysis object or fails with an error if the user is not authenticated
+ * or if there is an error fetching the data.
+ *
+ * @param {number} workflowId - The ID of the workflow to fetch analyses for.
+ * @returns {Effect<WorkflowAnalysis, GetWorkflowAnalysesError>} An effect that resolves to the analysis data.
+ */
 export function getWorkflowAnalysesEffect(workflowId: number) {
   return Effect.gen(function* () {
-    const supabase = yield* ClientSupabaseClient
-    const user = yield* ClientSupabaseUser
+    const supabase = yield* SupabaseClientLayer
+    const user = yield* SupabaseUserLayer
     const userVal = toValue(user)
 
     if (!userVal) {

@@ -45,9 +45,13 @@ export interface ModuleOptions {
   email: string
 
   /**
-   * Use local docker galaxy
+   * Database URL for the supabase instance
+   * This is used to connect to the database where Galaxy data is stored.
+   * @default process.env.GALAXY_DRIZZLE_DATABASE_URL
+   * @example 'postgres://postgres:postgres@localhost:5432/postgres'
+   * @type string
    */
-  localDocker: boolean
+  databaseUrl: string
 
 }
 
@@ -68,7 +72,7 @@ export default defineNuxtModule<ModuleOptions>({
     url: process.env.GALAXY_URL || 'http://localhost:9000',
     apiKey: process.env.GALAXY_API_KEY || 'fakekey',
     email: process.env.GALAXY_EMAIL || 'admin@example.org',
-    localDocker: false,
+    databaseUrl: process.env.GALAXY_DRIZZLE_DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
 
   },
   // Shorthand sugar to register Nuxt hooks
@@ -87,13 +91,16 @@ export default defineNuxtModule<ModuleOptions>({
     )
 
     // Private runtime
+
     // Leftmost arguments have more priority when assigning defaults.
     nuxt.options.runtimeConfig.galaxy = defu(
       runtimeConfig.galaxy || {},
       {
         apiKey: moduleOptions.apiKey,
         email: moduleOptions.email,
-        localDocker: moduleOptions.localDocker,
+        drizzle: {
+          databaseUrl: moduleOptions.databaseUrl,
+        },
       },
     )
 
@@ -104,9 +111,11 @@ export default defineNuxtModule<ModuleOptions>({
     if (!nuxt.options.runtimeConfig.galaxy.apiKey) {
       log.warn('Missing galaxy api key, set it either in `nuxt.config.js` or via env variable')
     }
-
     if (!nuxt.options.runtimeConfig.galaxy.email) {
       log.warn('Missing galaxy email, set it either in `nuxt.config.js` or via env variable')
+    }
+    if (!nuxt.options.runtimeConfig.galaxy.drizzle.databaseUrl) {
+      log.warn('Missing galaxy database url, set it either in `nuxt.config.js` or via env variable')
     }
 
     // Install supabase module
@@ -136,17 +145,16 @@ export default defineNuxtModule<ModuleOptions>({
 
     const composables = [
       { name: 'useUserRole', path: './runtime/app/composables/useUserRole' },
-      { name: 'useSupabaseCookie', path: './runtime/app/composables/useSupabaseCookie' },
       { name: 'useFileSize', path: './runtime/app/composables/useFileSize' },
       { name: 'useErrorStatus', path: './runtime/app/composables/useErrorStatus' },
       { name: 'useErrorMessage', path: './runtime/app/composables/useErrorMessage' },
-      { name: 'useAnalysisDatasetIO', path: './runtime/app/composables/useAnalysisDatasetIO' },
+      { name: 'useAnalysisDetails', path: './runtime/app/composables/useAnalysisDetails' },
       { name: 'useGalaxyHint', path: './runtime/app/composables/galaxy/useGalaxyHint' },
       { name: 'useGalaxyTool', path: './runtime/app/composables/galaxy/useGalaxyTool' },
       { name: 'useGalaxyWorkflow', path: './runtime/app/composables/galaxy/useGalaxyWorkflow' },
       { name: 'useUploadFileToStorage', path: './runtime/app/composables/useUploadFileToStorage' },
-      { name: 'useWorkflowAnalyses', path: './runtime/app/composables/workflow/analysis/useWorkflowAnalyses' },
       { name: 'useDiskUsage', path: './runtime/app/composables/useDiskUsage' },
+      { name: 'useSupabaseRealtime', path: './runtime/app/composables/useSupabaseRealtime' },
 
     ]
 
@@ -284,18 +292,18 @@ export { SupabaseTypes }
   },
 })
 
-declare module '@nuxt/schema' {
+// declare module '@nuxt/schema' {
 
-  interface PublicRuntimeConfig {
-    galaxy: {
-      url: string
-    }
-  }
-  interface RuntimeConfig {
-    galaxy: {
-      apiKey: string
-      email: string
-      localDocker: boolean
-    }
-  }
-}
+//   interface PublicRuntimeConfig {
+//     galaxy: {
+//       url: string
+//     }
+//   }
+//   interface RuntimeConfig {
+//     galaxy: {
+//       apiKey: string
+//       email: string
+//       localDocker: boolean
+//     }
+//   }
+// }

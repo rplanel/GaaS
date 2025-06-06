@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import type { AccordionItem } from '@nuxt/ui'
-import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { GalaxyTool } from 'blendtype'
 import type { GalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
-import type { AnalysisDetail, Database, RowAnalysisJob } from '../../types'
+import type { AnalysisDetail, RowAnalysisJob } from '../../types'
 import * as bt from 'blendtype'
 import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDecodeParameters'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
@@ -14,54 +13,38 @@ const props = withDefaults(defineProps<{
 
 const emits = defineEmits(['close'])
 // const { analysis } = toRefs(props)
-const client = useSupabaseClient<Database>()
+// const client = useSupabaseClient<Database>()
 // const user = useSupabaseUser()
-let realtimeHistoriesChannel: RealtimeChannel
-let realtimeJobsChannel: RealtimeChannel
-const workflowParametersModel = ref<
-  | Record<string, Record<string, string | string[] | Record<string, any>>>
-  | undefined
->(undefined)
-const { analysisId } = toRefs(props)
+// let realtimeHistoriesChannel: RealtimeChannel
+// let realtimeJobsChannel: RealtimeChannel
+// const workflowParametersModel = ref<
+//   | Record<string, Record<string, string | string[] | Record<string, any>>>
+//   | undefined
+// >(undefined)
+// const analysisId = toRef(() => props.analysisId)
+const analysisId = ref<number | undefined>(props.analysisId)
+watch(
+  () => props.analysisId,
+  (newAnalysisId) => {
+    analysisId.value = newAnalysisId
+  },
+  { immediate: true, deep: true },
+)
 
-const { outputs, analysis: detailedAnalysis, inputs, workflow: dbWorkflow, refresh, pendingAnalysis } = useAnalysisDatasetIO(analysisId)
+const { outputs, analysis: detailedAnalysis, inputs, refresh, pendingAnalysis } = useAnalysisDetails(analysisId)
 
 const workflowGalaxyId = computed(() => {
-  const dbWorkflowVal = toValue(dbWorkflow)
-
-  if (dbWorkflowVal) {
-    return dbWorkflowVal.galaxy_id
+  const detailedAnalysisVal = toValue(detailedAnalysis)
+  if (detailedAnalysisVal) {
+    return detailedAnalysisVal.workflows.galaxy_id
   }
   return undefined
 })
 const { gaasUi: { resultsMenuItems, analyisParametersMenuItems } } = useAppConfig()
 
-onMounted(() => {
-  // Real time listener for new workouts
-  realtimeHistoriesChannel = client.channel('galaxy:histories').on(
-    'postgres_changes',
-    { event: '*', schema: 'galaxy', table: 'histories' },
-    () => {
-      refresh()
-    },
-  )
-  realtimeHistoriesChannel.subscribe()
-
-  realtimeJobsChannel = client.channel('galaxy:jobs').on(
-    'postgres_changes',
-    { event: '*', schema: 'galaxy', table: 'jobs' },
-    () => {
-      refresh()
-    },
-  )
-  realtimeJobsChannel.subscribe()
-})
-
-// Don't forget to unsubscribe when user left the page
-onUnmounted(() => {
-  client.removeChannel(realtimeHistoriesChannel)
-  client.removeChannel(realtimeJobsChannel)
-})
+useSupabaseRealtime(`galaxy:histories:${props.analysisId}`, 'histories', refresh)
+useSupabaseRealtime(`galaxy:jobs:${props.analysisId}`, 'jobs', refresh)
+useSupabaseRealtime(`galaxy:analysis_outputs:${props.analysisId}`, 'analysis_outputs', refresh)
 
 const {
   workflow,
@@ -179,15 +162,27 @@ function useAnalysisTools(tools: Ref<Record<string, GalaxyTool>>) {
   return { tools, getToolParameters, getParametersInputComponent }
 }
 
-watchEffect(() => {
-  const dbAnalysisVal = toValue(detailedAnalysis) as Record<string, any> | undefined
-  if (dbAnalysisVal) {
-    const { decodedParameters } = useGalaxyDecodeParameters(
-      dbAnalysisVal.parameters,
-    )
-    workflowParametersModel.value = toValue(decodedParameters)
+const analysisParameters = computed(() => {
+  const analysisVal = toValue(detailedAnalysis)
+  if (analysisVal) {
+    return analysisVal.parameters
   }
+  return undefined
 })
+
+const { decodedParameters: workflowParametersModel } = useGalaxyDecodeParameters(
+  analysisParameters,
+)
+
+// watchEffect(() => {
+//   const dbAnalysisVal = toValue(detailedAnalysis) as Record<string, any> | undefined
+//   if (dbAnalysisVal) {
+//     const { decodedParameters } = useGalaxyDecodeParameters(
+//       dbAnalysisVal.parameters,
+//     )
+//     workflowParametersModel.value = toValue(decodedParameters)
+//   }
+// })
 
 const computedResultsMenuItems = computed(() => {
   const analysisIdVal = toValue(analysisId)
@@ -241,6 +236,7 @@ const computedResultsMenuItems = computed(() => {
       </UDashboardToolbar>
     </template>
     <template #body>
+      <pre>{{ pendingAnalysis }}</pre>
       <template v-if="pendingAnalysis">
         <div class="hidden lg:flex flex-1 items-center justify-center">
           <div class="flex items-center gap-4">
@@ -288,14 +284,14 @@ const computedResultsMenuItems = computed(() => {
                     </template>
                     <template #stdout>
                       <div class="p-1">
-                        <div class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
+                        <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
                           <pre v-if="jobsMap" class="text-nowrap"> {{ jobsMap[item.value]?.stdout }}</pre>
                         </div>
                       </div>
                     </template>
                     <template #stderr>
                       <div class="p-1">
-                        <div class="ring ring-[var(--ui-border)] rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
+                        <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
                           <pre v-if="jobsMap"> {{ jobsMap[item.value]?.stderr }}</pre>
                         </div>
                       </div>

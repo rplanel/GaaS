@@ -9,7 +9,7 @@ const user = useSupabaseUser()
 
 const { userRole } = useUserRole(supabase)
 
-const { data: dbWorkflows } = await useAsyncData('workflows-auth', async () => {
+const { data: dbWorkflows } = await useAsyncData('all-workflows', async () => {
   const userVal = toValue(user)
   if (!userVal) {
     throw createError({
@@ -22,7 +22,7 @@ const { data: dbWorkflows } = await useAsyncData('workflows-auth', async () => {
     .schema('galaxy')
     .from('workflows')
     .select()
-    .returns<RowWorkflow[]>()
+    .overrideTypes<RowWorkflow[]>()
 
   if (data === null) {
     throw createError({ statusMessage: 'No uploaded dataset found', statusCode: 404 })
@@ -30,7 +30,6 @@ const { data: dbWorkflows } = await useAsyncData('workflows-auth', async () => {
   if (error) {
     throw createError({ statusCode: getStatusCode(error), statusMessage: getErrorMessage(error) })
   }
-
   return data
 })
 

@@ -3,6 +3,7 @@ packages:
   - packages/nuxt-galaxy
   - packages/ui
   - packages/wiki
+  - docs
   - playground
 
 catalog:
@@ -32,6 +33,7 @@ catalog:
   drizzle-kit: ^0.31.0
   drizzle-orm: ^0.43.1
   effect: ^3.14.1
+  embla-carousel: ^8.6.0
   eslint: ^9.21.0
   eslint-config-unjs: ^0.4.2
   eslint-plugin-format: ^1.0.1
@@ -40,7 +42,7 @@ catalog:
   happy-dom: ^17.1.8
   jiti: ^2.4.2
   jwt-decode: ^4.0.0
-  lint-staged: ^15.3.0
+  lint-staged: ^16.1.0
   ofetch: ^1.4.1
   playwright-core: ^1.50.0
   postgres: ^3.4.5
@@ -59,12 +61,14 @@ catalogs:
   nuxt:
     '@nuxt/content': ^3.5.1
     '@nuxt/devtools': ^2.4.0
+    '@nuxt/eslint': ^1.4.0
     '@nuxt/eslint-config': ^1.1.0
-    '@nuxt/kit': ^3.17.0
+    '@nuxt/image': ^1.10.0
+    '@nuxt/kit': ^3.17.3
     '@nuxt/module-builder': ^1.0.1
-    '@nuxt/schema': ^3.17.0
-    '@nuxt/test-utils': ^3.17.0
-    '@nuxt/ui': ^3.1.1
-    '@nuxt/ui-pro': ^3.1.1
-    '@nuxtjs/supabase': ^1.5.0
-    nuxt: ^3.17.0
+    '@nuxt/schema': ^3.17.3
+    '@nuxt/test-utils': ^3.17.3
+    '@nuxt/ui': ^3.1.2
+    '@nuxt/ui-pro': ^3.1.2
+    '@nuxtjs/supabase': ^1.5.1
+    nuxt: ^3.17.3

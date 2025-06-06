@@ -1,6 +1,6 @@
 import type { GalaxyWorkflowInput } from 'blendtype'
 import type { AnalysisBody } from '../../../types/nuxt-galaxy.js'
-import { GalaxyFetch, runWithConfig } from 'blendtype'
+import * as bt from 'blendtype'
 import { Effect, Layer } from 'effect'
 import { defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle.js'
@@ -20,13 +20,14 @@ export default defineEventHandler<{ body: AnalysisBody }>(
         const workflow = yield* getWorkflowEffect(workflowId)
         const historyDb = yield* addHistoryEffect(name, supabaseUser.id)
         if (historyDb && workflow) {
-          const datasets = yield* uploadDatasetsEffect(
+          const datasets = yield* uploadDatasetsEffect({
             datamap,
-            historyDb.galaxyId,
-            historyDb.id,
-            supabaseUser.id,
+            galaxyHistoryId: historyDb.galaxyId,
+            historyId: historyDb.id,
+            ownerId: supabaseUser.id,
             event,
-          )
+            file: false,
+          })
           // load input dataset sous la forme de datamap mais comme id pg id
           const workflowInput: GalaxyWorkflowInput = {}
           const inputs = datasets.filter(data => data !== undefined)
@@ -61,12 +62,12 @@ export default defineEventHandler<{ body: AnalysisBody }>(
     const finalLayer = Layer.mergeAll(
       ServerSupabaseClient.Live,
       ServerSupabaseUser.Live,
-      GalaxyFetch.Live,
+      bt.GalaxyFetch.Live,
       Drizzle.Live,
     )
     return program.pipe(
       Effect.provide(finalLayer),
-      runWithConfig,
+      bt.runWithConfig,
     )
   },
 
