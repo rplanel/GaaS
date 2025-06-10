@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, toRefs, toValue } from 'vue'
+import { computed, toValue } from 'vue'
 import { useCitations } from '../../composables/useCitations'
 
 export interface Props {
@@ -7,8 +7,7 @@ export interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { dois: undefined })
-const { dois } = toRefs(props)
-
+const dois = toRef(() => props.dois)
 const doisList = computed(() => {
   const doisVal = toValue(dois)
   if (doisVal) {

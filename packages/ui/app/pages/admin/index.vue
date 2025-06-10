@@ -13,7 +13,7 @@ const props = withDefaults(defineProps<Props>(), { breadcrumbsItems: undefined }
 interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined
 }
-const { breadcrumbsItems } = toRefs(props)
+const breadcrumbsItems = toRef(() => props.breadcrumbsItems)
 const router = useRouter()
 const supabase = useSupabaseClient<Database>()
 

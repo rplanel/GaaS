@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Database, GalaxyWorkflowExportSchema, RowWorkflow, SanitizedWorkflowDbItem } from '../types'
-import { getErrorMessage, getStatusCode } from '#imports'
+import * as bt from 'blendtype'
 import { galaxyWorkflowExportSchema } from 'blendtype'
 import { z } from 'zod'
 import { fromError } from 'zod-validation-error'
@@ -29,7 +29,7 @@ const { data: dbWorkflows } = await useAsyncData('all-workflows', async () => {
     throw createError({ statusMessage: 'No uploaded dataset found', statusCode: 404 })
   }
   if (error) {
-    throw createError({ statusCode: getStatusCode(error), statusMessage: getErrorMessage(error) })
+    throw createError({ statusCode: bt.getStatusCode(error), statusMessage: bt.getErrorMessage(error) })
   }
   return data
 })
@@ -48,8 +48,8 @@ const sanitizedDbWorkflows = computed<SanitizedWorkflowDbItem[] | null>(() => {
           throw createError({ statusMessage: sanitizedErr.message, cause: sanitizedErr.cause, stack: sanitizedErr.stack, name: sanitizedErr.name })
         }
         throw createError({
-          statusCode: getStatusCode(err),
-          statusMessage: getErrorMessage(err),
+          statusCode: bt.getStatusCode(err),
+          statusMessage: bt.getErrorMessage(err),
         })
       }
     })

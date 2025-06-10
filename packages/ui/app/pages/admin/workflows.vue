@@ -3,8 +3,6 @@ import type { SupabaseTypes } from '#build/types/database'
 import type { BreadcrumbItem, TableColumn } from '@nuxt/ui'
 import type { GalaxyWorkflowsItem } from 'blendtype'
 import { USwitch } from '#components'
-import { getErrorMessage, getStatusCode } from '#imports'
-
 import * as bt from 'blendtype'
 
 type Database = SupabaseTypes.Database
@@ -17,8 +15,7 @@ interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined
 }
 const props = withDefaults(defineProps<Props>(), { breadcrumbsItems: undefined })
-
-const { breadcrumbsItems } = toRefs(props)
+const breadcrumbsItems = toRef(() => props.breadcrumbsItems)
 
 const toast = useToast()
 const UBadge = resolveComponent('UBadge')
@@ -111,8 +108,8 @@ async function addToDb(workflow: { id: string }) {
   }
   catch (error) {
     showError({
-      statusCode: getStatusCode(error),
-      statusMessage: getErrorMessage(error),
+      statusCode: bt.getStatusCode(error),
+      statusMessage: bt.getErrorMessage(error),
     })
   }
 }

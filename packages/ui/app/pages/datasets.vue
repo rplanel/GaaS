@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SupabaseTypes } from '#build/types/database'
 import type { BreadcrumbItem } from '#ui/types'
-import { getErrorMessage, getStatusCode } from '#imports'
+import * as bt from 'blendtype'
 import { z } from 'zod'
 
 type Database = SupabaseTypes.Database
@@ -41,7 +41,7 @@ watch(uploadError, (error) => {
   if (error) {
     toast.add({
       'title': 'Uh oh! Something went wrong.',
-      'description': getErrorMessage(error),
+      'description': bt.getErrorMessage(error),
       'icon': 'ic:baseline-error-outline',
       'color': 'error',
       'onUpdate:open': (isOpen) => {
@@ -77,7 +77,7 @@ const { data, refresh: refreshDatasets } = await useAsyncData<DatasetColumn[] | 
       throw createError({ statusMessage: 'No uploaded dataset found', statusCode: 404 })
     }
     if (error) {
-      throw createError({ statusCode: getStatusCode(error), statusMessage: getErrorMessage(error) })
+      throw createError({ statusCode: bt.getStatusCode(error), statusMessage: bt.getErrorMessage(error) })
     }
 
     return data

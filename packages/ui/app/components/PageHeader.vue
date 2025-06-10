@@ -17,8 +17,7 @@ const props = withDefaults(defineProps<Props>(), {
   breadcrumbsItems: undefined,
 
 })
-
-const { breadcrumbsItems } = toRefs(props)
+const breadcrumbsItems = toRef(() => props.breadcrumbsItems)
 </script>
 
 <template>

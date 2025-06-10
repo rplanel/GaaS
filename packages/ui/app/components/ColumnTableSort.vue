@@ -8,7 +8,8 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {})
-const { column, label } = toRefs(props)
+const column = toRef(() => props.column)
+const label = toRef(() => props.label)
 
 const isSorted = computed(() => {
   const columnVal = toValue(column)

@@ -12,7 +12,6 @@ const props = withDefaults(defineProps<{
 }>(), {})
 
 const emits = defineEmits(['close'])
-// const { analysis } = toRefs(props)
 // const client = useSupabaseClient<Database>()
 // const user = useSupabaseUser()
 // let realtimeHistoriesChannel: RealtimeChannel

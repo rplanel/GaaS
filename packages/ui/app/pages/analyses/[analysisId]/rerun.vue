@@ -8,7 +8,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
 })
 
-const { analysisId, workflowId } = toRefs(props)
+const analysisId = toRef(() => props.analysisId)
+const workflowId = toRef(() => props.workflowId)
 
 const breakpoints = useBreakpoints(breakpointsTailwind)
 const isMobile = breakpoints.smaller('lg')

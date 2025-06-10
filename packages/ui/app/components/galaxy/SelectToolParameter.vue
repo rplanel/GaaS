@@ -32,8 +32,10 @@ const props = withDefaults(defineProps<GalaxySelectToolParameterProps>(), {
 })
 
 const emit = defineEmits(['update:modelValue'])
-const { variant } = toRefs(props)
-const { multiple, options, disabled } = toRefs(props)
+const variant = toRef(() => props.variant)
+const multiple = toRef(() => props.multiple)
+const options = toRef(() => props.options)
+const disabled = toRef(() => props.disabled)
 
 const model = computed({
   get() {

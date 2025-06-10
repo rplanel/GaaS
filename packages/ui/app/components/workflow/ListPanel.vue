@@ -6,7 +6,7 @@ interface Props {
 }
 const props = withDefaults(defineProps<Props>(), { workflows: undefined })
 const route = useRoute()
-const { workflows } = toRefs(props)
+const workflows = toRef(() => props.workflows)
 
 const workflowId = computed(() => {
   if (route?.params && 'workflowId' in route.params) {

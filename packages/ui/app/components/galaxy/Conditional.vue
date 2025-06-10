@@ -13,7 +13,7 @@ const props = withDefaults(defineProps<GalaxyConditionalParameterProps>(), {
 })
 
 const emit = defineEmits(['update:modelValue'])
-const { variant } = toRefs(props)
+const variant = toRef(() => props.variant)
 const { hint } = useGalaxyHint(
   props.test_param.help,
   props.test_param.argument,

@@ -10,7 +10,6 @@ interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined
   // workflowId: number
 }
-// const { breadcrumbsItems } = toRefs(props)
 const route = useRoute()
 // const user = useSupabaseUser()
 // const supabase = useSupabaseClient<Database>()

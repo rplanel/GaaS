@@ -14,7 +14,8 @@ const props = withDefaults(defineProps<GalaxyFloatToolParameterProps>(), {
 })
 const emit = defineEmits(['update:modelValue'])
 
-const { min, max } = toRefs(props)
+const min = toRef(() => props.min)
+const max = toRef(() => props.max)
 
 const proxyValue = useVModel(props, 'modelValue', emit)
 const { hint } = useGalaxyHint(props.help, props.argument)

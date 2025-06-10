@@ -9,9 +9,8 @@ import type {
 import type { Props as WorkflowStepProps } from '../../../components/galaxy/workflow/Step.vue'
 import type { GalaxyToolInputComponent } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 import { NuxtErrorBoundary } from '#components'
-import { computed, getErrorMessage, getStatusCode, ref, toValue } from '#imports'
-// import { getErrorMessage, getStatusCode } from 'blendtype'
-// import { getErrorMessage, getStatusCode } from '#imports'
+import { computed, ref, toValue } from '#imports'
+import * as bt from 'blendtype'
 
 import { z } from 'zod'
 import { useGalaxyDecodeParameters } from '../../../composables/galaxy/useGalaxyDecodeParameters'
@@ -188,7 +187,7 @@ async function runAnalysis() {
         router.push(`/analyses/${newAnalysisId}`)
       }
       catch (error) {
-        createError({ statusCode: getStatusCode(error), statusMessage: getErrorMessage(error) })
+        createError({ statusCode: bt.getStatusCode(error), statusMessage: bt.getErrorMessage(error) })
       }
       finally {
         startingAnalysis.value = false
@@ -223,7 +222,7 @@ const { data: dbWorkflow } = await useAsyncData('workflow-db', async () => {
     throw createError({ statusMessage: 'No workflow found', statusCode: 404 })
   }
   if (error) {
-    throw createError({ statusCode: getStatusCode(error), statusMessage: getErrorMessage(error) })
+    throw createError({ statusCode: bt.getStatusCode(error), statusMessage: bt.getErrorMessage(error) })
   }
   return data
 })
@@ -257,7 +256,7 @@ const { data: dbAnalysis } = await useAsyncData('analysis-db', async () => {
     throw createError({ statusMessage: 'No analysis found', statusCode: 404 })
   }
   if (error) {
-    throw createError({ statusCode: getStatusCode(error), statusMessage: getErrorMessage(error) })
+    throw createError({ statusCode: bt.getStatusCode(error), statusMessage: bt.getErrorMessage(error) })
   }
 
   return data
@@ -282,7 +281,7 @@ const { data: datasets } = await useAsyncData(
       .overrideTypes<UploadedDatasetDb[]>()
 
     if (error) {
-      throw createError({ statusCode: getStatusCode(error), statusMessage: getErrorMessage(error) })
+      throw createError({ statusCode: bt.getStatusCode(error), statusMessage: bt.getErrorMessage(error) })
     }
     if (data === null) {
       throw createError({ statusMessage: 'No uploaded datasets', statusCode: 500 })

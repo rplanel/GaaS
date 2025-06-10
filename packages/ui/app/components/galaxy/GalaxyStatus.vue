@@ -14,7 +14,8 @@ const excludeStates = ['setting_metadata', 'failed_metadata'] as const
 
 type ExcludeState = (typeof excludeStates)[number]
 
-const { state, size } = toRefs(props)
+const state = toRef(() => props.state)
+const size = toRef(() => props.size)
 
 const galaxyStateToIcon: Record<
   Exclude<GalaxyState, ExcludeState>,

@@ -6,7 +6,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {})
-const { version } = toRefs(props)
+const version = toRef(() => props.version)
 const badgeProps = computed<BadgeProps>(() => {
   return {
     icon: toValue(version) ? 'tabler:versions' : 'i-mdi:null',

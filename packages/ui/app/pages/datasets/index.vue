@@ -18,7 +18,7 @@ interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined
   datasets?: DatasetColumn[]
 }
-const { breadcrumbsItems } = toRefs(props)
+const breadcrumbsItems = toRef(() => props.breadcrumbsItems)
 const ColumnTableSort = resolveComponent('ColumnTableSort')
 
 const fileMetadataSchema = z.object({

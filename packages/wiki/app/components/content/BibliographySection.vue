@@ -8,7 +8,7 @@ const props = withDefaults(defineProps<Props>(), {
   dois: () => ([]),
 })
 
-const { dois } = toRefs(props)
+const dois = toRef(() => props.dois)
 
 const doisIdentifier = computed(() => {
   const doisVal = toValue(dois)

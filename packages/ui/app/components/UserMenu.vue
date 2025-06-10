@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AvatarProps, DropdownMenuItem } from '@nuxt/ui'
 import type { Database } from '../types'
-import { getErrorMessage, getStatusCode } from '#imports'
+import * as bt from 'blendtype'
 
 interface Props {
   collapsed?: boolean
@@ -35,7 +35,7 @@ const user = computed<{ name: string, avatar: AvatarProps }>(() => {
 async function logout() {
   const { error } = await supabase.auth.signOut()
   if (error) {
-    throw createError({ statusMessage: getErrorMessage(error), statusCode: getStatusCode(error) })
+    throw createError({ statusMessage: bt.getErrorMessage(error), statusCode: bt.getStatusCode(error) })
   }
 
   await navigateTo('/login')

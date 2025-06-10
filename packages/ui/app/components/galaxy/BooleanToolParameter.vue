@@ -12,8 +12,8 @@ const props = withDefaults(defineProps<GalaxyBooleanToolParameterProps>(), {
 })
 
 const emit = defineEmits(['update:modelValue'])
-
-const { truevalue, falsevalue } = toRefs(props)
+const truevalue = toRef(() => props.truevalue)
+const falsevalue = toRef(() => props.falsevalue)
 
 const proxyValue = computed({
   // eslint-disable-next-line vue/return-in-computed-property

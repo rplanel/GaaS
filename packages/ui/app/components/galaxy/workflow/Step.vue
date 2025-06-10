@@ -18,12 +18,10 @@ const props = withDefaults(defineProps<Props>(), {
   variant: 'form',
 })
 
-const {
-  workflowStep,
-  toolParameters,
-  workflowParametersModel,
-  parametersInputsComponent,
-} = toRefs(props)
+const workflowStep = toRef(() => props.workflowStep)
+const toolParameters = toRef(() => props.toolParameters)
+const workflowParametersModel = toRef(() => props.workflowParametersModel)
+const parametersInputsComponent = toRef(() => props.parametersInputsComponent)
 
 function getComponent(toolInput: GalaxyToolParameters) {
   return toValue(parametersInputsComponent)?.[toolInput.name]?.component

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Database } from '../types'
-import { getErrorMessage, getStatusCode } from '#imports'
+import * as bt from 'blendtype'
 import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
 
 const supabase = useSupabaseClient<Database>()
@@ -13,7 +13,7 @@ const { navigationMenuItems } = useNavigationMenuItems({ navigationMenuItems: na
 async function logout() {
   const { error } = await supabase.auth.signOut()
   if (error) {
-    throw createError({ statusMessage: getErrorMessage(error), statusCode: getStatusCode(error) })
+    throw createError({ statusMessage: bt.getErrorMessage(error), statusCode: bt.getStatusCode(error) })
   }
 
   await navigateTo('/login')
