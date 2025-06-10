@@ -234,7 +234,6 @@ const computedResultsMenuItems = computed(() => {
       </UDashboardToolbar>
     </template>
     <template #body>
-      <pre>{{ pendingAnalysis }}</pre>
       <template v-if="pendingAnalysis">
         <div class="hidden lg:flex flex-1 items-center justify-center">
           <div class="flex items-center gap-4">

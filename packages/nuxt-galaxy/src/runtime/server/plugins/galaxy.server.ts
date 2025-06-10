@@ -11,7 +11,7 @@ export default defineNitroPlugin((nitroApp) => {
     if (!apiKey) {
       throw createError('Galaxy API key is not configured in the runtime config.')
     }
-    console.warn(`Initializing Galaxy client with URL: ${url} and API Key: ${apiKey}`)
+    // console.warn(`Initializing Galaxy client with URL: ${url} and API Key: ${apiKey}`)
     initializeGalaxyClient({ apiKey, url })
   })
 })
