@@ -1,5 +1,5 @@
 import { useRuntimeConfig } from '#imports'
-import { GalaxyFetch, getWorkflowEffect, runWithConfigExit } from 'blendtype'
+import * as bt from 'blendtype'
 import { Cause, Effect, Exit, Option } from 'effect'
 import { defineEventHandler, getRouterParam } from 'h3'
 import { Drizzle } from '../../../utils/drizzle'
@@ -11,19 +11,14 @@ export default defineEventHandler(async (event) => {
   const workflowId = getRouterParam(event, 'workflowId')
   if (workflowId) {
     const program = Effect.gen(function* () {
-      // return yield* Effect.fail(
-      //   new GalaxyServiceUnavailable({
-      //     message: `Galaxy service @ ${url} is unavailable`,
-      //   }),
-      // )
-      return yield* getWorkflowEffect(workflowId)
+      return yield* bt.getWorkflowEffect(workflowId)
     })
     const workflowExit = await program.pipe(
-      Effect.provide(GalaxyFetch.Live),
+      Effect.provide(bt.GalaxyFetch.Live),
       Effect.provide(Drizzle.Live),
       Effect.provide(ServerSupabaseUser.Live),
       Effect.provide(ServerSupabaseClient.Live),
-      runWithConfigExit,
+      bt.runWithConfigExit,
     )
 
     return Exit.match(workflowExit, {

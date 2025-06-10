@@ -65,7 +65,7 @@ export function getWorkflowsEffect() {
           method: 'GET',
         },
       ),
-      catch: _caughtError => new HttpError({ message: `Error getting workflows ${_caughtError}` }),
+      catch: _caughtError => new HttpError({ message: `Error getting workflows.\nError: ${_caughtError}` }),
     })
     return yield* workflow
   })

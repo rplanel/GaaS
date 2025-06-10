@@ -1,7 +1,7 @@
 import type { GalaxyVersion } from './types'
 import { Context, Data, Effect, Layer } from 'effect'
 import { $fetch } from 'ofetch'
-import { BlendTypeConfig, runWithConfig } from './config'
+import { BlendTypeConfig, NoConfigError, runWithConfig } from './config'
 
 /**
  * GalaxyFetch is a service that provides a fetch function that is configured with the Galaxy API key.
@@ -33,6 +33,11 @@ export class GalaxyFetch extends Context.Tag('@blendtype/GalaxyFetch')<
     GalaxyFetch,
     Effect.gen(function* () {
       const { apiKey, url } = yield* BlendTypeConfig
+      if (!url || !apiKey) {
+        return yield* Effect.fail(new NoConfigError({
+          message: 'Library not initialized. Call initializeGalaxyClient({apiKey: "api-key", url: "galaxy-url"}) first.',
+        }))
+      }
       return $fetch.create({
         headers: {
           'x-api-key': apiKey,

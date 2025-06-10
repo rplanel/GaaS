@@ -35,8 +35,9 @@ export function uploadDatasetsEffect(params: UploadDatasetParams) {
         if (storageObjectId) {
           const storageObject = yield* getStorageObject(storageObjectId)
           if (storageObject && storageObject?.name) {
-            let signedUrl = yield* createSignedUrl(event, storageObject.name)
-            signedUrl = 'https://raw.githubusercontent.com/mdmparis/defense-finder/refs/heads/master/tests/data/prot/df_test_prot.faa'
+            const signedUrl = yield* createSignedUrl(event, storageObject.name)
+            // let signedUrl = yield* createSignedUrl(event, storageObject.name)
+            // signedUrl = 'https://raw.githubusercontent.com/mdmparis/defense-finder/refs/heads/master/tests/data/prot/df_test_prot.faa'
 
             if (signedUrl) {
               const filename = parseFilename(signedUrl, { strict: false }) || 'gaas_input_file'
