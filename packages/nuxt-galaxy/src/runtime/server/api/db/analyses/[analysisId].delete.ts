@@ -32,27 +32,6 @@ export default defineEventHandler(
         Effect.provide(finalLayer),
         runWithConfig,
       )
-      // try {
-      //   const analysisDb = await useDrizzle()
-      //     .select()
-      //     .from(analyses)
-      //     .innerJoin(histories, eq(analyses.historyId, histories.id))
-      //     .where(eq(analyses.id, Number.parseInt(analysisId)))
-      //     .then(takeUniqueOrThrow)
-
-      //   // delete galaxy history
-      //   await deleteHistory(analysisDb.histories.galaxyId)
-      //   await useDrizzle()
-      //     .delete(histories)
-      //     .where(
-      //       eq(histories.id, analysisDb.histories.id),
-      //     )
-      //     .returning()
-      //   return analysisDb
-      // }
-      // catch (error) {
-      //   throw createError({ statusMessage: getErrorMessage(error), statusCode: getStatusCode(error) })
-      // }
     }
   },
 )

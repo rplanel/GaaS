@@ -3,9 +3,6 @@ import type { Ref } from '#imports'
 import type { Database } from '../../types/database'
 import type { AnalysisDetail, AnalysisInputsWithStoratePath, AnalysisOutputsWithStoratePath } from '../../types/nuxt-galaxy'
 import { createError, ref, toValue, useSupabaseClient, useSupabaseUser, watch } from '#imports'
-// import { getErrorMessage, getStatusCode } from 'blendtype'
-
-// export type AnalysisWorkflow = Pick<RowWorkflow, 'id' | 'name' | 'galaxy_id' | 'definition'>
 
 export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
   inputs: Ref<AnalysisInputsWithStoratePath[] | null>

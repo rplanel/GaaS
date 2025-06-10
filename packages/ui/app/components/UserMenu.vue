@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AvatarProps, DropdownMenuItem } from '@nuxt/ui'
 import type { Database } from '../types'
+import { getErrorMessage, getStatusCode } from '#imports'
 
 interface Props {
   collapsed?: boolean

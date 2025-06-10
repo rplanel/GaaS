@@ -74,7 +74,6 @@ function useAnalysisJob(analysis: Ref<AnalysisDetail | null>, tools: Ref<Record<
       return jobsVal.map((job): AccordionItem => {
         const item = toolsVal[job.tool_id]
         return {
-
           label: `${item?.name ?? 'no tool name'} - ${
             item?.version ?? 'no tool version'
           }`,

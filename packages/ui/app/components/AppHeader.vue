@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Database } from '../types'
+import { getErrorMessage, getStatusCode } from '#imports'
 import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
 
 const supabase = useSupabaseClient<Database>()
