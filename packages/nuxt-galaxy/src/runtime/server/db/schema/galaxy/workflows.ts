@@ -5,6 +5,7 @@ import { galaxy, galaxyItem } from '../galaxy'
 import { analyses } from './analyses'
 import { tags } from './tags'
 import { users } from './users'
+
 /**
  * Workflows
  */

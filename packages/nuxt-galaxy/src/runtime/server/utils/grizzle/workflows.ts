@@ -8,6 +8,7 @@ import { Drizzle } from '../drizzle'
 import { takeUniqueOrThrow } from './helper'
 import { ServerSupabaseClient, ServerSupabaseUser } from './supabase'
 import { getCurrentUserEffect } from './user'
+
 // eslint-disable-next-line unicorn/throw-new-error
 export class GetWorkflowError extends Data.TaggedError('GetWorkflowError')<{
   readonly message: string
