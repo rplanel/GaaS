@@ -22,7 +22,7 @@
     "@iconify-json/vscode-icons": "^1.2.20",
     "@nuxt/content": "^3.5.1",
     "@nuxt/image": "catalog:nuxt",
-    "@nuxt/test-utils": "3.18.0",
+    "@nuxt/test-utils": "3.19.1",
     "@nuxt/ui-pro": "catalog:nuxt",
     "nuxt": "catalog:nuxt",
     "nuxt-llms": "0.1.3",
