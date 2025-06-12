@@ -226,7 +226,7 @@ importers:
     dependencies:
       '@iconify-json/lucide':
         specifier: ^1.2.40
-        version: 1.2.47
+        version: 1.2.48
       '@iconify-json/simple-icons':
         specifier: ^1.2.33
         version: 1.2.38
@@ -1285,6 +1285,9 @@ packages:
 
   '@iconify-json/lucide@1.2.47':
     resolution: {integrity: sha512-kI7IK5I3iWRcJeAZv9yBSEQ26EETgTVeUYJNXkJ9QN8raWvmRMLB/PICdcfyOWBTaaEosru8MNxKEwbJfnrnUQ==}
+
+  '@iconify-json/lucide@1.2.48':
+    resolution: {integrity: sha512-jDVqOHEF7XUwHJzx7fhwVXnx638lL89wOfmBob5UJofSGGIYV544zktmHr4CzKePslDBgl3MPKEpmFU/RfzppQ==}
 
   '@iconify-json/majesticons@1.2.2':
     resolution: {integrity: sha512-hFZb/XYr2b/jW5DPpr7He0wm8iyORkryjxIiBFB8iyecpEXA1vp6ALyxN5LlKKhQ9yqhICeQ7uYWEMbwkXkRCg==}
@@ -5567,8 +5570,8 @@ packages:
     resolution: {integrity: sha512-tJLxrKJhO2ukZ5z0gyjY1zPh3Rh88Ej9P7jNrZiHMUXHae1yvI2imgOZtL1TO8TW6biMMKfTtAOoEJANgtWBMQ==}
     engines: {node: '>=12'}
 
-  macos-release@3.3.0:
-    resolution: {integrity: sha512-tPJQ1HeyiU2vRruNGhZ+VleWuMQRro8iFtJxYgnS4NQe+EukKF6aGiIT+7flZhISAt2iaXBCfFGvAyif7/f8nQ==}
+  macos-release@3.4.0:
+    resolution: {integrity: sha512-wpGPwyg/xrSp4H4Db4xYSeAr6+cFQGHfspHzDUdYxswDnUW0L5Ov63UuJiSr8NMSpyaChO4u1n0MXUvVPtrN6A==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   magic-regexp@0.10.0:
@@ -8809,6 +8812,10 @@ snapshots:
       '@iconify/types': 2.0.0
 
   '@iconify-json/lucide@1.2.47':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/lucide@1.2.48':
     dependencies:
       '@iconify/types': 2.0.0
 
@@ -14078,7 +14085,7 @@ snapshots:
 
   luxon@3.6.1: {}
 
-  macos-release@3.3.0: {}
+  macos-release@3.4.0: {}
 
   magic-regexp@0.10.0:
     dependencies:
@@ -15218,7 +15225,7 @@ snapshots:
 
   os-name@6.1.0:
     dependencies:
-      macos-release: 3.3.0
+      macos-release: 3.4.0
       windows-release: 6.1.0
 
   os-tmpdir@1.0.2: {}
