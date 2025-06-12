@@ -5,7 +5,7 @@ workflow:
     - when: always
 
 # The Docker image that will be used to build your app
-image: node:22.15.1-bookworm
+image: node:22.16.0-bookworm
 # Functions that should be executed before the build script is run
 before_script:
   - npm install --global corepack@latest
