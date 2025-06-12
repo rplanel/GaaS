@@ -31,7 +31,7 @@ catalog:
   defu: ^6.1.4
   dotenv: ^16.4.7
   drizzle-kit: ^0.31.0
-  drizzle-orm: ^0.43.1
+  drizzle-orm: ^0.44.0
   effect: ^3.14.1
   embla-carousel: ^8.6.0
   eslint: ^9.21.0
