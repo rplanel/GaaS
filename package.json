@@ -47,7 +47,7 @@
     ]
   },
   "resolutions": {
-    "cookie": "0.7.2",
+    "cookie": "1.0.2",
     "ohash": "1.1.6",
     "unimport": "4.2.0"
   },
