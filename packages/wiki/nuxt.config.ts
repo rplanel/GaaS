@@ -23,7 +23,6 @@ export default defineNuxtConfig({
   ],
   css: [
     join(currentDir, './app/assets/css/main.css'),
-    // '~gaasWiki/app/assets/css/main.css'
   ],
   hooks: {
     'content:file:afterParse': function (ctx: FileAfterParseHook) {

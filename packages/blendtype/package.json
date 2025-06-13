@@ -40,6 +40,7 @@
     "cleandep": "rm -rf node_modules dist"
   },
   "dependencies": {
+    "dotenv": "catalog:",
     "effect": "catalog:",
     "h3": "catalog:",
     "ofetch": "catalog:",
