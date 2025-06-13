@@ -2,6 +2,7 @@ import type { GalaxyVersion } from './types'
 import { Context, Data, Effect, Layer } from 'effect'
 import { $fetch } from 'ofetch'
 import { BlendTypeConfig, NoConfigError, runWithConfig } from './config'
+// import 'dotenv/config'
 
 /**
  * GalaxyFetch is a service that provides a fetch function that is configured with the Galaxy API key.
@@ -34,8 +35,30 @@ export class GalaxyFetch extends Context.Tag('@blendtype/GalaxyFetch')<
     Effect.gen(function* () {
       const { apiKey, url } = yield* BlendTypeConfig
       if (!url || !apiKey) {
+        // if (typeof window === 'undefined') {
+        // // try to get the config from env variables
+        //   if (!process.env.GALAXY_URL) {
+        //     return yield* Effect.fail(new NoConfigError({
+        //       message: `Galaxy URL is not configured.
+        //     Set GALAXY_URL environment variable or
+        //     pass it in the config.`,
+        //     }))
+        //   }
+        //   else {
+        //     url = process.env.GALAXY_URL
+        //   }
+
+        //   if (!process.env.GALAXY_API_KEY) {
+        //     return yield* Effect.fail(new NoConfigError({
+        //       message: 'Galaxy API key is not configured. Set GALAXY_API_KEY environment variable or pass it in the config.',
+        //     }))
+        //   }
+        //   else {
+        //     apiKey = process.env.GALAXY_API_KEY
+        //   }
+        // }
         return yield* Effect.fail(new NoConfigError({
-          message: 'Library not initialized. Call initializeGalaxyClient({apiKey: "api-key", url: "galaxy-url"}) first.',
+          message: 'Galaxy URL and API key are not configured. Set GALAXY_URL and GALAXY_API_KEY environment variables or pass them in the config.',
         }))
       }
       return $fetch.create({
