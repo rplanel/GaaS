@@ -21,6 +21,7 @@
     "@nuxt/content": "catalog:nuxt",
     "@nuxt/eslint": "latest",
     "@nuxt/ui-pro": "catalog:nuxt",
+    "better-sqlite3": "catalog:",
     "zod": "catalog:",
     "zod-validation-error": "catalog:"
   },

@@ -49,8 +49,10 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "@vue/compiler-core": "^3.5.16",
     "automd": "catalog:",
     "changelogen": "catalog:",
+    "esbuild": "^0.25.5",
     "eslint": "catalog:",
     "eslint-config-unjs": "catalog:",
     "jiti": "catalog:",
