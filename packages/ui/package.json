@@ -51,6 +51,6 @@
     "playwright-core": "catalog:",
     "typescript": "catalog:",
     "vue": "latest",
-    "vue-tsc": "^2.2.0"
+    "vue-tsc": "^2.2.10"
   }
 }
