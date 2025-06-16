@@ -46,11 +46,6 @@
       "vue-demi"
     ]
   },
-  "resolutions": {
-    "cookie": "1.0.2",
-    "ohash": "2.0.11",
-    "unimport": "4.2.0"
-  },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"
   },
