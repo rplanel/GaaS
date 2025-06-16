@@ -1,9 +1,9 @@
-@import 'tailwindcss' theme(static);
+@import 'tailwindcss';
 @import '@nuxt/ui-pro';
-/* this work */
-@source "../../../../../node_modules/@gaas/ui";
 
-/* @theme {
+@theme {
   --font-sans: 'Public Sans', sans-serif;
   --header-height: 5rem;
-} */
+}
+
+@source "../../../";

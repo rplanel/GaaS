@@ -2,7 +2,7 @@
   "name": "blendtype",
   "type": "module",
   "version": "0.0.3-alpha.5",
-  "packageManager": "pnpm@10.4.1",
+  "packageManager": "pnpm@10.12.1",
   "description": "",
   "author": "Rémi Planel <rplanel@pasteur.fr>",
   "license": "MIT",
@@ -40,6 +40,7 @@
     "cleandep": "rm -rf node_modules dist"
   },
   "dependencies": {
+    "dotenv": "catalog:",
     "effect": "catalog:",
     "h3": "catalog:",
     "ofetch": "catalog:",
@@ -49,8 +50,10 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "@vue/compiler-core": "^3.5.16",
     "automd": "catalog:",
     "changelogen": "catalog:",
+    "esbuild": "^0.25.5",
     "eslint": "catalog:",
     "eslint-config-unjs": "catalog:",
     "jiti": "catalog:",
