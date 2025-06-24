@@ -7,6 +7,7 @@ export interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { dois: undefined })
+const selectedRef = useState<string | undefined>('selected-ref', () => undefined)
 const dois = toRef(() => props.dois)
 const doisList = computed(() => {
   const doisVal = toValue(dois)
@@ -25,6 +26,10 @@ const { data: articles } = await useAsyncData(`biblio-${toValue(dois)}`, () => {
     .all()
 })
 
+function goToRef(doi: string) {
+  selectedRef.value = doi
+}
+
 // const { countBiblio } = await useBiblio(doisList)
 const { citations } = useCitations(articles)
 </script>
@@ -33,7 +38,7 @@ const { citations } = useCitations(articles)
   (
   <template v-if="articles && articles.length > 0">
     <template v-for="article, i in articles" :key="article.DOI">
-      <ULink :href="`https://doi.org/${article.DOI}`">
+      <ULink @click="goToRef(article.DOI)">
         <template v-if="citations && citations[i]">
           {{ citations[i].label }}
         </template>
