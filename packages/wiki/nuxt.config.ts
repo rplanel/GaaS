@@ -26,31 +26,23 @@ export default defineNuxtConfig({
   ],
   hooks: {
     'content:file:afterParse': function (ctx: FileAfterParseHook) {
-      if (ctx.file.id === 'content/wiki/satellites/1.p4.md') {
-        // const t = ctx.content
-        console.log('Parsed content:', ctx.file.id)
-        const dois = []
-        for (const block of ctx.content.body.value) {
-          dois.push(...searchContentRef(block))
-        }
-        const uniqueDois = new Set(
-          dois.flatMap((doi: string) => doi
-            .split(',')
-            .map((doi: string) => doi.trim()),
-          ),
-        )
-
-        // Add bibliography section to content
-        ctx.content.body.value.push(
-          ['bibliography-section', { ':dois': JSON.stringify(Array.from(uniqueDois)) }],
-        )
-
-        // Add bibliography section to table of contents
-
-        ctx.content.body.toc.links.push({ depth: 2, text: 'Bibliography', id: 'bibliography' })
+      console.log('Parsed content:', ctx.file.id)
+      const dois = []
+      for (const block of ctx.content.body.value) {
+        dois.push(...searchContentRef(block))
       }
-
-      // console.log('Parsed content:', ctx.content.value)
+      const uniqueDois = new Set(
+        dois.flatMap((doi: string) => doi
+          .split(',')
+          .map((doi: string) => doi.trim()),
+        ),
+      )
+      // Add bibliography section to content
+      ctx.content.body.value.push(
+        ['bibliography-section', { ':dois': JSON.stringify(Array.from(uniqueDois)) }],
+      )
+      // Add bibliography section to table of contents
+      ctx.content.body.toc.links.push({ depth: 2, text: 'Bibliography', id: 'bibliography' })
     },
   },
 

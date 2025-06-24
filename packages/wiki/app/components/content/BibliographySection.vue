@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { promiseTimeout, useTimeout } from '@vueuse/core'
 import { useBibliography } from '../../composables/useBibliography'
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   dois: () => ([]),
 })
+const router = useRouter()
 
 const dois = toRef(() => props.dois)
 
@@ -19,6 +21,7 @@ const doisIdentifier = computed(() => {
   }
   return []
 })
+const selectedRef = useState<string | undefined>('selected-ref')
 
 const { data: articles } = await useAsyncData(
   `biblio-${toValue(doisIdentifier)}`,
@@ -28,8 +31,32 @@ const { data: articles } = await useAsyncData(
       .all()
   },
 )
-
+const { ready, start, stop } = useTimeout(1000, { controls: true })
 const { bibliography } = useBibliography(articles)
+
+const sortedBibliography = computed(() => {
+  const bibliographyVal = toValue(bibliography)
+  if (!bibliographyVal) {
+    return []
+  }
+  return bibliographyVal.sort((a, b) => {
+    if (a.year && b.year) {
+      return b.year - a.year
+    }
+    return 0
+  })
+})
+
+watch (selectedRef, (newSelectedRef) => {
+  if (newSelectedRef) {
+    start()
+    router.push({ hash: `#${newSelectedRef}` })
+    promiseTimeout(1000).then(() => {
+      stop()
+      selectedRef.value = undefined
+    })
+  }
+})
 </script>
 
 <template>
@@ -39,29 +66,36 @@ const { bibliography } = useBibliography(articles)
     </ProseH2>
     <UPageList divide>
       <UPageCard
-        v-for="(item) in bibliography"
+        v-for="(item) in sortedBibliography"
         :id="item.doi"
         :key="item.doi"
         :description="item.authors.join(', ')"
         variant="ghost"
         :ui="{ footer: 'pt-1 mt-auto w-full' }"
+        :highlight="!ready && item.doi === selectedRef"
       >
         <template #title>
-          <NuxtLink
+          <ULink
+            :id="item.doi"
             :to="`https://doi.org/${item.doi}`"
             target="_blank"
             rel="noopener noreferrer"
+            class="text-base text-pretty font-semibold text-highlighted hover:text-primary"
           >
-            <div class="text-base text-pretty font-semibold text-highlighted">
-              {{ item.title }}
-            </div>
-          </NuxtLink>
+            {{ item.title }}
+          </ULink>
         </template>
         <template #footer>
           <div class="flex flex-col gap-1 w-full">
-            <div class="text-sm flex flex-row justify-end">
-              <span v-if="item.year" class="font-semibold">{{ item.year }}</span>
-              <span v-if="item.journal" class="italic" v-html="`&nbsp;-&nbsp;${item.journal}`" />
+            <div class="text-sm flex flex-row justify-end gap-1">
+              <UBadge v-if="item.journal" variant="soft" color="neutral" class="italic">
+                <template #default>
+                  <span v-html="item.journal" />
+                </template>
+              </UBadge>
+              <UBadge v-if="item.year" variant="soft" color="info" class="font-semibold">
+                {{ item.year }}
+              </UBadge>
             </div>
             <div v-if="item.abstract" class="flex justify-start">
               <UCollapsible :ui="{ content: 'w-full' }" :unmount-on-hide="false">
