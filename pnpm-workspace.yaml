@@ -61,7 +61,7 @@ catalog:
 
 catalogs:
   nuxt:
-    '@nuxt/content': ^3.6.0
+    '@nuxt/content': ^3.6.1
     '@nuxt/devtools': ^2.5.0
     '@nuxt/eslint': ^1.4.1
     '@nuxt/eslint-config': ^1.4.1
