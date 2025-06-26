@@ -26,23 +26,30 @@ export default defineNuxtConfig({
   ],
   hooks: {
     'content:file:afterParse': function (ctx: FileAfterParseHook) {
-      console.log('Parsed content:', ctx.file.id)
-      const dois = []
-      for (const block of ctx.content.body.value) {
-        dois.push(...searchContentRef(block))
+      if (ctx.file.id.startsWith('content/wiki/')) {
+        console.log('Parsed content:', ctx.file.id)
+        const dois = []
+        for (const block of ctx.content.body.value) {
+          dois.push(...searchContentRef(block))
+        }
+        const uniqueDois = new Set(
+          dois.flatMap((doi: string) => doi
+            .split(',')
+            .map((doi: string) => doi.trim()),
+          ),
+        )
+
+        if (uniqueDois.size === 0) {
+          return
+        }
+
+        // Add bibliography section to content
+        ctx.content.body.value.push(
+          ['bibliography-section', { ':dois': JSON.stringify(Array.from(uniqueDois)) }],
+        )
+        // Add bibliography section to table of contents
+        ctx.content.body.toc.links.push({ depth: 2, text: 'Bibliography', id: 'bibliography' })
       }
-      const uniqueDois = new Set(
-        dois.flatMap((doi: string) => doi
-          .split(',')
-          .map((doi: string) => doi.trim()),
-        ),
-      )
-      // Add bibliography section to content
-      ctx.content.body.value.push(
-        ['bibliography-section', { ':dois': JSON.stringify(Array.from(uniqueDois)) }],
-      )
-      // Add bibliography section to table of contents
-      ctx.content.body.toc.links.push({ depth: 2, text: 'Bibliography', id: 'bibliography' })
     },
   },
 
