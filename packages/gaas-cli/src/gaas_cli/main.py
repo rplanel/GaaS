@@ -1,9 +1,9 @@
 import typer
 from rich import print
-from typing_extensions import Annotated
 
 # from dotenv import dotenv_values
 import gaas_cli.biblio as biblio
+import gaas_cli.content as content
 
 # config = dotenv_values()  # take environment variables
 
@@ -17,14 +17,15 @@ app.add_typer(
     help="Manage bibliographic data.",
 )
 
+app.add_typer(
+    content.app,
+    name="content",
+    help="Manage Nuxt content (Wiki).",
+)
+
 # @app.command()
 # def biblio(name: Annotated[str, typer.Argument()]):
 #     print(f"Hello from gaas-cli to biblio! Your name is {name}.")
-
-
-@app.command()
-def hello(name: Annotated[str, typer.Argument()]):
-    print(f"Hello from gaas-cli! Your name is {name}.")
 
 
 @app.callback()

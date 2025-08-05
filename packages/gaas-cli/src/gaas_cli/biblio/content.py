@@ -1,9 +1,7 @@
 from pathlib import Path
 from rich.console import Console
-from rich import print
 import frontmatter
 import re
-from rich.columns import Columns
 
 console = Console()
 

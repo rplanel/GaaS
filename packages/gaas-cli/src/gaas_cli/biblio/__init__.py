@@ -1,11 +1,10 @@
 import json
-from typing import Annotated, Any
+from typing import Annotated
 import typer
 from pathlib import Path
 from dotenv import load_dotenv
 from gaas_cli.biblio.crossref import gen_crossref_record
-from gaas_cli.biblio.zotero import add_doi, dois_not_in_collection, gen_dois, gen_fetch
-from pyzotero import zotero
+from gaas_cli.biblio.zotero import add_doi, gen_dois, gen_fetch
 
 app = typer.Typer(no_args_is_help=True)
 
