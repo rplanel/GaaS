@@ -42,6 +42,7 @@ catalog:
   fs-extra: ^11.3.0
   h3: ^1.15.3
   happy-dom: ^17.6.3
+  htl: ^0.3.1
   jiti: ^2.4.2
   jwt-decode: ^4.0.0
   lint-staged: ^16.1.2
@@ -60,6 +61,12 @@ catalog:
   zod-validation-error: ^3.5.0
 
 catalogs:
+  dataviz:
+    '@observablehq/plot': ^0.6.17
+    '@uwdata/mosaic-core': ^0.18.0
+    '@uwdata/mosaic-sql': ^0.18.0
+    '@uwdata/vgplot': ^0.18.0
+    d3: ^7.9.0
   nuxt:
     '@nuxt/content': ^3.6.1
     '@nuxt/devtools': ^2.5.0
