@@ -31,7 +31,7 @@ catalog:
   bumpp: ^10.1.1
   changelogen: ^0.6.1
   defu: ^6.1.4
-  dotenv: ^16.5.0
+  dotenv: ^17.2.1
   drizzle-kit: ^0.31.1
   drizzle-orm: ^0.44.2
   effect: ^3.16.7
