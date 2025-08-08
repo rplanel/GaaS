@@ -4,7 +4,7 @@ import {
   Selection,
 } from '@uwdata/mosaic-core'
 import { computed, ref } from 'vue'
-import { useMosaicObject } from '../../../../packages/ui/app/composables/mosaic/useMosaicObject'
+import { useMosaicObject } from '../../../../packages/ui/app/composables/useMosaicObject'
 
 interface SatelliteData {
   id: number
