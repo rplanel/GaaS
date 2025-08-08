@@ -24,6 +24,7 @@
  */
 import { coordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { loadCSV } from '@uwdata/mosaic-sql'
+import { ref } from 'vue'
 
 export function useMosaicCsv(tableName: string, filePath: string) {
   const pending = ref<boolean>(false)
