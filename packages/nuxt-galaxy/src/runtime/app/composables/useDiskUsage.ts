@@ -39,7 +39,17 @@ export function useDiskUsage() {
       ),
     ).then((data) => {
       if (data) {
-        diskUsage.value = data.reduce((acc, item) => acc + item.metadata.size, 0)
+        diskUsage.value = data.reduce((acc, item) => {
+          if (!item.metadata) {
+            return acc
+          }
+          // Ensure metadata and size exist
+          const metadataItem = item as { metadata: { size?: number } }
+          if (typeof metadataItem.metadata.size !== 'number') {
+            return acc
+          }
+          return acc + metadataItem.metadata.size
+        }, 0)
       }
       return data
     })

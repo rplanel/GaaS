@@ -20,6 +20,7 @@ export class GetWorkflowAnalysesError extends Data.TaggedError('GetWorkflowAnaly
  * @param {number} workflowId - The ID of the workflow to fetch analyses for.
  * @returns {Effect<WorkflowAnalysis, GetWorkflowAnalysesError>} An effect that resolves to the analysis data.
  */
+
 export function getWorkflowAnalysesEffect(workflowId: number) {
   return Effect.gen(function* () {
     const supabase = yield* SupabaseClientLayer
