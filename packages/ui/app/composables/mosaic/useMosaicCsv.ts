@@ -26,18 +26,26 @@ import { coordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { loadCSV } from '@uwdata/mosaic-sql'
 import { ref } from 'vue'
 
-export function useMosaicCsv(tableName: string, filePath: string) {
+export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<string | undefined>) {
   const pending = ref<boolean>(false)
+  const filePathVal = toValue(filePath)
+  const tableNameVal = toValue(tableName)
   async function init() {
+    if (!filePathVal) {
+      throw new Error('File path is required to load CSV data')
+    }
     const wasm = new DuckDBWASMConnector()
     coordinator().databaseConnector(wasm)
     pending.value = true
     await coordinator().exec(
-      loadCSV(tableName, filePath),
+      loadCSV(tableNameVal, filePathVal),
     )
     pending.value = false
   }
   init()
+  watchEffect(() => {
+    init()
+  })
   return {
     pending,
   }

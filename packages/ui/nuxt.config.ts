@@ -2,9 +2,9 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { createResolver } from '@nuxt/kit'
+// import { createResolver } from '@nuxt/kit'
 
-const { resolve } = createResolver(import.meta.url)
+// const { resolve } = createResolver(import.meta.url)
 
 const currentDir = dirname(fileURLToPath(import.meta.url))
 
@@ -13,11 +13,11 @@ const currentDir = dirname(fileURLToPath(import.meta.url))
 // const currentDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineNuxtConfig({
-  alias: { '@gaas-ui': resolve('./') },
+  // alias: { '@gaas-ui': resolve('./') },
   devtools: { enabled: true },
-  $meta: {
-    name: '@gaas-ui',
-  },
+  // $meta: {
+  //   name: '@gaas-ui',
+  // },
   modules: [
     '@nuxt/ui-pro',
     '@nuxt/test-utils/module',
