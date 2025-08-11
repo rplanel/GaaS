@@ -21,13 +21,7 @@ export default defineNuxtConfig({
   ],
   css: [
     join(currentDir, './app/assets/css/main.css'),
-
-    // '../app/assets/css/main.css',
-    // './app/assets/css/main.css',
   ],
-  future: {
-    compatibilityVersion: 4,
-  },
   experimental: {
     typedPages: true,
   },
@@ -45,5 +39,4 @@ export default defineNuxtConfig({
       ],
     },
   },
-
 })
