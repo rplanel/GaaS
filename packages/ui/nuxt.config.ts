@@ -10,6 +10,9 @@ const currentDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
+  $meta: {
+    name: 'gaas-ui',
+  },
   modules: [
     '@nuxt/ui-pro',
     '@nuxt/test-utils/module',
