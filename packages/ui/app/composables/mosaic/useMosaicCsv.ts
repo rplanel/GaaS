@@ -24,7 +24,7 @@
  */
 import { coordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { loadCSV } from '@uwdata/mosaic-sql'
-import { ref, toValue } from 'vue'
+import { ref, toValue, watchEffect } from 'vue'
 
 export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<string | undefined>) {
   const pending = ref<boolean>(false)
@@ -33,7 +33,7 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
     const tableNameVal = toValue(tableName)
 
     if (!filePathVal) {
-      throw new Error('File path is required to load CSV data')
+      return console.warn('No file path provided for CSV loading')
     }
     const wasm = new DuckDBWASMConnector()
     coordinator().databaseConnector(wasm)
@@ -44,6 +44,11 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
     pending.value = false
   }
   init()
+  watchEffect(() => {
+    if (toValue(filePath) && toValue(tableName)) {
+      init()
+    }
+  })
   return {
     pending,
   }
