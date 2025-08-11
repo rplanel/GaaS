@@ -28,9 +28,10 @@ import { ref } from 'vue'
 
 export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<string | undefined>) {
   const pending = ref<boolean>(false)
-  const filePathVal = toValue(filePath)
-  const tableNameVal = toValue(tableName)
   async function init() {
+    const filePathVal = toValue(filePath)
+    const tableNameVal = toValue(tableName)
+
     if (!filePathVal) {
       throw new Error('File path is required to load CSV data')
     }
