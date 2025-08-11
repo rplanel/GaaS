@@ -23,8 +23,8 @@
  */
 import type { Column } from '@tanstack/vue-table'
 import type { Selection } from '@uwdata/mosaic-core'
-import { PlotTableHeaderCategory } from '#components'
 import { coordinator as defaultCoordinator } from '@uwdata/mosaic-core'
+import PlotTableHeaderCategory from '../components/plot/table/header/Category.vue'
 
 interface GetHeaderParams<T> {
   column: Column<T>
