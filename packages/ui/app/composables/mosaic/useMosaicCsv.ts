@@ -31,7 +31,7 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
   async function init() {
     const filePathVal = toValue(filePath)
     const tableNameVal = toValue(tableName)
-
+    console.warn('Initializing Mosaic CSV with table:', tableNameVal, 'and file path:', filePathVal)
     if (!filePathVal) {
       return console.warn('No file path provided for CSV loading')
     }
@@ -43,12 +43,15 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
     )
     pending.value = false
   }
-  init()
   watchEffect(() => {
-    if (toValue(filePath) && toValue(tableName)) {
-      init()
-    }
+    console.warn('Watching for changes in filePath and tableName:', toValue(filePath), toValue(tableName))
+
+    // if (toValue(filePath) && toValue(tableName)) {
+    init()
+    // }
   })
+  init()
+
   return {
     pending,
   }
