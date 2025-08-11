@@ -1,5 +1,6 @@
 import type { Column } from '@tanstack/vue-table'
 import type { Selection } from '@uwdata/mosaic-core'
+import { h } from 'vue'
 import PlotTableHeaderHistogram from '../components/plot/table/header/Histogram.vue'
 
 interface GetHeaderParams<T> {
