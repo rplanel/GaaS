@@ -44,9 +44,6 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
     pending.value = false
   }
   init()
-  watchEffect(() => {
-    init()
-  })
   return {
     pending,
   }
