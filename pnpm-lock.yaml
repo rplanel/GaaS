@@ -95,8 +95,8 @@ catalogs:
       specifier: ^6.1.4
       version: 6.1.4
     dotenv:
-      specifier: ^16.6.1
-      version: 16.6.1
+      specifier: ^17.2.1
+      version: 17.2.1
     drizzle-kit:
       specifier: ^0.31.4
       version: 0.31.4
@@ -304,7 +304,7 @@ importers:
     dependencies:
       dotenv:
         specifier: 'catalog:'
-        version: 16.6.1
+        version: 17.2.1
       effect:
         specifier: 'catalog:'
         version: 3.17.7
