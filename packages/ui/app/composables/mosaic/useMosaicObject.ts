@@ -24,7 +24,7 @@
 import type { MaybeRef } from 'vue'
 import { coordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { loadObjects } from '@uwdata/mosaic-sql'
-import { onUnmounted, ref, toValue, watchEffect } from 'vue'
+import { ref, toValue, watchEffect } from 'vue'
 
 export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Record<string, unknown>[]>) {
   const pending = ref<boolean>(false)
@@ -52,10 +52,10 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
   // // Perform any setup or data fetching here
   //   defaultCoordinator.clear({ clients: true, cache: true })
   // })
-  onUnmounted(() => {
-  // Perform any cleanup or teardown here
-    defaultCoordinator.clear({ clients: true, cache: true })
-  })
+  // onUnmounted(() => {
+  // // Perform any cleanup or teardown here
+  //   defaultCoordinator.clear({ clients: true, cache: true })
+  // })
 
   return {
     pending,

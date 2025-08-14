@@ -10,7 +10,7 @@ export interface GalaxyMultipleSelectToolParameterProps
   modelValue: string[]
   disabled?: boolean
   variant?: 'form' | 'display'
-  isConditionalSelect: boolean
+  isConditionalSelect: true
 }
 
 export interface GalaxySingleSelectToolParameterProps

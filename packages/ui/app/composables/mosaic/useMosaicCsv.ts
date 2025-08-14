@@ -24,7 +24,7 @@
  */
 import { coordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { loadCSV } from '@uwdata/mosaic-sql'
-import { onUnmounted, ref, toValue, watchEffect } from 'vue'
+import { ref, toValue, watchEffect } from 'vue'
 
 export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<string | undefined>) {
   const pending = ref<boolean>(false)
@@ -51,11 +51,11 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
     // }
   })
   init()
-  onUnmounted(() => {
-  // Perform any cleanup or teardown here
+  // onUnmounted(() => {
+  // // Perform any cleanup or teardown here
 
-    coordinator().clear({ clients: true, cache: true })
-  })
+  //   coordinator().clear({ clients: true, cache: true })
+  // })
   return {
     pending,
   }
