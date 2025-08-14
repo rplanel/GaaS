@@ -1,20 +1,8 @@
-import type { Column } from '@tanstack/vue-table'
-import type { Selection } from '@uwdata/mosaic-core'
+import type { GetHeaderParams, UseHeaderParams } from '../types/plotHeader'
 import { h } from 'vue'
 import PlotTableHeaderHistogram from '../components/plot/table/header/Histogram.vue'
 
-interface GetHeaderParams<T> {
-  column: Column<T>
-  label: string
-  variable: string
-}
-
-interface UseHistogramHeaderParams {
-  table: string
-  selection: Selection
-}
-
-export function useHistogramHeader(params: UseHistogramHeaderParams) {
+export function useHistogramHeader(params: UseHeaderParams) {
   const { table, selection } = params
   function getHeader<T>(params: GetHeaderParams<T>): VNode {
     const { column, label, variable } = params

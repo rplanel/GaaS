@@ -268,7 +268,7 @@ const workflowGalaxyId = computed(() => {
 })
 
 const { data: datasets } = await useAsyncData(
-  'analysis-input-datasets',
+  'invoke-analysis-input-datasets',
   async (): Promise<UploadedDatasetDb[]> => {
     const userVal = toValue(user)
     if (!userVal) {

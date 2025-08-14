@@ -16,7 +16,7 @@ import {
   GalaxyIntegerToolParameter,
   GalaxySelectToolParameter,
 } from '#components'
-import { computed, ref, toValue } from 'vue'
+import { computed, shallowRef, toValue } from 'vue'
 
 export interface GalaxyToolInputComponent {
   component: unknown
@@ -27,7 +27,7 @@ export function useGalaxyToolInputComponent(toolParameters: MaybeRef<GalaxyToolP
   inputComponents: ComputedRef<GalaxyToolInputComponent[] | undefined>
   inputComponentsObject: ComputedRef<Record<string, GalaxyToolInputComponent> | undefined>
 } {
-  const classToComponent = ref({
+  const classToComponent = shallowRef({
     select: GalaxySelectToolParameter,
     boolean: GalaxyBooleanToolParameter,
     float: GalaxyFloatToolParameter,
