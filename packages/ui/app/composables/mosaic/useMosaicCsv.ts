@@ -39,7 +39,7 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
     coordinator().databaseConnector(wasm)
     pending.value = true
     await coordinator().exec(
-      loadCSV(tableNameVal, filePathVal),
+      loadCSV(tableNameVal, filePathVal, { replace: true }),
     )
     pending.value = false
   }
@@ -51,7 +51,10 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
     // }
   })
   init()
-
+  onUnmounted(() => {
+  // Perform any cleanup or teardown here
+    coordinator().clear({ clients: true, cache: true })
+  })
   return {
     pending,
   }

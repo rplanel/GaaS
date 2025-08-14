@@ -28,13 +28,14 @@ import { ref, toValue, watchEffect } from 'vue'
 
 export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Record<string, unknown>[]>) {
   const pending = ref<boolean>(false)
-
+  const defaultCoordinator = coordinator()
   async function init() {
     const wasm = new DuckDBWASMConnector()
-    coordinator().databaseConnector(wasm)
+
+    defaultCoordinator.databaseConnector(wasm)
     pending.value = true
-    const sqlQuery = loadObjects(toValue(tableName), toValue(object))
-    await coordinator().exec(sqlQuery)
+    const sqlQuery = loadObjects(toValue(tableName), toValue(object), { replace: true })
+    await defaultCoordinator.exec(sqlQuery)
     pending.value = false
   }
 
@@ -46,6 +47,16 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
       init()
     }
   })
+
+  // onBeforeMount(() => {
+  // // Perform any setup or data fetching here
+  //   defaultCoordinator.clear({ clients: true, cache: true })
+  // })
+  onUnmounted(() => {
+  // Perform any cleanup or teardown here
+    defaultCoordinator.clear({ clients: true, cache: true })
+  })
+
   return {
     pending,
   }
