@@ -39,6 +39,13 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
   }
 
   init()
+  watchEffect(() => {
+    const tableNameVal = toValue(tableName)
+    const objectVal = toValue(object)
+    if (tableNameVal && objectVal) {
+      init()
+    }
+  })
   return {
     pending,
   }
