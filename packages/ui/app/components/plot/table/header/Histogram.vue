@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import type { Selection } from '@uwdata/mosaic-core'
 import { PlotRange } from '#components'
-import { usePlotLayout } from '#imports'
 import { coordinator as defaultCoordinator } from '@uwdata/mosaic-core'
 import * as vg from '@uwdata/vgplot'
+import { usePlotLayout } from '../../../../composables/usePlotLayout'
 
 interface Props {
   table: string
