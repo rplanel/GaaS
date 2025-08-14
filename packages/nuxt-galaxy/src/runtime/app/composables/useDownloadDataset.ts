@@ -23,14 +23,14 @@ export function useDownloadDataset(storageObjectId: MaybeRef<string | undefined>
         const { name } = storageObject
         const { data: analysisFile, error } = await supabase
           .storage
-          .from('avatars')
+          .from('analysis_files')
           .download(name)
 
         if (error) {
           throw createError(`Failed to download dataset: ${error.message}`)
         }
 
-        if (data) {
+        if (analysisFile) {
           data.value = analysisFile
         }
       }
