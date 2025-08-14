@@ -34,7 +34,7 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
 
     defaultCoordinator.databaseConnector(wasm)
     pending.value = true
-    const sqlQuery = loadObjects(toValue(tableName), toValue(object), { replace: true })
+    const sqlQuery = loadObjects(toValue(tableName), toValue(object), { replace: true, temp: true })
     await defaultCoordinator.exec(sqlQuery)
     pending.value = false
   }
