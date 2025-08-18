@@ -38,8 +38,15 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
       defaultCoordinator.databaseConnector(wasm)
       pending.value = true
       const sqlQuery = loadObjects(tableNameVal, objectVal, { replace: true, temp: true })
-      await defaultCoordinator.exec(sqlQuery)
-      pending.value = false
+      try {
+        await defaultCoordinator.exec(sqlQuery)
+      }
+      catch (error) {
+        console.error('Error initializing Mosaic Object:', error)
+      }
+      finally {
+        pending.value = false
+      }
     }
   }
 

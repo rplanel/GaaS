@@ -40,10 +40,17 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
     const wasm = new DuckDBWASMConnector()
     defaultCoordinator.databaseConnector(wasm)
     pending.value = true
-    await defaultCoordinator.exec(
-      loadCSV(tableNameVal, filePathVal, { replace: true, temp: true }),
-    )
-    pending.value = false
+    try {
+      await defaultCoordinator.exec(
+        loadCSV(tableNameVal, filePathVal, { replace: true, temp: true }),
+      )
+    }
+    catch (error) {
+      console.error('Error initializing Mosaic CSV:', error)
+    }
+    finally {
+      pending.value = false
+    }
   }
   watchEffect(() => {
     console.warn('Watching for changes in filePath and tableName:', toValue(filePath), toValue(tableName))
