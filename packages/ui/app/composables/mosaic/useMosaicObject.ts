@@ -30,6 +30,7 @@ const defaultCoordinator = coordinator()
 
 export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Record<string, unknown>[]>) {
   const pending = ref<boolean>(false)
+  const queryResult = ref<unknown | null>(null)
   async function init() {
     const tableNameVal = toValue(tableName)
     const objectVal = toValue(object)
@@ -39,7 +40,8 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
       pending.value = true
       const sqlQuery = loadObjects(tableNameVal, objectVal, { replace: true, temp: true })
       try {
-        await defaultCoordinator.exec(sqlQuery)
+        const qr = await defaultCoordinator.exec(sqlQuery)
+        queryResult.value = qr
       }
       catch (error) {
         console.error('Error initializing Mosaic Object:', error)
@@ -75,5 +77,6 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
 
   return {
     pending,
+    queryResult,
   }
 }
