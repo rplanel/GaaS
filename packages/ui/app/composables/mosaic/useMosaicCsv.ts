@@ -49,10 +49,15 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
     console.warn('Watching for changes in filePath and tableName:', toValue(filePath), toValue(tableName))
 
     // if (toValue(filePath) && toValue(tableName)) {
-    init()
+    init().catch((error) => {
+      console.error('Error initializing Mosaic CSV in watchEffect:', error)
+    })
     // }
   })
-  init()
+
+  init().catch((error) => {
+    console.error('Error initializing Mosaic CSV:', error)
+  })
   // onUnmounted(() => {
   // // Perform any cleanup or teardown here
 
