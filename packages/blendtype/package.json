@@ -53,7 +53,7 @@
     "@vue/compiler-core": "^3.5.18",
     "automd": "catalog:",
     "changelogen": "catalog:",
-    "esbuild": "^0.25.8",
+    "esbuild": "^0.25.9",
     "eslint": "catalog:",
     "eslint-config-unjs": "catalog:",
     "jiti": "catalog:",
