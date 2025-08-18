@@ -26,28 +26,30 @@ import { coordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { loadObjects } from '@uwdata/mosaic-sql'
 import { ref, toValue, watchEffect } from 'vue'
 
+const defaultCoordinator = coordinator()
+
 export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Record<string, unknown>[]>) {
   const pending = ref<boolean>(false)
-  const defaultCoordinator = coordinator()
   async function init() {
-    const wasm = new DuckDBWASMConnector()
-
-    defaultCoordinator.databaseConnector(wasm)
-    pending.value = true
     const tableNameVal = toValue(tableName)
-    const objectVal = toValue(object) || []
-    const sqlQuery = loadObjects(tableNameVal, objectVal, { replace: true, temp: true })
-    await defaultCoordinator.exec(sqlQuery)
-    pending.value = false
+    const objectVal = toValue(object)
+    if (tableNameVal && objectVal) {
+      const wasm = new DuckDBWASMConnector()
+      defaultCoordinator.databaseConnector(wasm)
+      pending.value = true
+      const sqlQuery = loadObjects(tableNameVal, objectVal, { replace: true, temp: true })
+      await defaultCoordinator.exec(sqlQuery)
+      pending.value = false
+    }
   }
 
   init()
   watchEffect(() => {
-    const tableNameVal = toValue(tableName)
-    const objectVal = toValue(object)
-    if (tableNameVal && objectVal) {
-      init()
-    }
+    // const tableNameVal = toValue(tableName)
+    // const objectVal = toValue(object)
+    // if (tableNameVal && objectVal) {
+    init()
+    // }
   })
 
   // onBeforeMount(() => {
