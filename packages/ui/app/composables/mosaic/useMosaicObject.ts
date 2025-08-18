@@ -32,13 +32,21 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
   async function init() {
     const wasm = new DuckDBWASMConnector()
     coordinator().databaseConnector(wasm)
+    const tableNameVal = toValue(tableName)
+    const objectVal = toValue(object) || []
     pending.value = true
-    const sqlQuery = loadObjects(toValue(tableName), toValue(object))
+
+    const sqlQuery = loadObjects(tableNameVal, objectVal)
     await coordinator().exec(sqlQuery)
     pending.value = false
   }
 
   init()
+  watchEffect(() => {
+    if (toValue(tableName)) {
+      init()
+    }
+  })
   return {
     pending,
   }
