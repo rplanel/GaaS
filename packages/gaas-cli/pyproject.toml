@@ -3,7 +3,7 @@ name = "gaas-cli"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13.6"
+requires-python = ">=3.13.7"
 dependencies = [
   "python-dotenv>=1.1.1",
   "python-frontmatter>=1.1.0",
@@ -25,7 +25,7 @@ package = true
 [dependency-groups]
 dev = [
   "black>=25.1.0",
-  "ruff>=0.12.8",
+  "ruff>=0.12.9",
 ]
 
 [build-system]

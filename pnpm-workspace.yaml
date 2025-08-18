@@ -12,20 +12,20 @@ catalog:
   '@iconify-json/ep': ^1.2.3
   '@iconify-json/lucide': ^1.2.62
   '@iconify-json/majesticons': ^1.2.4
-  '@iconify-json/material-symbols': ^1.2.31
+  '@iconify-json/material-symbols': ^1.2.32
   '@iconify-json/mdi': ^1.2.3
   '@iconify-json/octicon': ^1.2.10
-  '@iconify-json/simple-icons': ^1.2.47
+  '@iconify-json/simple-icons': ^1.2.48
   '@iconify-json/stash': ^1.2.4
   '@iconify-json/streamline': ^1.2.5
   '@iconify-json/svg-spinners': ^1.2.4
   '@iconify-json/tabler': ^1.2.22
   '@iconify-json/vscode-icons': ^1.2.29
   '@release-it/conventional-changelog': ^10.0.1
-  '@types/node': ^22.17.1
+  '@types/node': ^22.17.2
   '@vitest/coverage-v8': ^3.2.4
   '@vue/test-utils': ^2.4.6
-  '@vueuse/core': ^13.6.0
+  '@vueuse/core': ^13.7.0
   automd: ^0.4.0
   better-sqlite3: ^12.2.0
   bumpp: ^10.2.3
@@ -50,11 +50,11 @@ catalog:
   playwright-core: ^1.54.2
   postgres: ^3.4.7
   simple-git-hooks: ^2.13.1
-  supabase: ^2.33.9
-  tailwindcss: ^4.1.11
+  supabase: ^2.34.3
+  tailwindcss: ^4.1.12
   typescript: ^5.9.2
   ufo: ^1.6.1
-  unbuild: ^3.6.0
+  unbuild: ^3.6.1
   vitest: ^3.2.4
   vue-tsc: ^3.0.5
   zod: ^3.25.76
@@ -70,15 +70,15 @@ catalogs:
   nuxt:
     '@nuxt/content': ^3.6.3
     '@nuxt/devtools': ^2.6.2
-    '@nuxt/eslint': ^1.8.0
-    '@nuxt/eslint-config': ^1.8.0
+    '@nuxt/eslint': ^1.9.0
+    '@nuxt/eslint-config': ^1.9.0
     '@nuxt/image': ^1.11.0
     '@nuxt/kit': ^4.0.3
     '@nuxt/module-builder': ^1.0.2
     '@nuxt/schema': ^4.0.3
     '@nuxt/test-utils': ^3.19.2
-    '@nuxt/ui': ^3.3.0
-    '@nuxt/ui-pro': ^3.3.0
+    '@nuxt/ui': ^3.3.2
+    '@nuxt/ui-pro': ^3.3.2
     '@nuxtjs/supabase': ^1.6.0
     nuxt: ^4.0.3
     nuxt-llms: ^0.1.3
