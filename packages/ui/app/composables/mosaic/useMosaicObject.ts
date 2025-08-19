@@ -26,11 +26,12 @@ import { coordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { loadObjects } from '@uwdata/mosaic-sql'
 import { ref, toValue, watchEffect } from 'vue'
 
-const defaultCoordinator = coordinator()
-
 export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Record<string, unknown>[]>) {
+  const defaultCoordinator = coordinator()
+
   const pending = ref<boolean>(false)
   const queryResult = ref<unknown | null>(null)
+  const queryString = ref<string | undefined>(undefined)
   async function init() {
     const tableNameVal = toValue(tableName)
     const objectVal = toValue(object)
@@ -38,9 +39,10 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
       const wasm = new DuckDBWASMConnector()
       defaultCoordinator.databaseConnector(wasm)
       pending.value = true
-      const sqlQuery = loadObjects(tableNameVal, objectVal, { replace: true, temp: true })
+      const qs = loadObjects(tableNameVal, objectVal, { replace: true, temp: true })
+      queryString.value = qs
       try {
-        const qr = await defaultCoordinator.exec(sqlQuery)
+        const qr = await defaultCoordinator.exec(qs)
         queryResult.value = qr
       }
       catch (error) {
@@ -56,9 +58,10 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
     // const tableNameVal = toValue(tableName)
     // const objectVal = toValue(object)
     // if (tableNameVal && objectVal) {
-    init().catch((error) => {
-      console.error('Error initializing Mosaic Object in watchEffect:', error)
-    })
+    init()
+      .catch((error) => {
+        console.error('Error initializing Mosaic Object in watchEffect:', error)
+      })
     // }
   })
 
@@ -66,17 +69,19 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
     console.error('Error initializing Mosaic Object:', error)
   })
 
-  // onBeforeMount(() => {
-  // // Perform any setup or data fetching here
-  //   defaultCoordinator.clear({ clients: true, cache: true })
-  // })
-  // onUnmounted(() => {
-  // // Perform any cleanup or teardown here
-  //   defaultCoordinator.clear({ clients: true, cache: true })
-  // })
+  onBeforeMount(() => {
+  // Perform any setup or data fetching here
+    defaultCoordinator.clear({ clients: true, cache: true })
+  })
+  onUnmounted(() => {
+  // Perform any cleanup or teardown here
+    defaultCoordinator.clear({ clients: true, cache: true })
+  })
 
   return {
     pending,
     queryResult,
+    queryString,
+    coordinator: defaultCoordinator,
   }
 }
