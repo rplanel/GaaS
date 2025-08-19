@@ -9,6 +9,6 @@ export interface GetHeaderParams<T> {
 
 export interface UseHeaderParams {
   table: string
-  selection: Selection
-  coordinator: Coordinator
+  selection: Selection | undefined
+  coordinator: Coordinator | undefined
 }

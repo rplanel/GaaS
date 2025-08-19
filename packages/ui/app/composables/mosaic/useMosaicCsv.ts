@@ -32,7 +32,7 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
   const queryResult = ref<unknown | undefined>(undefined)
   const queryString = ref<string | undefined>(undefined)
   const pending = ref<boolean>(false)
-  const { coordinator } = useMosaicCoordinator(tableName)
+  const { coordinator } = useMosaicCoordinator()
 
   async function init() {
     const filePathVal = toValue(filePath)
@@ -45,7 +45,7 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
     queryString.value = qs
     pending.value = true
     try {
-      const qr = await coordinator.value.exec(qs)
+      const qr = await coordinator.exec(qs)
       queryResult.value = qr
     }
     catch (error) {
