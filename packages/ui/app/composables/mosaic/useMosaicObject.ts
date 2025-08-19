@@ -32,6 +32,7 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
   const pending = ref<boolean>(false)
   const queryResult = ref<unknown | null>(null)
   const queryString = ref<string | undefined>(undefined)
+
   async function init() {
     const tableNameVal = toValue(tableName)
     const objectVal = toValue(object)
@@ -39,7 +40,7 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
       const wasm = new DuckDBWASMConnector()
       defaultCoordinator.databaseConnector(wasm)
       pending.value = true
-      const qs = loadObjects(tableNameVal, objectVal, { replace: true, temp: true })
+      const qs = loadObjects(tableNameVal, objectVal, { replace: true })
       queryString.value = qs
       try {
         const qr = await defaultCoordinator.exec(qs)
