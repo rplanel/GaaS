@@ -10,7 +10,7 @@ catalog:
   '@antfu/eslint-config': ^5.2.1
   '@iconify-json/eos-icons': ^1.2.4
   '@iconify-json/ep': ^1.2.3
-  '@iconify-json/lucide': ^1.2.62
+  '@iconify-json/lucide': ^1.2.63
   '@iconify-json/majesticons': ^1.2.4
   '@iconify-json/material-symbols': ^1.2.32
   '@iconify-json/mdi': ^1.2.3
