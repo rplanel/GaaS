@@ -55,21 +55,21 @@ const pending = computed(() => {
 
 watchEffect((onCleanup) => {
   const selectClauseVal = toValue(selectClause)
-
   const tableName = toValue(table)
   const selectionVal = toValue(selection)
   if (!coordinator.value || !selectionVal) {
     console.warn('Coordinator or selection is not defined.')
     return
   }
+  const coordinatorVal = toValue(coordinator)
   const client = makeClient({
-    coordinator: toValue(coordinator),
+    coordinator: coordinatorVal,
     selection: selectionVal,
     prepare: async () => {
       // Preparation work before the client starts.
       // Here we get the total number of rows in the table.
 
-      const result = await coordinator.value.query(
+      const result = await coordinatorVal.query(
         Query.from(tableName).select(selectClauseVal),
       )
       // as QueryResult<T>
