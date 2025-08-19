@@ -1,6 +1,6 @@
 <script lang="ts" setup generic="T">
 import type { TableColumn } from '@nuxt/ui'
-import type { Selection } from '@uwdata/mosaic-core'
+import type { Coordinator, Selection } from '@uwdata/mosaic-core'
 import type { FilterExpr, SelectExpr } from '@uwdata/mosaic-sql'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { coordinator as defaultCoordinator, makeClient } from '@uwdata/mosaic-core'
@@ -11,7 +11,7 @@ interface Props {
   table: string
   selection: Selection
   columns: TableColumn<T>[]
-  coordinator?: ReturnType<typeof defaultCoordinator>
+  coordinator?: Coordinator
 }
 
 const props = defineProps<Props>()
@@ -63,7 +63,7 @@ watchEffect((onCleanup) => {
     return
   }
   const client = makeClient({
-    coordinator,
+    coordinator: toValue(coordinator),
     selection: selectionVal,
     prepare: async () => {
       // Preparation work before the client starts.
