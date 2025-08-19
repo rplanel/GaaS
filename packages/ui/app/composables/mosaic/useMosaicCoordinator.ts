@@ -1,6 +1,6 @@
 import type { Coordinator } from '@uwdata/mosaic-core'
-
 import { coordinator as defaultCoordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
+import { shallowRef, toValue, watchEffect } from 'vue'
 
 export function useMosaicCoordinator(tableName: MaybeRef<string>) {
   const coordinator = shallowRef<Coordinator>(defaultCoordinator())
