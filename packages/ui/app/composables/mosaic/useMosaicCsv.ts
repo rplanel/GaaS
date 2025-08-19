@@ -2,6 +2,7 @@ import type { MaybeRef } from 'vue'
 import { loadCSV } from '@uwdata/mosaic-sql'
 import { ref, toValue, watchEffect } from 'vue'
 import { useMosaicCoordinator } from './useMosaicCoordinator'
+
 /**
  * A composable function that loads a CSV file into a DuckDB table using Mosaic.
  *
