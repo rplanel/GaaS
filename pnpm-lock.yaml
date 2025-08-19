@@ -32,8 +32,8 @@ catalogs:
       specifier: ^1.2.3
       version: 1.2.3
     '@iconify-json/lucide':
-      specifier: ^1.2.62
-      version: 1.2.62
+      specifier: ^1.2.63
+      version: 1.2.63
     '@iconify-json/majesticons':
       specifier: ^1.2.4
       version: 1.2.4
@@ -255,7 +255,7 @@ importers:
     dependencies:
       '@iconify-json/lucide':
         specifier: 'catalog:'
-        version: 1.2.62
+        version: 1.2.63
       '@iconify-json/simple-icons':
         specifier: 'catalog:'
         version: 1.2.48
@@ -456,7 +456,7 @@ importers:
         version: 1.2.3
       '@iconify-json/lucide':
         specifier: 'catalog:'
-        version: 1.2.62
+        version: 1.2.63
       '@iconify-json/majesticons':
         specifier: 'catalog:'
         version: 1.2.4
@@ -1521,8 +1521,8 @@ packages:
   '@iconify-json/ep@1.2.3':
     resolution: {integrity: sha512-bESiKz5aTcbT4chTVSKjR5P+Nk81ibRtWgR7Gng5JPdF1Az+91+bIOof/OCUKThFRWqWsQ9A4XmSSrakvjuJDQ==}
 
-  '@iconify-json/lucide@1.2.62':
-    resolution: {integrity: sha512-K0KfhvP5YQZ2KraOgCm6jJbwwzQCVocvXcdMpDou5uLa48QnLBRW/dQ8VDGmxHTGpwF9EqLlvnUSinH2i6xs3Q==}
+  '@iconify-json/lucide@1.2.63':
+    resolution: {integrity: sha512-4rRKhUhEh4TsBq5ypbimHbBA6ApIcDLR9gzjnJT2cvUn2+rG+oG4TPXgHLFmIaRkHKYcMKukdcfOUaJbM/G4pQ==}
 
   '@iconify-json/majesticons@1.2.4':
     resolution: {integrity: sha512-8h6zfqN/8eKLNGcHzJd8LZ+vI6aC2MIGq+QTNoYD/H98TL1N/s8ufxal54OkzIsemylXxWLj+NLd0wXDLlVIIg==}
@@ -9719,7 +9719,7 @@ snapshots:
     dependencies:
       '@iconify/types': 2.0.0
 
-  '@iconify-json/lucide@1.2.62':
+  '@iconify-json/lucide@1.2.63':
     dependencies:
       '@iconify/types': 2.0.0
 
