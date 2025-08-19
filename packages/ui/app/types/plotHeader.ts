@@ -1,5 +1,5 @@
 import type { Column } from '@tanstack/vue-table'
-import type { Selection } from '@uwdata/mosaic-core'
+import type { Coordinator, Selection } from '@uwdata/mosaic-core'
 
 export interface GetHeaderParams<T> {
   column: Column<T>
@@ -10,4 +10,5 @@ export interface GetHeaderParams<T> {
 export interface UseHeaderParams {
   table: string
   selection: Selection
+  coordinator: Coordinator
 }

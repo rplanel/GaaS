@@ -23,14 +23,11 @@
  */
 
 import type { GetHeaderParams, UseHeaderParams } from '../types/plotHeader'
-import { coordinator as defaultCoordinator } from '@uwdata/mosaic-core'
 import { h } from 'vue'
 import PlotTableHeaderCategory from '../components/plot/table/header/Category.vue'
 
-const coordinator = defaultCoordinator()
-
 export function useCategoryHeader(params: UseHeaderParams) {
-  const { table, selection } = params
+  const { table, selection, coordinator } = params
   function getHeader<T>(params: GetHeaderParams<T>): VNode {
     const { column, label, variable } = params
     return h('div', { class: 'w-full' }, [

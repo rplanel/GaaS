@@ -3,7 +3,7 @@ import { h } from 'vue'
 import PlotTableHeaderHistogram from '../components/plot/table/header/Histogram.vue'
 
 export function useHistogramHeader(params: UseHeaderParams) {
-  const { table, selection } = params
+  const { table, selection, coordinator } = params
   function getHeader<T>(params: GetHeaderParams<T>): VNode {
     const { column, label, variable } = params
     return h('div', { class: 'w-full' }, [
@@ -15,6 +15,7 @@ export function useHistogramHeader(params: UseHeaderParams) {
         table,
         selection,
         variable,
+        coordinator,
         width: column.getSize() - 32,
       }),
     ])

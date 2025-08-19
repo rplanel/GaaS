@@ -53,11 +53,13 @@ const { pending, coordinator } = useMosaicObject(table, data)
 const { getHeader: getHistogramHeader } = useHistogramHeader({
   table: table.value,
   selection,
+  coordinator: coordinator.value,
 })
 
 const { getHeader: getCategoryHeader } = useCategoryHeader({
   table: table.value,
   selection,
+  coordinator: coordinator.value,
 })
 // watch(queryString, (newQuery) => {
 //   console.log('Query String:', newQuery)
