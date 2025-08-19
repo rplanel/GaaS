@@ -17,8 +17,9 @@ interface Props {
 const props = defineProps<Props>()
 const propsCoordinator = toRef(() => props.coordinator)
 const coordinator = computed(() => {
-  if (propsCoordinator.value) {
-    return propsCoordinator.value
+  const coordinatorVal = toValue(propsCoordinator)
+  if (coordinatorVal) {
+    return coordinatorVal
   }
   return defaultCoordinator()
 })
@@ -59,11 +60,12 @@ watchEffect((onCleanup) => {
   const selectClauseVal = toValue(selectClause)
   const tableName = toValue(table)
   const selectionVal = toValue(selection)
-  if (!coordinator.value || !selectionVal) {
+  const coordinatorVal = toValue(coordinator)
+
+  if (!coordinatorVal || !selectionVal) {
     console.warn('Coordinator or selection is not defined.')
     return
   }
-  const coordinatorVal = toValue(coordinator)
   const client = makeClient({
     coordinator: coordinatorVal,
     selection: selectionVal,
