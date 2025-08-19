@@ -27,8 +27,6 @@ import { ref, toValue, watchEffect } from 'vue'
 import { useMosaicCoordinator } from './useMosaicCoordinator'
 
 export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Record<string, unknown>[]>) {
-  // const defaultCoordinator = coordinator()
-
   const pending = ref<boolean>(false)
   const queryResult = ref<unknown | undefined>(undefined)
   const queryString = ref<string | undefined>(undefined)
