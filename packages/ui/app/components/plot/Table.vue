@@ -11,11 +11,17 @@ interface Props {
   table: string
   selection: Selection
   columns: TableColumn<T>[]
+  coordinator?: ReturnType<typeof defaultCoordinator>
 }
 
 const props = defineProps<Props>()
-// const coordinator = toRef(() => props.coordinator)
-const coordinator = defaultCoordinator()
+const propsCoordinator = toRef(() => props.coordinator)
+const coordinator = computed(() => {
+  if (propsCoordinator.value) {
+    return propsCoordinator.value
+  }
+  return defaultCoordinator()
+})
 const table = toRef(() => props.table)
 const selection = toRef(() => props.selection)
 const columns = toRef(() => props.columns)
@@ -32,6 +38,7 @@ const columnVisibility = ref({
 const tableElem = useTemplateRef('tableElem')
 const selectClause = computed(() => {
   // Generate the select clause based on the columns
+
   return columns.value.reduce((acc, col) => {
     const { accessorKey } = col
     if (accessorKey) {
@@ -48,9 +55,10 @@ const pending = computed(() => {
 
 watchEffect((onCleanup) => {
   const selectClauseVal = toValue(selectClause)
+
   const tableName = toValue(table)
   const selectionVal = toValue(selection)
-  if (!coordinator || !selectionVal) {
+  if (!coordinator.value || !selectionVal) {
     console.warn('Coordinator or selection is not defined.')
     return
   }
@@ -61,7 +69,7 @@ watchEffect((onCleanup) => {
       // Preparation work before the client starts.
       // Here we get the total number of rows in the table.
 
-      const result = await coordinator.query(
+      const result = await coordinator.value.query(
         Query.from(tableName).select(selectClauseVal),
       )
       // as QueryResult<T>
