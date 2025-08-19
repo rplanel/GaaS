@@ -24,7 +24,7 @@
 import type { MaybeRef } from 'vue'
 import { coordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { loadObjects } from '@uwdata/mosaic-sql'
-import { onBeforeMount, ref, toValue, watchEffect } from 'vue'
+import { onBeforeMount, onUnmounted, ref, toValue, watchEffect } from 'vue'
 
 export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Record<string, unknown>[]>) {
   const defaultCoordinator = coordinator()
