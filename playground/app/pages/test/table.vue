@@ -45,6 +45,9 @@ const plotMetaClass = computed(() => {
   }
 })
 const table = ref('satellitedata')
+onBeforeMount(() => {
+  table.value = `satellitedata${Math.floor(Math.random() * 20)}`
+})
 
 const { pending, coordinator } = useMosaicObject(table, data)
 const { getHeader: getHistogramHeader } = useHistogramHeader({
@@ -56,7 +59,9 @@ const { getHeader: getCategoryHeader } = useCategoryHeader({
   table: table.value,
   selection,
 })
-
+// watch(queryString, (newQuery) => {
+//   console.log('Query String:', newQuery)
+// })
 const computedColumns = computed(() => {
   return columns.value.map((col) => {
     const label = col.header as string

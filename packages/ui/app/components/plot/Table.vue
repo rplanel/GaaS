@@ -35,7 +35,9 @@ const pagination = ref({
 const columnVisibility = ref({
   id: false,
 })
+
 const tableElem = useTemplateRef('tableElem')
+
 const selectClause = computed(() => {
   // Generate the select clause based on the columns
 

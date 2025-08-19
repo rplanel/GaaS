@@ -1,3 +1,7 @@
+import type { MaybeRef } from 'vue'
+import { loadCSV } from '@uwdata/mosaic-sql'
+import { ref, toValue, watchEffect } from 'vue'
+import { useMosaicCoordinator } from './useMosaicCoordinator'
 /**
  * A composable function that loads a CSV file into a DuckDB table using Mosaic.
  *
@@ -22,14 +26,13 @@
  * })
  * ```
  */
-import { coordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
-import { loadCSV } from '@uwdata/mosaic-sql'
-import { ref, toValue, watchEffect } from 'vue'
-
-const defaultCoordinator = coordinator()
 
 export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<string | undefined>) {
+  const queryResult = ref<unknown | undefined>(undefined)
+  const queryString = ref<string | undefined>(undefined)
   const pending = ref<boolean>(false)
+  const { coordinator } = useMosaicCoordinator(tableName)
+
   async function init() {
     const filePathVal = toValue(filePath)
     const tableNameVal = toValue(tableName)
@@ -37,13 +40,12 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
     if (!filePathVal) {
       return console.warn('No file path provided for CSV loading')
     }
-    const wasm = new DuckDBWASMConnector()
-    defaultCoordinator.databaseConnector(wasm)
+    const qs = loadCSV(tableNameVal, filePathVal, { replace: true, temp: true })
+    queryString.value = qs
     pending.value = true
     try {
-      await defaultCoordinator.exec(
-        loadCSV(tableNameVal, filePathVal, { replace: true, temp: true }),
-      )
+      const qr = await coordinator.value.exec(qs)
+      queryResult.value = qr
     }
     catch (error) {
       console.error('Error initializing Mosaic CSV:', error)
@@ -72,5 +74,8 @@ export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<str
   // })
   return {
     pending,
+    queryResult,
+    queryString,
+    coordinator,
   }
 }

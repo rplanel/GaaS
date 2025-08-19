@@ -22,28 +22,26 @@
  * ```
  */
 import type { MaybeRef } from 'vue'
-import { coordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { loadObjects } from '@uwdata/mosaic-sql'
 import { ref, toValue, watchEffect } from 'vue'
+import { useMosaicCoordinator } from './useMosaicCoordinator'
 
 export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Record<string, unknown>[]>) {
-  const defaultCoordinator = coordinator()
+  // const defaultCoordinator = coordinator()
 
   const pending = ref<boolean>(false)
-  const queryResult = ref<unknown | null>(null)
+  const queryResult = ref<unknown | undefined>(undefined)
   const queryString = ref<string | undefined>(undefined)
-
+  const { coordinator } = useMosaicCoordinator(tableName)
   async function init() {
     const tableNameVal = toValue(tableName)
     const objectVal = toValue(object)
     if (tableNameVal && objectVal) {
-      const wasm = new DuckDBWASMConnector()
-      defaultCoordinator.databaseConnector(wasm)
       pending.value = true
       const qs = loadObjects(tableNameVal, objectVal, { replace: true })
       queryString.value = qs
       try {
-        const qr = await defaultCoordinator.exec(qs)
+        const qr = await coordinator.value.exec(qs)
         queryResult.value = qr
       }
       catch (error) {
@@ -83,6 +81,6 @@ export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Re
     pending,
     queryResult,
     queryString,
-    coordinator: defaultCoordinator,
+    coordinator,
   }
 }
