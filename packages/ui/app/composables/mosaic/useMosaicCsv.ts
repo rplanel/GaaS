@@ -1,7 +1,7 @@
+import type { Coordinator } from '@uwdata/mosaic-core'
 import type { MaybeRef } from 'vue'
 import { loadCSV } from '@uwdata/mosaic-sql'
 import { ref, toValue, watchEffect } from 'vue'
-import { useMosaicCoordinator } from './useMosaicCoordinator'
 
 /**
  * A composable function that loads a CSV file into a DuckDB table using Mosaic.
@@ -28,11 +28,10 @@ import { useMosaicCoordinator } from './useMosaicCoordinator'
  * ```
  */
 
-export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<string | undefined>) {
+export function useMosaicCsv(tableName: MaybeRef<string>, filePath: MaybeRef<string | undefined>, coordinator: Coordinator) {
   const queryResult = ref<unknown | undefined>(undefined)
   const queryString = ref<string | undefined>(undefined)
   const pending = ref<boolean>(false)
-  const { coordinator } = useMosaicCoordinator()
 
   async function init() {
     const filePathVal = toValue(filePath)

@@ -1,3 +1,4 @@
+import type { Coordinator } from '@uwdata/mosaic-core'
 /**
  * A Vue composable that initializes a Mosaic database table with object data.
  *
@@ -24,13 +25,11 @@
 import type { MaybeRef } from 'vue'
 import { loadObjects } from '@uwdata/mosaic-sql'
 import { ref, toValue, watchEffect } from 'vue'
-import { useMosaicCoordinator } from './useMosaicCoordinator'
 
-export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Record<string, unknown>[]>) {
+export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Record<string, unknown>[]>, coordinator: Coordinator) {
   const pending = ref<boolean>(false)
   const queryResult = ref<unknown | undefined>(undefined)
   const queryString = ref<string | undefined>(undefined)
-  const { coordinator } = useMosaicCoordinator()
   async function init() {
     const tableNameVal = toValue(tableName)
     const objectVal = toValue(object)
