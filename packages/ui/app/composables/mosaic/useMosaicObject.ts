@@ -1,3 +1,4 @@
+import type { Coordinator } from '@uwdata/mosaic-core'
 /**
  * A Vue composable that initializes a Mosaic database table with object data.
  *
@@ -22,32 +23,61 @@
  * ```
  */
 import type { MaybeRef } from 'vue'
-import { coordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { loadObjects } from '@uwdata/mosaic-sql'
-import { ref, toValue } from 'vue'
+import { ref, toValue, watchEffect } from 'vue'
 
-export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Record<string, unknown>[]>) {
+export function useMosaicObject(tableName: MaybeRef<string>, object: MaybeRef<Record<string, unknown>[]>, coordinator: Coordinator) {
   const pending = ref<boolean>(false)
-
+  const queryResult = ref<unknown | undefined>(undefined)
+  const queryString = ref<string | undefined>(undefined)
   async function init() {
-    const wasm = new DuckDBWASMConnector()
-    coordinator().databaseConnector(wasm)
     const tableNameVal = toValue(tableName)
-    const objectVal = toValue(object) || []
-    pending.value = true
-
-    const sqlQuery = loadObjects(tableNameVal, objectVal)
-    await coordinator().exec(sqlQuery)
-    pending.value = false
+    const objectVal = toValue(object)
+    if (tableNameVal && objectVal) {
+      pending.value = true
+      const qs = loadObjects(tableNameVal, objectVal, { replace: true })
+      queryString.value = qs
+      try {
+        const qr = await coordinator.exec(qs)
+        queryResult.value = qr
+      }
+      catch (error) {
+        console.error('Error initializing Mosaic Object:', error)
+      }
+      finally {
+        pending.value = false
+      }
+    }
   }
 
-  init()
   watchEffect(() => {
-    if (toValue(tableName)) {
-      init()
-    }
+    // const tableNameVal = toValue(tableName)
+    // const objectVal = toValue(object)
+    // if (tableNameVal && objectVal) {
+    init()
+      .catch((error) => {
+        console.error('Error initializing Mosaic Object in watchEffect:', error)
+      })
+    // }
   })
+
+  init().catch((error) => {
+    console.error('Error initializing Mosaic Object:', error)
+  })
+
+  // onBeforeMount(() => {
+  // // Perform any setup or data fetching here
+  //   defaultCoordinator.clear({ clients: true, cache: true })
+  // })
+  // onUnmounted(() => {
+  // // Perform any cleanup or teardown here
+  //   defaultCoordinator.clear({ clients: true, cache: true })
+  // })
+
   return {
     pending,
+    queryResult,
+    queryString,
+    coordinator,
   }
 }
