@@ -98,10 +98,11 @@ watchEffect((onCleanup) => {
       isPending.value = true
       isError.value = false
     },
-    queryError: () => {
+    queryError: (err) => {
       // There is an error running the query.
       isPending.value = false
       isError.value = true
+      throw createError(`Error running query: ${err.message}`)
     },
   })
 
