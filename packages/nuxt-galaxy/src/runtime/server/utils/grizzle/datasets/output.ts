@@ -37,7 +37,6 @@ export function synchronizeOutputDatasetEffect(galaxyDatasetId: string, analysis
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetAnalysisOutputError extends Data.TaggedError('GetAnalysisOutputError')<{
   readonly message: string
 }> {}
@@ -109,7 +108,6 @@ export function getOrCreateOutputDatasetEffect(
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class InsertAnalysisOutputTagsError extends Data.TaggedError('InsertAnalysisOutputTagsError')<{
   readonly message: string
 }> {}
@@ -131,7 +129,7 @@ export function insertAnalysisOutputTags(datasetTags: GetTag[], analysisOutputId
     })
   })
 }
-// eslint-disable-next-line unicorn/throw-new-error
+
 export class InsertAnalysisOutputError extends Data.TaggedError('InsertAnalysisOutputError')<{
   readonly message: string
 
@@ -152,7 +150,6 @@ export function insertAnalysisOutputEffect(analysisId: number, datasetId: number
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetAnalysisOutputStateError extends Data.TaggedError('GetAnalysisOutputStateError')<{
   readonly message: string
 }> {}
@@ -194,7 +191,6 @@ export function isOutputDatasetSyncEffect(galaxyDatasetId: string, jobId: number
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class UpdateAnalysisOuputStateError extends Data.TaggedError('UpdateAnalysisOuputStateError')<{
   readonly message: string
 }> {}

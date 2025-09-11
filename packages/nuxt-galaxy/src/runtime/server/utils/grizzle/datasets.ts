@@ -12,7 +12,6 @@ import { takeUniqueOrThrow } from './helper.js'
 import { deleteHistory } from './histories'
 import { createSignedUrl } from './supabase'
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class NoStorageObjectError extends Data.TaggedError('NoStorageObjectError')<{
   readonly message: string
 }> {}
@@ -141,12 +140,10 @@ export function uploadFileToSupabase() {
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class NotDefinedInsertedDatasetError extends Data.TaggedError('NotDefinedInsertedDatasetError')<{
   readonly message: string
 }> {}
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetStorageObjectError extends Data.TaggedError('GetStorageObjectError')<{
   readonly message: string
 }> {}
@@ -169,7 +166,6 @@ export function isDatasetTerminalState(state: DatasetState): boolean {
   return bt.DatasetsTerminalStates.includes(state as DatasetTerminalState)
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class InsertDatasetError extends Data.TaggedError('InsertDatasetError')<{
   readonly message: string
 }> {}

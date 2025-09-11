@@ -11,7 +11,6 @@ import { takeUniqueOrThrow } from '../helper'
 import { getHistoryDb } from '../histories'
 import { uploadFileToStorage } from '../supabase'
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetAnalysisInputError extends Data.TaggedError('GetAnalysisInputError')<{
   readonly message: string
 }> {}
@@ -90,7 +89,6 @@ export function getOrCreateInputDatasetEffect(galaxyDatasetId: string, analysisI
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class InsertAnalysisInputError extends Data.TaggedError('InsertAnalysisInputError')<{
   readonly message: string
 
@@ -150,7 +148,6 @@ export function synchronizeInputDatasetEffect(
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetAnalysisInputStateError extends Data.TaggedError('GetAnalysisInputStateError')<{
   readonly message: string
 }> {}
@@ -177,7 +174,6 @@ export function getAnalysisInputState(galaxyDatasetId: string, ownerId: string) 
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class UpdateAnalysisInputStateError extends Data.TaggedError('UpdateAnalysisInputStateError')<{
   readonly message: string
 }> {}

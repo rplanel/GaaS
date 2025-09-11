@@ -83,7 +83,6 @@ export function runAnalysis(
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class DeleteAnalysisError extends Data.TaggedError('DeleteAnalysisError')<{
   readonly message: string
 }> { }
@@ -111,7 +110,6 @@ export function deleteAnalysis(
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class InsertAnalysisError extends Data.TaggedError('InsertAnalysisError')<{
   readonly message: string
 }> { }
@@ -161,7 +159,6 @@ export function getInvocationOutputs(analysisId: number, ownerId: string) {
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetAnalysisError extends Data.TaggedError('GetAnalysisError')<{
   readonly message: string
 }> { }
@@ -250,7 +247,6 @@ export function updateAnalysisState(analysisId: number, invocation: GalaxyInvoca
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class UpdateAnalysisIsSyncError extends Data.TaggedError('UpdateAnalysisIsSyncError')<{
   readonly message: string
 }> { }
@@ -315,7 +311,6 @@ export function getWorkflowAnalyses(workflowId: number, ownerId: string) {
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetHistoryAnalysisError extends Data.TaggedError('GetHistoryAnalysisError')<{
   readonly message: string
 }> { }

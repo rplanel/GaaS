@@ -14,7 +14,7 @@ export function useGalaxyDecodeParameters(galaxyWorkflowParameters: MaybeRef<Enc
         const splittedParamName = paramName.split('|')
         if (splittedParamName.length === 1 && galaxyWorkflowParametersVal[stepId][paramName]) {
           inputParameters[stepId][paramName]
-              = galaxyWorkflowParametersVal[stepId][paramName]
+            = galaxyWorkflowParametersVal[stepId][paramName]
         }
         else {
           // init object

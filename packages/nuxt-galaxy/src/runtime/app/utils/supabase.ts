@@ -32,7 +32,6 @@ export class SupabaseClientLayer extends Context.Tag('@nuxt-galaxy/SupabaseClien
   )
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class NoSupabaseUserError extends Data.TaggedError('NoSupabaseUserError')<{
   readonly message: string
 }> {}
@@ -61,7 +60,6 @@ export const SupabaseConfigLive = Layer.merge(
   SupabaseUserLayer.Live,
 )
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class UploadFileToStorageError extends Data.TaggedError('UploadFileToStorageError')<{
   readonly message: string
 }> {}
@@ -93,7 +91,6 @@ export function uploadFileToStorageEffect(bucket: string, file: File) {
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class InsertUploadedDatasetEffect extends Data.TaggedError('InsertUploadedDatasetEffect')<{
   readonly message: string
 }> {}

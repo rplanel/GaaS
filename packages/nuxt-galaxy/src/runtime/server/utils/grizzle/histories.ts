@@ -63,7 +63,6 @@ export function synchronizeHistoryEffect(historyId: number, ownerId: string, eve
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetHistoryError extends Data.TaggedError('GetHistoryError')<{
   readonly message: string
 }> { }
@@ -126,7 +125,6 @@ export function addHistoryEffect(name: string, ownerId: string) {
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class DeleteGalaxyHistoryError extends Data.TaggedError('DeleteGalaxyHistoryError')<{
   readonly message: string
 }> { }
@@ -143,7 +141,6 @@ export function deleteHistory(historyId: number) {
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class InsertHistoryError extends Data.TaggedError('InsertHistoryError')<{
   readonly message: string
 }> { }
@@ -217,7 +214,6 @@ export function isSynchronizedAnalysisJobs(analysisId: number, jobsWithOutputs: 
   ).pipe(Effect.map(d => d.every(d => d)))
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class UpdateHistoryState extends Data.TaggedError('UpdateHistoryState')<{
   readonly message: string
 }> { }

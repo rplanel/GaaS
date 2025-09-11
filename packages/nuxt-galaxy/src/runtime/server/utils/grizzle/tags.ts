@@ -16,7 +16,6 @@ export function insertTags(datasetTags: string[]) {
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class InsertTagsError extends Data.TaggedError('InsertTagsError')<{
   readonly message: string
 }> {}
