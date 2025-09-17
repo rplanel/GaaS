@@ -78,19 +78,9 @@ export function useSupabaseRealtime(
     // console.log(`Unsubscribing from Supabase realtime channel: ${channelName}`)
     if (channelName in channels) {
       const channelData = channels[channelName]
-      // const eventHandlers = channelData.eventHandlers
-      // const index = eventHandlers.indexOf(eventHandler)
-      // if (index >= 0) {
-      //   eventHandlers.splice(index, 1)
-      // }
-      // channels[channelName].count--
-      // if (eventHandlers.length === 0) {
-      //   console.log(`Removing Supabase realtime channel: ${channelName}`)
-      //   supabase.removeChannel(channelData.channel)
-      //   delete channels[channelName]
-      // }
-
-      // console.log(`Removing Supabase realtime channel: ${channelName}`)
+      if (!channelData) {
+        return
+      }
       supabase.removeChannel(channelData.channel)
       delete channels[channelName]
     }
