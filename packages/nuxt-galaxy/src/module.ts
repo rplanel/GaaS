@@ -156,7 +156,7 @@ export default defineNuxtModule<ModuleOptions>({
       { name: 'useDiskUsage', path: './runtime/app/composables/useDiskUsage' },
       { name: 'useSupabaseRealtime', path: './runtime/app/composables/useSupabaseRealtime' },
       { name: 'useDatasetSignedUrl', path: './runtime/app/composables/useDatasetSignedUrl' },
-      { name: 'useDownloadDataset', path: './runtime/app/composables/useDownloadDataset' },
+      // { name: 'useDownloadDataset', path: './runtime/app/composables/useDownloadDataset' },
 
     ]
 
