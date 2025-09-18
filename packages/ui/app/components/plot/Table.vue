@@ -10,7 +10,7 @@ import { upperFirst } from 'scule'
 interface Props {
   table: string
   selection: Selection
-  columns: TableColumn<T>[]
+  columns: TableColumn<T>[] | undefined
   coordinator?: Coordinator
 }
 
@@ -41,7 +41,9 @@ const tableElem = useTemplateRef('tableElem')
 
 const selectClause = computed(() => {
   // Generate the select clause based on the columns
-
+  if (!columns.value) {
+    return undefined
+  }
   return columns.value.reduce((acc, col) => {
     const { accessorKey } = col
     if (accessorKey) {
@@ -64,6 +66,14 @@ watchEffect((onCleanup) => {
 
   if (!coordinatorVal || !selectionVal) {
     console.warn('Coordinator or selection is not defined.')
+    return
+  }
+  if (!tableName) {
+    console.warn('Table name is not defined.')
+    return
+  }
+  if (!selectClauseVal) {
+    console.warn('Select clause is not defined.')
     return
   }
   const client = makeClient({
@@ -158,8 +168,9 @@ watchEffect((onCleanup) => {
           </div>
         </div>
       </div>
-      <div>
+      <div v-if="columns">
         <UTable
+
           ref="tableElem"
           v-model:pagination="pagination"
           v-model:column-visibility="columnVisibility"

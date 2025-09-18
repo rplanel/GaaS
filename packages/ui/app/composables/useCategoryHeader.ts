@@ -22,12 +22,26 @@
  * ```
  */
 
+import type { Coordinator } from '@uwdata/mosaic-core'
 import type { GetHeaderParams, UseHeaderParams } from '../types/plotHeader'
+import { coordinator as defaultCoordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { h } from 'vue'
 import PlotTableHeaderCategory from '../components/plot/table/header/Category.vue'
 
 export function useCategoryHeader(params: UseHeaderParams) {
   const { table, selection, coordinator } = params
+
+  const mosaicCoordinator = ref<Coordinator | undefined>(coordinator)
+
+  onBeforeMount(() => {
+    if (mosaicCoordinator.value === undefined) {
+      const wasm = new DuckDBWASMConnector()
+      const c = defaultCoordinator()
+      c.databaseConnector(wasm)
+      mosaicCoordinator.value = c
+    }
+  })
+
   function getHeader<T>(params: GetHeaderParams<T>): VNode {
     const { column, label, variable } = params
     if (!selection || !coordinator) {
