@@ -32,7 +32,6 @@ export function useCategoryHeader(params: UseHeaderParams) {
   const { table, selection, coordinator } = params
 
   const mosaicCoordinator = ref<Coordinator | undefined>(coordinator)
-
   onBeforeMount(() => {
     if (mosaicCoordinator.value === undefined) {
       const wasm = new DuckDBWASMConnector()
@@ -42,23 +41,33 @@ export function useCategoryHeader(params: UseHeaderParams) {
     }
   })
 
-  function getHeader<T>(params: GetHeaderParams<T>): VNode {
-    const { column, label, variable } = params
-    if (!selection || !coordinator) {
-      console.warn('Missing required parameters for category header:', { table, selection, coordinator })
-      return h('div', { class: 'w-full' }, 'No data available')
+  // Wrap _getHeader in a function to capture the latest mosaicCoordinator value
+  const getHeaderFn = () => {
+    function _getHeader<T>(params: GetHeaderParams<T>): VNode {
+      const { column, label, variable } = params
+      if (!selection || !coordinator) {
+        console.warn('Missing required parameters for category header:', { table, selection, coordinator })
+        return h('div', { class: 'w-full' }, 'No data available')
+      }
+      return h('div', { class: 'w-full' }, [
+        h('div', { class: 'text-sm font-semibold' }, label),
+        h(PlotTableHeaderCategory, {
+          table,
+          selection,
+          variableId: variable,
+          coordinator,
+          width: column.getSize() - 32,
+        }),
+      ])
     }
-    return h('div', { class: 'w-full' }, [
-      h('div', { class: 'text-sm font-semibold' }, label),
-      h(PlotTableHeaderCategory, {
-        table,
-        selection,
-        variableId: variable,
-        coordinator,
-        width: column.getSize() - 32,
-      }),
-    ])
+    return _getHeader
   }
+  const getHeader = ref<ReturnType<typeof getHeaderFn>>(getHeaderFn())
+
+  watch(mosaicCoordinator, () => {
+    getHeader.value = getHeaderFn()
+  })
+
   return {
     getHeader,
   }
