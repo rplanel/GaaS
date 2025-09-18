@@ -20,7 +20,8 @@ export function useHistogramHeader(params: UseHeaderParams) {
   function getHeaderFn() {
     function _getHeader<T>(params: GetHeaderParams<T>): VNode {
       const { column, label, variable } = params
-      if (!selection || !coordinator) {
+      const mosaicCoordinatorVal = mosaicCoordinator.value as Coordinator | undefined
+      if (!selection || !mosaicCoordinatorVal) {
         console.warn('Missing required parameters for histogram header:', { table, selection, coordinator })
         return h('div', { class: 'w-full' }, 'No data available')
       }
@@ -33,7 +34,7 @@ export function useHistogramHeader(params: UseHeaderParams) {
           table,
           selection,
           variable,
-          coordinator,
+          coordinator: mosaicCoordinatorVal,
           width: column.getSize() - 32,
         }),
       ])
