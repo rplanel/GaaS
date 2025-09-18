@@ -44,7 +44,8 @@ export function useCategoryHeader(params: UseHeaderParams) {
   // Wrap _getHeader in a function to capture the latest mosaicCoordinator value
   function _getHeader<T>(params: GetHeaderParams<T>): VNode {
     const { column, label, variable } = params
-    if (!selection || !coordinator) {
+    const mosaicCoordinatorVal = mosaicCoordinator.value as Coordinator | undefined
+    if (!selection || !mosaicCoordinatorVal) {
       console.warn('Missing required parameters for category header:', { table, selection, coordinator })
       return h('div', { class: 'w-full' }, 'No data available')
     }
@@ -54,7 +55,7 @@ export function useCategoryHeader(params: UseHeaderParams) {
         table,
         selection,
         variableId: variable,
-        coordinator,
+        coordinator: mosaicCoordinatorVal,
         width: column.getSize() - 32,
       }),
     ])
@@ -63,7 +64,9 @@ export function useCategoryHeader(params: UseHeaderParams) {
   const getHeader = ref<typeof _getHeader>(_getHeader)
 
   watch(mosaicCoordinator, () => {
-    getHeader.value = _getHeader
+    const getHeaderFn = () => _getHeader
+
+    getHeader.value = getHeaderFn()
   })
 
   return {
