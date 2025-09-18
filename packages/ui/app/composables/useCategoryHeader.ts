@@ -25,7 +25,7 @@
 import type { Coordinator } from '@uwdata/mosaic-core'
 import type { GetHeaderParams, UseHeaderParams } from '../types/plotHeader'
 import { coordinator as defaultCoordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
-import { h, onBeforeMount, ref } from 'vue'
+import { h, onBeforeMount, ref, watch } from 'vue'
 import PlotTableHeaderCategory from '../components/plot/table/header/Category.vue'
 
 export function useCategoryHeader(params: UseHeaderParams) {
