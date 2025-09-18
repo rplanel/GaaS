@@ -42,30 +42,28 @@ export function useCategoryHeader(params: UseHeaderParams) {
   })
 
   // Wrap _getHeader in a function to capture the latest mosaicCoordinator value
-  const getHeaderFn = () => {
-    function _getHeader<T>(params: GetHeaderParams<T>): VNode {
-      const { column, label, variable } = params
-      if (!selection || !coordinator) {
-        console.warn('Missing required parameters for category header:', { table, selection, coordinator })
-        return h('div', { class: 'w-full' }, 'No data available')
-      }
-      return h('div', { class: 'w-full' }, [
-        h('div', { class: 'text-sm font-semibold' }, label),
-        h(PlotTableHeaderCategory, {
-          table,
-          selection,
-          variableId: variable,
-          coordinator,
-          width: column.getSize() - 32,
-        }),
-      ])
+  function _getHeader<T>(params: GetHeaderParams<T>): VNode {
+    const { column, label, variable } = params
+    if (!selection || !coordinator) {
+      console.warn('Missing required parameters for category header:', { table, selection, coordinator })
+      return h('div', { class: 'w-full' }, 'No data available')
     }
-    return _getHeader
+    return h('div', { class: 'w-full' }, [
+      h('div', { class: 'text-sm font-semibold' }, label),
+      h(PlotTableHeaderCategory, {
+        table,
+        selection,
+        variableId: variable,
+        coordinator,
+        width: column.getSize() - 32,
+      }),
+    ])
   }
-  const getHeader = ref<ReturnType<typeof getHeaderFn>>(getHeaderFn())
+
+  const getHeader = ref<typeof _getHeader>(_getHeader)
 
   watch(mosaicCoordinator, () => {
-    getHeader.value = getHeaderFn()
+    getHeader.value = _getHeader
   })
 
   return {
