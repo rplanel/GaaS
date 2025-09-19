@@ -24,7 +24,7 @@ watch(
 
 const { outputs, analysis: detailedAnalysis, inputs, refresh, pendingAnalysis, error } = useAnalysisDetails(analysisId)
 
-if (error) {
+if (error.value) {
   throw createError({
     statusCode: 500,
     statusMessage: error.value?.message || 'Error fetching analysis details',
