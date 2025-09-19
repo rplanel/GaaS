@@ -12,15 +12,7 @@ const props = withDefaults(defineProps<{
 }>(), {})
 
 const emits = defineEmits(['close'])
-// const client = useSupabaseClient<Database>()
-// const user = useSupabaseUser()
-// let realtimeHistoriesChannel: RealtimeChannel
-// let realtimeJobsChannel: RealtimeChannel
-// const workflowParametersModel = ref<
-//   | Record<string, Record<string, string | string[] | Record<string, any>>>
-//   | undefined
-// >(undefined)
-// const analysisId = toRef(() => props.analysisId)
+
 const analysisId = ref<number | undefined>(props.analysisId)
 watch(
   () => props.analysisId,
@@ -30,7 +22,15 @@ watch(
   { immediate: true, deep: true },
 )
 
-const { outputs, analysis: detailedAnalysis, inputs, refresh, pendingAnalysis } = useAnalysisDetails(analysisId)
+const { outputs, analysis: detailedAnalysis, inputs, refresh, pendingAnalysis, error } = useAnalysisDetails(analysisId)
+
+if (error) {
+  throw createError({
+    statusCode: 500,
+    statusMessage: error.value?.message || 'Error fetching analysis details',
+  })
+  console.error('Error fetching analysis details:', error.value)
+}
 
 const workflowGalaxyId = computed(() => {
   const detailedAnalysisVal = toValue(detailedAnalysis)
@@ -171,16 +171,6 @@ const analysisParameters = computed(() => {
 const { decodedParameters: workflowParametersModel } = useGalaxyDecodeParameters(
   analysisParameters,
 )
-
-// watchEffect(() => {
-//   const dbAnalysisVal = toValue(detailedAnalysis) as Record<string, any> | undefined
-//   if (dbAnalysisVal) {
-//     const { decodedParameters } = useGalaxyDecodeParameters(
-//       dbAnalysisVal.parameters,
-//     )
-//     workflowParametersModel.value = toValue(decodedParameters)
-//   }
-// })
 
 const computedResultsMenuItems = computed(() => {
   const analysisIdVal = toValue(analysisId)
