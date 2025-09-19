@@ -24,6 +24,22 @@ watch(
 
 const { outputs, analysis: detailedAnalysis, inputs, refresh, pendingAnalysis, error } = useAnalysisDetails(analysisId)
 
+const sortedOutputs = computed(() => {
+  const outputsVal = toValue(outputs)
+  if (outputsVal) {
+    return [...outputsVal].sort((a, b) => {
+      if (a.dataset_name === null && b.dataset_name === null)
+        return 0
+      if (a.dataset_name === null)
+        return 1
+      if (b.dataset_name === null)
+        return -1
+      return a.dataset_name.localeCompare(b.dataset_name)
+    })
+  }
+  return []
+})
+
 if (error.value) {
   throw createError({
     statusCode: 500,
@@ -289,7 +305,7 @@ const computedResultsMenuItems = computed(() => {
             </UPageAccordion>
           </UPageCard>
           <UPageCard title="Outputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-            <GalaxyAnalysisIoDatasets :items="outputs" />
+            <GalaxyAnalysisIoDatasets :items="sortedOutputs" />
           </UPageCard>
         </UPageList>
       </slot>
