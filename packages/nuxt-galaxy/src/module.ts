@@ -145,7 +145,6 @@ export default defineNuxtModule<ModuleOptions>({
 
     const composables = [
       { name: 'useUserRole', path: './runtime/app/composables/useUserRole' },
-      { name: 'useFileSize', path: './runtime/app/composables/useFileSize' },
       { name: 'useErrorStatus', path: './runtime/app/composables/useErrorStatus' },
       { name: 'useErrorMessage', path: './runtime/app/composables/useErrorMessage' },
       { name: 'useAnalysisDetails', path: './runtime/app/composables/useAnalysisDetails' },
