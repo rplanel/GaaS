@@ -77,7 +77,8 @@ export function getOrCreateInputDatasetEffect(galaxyDatasetId: string, analysisI
             storageObjectId: data.id,
             historyId,
             uuid: galaxyDataset.uuid,
-            dataLines: galaxyDataset.metadata_comment_lines || 0,
+            dataLines: galaxyDataset.metadata_data_lines || 0,
+            miscBlurb: galaxyDataset?.misc_blurb ?? null,
             extension: galaxyDataset.extension,
           })
           if (insertedDataset) {

@@ -85,8 +85,8 @@ async function downloadFile(storageId: string | null) {
             <UBadge v-if="dataset.humanFileSize" class="font-bold rounded-full">
               {{ dataset.humanFileSize }}
             </UBadge>
-            <UBadge v-if="dataset?.data_lines" class="font-bold rounded-full" variant="text" color="neutral">
-              {{ dataset.data_lines }} lines
+            <UBadge v-if="dataset?.misc_blurb" class="font-bold rounded-full" variant="text" color="neutral">
+              {{ dataset.misc_blurb }}
             </UBadge>
           </div>
         </template>
