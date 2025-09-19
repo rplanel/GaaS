@@ -12,7 +12,7 @@ export interface Props {
 type Database = SupabaseTypes.Database
 const props = withDefaults(defineProps<Props>(), { items: undefined })
 const supabase = useSupabaseClient<Database>()
-const items = toRef(props.items)
+const items = toRef(() => props.items)
 const fileMetadataSchema = z.object({
   size: z.number(),
 })
