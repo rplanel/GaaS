@@ -6,12 +6,11 @@ import { Data, Effect } from 'effect'
 import { analysisInputs } from '../../../db/schema/galaxy/analysisInputs'
 import { datasets } from '../../../db/schema/galaxy/datasets'
 import { Drizzle } from '../../drizzle'
-import { insertDatasetEffect, isDatasetTerminalState } from '../datasets'
+import { insertDatasetEffect, isDatasetTerminalState, UpdateDatasetError } from '../datasets'
 import { takeUniqueOrThrow } from '../helper'
 import { getHistoryDb } from '../histories'
 import { uploadFileToStorage } from '../supabase'
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetAnalysisInputError extends Data.TaggedError('GetAnalysisInputError')<{
   readonly message: string
 }> {}
@@ -78,7 +77,8 @@ export function getOrCreateInputDatasetEffect(galaxyDatasetId: string, analysisI
             storageObjectId: data.id,
             historyId,
             uuid: galaxyDataset.uuid,
-            dataLines: galaxyDataset.metadata_comment_lines || 0,
+            dataLines: galaxyDataset.metadata_data_lines || 0,
+            miscBlurb: galaxyDataset?.misc_blurb ?? null,
             extension: galaxyDataset.extension,
           })
           if (insertedDataset) {
@@ -90,7 +90,6 @@ export function getOrCreateInputDatasetEffect(galaxyDatasetId: string, analysisI
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class InsertAnalysisInputError extends Data.TaggedError('InsertAnalysisInputError')<{
   readonly message: string
 
@@ -143,14 +142,13 @@ export function synchronizeInputDatasetEffect(
         }
         const galaxyDataset = yield* bt.getDatasetEffect(galaxyDatasetId, historyDb.galaxyId)
         if (inputDatasetDb.state !== galaxyDataset.state) {
-          yield* updateAnalysisInputStateEffect(galaxyDataset.state, inputDatasetDb.id)
+          yield* updateAnalysisInputStateEffect(galaxyDataset, inputDatasetDb.id, inputDatasetDb.datasetId)
         }
       }
     }
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetAnalysisInputStateError extends Data.TaggedError('GetAnalysisInputStateError')<{
   readonly message: string
 }> {}
@@ -177,21 +175,41 @@ export function getAnalysisInputState(galaxyDatasetId: string, ownerId: string) 
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
+export function updateDatasetBlurbEffect(datasetDbId: number, miscBlurb: string) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .update(datasets)
+        .set({ miscBlurb })
+        .where(
+          eq(datasets.id, datasetDbId),
+        )
+        .returning({ updatedId: datasets.id, miscBlurb: datasets.miscBlurb })
+        .then(takeUniqueOrThrow),
+      catch: (error) => {
+        return new UpdateDatasetError({ message: `Error updating dataset misc_blurb: ${error}` })
+      },
+    })
+  })
+}
+
 export class UpdateAnalysisInputStateError extends Data.TaggedError('UpdateAnalysisInputStateError')<{
   readonly message: string
 }> {}
 
-export function updateAnalysisInputStateEffect(state: DatasetState, datasetDbId: number) {
+export function updateAnalysisInputStateEffect(dataset: bt.GalaxyDataset, inputDatasetDbId: number, datasetDbId: number) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
-    return Effect.tryPromise({
+    const { state, misc_blurb } = dataset
+    yield* updateDatasetBlurbEffect(datasetDbId, misc_blurb || '')
+    return yield* Effect.tryPromise({
       try: () => useDrizzle
         .update(analysisInputs)
         .set({ state })
         .where(
           and(
-            eq(analysisInputs.id, datasetDbId),
+            eq(analysisInputs.id, inputDatasetDbId),
           ),
         )
         .returning({ updatedId: analysisInputs.id, state: analysisInputs.state })

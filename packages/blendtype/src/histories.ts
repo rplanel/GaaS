@@ -65,7 +65,6 @@ export function getHistories() {
   )
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class DeleteGalaxyHistoryHttpError extends Data.TaggedError('DeleteGalaxyHistoryHttpError')<{
   readonly message: string
 }> {}

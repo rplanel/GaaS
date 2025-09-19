@@ -9,7 +9,6 @@ export interface BlendTypeConfigImpl {
   url: string
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class NoConfigError extends Data.TaggedError('NoConfigError')<{
   readonly message: string
 }> {}

@@ -54,7 +54,9 @@ const inputConditionalComponents = computed(() => {
       <template #default>
         <component
           :is="inputTestParamComponents?.[props?.test_param.name]?.component"
-          v-model="conditionalModel[props.test_param.name]" v-bind="props.test_param" :hint :disabled="true"
+          v-model="conditionalModel[props.test_param.name]"
+          v-bind="props.test_param"
+          :hint :disabled="true"
           variant="display"
         />
       </template>

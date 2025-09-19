@@ -73,12 +73,10 @@ export class GalaxyFetch extends Context.Tag('@blendtype/GalaxyFetch')<
   )
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GalaxyServiceUnavailable extends Data.TaggedError('GalaxyServiceUnavailable')<{
   readonly message: string
 }> {}
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class HttpError extends Data.TaggedError('HttpError')<{
   readonly message: string
 }> {}

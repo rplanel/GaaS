@@ -2,7 +2,7 @@ import type { AsyncDataExecuteOptions } from '#app/composables/asyncData'
 import type { Ref } from '#imports'
 import type { Database } from '../../types/database'
 import type { AnalysisDetail, AnalysisInputsWithStoratePath, AnalysisOutputsWithStoratePath } from '../../types/nuxt-galaxy'
-import { createError, ref, toValue, useSupabaseClient, useSupabaseUser, watch } from '#imports'
+import { ref, toValue, useSupabaseClient, useSupabaseUser, watch } from '#imports'
 
 export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
   inputs: Ref<AnalysisInputsWithStoratePath[] | null>
@@ -10,6 +10,7 @@ export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
   analysis: Ref<AnalysisDetail | null>
   pendingAnalysis: Ref<boolean>
   refresh: (opts?: AsyncDataExecuteOptions) => void
+  error: Ref<Error | undefined>
 } {
   const supabase = useSupabaseClient<Database>()
   const user = useSupabaseUser()
@@ -17,6 +18,7 @@ export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
   const outputs = ref<AnalysisOutputsWithStoratePath[] | null>(null)
   const analysis = ref<AnalysisDetail | null>(null)
   const pendingAnalysis = ref<boolean>(false)
+  const error = ref<Error | undefined>(undefined)
 
   /**
    * fetch the input datasets of the analysis and put it in the `inputs` ref.
@@ -28,32 +30,27 @@ export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
     const analysisVal = toValue(analysisId)
     const userVal = toValue(user)
     if (!userVal) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized: User not found',
-      })
+      error.value = new Error('User is not defined')
+      return
     }
     if (!analysisVal) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Analysis not found',
-      })
+      error.value = new Error('Analysis ID is not defined')
+      return
     }
-    const { data, error } = await supabase
+    const { data, error: supabaseError } = await supabase
       .schema('galaxy')
       .from('analysis_inputs_with_storage_path')
       .select('*')
       .eq('analysis_id', analysisVal)
       .overrideTypes<AnalysisInputsWithStoratePath[]>()
 
-    if (error) {
-      throw createError({
-        statusMessage: error.message,
-        statusCode: Number.parseInt(error.code),
-      })
+    if (supabaseError) {
+      error.value = supabaseError
+      return
     }
     if (data === null) {
-      throw createError({ statusMessage: 'No input datasets found', statusCode: 404 })
+      error.value = new Error('No output datasets found')
+      return
     }
     return inputs.value = data
   }
@@ -68,32 +65,27 @@ export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
     const analysisVal = toValue(analysisId)
     const userVal = toValue(user)
     if (!userVal) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized: User not found',
-      })
+      error.value = new Error('User is not defined')
+      return
     }
     if (!analysisVal) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Analysis not found',
-      })
+      error.value = new Error('Analysis ID is not defined')
+      return
     }
-    const { data, error } = await supabase
+    const { data, error: supabaseError } = await supabase
       .schema('galaxy')
       .from('analysis_outputs_with_storage_path')
       .select('*')
       .eq('analysis_id', analysisVal)
       .overrideTypes<AnalysisOutputsWithStoratePath[]>()
 
-    if (error) {
-      throw createError({
-        statusMessage: error.message,
-        statusCode: Number.parseInt(error.code),
-      })
+    if (supabaseError) {
+      error.value = supabaseError
+      return
     }
     if (data === null) {
-      throw createError({ statusMessage: 'No output datasets found', statusCode: 404 })
+      error.value = new Error('No output datasets found')
+      return
     }
     return outputs.value = data
   }
@@ -109,19 +101,15 @@ export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
     const analysisVal = toValue(analysisId)
     const userVal = toValue(user)
     if (!userVal) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized: User not found',
-      })
+      error.value = new Error('User is not defined')
+      return
     }
     if (!analysisVal) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Analysis not found',
-      })
+      error.value = new Error('Analysis ID is not defined')
+      return
     }
     pendingAnalysis.value = true
-    const { data, error } = await supabase
+    const { data, error: supabaseError } = await supabase
       .schema('galaxy')
       .from('analyses')
       .select(`
@@ -134,20 +122,15 @@ export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
       .overrideTypes<AnalysisDetail[]>()
 
     pendingAnalysis.value = false
-    if (error) {
-      throw createError({
-        statusMessage: error.message,
-        statusCode: Number.parseInt(error.code),
-      })
+    if (supabaseError) {
+      error.value = supabaseError
+      return
     }
     if (data.length === 1) {
-      return analysis.value = data[0]
+      return analysis.value = data[0] as AnalysisDetail
     }
     else {
-      throw createError({
-        statusMessage: 'No analysis found',
-        statusCode: 404,
-      })
+      error.value = new Error('No output datasets found')
     }
   }
 
@@ -163,5 +146,6 @@ export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
     analysis,
     refresh: fetchAnalysis,
     pendingAnalysis,
+    error,
   }
 }

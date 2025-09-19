@@ -36,6 +36,7 @@ export const datasets = galaxy.table('datasets', {
   extension: varchar('extension', { length: 100 }).notNull(),
   // fileSize: integer('file_size').notNull(),
   dataLines: integer('data_lines'),
+  miscBlurb: varchar('misc_blurb', { length: 512 }),
   datasetName: varchar('dataset_name', { length: 256 }).notNull(),
   ...galaxyItemNoName,
 }, t => ([

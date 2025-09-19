@@ -7,7 +7,6 @@ export interface WorkflowAnalysis extends RowAnalysis {
   workflows: RowWorkflow
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetWorkflowAnalysesError extends Data.TaggedError('GetWorkflowAnalysesError')<{
   readonly message: string
 }> {}

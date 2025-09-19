@@ -145,7 +145,6 @@ export default defineNuxtModule<ModuleOptions>({
 
     const composables = [
       { name: 'useUserRole', path: './runtime/app/composables/useUserRole' },
-      { name: 'useFileSize', path: './runtime/app/composables/useFileSize' },
       { name: 'useErrorStatus', path: './runtime/app/composables/useErrorStatus' },
       { name: 'useErrorMessage', path: './runtime/app/composables/useErrorMessage' },
       { name: 'useAnalysisDetails', path: './runtime/app/composables/useAnalysisDetails' },
@@ -155,6 +154,8 @@ export default defineNuxtModule<ModuleOptions>({
       { name: 'useUploadFileToStorage', path: './runtime/app/composables/useUploadFileToStorage' },
       { name: 'useDiskUsage', path: './runtime/app/composables/useDiskUsage' },
       { name: 'useSupabaseRealtime', path: './runtime/app/composables/useSupabaseRealtime' },
+      { name: 'useDatasetSignedUrl', path: './runtime/app/composables/useDatasetSignedUrl' },
+      // { name: 'useDownloadDataset', path: './runtime/app/composables/useDownloadDataset' },
 
     ]
 

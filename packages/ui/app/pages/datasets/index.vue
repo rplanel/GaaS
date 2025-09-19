@@ -3,6 +3,7 @@ import type { SupabaseTypes } from '#build/types/database'
 import type { BreadcrumbItem, TableColumn } from '@nuxt/ui'
 import { h, resolveComponent } from 'vue'
 import { z } from 'zod'
+import { getHumanSize } from '../../utils'
 
 type Database = SupabaseTypes.Database
 
@@ -40,8 +41,7 @@ const sanitizedDatasets = computed<Dataset[] | undefined>(() => {
       const metadata = fileMetadataSchema.passthrough().parse(d.metadata)
       const rawSize = metadata.size
       if (rawSize) {
-        const { fileSize } = useFileSize(rawSize)
-        size = toValue(fileSize)
+        size = getHumanSize(rawSize)
       }
       return {
         name,

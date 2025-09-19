@@ -3,7 +3,6 @@ import type { Database } from '../../../types/database'
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 import { Context, Data, Effect, Layer } from 'effect'
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class ServerSupabaseClientError extends Data.TaggedError('NoServerSupabaseClientError')<{
   readonly message: string
 }> {}
@@ -40,7 +39,6 @@ export class ServerSupabaseClient extends Context.Tag('@nuxt-galaxy/ServerSupaba
   )
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetSupabaseUserError extends Data.TaggedError('GetSupabaseUserError')<{
   readonly message: string
 }> {}
@@ -69,7 +67,6 @@ export class ServerSupabaseUser extends Context.Tag('@nuxt-galaxy/ServerSupabase
   )
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class UploadFileToStorageError extends Data.TaggedError('UploadFileToStorageError')<{
   readonly message: string
 }> {}
@@ -90,7 +87,6 @@ export function uploadFileToStorage(event: H3Event<EventHandlerRequest>, dataset
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class CreateSignedUrlError extends Data.TaggedError('CreateSignedUrlError')<{
   readonly message: string
 }> {}
