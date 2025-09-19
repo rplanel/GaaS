@@ -30,7 +30,7 @@ export function synchronizeOutputDatasetEffect(galaxyDatasetId: string, analysis
         }
         const galaxyDataset = yield* bt.getDatasetEffect(galaxyDatasetId, historyDb.galaxyId)
         if (datasetDb.state !== galaxyDataset.state) {
-          yield* updateAnalysisOuputStateEffect(galaxyDataset.state, galaxyDatasetId, ownerId)
+          yield* updateAnalysisOutputStateEffect(galaxyDataset.state, galaxyDatasetId, ownerId)
         }
       }
     }
@@ -196,7 +196,7 @@ export class UpdateAnalysisOuputStateError extends Data.TaggedError('UpdateAnaly
   readonly message: string
 }> {}
 
-export function updateAnalysisOuputStateEffect(state: DatasetState, galaxyDatasetId: string, ownerId: string) {
+export function updateAnalysisOutputStateEffect(state: DatasetState, galaxyDatasetId: string, ownerId: string) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
     return yield* Effect.tryPromise({

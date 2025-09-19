@@ -171,6 +171,10 @@ export class InsertDatasetError extends Data.TaggedError('InsertDatasetError')<{
   readonly message: string
 }> {}
 
+export class UpdateDatasetError extends Data.TaggedError('UpdateDatasetError')<{
+  readonly message: string
+}> {}
+
 export function insertDatasetEffect(dataset: NewDataset) {
   return Effect.tryPromise({
     try: () => useDrizzle().insert(datasets).values(

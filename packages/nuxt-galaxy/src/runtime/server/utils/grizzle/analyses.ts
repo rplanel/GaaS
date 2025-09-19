@@ -269,7 +269,6 @@ export function updateAnalysisIsSync(isSync: boolean, analysisId: number, ownerI
 export function synchronizeAnalysesEffect(event: H3Event<EventHandlerRequest>, ownerId: string) {
   return Effect.gen(function* () {
     const analysesDb = yield* getAllAnalyses(ownerId)
-    // console.log('analysesDb', analysesDb)
     return yield* Effect.all(
       analysesDb.map(({ id: analysisId }) => {
         return synchronizeAnalysisEffect(analysisId, ownerId, event)
