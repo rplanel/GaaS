@@ -22,10 +22,8 @@ type useMosaicParams = UseMosaicFromFileParams | UseMosaicFromObjectParams
 export function useMosaic(params: useMosaicParams) {
   const {
     tableName,
-    // coordinator
   } = params
-  // const tableName = toValue(params.tableName)
-  // const coordinator = params.coordinator
+
   const error = ref<Error | undefined>(undefined)
   const pending = ref(false)
   const queryResult = ref<unknown | undefined>(undefined)
