@@ -156,7 +156,9 @@ export default defineNuxtModule<ModuleOptions>({
       { name: 'useSupabaseRealtime', path: './runtime/app/composables/useSupabaseRealtime' },
       { name: 'useDatasetSignedUrl', path: './runtime/app/composables/useDatasetSignedUrl' },
       { name: 'useDownloadDataset', path: './runtime/app/composables/useDownloadDataset' },
+      { name: 'useParse', path: './runtime/app/composables/parser/useParse' },
       { name: 'useParseCsv', path: './runtime/app/composables/parser/useParseCsv' },
+      { name: 'useParseTsv', path: './runtime/app/composables/parser/useParseTsv' },
 
     ]
 
