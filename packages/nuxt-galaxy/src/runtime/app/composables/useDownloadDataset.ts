@@ -1,43 +1,62 @@
-import type { MaybeRef } from 'vue'
+import type { PostgrestError } from '@supabase/postgrest-js'
+import type { StorageError } from '@supabase/storage-js'
+import type { Ref } from 'vue'
 import type { Database } from '../../types/database'
-import { createError, useSupabaseClient } from '#imports'
-import { ref, toValue, watchEffect } from 'vue'
+import { useSupabaseClient } from '#imports'
+import { useAsyncState } from '@vueuse/core'
+import { ref, toValue, watch } from 'vue'
 
-export function useDownloadDataset(storageObjectId: MaybeRef<string | undefined>) {
+export function useDownloadDataset(storageObjectId: Ref<string | undefined>) {
   const supabase = useSupabaseClient<Database>()
-  const data = ref<Blob | null>(null)
+  const error = ref<StorageError | PostgrestError | undefined>(undefined)
 
-  async function query(storageObjectId: MaybeRef<string | undefined>) {
+  async function query() {
     const storageObjectIdVal = toValue(storageObjectId)
     if (storageObjectIdVal) {
-      const { data: storageObject } = await supabase
+      const { data: storageObject, error: postgresError } = await supabase
         .schema('storage')
         .from('objects')
         .select()
         .eq('id', storageObjectIdVal)
         .limit(1)
         .single()
-      // const storageObjectVal = toValue(storageObject)
-
+      if (postgresError) {
+        error.value = postgresError
+        return
+      }
       if (storageObject && storageObject?.name) {
         const { name } = storageObject
-        const { data: analysisFile, error } = await supabase
+        const { data: analysisFile, error: storageError } = await supabase
           .storage
           .from('analysis_files')
           .download(name)
 
-        if (error) {
-          throw createError(`Failed to download dataset: ${error.message}`)
+        if (storageError) {
+          error.value = storageError
+          return
         }
 
         if (analysisFile) {
-          data.value = analysisFile
+          try {
+            const text = await analysisFile.text()
+            return text
+          }
+          catch (error) {
+            console.error('Error reading analysis file as text:', error)
+          }
         }
       }
     }
   }
-  watchEffect(() => {
-    query(storageObjectId)
+
+  const { state: dataText, isReady, isLoading, execute } = useAsyncState(query, '', {
+    immediate: false,
   })
-  return { data }
+
+  execute()
+  watch(storageObjectId, () => {
+    execute()
+  })
+
+  return { dataText, error, isReady, isLoading, execute }
 }
