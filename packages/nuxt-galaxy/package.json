@@ -53,6 +53,7 @@
     "@nuxt/kit": "catalog:nuxt",
     "@nuxtjs/supabase": "catalog:nuxt",
     "blendtype": "workspace:*",
+    "d3-dsv": "catalog:dataviz",
     "defu": "catalog:",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",

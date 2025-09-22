@@ -67,6 +67,8 @@ catalogs:
     '@uwdata/mosaic-sql': ^0.19.0
     '@uwdata/vgplot': ^0.19.1
     d3: ^7.9.0
+    d3-dsv: ^3.0.1
+
   nuxt:
     '@nuxt/content': ^3.6.3
     '@nuxt/devtools': ^2.6.2
