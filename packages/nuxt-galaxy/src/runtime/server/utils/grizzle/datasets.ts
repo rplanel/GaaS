@@ -34,12 +34,12 @@ export function uploadDatasetsEffect(params: UploadDatasetParams) {
         if (storageObjectId) {
           const storageObject = yield* getStorageObject(storageObjectId)
           if (storageObject && storageObject?.name) {
-            // const signedUrl = yield* createSignedUrl(event, storageObject.name)
-            let signedUrl = yield* createSignedUrl(event, storageObject.name)
+            const signedUrl = yield* createSignedUrl(event, storageObject.name)
+            // let signedUrl = yield* createSignedUrl(event, storageObject.name)
             // signedUrl = 'https://raw.githubusercontent.com/mdmparis/defense-finder/refs/heads/master/tests/data/prot/df_test_prot.faa'
             // signedUrl = 'https://supabase-satellite-finder.dev.pasteur.cloud/storage/v1/object/public/genome//GCF_000006945.2-prot.faa'
             // signedUrl = 'https://supabase-satellite-finder.dev.pasteur.cloud/storage/v1/object/public/genome//GCF_000008865.2-prot.faa'
-            signedUrl = 'https://supabase-satellite-finder.dev.pasteur.cloud/storage/v1/object/public/genome//NZ_CP018928.1.faa'
+            // signedUrl = 'https://supabase-satellite-finder.dev.pasteur.cloud/storage/v1/object/public/genome//NZ_CP018928.1.faa'
 
             if (signedUrl) {
               const filename = parseFilename(signedUrl, { strict: false }) || 'gaas_input_file'
