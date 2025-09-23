@@ -1,4 +1,4 @@
-create schema private;
+create schema if not exists private;
 
 insert into storage.buckets (id, name)
 values ('analysis_files', 'analysis_files')

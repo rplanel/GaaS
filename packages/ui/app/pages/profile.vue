@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { getHumanSize } from '../utils'
+
 const user = useSupabaseUser()
 const { diskUsage } = useDiskUsage()
-const { fileSize } = useFileSize(diskUsage)
+const fileSize = getHumanSize(diskUsage.value)
 </script>
 
 <template>

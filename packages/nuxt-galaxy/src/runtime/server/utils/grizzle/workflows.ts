@@ -9,7 +9,6 @@ import { takeUniqueOrThrow } from './helper'
 import { ServerSupabaseClient, ServerSupabaseUser } from './supabase'
 import { getCurrentUserEffect } from './user'
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetWorkflowError extends Data.TaggedError('GetWorkflowError')<{
   readonly message: string
 }> {}
@@ -100,7 +99,6 @@ export function insertWorkflow(
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class WorkflowAlreadyExistsError extends Data.TaggedError('WorkflowAlreadyExistsError')<{
   readonly message: string
   readonly statusCode: number

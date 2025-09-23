@@ -56,6 +56,7 @@ CREATE TABLE "galaxy"."datasets" (
 	"uuid" uuid NOT NULL,
 	"extension" varchar(100) NOT NULL,
 	"data_lines" integer,
+	"misc_blurb" varchar(512),
 	"dataset_name" varchar(256) NOT NULL,
 	"galaxy_id" varchar(256) NOT NULL,
 	"annotation" varchar(200),
@@ -148,13 +149,16 @@ CREATE TABLE "galaxy"."user" (
 --> statement-breakpoint
 CREATE TABLE "galaxy"."workflows" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"version" integer DEFAULT 1 NOT NULL,
+	"auto_version" integer DEFAULT 1 NOT NULL,
+	"version_key" varchar(255) NOT NULL,
+	"name_key" varchar(255) NOT NULL,
 	"user_id" integer NOT NULL,
 	"definition" json NOT NULL,
 	"galaxy_id" varchar(256) NOT NULL,
 	"name" varchar(256) NOT NULL,
 	"annotation" varchar(200),
-	CONSTRAINT "workflows_galaxy_id_version_unique" UNIQUE("galaxy_id","version")
+	CONSTRAINT "workflows_version_key_name_key_unique" UNIQUE("version_key","name_key"),
+	CONSTRAINT "workflows_galaxy_id_unique" UNIQUE("galaxy_id")
 );
 --> statement-breakpoint
 CREATE TABLE "galaxy"."workflows_to_tags" (
@@ -214,7 +218,7 @@ CREATE INDEX "role_permissions_role_id_index" ON "galaxy"."role_permissions" USI
 CREATE INDEX "role_permissions_permission_index" ON "galaxy"."role_permissions" USING btree ("permission");--> statement-breakpoint
 CREATE INDEX "uploaded_datasets_owner_id_index" ON "galaxy"."uploaded_datasets" USING btree ("owner_id");--> statement-breakpoint
 CREATE INDEX "uploaded_datasets_storage_object_id_index" ON "galaxy"."uploaded_datasets" USING btree ("storage_object_id");--> statement-breakpoint
-CREATE VIEW "galaxy"."analysis_inputs_with_storage_path" AS (select "galaxy"."datasets"."id", "galaxy"."analysis_inputs"."state", "galaxy"."analysis_inputs"."dataset_id", "galaxy"."analysis_inputs"."analysis_id", "galaxy"."datasets"."owner_id", "galaxy"."datasets"."history_id", "galaxy"."datasets"."storage_object_id", "galaxy"."datasets"."created_at", "galaxy"."datasets"."uuid", "galaxy"."datasets"."extension", "galaxy"."datasets"."data_lines", "galaxy"."datasets"."dataset_name", "galaxy"."datasets"."galaxy_id", "galaxy"."datasets"."annotation", "storage"."objects"."name", "storage"."objects"."metadata" from "galaxy"."analysis_inputs" inner join "galaxy"."datasets" on "galaxy"."analysis_inputs"."dataset_id" = "galaxy"."datasets"."id" inner join "storage"."objects" on "galaxy"."datasets"."storage_object_id" = "storage"."objects"."id");--> statement-breakpoint
-CREATE VIEW "galaxy"."analysis_outputs_with_storage_path" AS (select "galaxy"."datasets"."id", "galaxy"."analysis_outputs"."state", "galaxy"."analysis_outputs"."dataset_id", "galaxy"."analysis_outputs"."analysis_id", "galaxy"."analysis_outputs"."job_id", "galaxy"."datasets"."owner_id", "galaxy"."datasets"."history_id", "galaxy"."datasets"."storage_object_id", "galaxy"."datasets"."created_at", "galaxy"."datasets"."uuid", "galaxy"."datasets"."extension", "galaxy"."datasets"."data_lines", "galaxy"."datasets"."dataset_name", "galaxy"."datasets"."galaxy_id", "galaxy"."datasets"."annotation", "storage"."objects"."name", "storage"."objects"."metadata" from "galaxy"."analysis_outputs" inner join "galaxy"."datasets" on "galaxy"."analysis_outputs"."dataset_id" = "galaxy"."datasets"."id" inner join "storage"."objects" on "galaxy"."datasets"."storage_object_id" = "storage"."objects"."id");--> statement-breakpoint
-CREATE VIEW "galaxy"."datasets_with_storage_path" AS (select "galaxy"."datasets"."owner_id", "galaxy"."datasets"."history_id", "galaxy"."datasets"."storage_object_id", "storage"."objects"."created_at", "galaxy"."datasets"."uuid", "galaxy"."datasets"."extension", "galaxy"."datasets"."data_lines", "galaxy"."datasets"."dataset_name", "galaxy"."datasets"."galaxy_id", "galaxy"."datasets"."annotation", "storage"."objects"."id", "storage"."objects"."name", "storage"."objects"."metadata" from "galaxy"."datasets" inner join "storage"."objects" on "galaxy"."datasets"."storage_object_id" = "storage"."objects"."id");--> statement-breakpoint
+CREATE VIEW "galaxy"."analysis_inputs_with_storage_path" AS (select "galaxy"."datasets"."id", "galaxy"."analysis_inputs"."state", "galaxy"."analysis_inputs"."dataset_id", "galaxy"."analysis_inputs"."analysis_id", "galaxy"."datasets"."owner_id", "galaxy"."datasets"."history_id", "galaxy"."datasets"."storage_object_id", "galaxy"."datasets"."created_at", "galaxy"."datasets"."uuid", "galaxy"."datasets"."extension", "galaxy"."datasets"."data_lines", "galaxy"."datasets"."misc_blurb", "galaxy"."datasets"."dataset_name", "galaxy"."datasets"."galaxy_id", "galaxy"."datasets"."annotation", "storage"."objects"."name", "storage"."objects"."metadata" from "galaxy"."analysis_inputs" inner join "galaxy"."datasets" on "galaxy"."analysis_inputs"."dataset_id" = "galaxy"."datasets"."id" inner join "storage"."objects" on "galaxy"."datasets"."storage_object_id" = "storage"."objects"."id");--> statement-breakpoint
+CREATE VIEW "galaxy"."analysis_outputs_with_storage_path" AS (select "galaxy"."datasets"."id", "galaxy"."analysis_outputs"."state", "galaxy"."analysis_outputs"."dataset_id", "galaxy"."analysis_outputs"."analysis_id", "galaxy"."analysis_outputs"."job_id", "galaxy"."datasets"."owner_id", "galaxy"."datasets"."history_id", "galaxy"."datasets"."storage_object_id", "galaxy"."datasets"."created_at", "galaxy"."datasets"."uuid", "galaxy"."datasets"."extension", "galaxy"."datasets"."data_lines", "galaxy"."datasets"."misc_blurb", "galaxy"."datasets"."dataset_name", "galaxy"."datasets"."galaxy_id", "galaxy"."datasets"."annotation", "storage"."objects"."name", "storage"."objects"."metadata" from "galaxy"."analysis_outputs" inner join "galaxy"."datasets" on "galaxy"."analysis_outputs"."dataset_id" = "galaxy"."datasets"."id" inner join "storage"."objects" on "galaxy"."datasets"."storage_object_id" = "storage"."objects"."id");--> statement-breakpoint
+CREATE VIEW "galaxy"."datasets_with_storage_path" AS (select "galaxy"."datasets"."owner_id", "galaxy"."datasets"."history_id", "galaxy"."datasets"."storage_object_id", "storage"."objects"."created_at", "galaxy"."datasets"."uuid", "galaxy"."datasets"."extension", "galaxy"."datasets"."data_lines", "galaxy"."datasets"."misc_blurb", "galaxy"."datasets"."dataset_name", "galaxy"."datasets"."galaxy_id", "galaxy"."datasets"."annotation", "storage"."objects"."id", "storage"."objects"."name", "storage"."objects"."metadata" from "galaxy"."datasets" inner join "storage"."objects" on "galaxy"."datasets"."storage_object_id" = "storage"."objects"."id");--> statement-breakpoint
 CREATE VIEW "galaxy"."uploaded_datasets_with_storage_path" AS (select "galaxy"."uploaded_datasets"."id", "galaxy"."uploaded_datasets"."owner_id", "galaxy"."uploaded_datasets"."dataset_name", "galaxy"."uploaded_datasets"."storage_object_id", "storage"."objects"."metadata" from "galaxy"."uploaded_datasets" inner join "storage"."objects" on "galaxy"."uploaded_datasets"."storage_object_id" = "storage"."objects"."id");

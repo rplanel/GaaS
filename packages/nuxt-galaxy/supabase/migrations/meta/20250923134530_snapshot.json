@@ -1,6 +1,6 @@
 {
-  "id": "11f1ccd6-8622-4087-93c4-1fe7607c12d0",
-  "prevId": "87870c7b-6111-44ce-8d33-35fe91d8c566",
+  "id": "dfeffc0d-3e8f-4612-a20e-a55d5210ca4d",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -576,6 +576,12 @@
         "data_lines": {
           "name": "data_lines",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "misc_blurb": {
+          "name": "misc_blurb",
+          "type": "varchar(512)",
           "primaryKey": false,
           "notNull": false
         },
@@ -1550,8 +1556,14 @@
           "notNull": true,
           "default": 1
         },
-        "version": {
-          "name": "version",
+        "version_key": {
+          "name": "version_key",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name_key": {
+          "name": "name_key",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
@@ -1606,12 +1618,19 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "workflows_galaxy_id_version_unique": {
-          "name": "workflows_galaxy_id_version_unique",
+        "workflows_version_key_name_key_unique": {
+          "name": "workflows_version_key_name_key_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "galaxy_id",
-            "version"
+            "version_key",
+            "name_key"
+          ]
+        },
+        "workflows_galaxy_id_unique": {
+          "name": "workflows_galaxy_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "galaxy_id"
           ]
         }
       },
@@ -1872,6 +1891,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "misc_blurb": {
+          "name": "misc_blurb",
+          "type": "varchar(512)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "dataset_name": {
           "name": "dataset_name",
           "type": "varchar(256)",
@@ -1903,7 +1928,7 @@
           "notNull": false
         }
       },
-      "definition": "select \"galaxy\".\"datasets\".\"id\", \"galaxy\".\"analysis_inputs\".\"state\", \"galaxy\".\"analysis_inputs\".\"dataset_id\", \"galaxy\".\"analysis_inputs\".\"analysis_id\", \"galaxy\".\"datasets\".\"owner_id\", \"galaxy\".\"datasets\".\"history_id\", \"galaxy\".\"datasets\".\"storage_object_id\", \"galaxy\".\"datasets\".\"created_at\", \"galaxy\".\"datasets\".\"uuid\", \"galaxy\".\"datasets\".\"extension\", \"galaxy\".\"datasets\".\"data_lines\", \"galaxy\".\"datasets\".\"dataset_name\", \"galaxy\".\"datasets\".\"galaxy_id\", \"galaxy\".\"datasets\".\"annotation\", \"storage\".\"objects\".\"name\", \"storage\".\"objects\".\"metadata\" from \"galaxy\".\"analysis_inputs\" inner join \"galaxy\".\"datasets\" on \"galaxy\".\"analysis_inputs\".\"dataset_id\" = \"galaxy\".\"datasets\".\"id\" inner join \"storage\".\"objects\" on \"galaxy\".\"datasets\".\"storage_object_id\" = \"storage\".\"objects\".\"id\"",
+      "definition": "select \"galaxy\".\"datasets\".\"id\", \"galaxy\".\"analysis_inputs\".\"state\", \"galaxy\".\"analysis_inputs\".\"dataset_id\", \"galaxy\".\"analysis_inputs\".\"analysis_id\", \"galaxy\".\"datasets\".\"owner_id\", \"galaxy\".\"datasets\".\"history_id\", \"galaxy\".\"datasets\".\"storage_object_id\", \"galaxy\".\"datasets\".\"created_at\", \"galaxy\".\"datasets\".\"uuid\", \"galaxy\".\"datasets\".\"extension\", \"galaxy\".\"datasets\".\"data_lines\", \"galaxy\".\"datasets\".\"misc_blurb\", \"galaxy\".\"datasets\".\"dataset_name\", \"galaxy\".\"datasets\".\"galaxy_id\", \"galaxy\".\"datasets\".\"annotation\", \"storage\".\"objects\".\"name\", \"storage\".\"objects\".\"metadata\" from \"galaxy\".\"analysis_inputs\" inner join \"galaxy\".\"datasets\" on \"galaxy\".\"analysis_inputs\".\"dataset_id\" = \"galaxy\".\"datasets\".\"id\" inner join \"storage\".\"objects\" on \"galaxy\".\"datasets\".\"storage_object_id\" = \"storage\".\"objects\".\"id\"",
       "name": "analysis_inputs_with_storage_path",
       "schema": "galaxy",
       "isExisting": false,
@@ -1985,6 +2010,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "misc_blurb": {
+          "name": "misc_blurb",
+          "type": "varchar(512)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "dataset_name": {
           "name": "dataset_name",
           "type": "varchar(256)",
@@ -2016,7 +2047,7 @@
           "notNull": false
         }
       },
-      "definition": "select \"galaxy\".\"datasets\".\"id\", \"galaxy\".\"analysis_outputs\".\"state\", \"galaxy\".\"analysis_outputs\".\"dataset_id\", \"galaxy\".\"analysis_outputs\".\"analysis_id\", \"galaxy\".\"analysis_outputs\".\"job_id\", \"galaxy\".\"datasets\".\"owner_id\", \"galaxy\".\"datasets\".\"history_id\", \"galaxy\".\"datasets\".\"storage_object_id\", \"galaxy\".\"datasets\".\"created_at\", \"galaxy\".\"datasets\".\"uuid\", \"galaxy\".\"datasets\".\"extension\", \"galaxy\".\"datasets\".\"data_lines\", \"galaxy\".\"datasets\".\"dataset_name\", \"galaxy\".\"datasets\".\"galaxy_id\", \"galaxy\".\"datasets\".\"annotation\", \"storage\".\"objects\".\"name\", \"storage\".\"objects\".\"metadata\" from \"galaxy\".\"analysis_outputs\" inner join \"galaxy\".\"datasets\" on \"galaxy\".\"analysis_outputs\".\"dataset_id\" = \"galaxy\".\"datasets\".\"id\" inner join \"storage\".\"objects\" on \"galaxy\".\"datasets\".\"storage_object_id\" = \"storage\".\"objects\".\"id\"",
+      "definition": "select \"galaxy\".\"datasets\".\"id\", \"galaxy\".\"analysis_outputs\".\"state\", \"galaxy\".\"analysis_outputs\".\"dataset_id\", \"galaxy\".\"analysis_outputs\".\"analysis_id\", \"galaxy\".\"analysis_outputs\".\"job_id\", \"galaxy\".\"datasets\".\"owner_id\", \"galaxy\".\"datasets\".\"history_id\", \"galaxy\".\"datasets\".\"storage_object_id\", \"galaxy\".\"datasets\".\"created_at\", \"galaxy\".\"datasets\".\"uuid\", \"galaxy\".\"datasets\".\"extension\", \"galaxy\".\"datasets\".\"data_lines\", \"galaxy\".\"datasets\".\"misc_blurb\", \"galaxy\".\"datasets\".\"dataset_name\", \"galaxy\".\"datasets\".\"galaxy_id\", \"galaxy\".\"datasets\".\"annotation\", \"storage\".\"objects\".\"name\", \"storage\".\"objects\".\"metadata\" from \"galaxy\".\"analysis_outputs\" inner join \"galaxy\".\"datasets\" on \"galaxy\".\"analysis_outputs\".\"dataset_id\" = \"galaxy\".\"datasets\".\"id\" inner join \"storage\".\"objects\" on \"galaxy\".\"datasets\".\"storage_object_id\" = \"storage\".\"objects\".\"id\"",
       "name": "analysis_outputs_with_storage_path",
       "schema": "galaxy",
       "isExisting": false,
@@ -2067,6 +2098,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "misc_blurb": {
+          "name": "misc_blurb",
+          "type": "varchar(512)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "dataset_name": {
           "name": "dataset_name",
           "type": "varchar(256)",
@@ -2104,7 +2141,7 @@
           "notNull": false
         }
       },
-      "definition": "select \"galaxy\".\"datasets\".\"owner_id\", \"galaxy\".\"datasets\".\"history_id\", \"galaxy\".\"datasets\".\"storage_object_id\", \"storage\".\"objects\".\"created_at\", \"galaxy\".\"datasets\".\"uuid\", \"galaxy\".\"datasets\".\"extension\", \"galaxy\".\"datasets\".\"data_lines\", \"galaxy\".\"datasets\".\"dataset_name\", \"galaxy\".\"datasets\".\"galaxy_id\", \"galaxy\".\"datasets\".\"annotation\", \"storage\".\"objects\".\"id\", \"storage\".\"objects\".\"name\", \"storage\".\"objects\".\"metadata\" from \"galaxy\".\"datasets\" inner join \"storage\".\"objects\" on \"galaxy\".\"datasets\".\"storage_object_id\" = \"storage\".\"objects\".\"id\"",
+      "definition": "select \"galaxy\".\"datasets\".\"owner_id\", \"galaxy\".\"datasets\".\"history_id\", \"galaxy\".\"datasets\".\"storage_object_id\", \"storage\".\"objects\".\"created_at\", \"galaxy\".\"datasets\".\"uuid\", \"galaxy\".\"datasets\".\"extension\", \"galaxy\".\"datasets\".\"data_lines\", \"galaxy\".\"datasets\".\"misc_blurb\", \"galaxy\".\"datasets\".\"dataset_name\", \"galaxy\".\"datasets\".\"galaxy_id\", \"galaxy\".\"datasets\".\"annotation\", \"storage\".\"objects\".\"id\", \"storage\".\"objects\".\"name\", \"storage\".\"objects\".\"metadata\" from \"galaxy\".\"datasets\" inner join \"storage\".\"objects\" on \"galaxy\".\"datasets\".\"storage_object_id\" = \"storage\".\"objects\".\"id\"",
       "name": "datasets_with_storage_path",
       "schema": "galaxy",
       "isExisting": false,

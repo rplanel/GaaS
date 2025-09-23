@@ -1,12 +1,14 @@
 <script lang="ts" setup>
+import type { Coordinator, Selection } from '@uwdata/mosaic-core'
 import { PlotRange } from '#components'
-import { coordinator as defaultCoordinator } from '@uwdata/mosaic-core'
 import * as vg from '@uwdata/vgplot'
+import { usePlotLayout } from '../../../../composables/usePlotLayout'
 
 interface Props {
   table: string
   variable: string
   selection: Selection
+  coordinator?: Coordinator
   width?: number
   height?: number
 
@@ -22,8 +24,7 @@ const container = useTemplateRef('container')
 const selection = toRef(() => props.selection)
 const table = toRef(() => props.table)
 const variable = toRef(() => props.variable)
-// const coordinator = toRef(() => props.coordinator)
-const coordinator = defaultCoordinator()
+const coordinator = toRef(() => props.coordinator)
 const width = toRef(() => props.width)
 const height = toRef(() => props.height)
 

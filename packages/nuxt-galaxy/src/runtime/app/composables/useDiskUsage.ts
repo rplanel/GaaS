@@ -2,7 +2,6 @@ import { Data, Effect } from 'effect'
 import { ref } from 'vue'
 import { SupabaseClientLayer } from '../utils/supabase'
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class ListDatasetsError extends Data.TaggedError('CreateSignedUrlError')<{
   readonly message: string
 }> {}

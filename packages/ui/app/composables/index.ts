@@ -1,5 +1,5 @@
 export { useGalaxyDecodeParameters } from './galaxy/useGalaxyDecodeParameters'
 export { useGalaxyEncodeParameters } from './galaxy/useGalaxyEncodeParameters'
 export { useGalaxyToolInputComponent } from './galaxy/useGalaxyToolInputComponent'
-export { useMosaicCsv } from './mosaic/useMosaicCsv'
-export { useMosaicObject } from './mosaic/useMosaicObject'
+export { useMosaic } from './mosaic/useMosaic'
+export { useMosaicTable } from './mosaic/useMosaicTable'

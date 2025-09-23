@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SupabaseTypes } from '#build/types/database'
 import type { GalaxyTypes } from '#build/types/nuxt-galaxy'
+import { UBadge } from '#components'
+import { getHumanSize } from '#layers/@gaas-ui/app/utils'
 import { z } from 'zod'
 
 type AnalysisIOsWithStoratePath = GalaxyTypes.AnalysisInputsWithStoratePath | GalaxyTypes.AnalysisOutputsWithStoratePath
@@ -12,7 +14,7 @@ export interface Props {
 type Database = SupabaseTypes.Database
 const props = withDefaults(defineProps<Props>(), { items: undefined })
 const supabase = useSupabaseClient<Database>()
-const items = toRef(props.items)
+const items = toRef(() => props.items)
 const fileMetadataSchema = z.object({
   size: z.number(),
 })
@@ -25,10 +27,9 @@ const sanitizedItems = computed(() => {
       .map((item) => {
         const { size } = fileMetadataSchema.passthrough().parse(item.metadata)
 
-        const { fileSize } = useFileSize(size)
         return {
           ...item,
-          humanFileSize: fileSize.value,
+          humanFileSize: getHumanSize(size),
         }
       })
   }
@@ -74,10 +75,22 @@ async function downloadFile(storageId: string | null) {
     <UPageList>
       <UPageCard
         v-for="(dataset, i) in sanitizedItems" :key="dataset?.dataset_name ?? i"
-        :description="dataset?.dataset_name ? dataset.dataset_name : undefined" variant="ghost"
+        :description="dataset?.dataset_name ? dataset.dataset_name : undefined"
+        variant="ghost"
         icon="i-mdi:download"
         @click="downloadFile(dataset?.storage_object_id)"
-      />
+      >
+        <template #footer>
+          <div class="flex flex-row gap-1 text-sm text-gray-500">
+            <UBadge v-if="dataset.humanFileSize" class="font-bold rounded-full">
+              {{ dataset.humanFileSize }}
+            </UBadge>
+            <UBadge v-if="dataset?.misc_blurb" class="font-bold rounded-full" variant="text" color="neutral">
+              {{ dataset.misc_blurb }}
+            </UBadge>
+          </div>
+        </template>
+      </UPageCard>
     </UPageList>
   </div>
 </template>

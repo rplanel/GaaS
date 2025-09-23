@@ -12,7 +12,6 @@ export async function getCurrentUser(url: string, email: string) {
   )).then(takeUniqueOrThrow)
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetCurrentUserError extends Data.TaggedError('GetCurrentUserError')<{
   readonly message: string
 

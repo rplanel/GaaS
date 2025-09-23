@@ -3,7 +3,7 @@ import type { TableColumn } from '@nuxt/ui'
 import {
   Selection,
 } from '@uwdata/mosaic-core'
-import { computed, ref } from 'vue'
+import { computed, ref, toValue } from 'vue'
 import { useMosaicObject } from '../../../../packages/ui/app/composables/mosaic/useMosaicObject'
 
 interface SatelliteData {
@@ -45,18 +45,25 @@ const plotMetaClass = computed(() => {
   }
 })
 const table = ref('satellitedata')
+onBeforeMount(() => {
+  table.value = `satellitedata${Math.floor(Math.random() * 20)}`
+})
 
-const { pending } = useMosaicObject(table, data)
+const { pending, coordinator } = useMosaicObject(table, data)
 const { getHeader: getHistogramHeader } = useHistogramHeader({
   table: table.value,
   selection,
+  coordinator: coordinator.value,
 })
 
 const { getHeader: getCategoryHeader } = useCategoryHeader({
   table: table.value,
   selection,
+  coordinator: coordinator.value,
 })
-
+// watch(queryString, (newQuery) => {
+//   console.log('Query String:', newQuery)
+// })
 const computedColumns = computed(() => {
   return columns.value.map((col) => {
     const label = col.header as string
@@ -92,6 +99,7 @@ const computedColumns = computed(() => {
       :table
       :selection
       :columns="computedColumns"
+      :coordinator
     />
   </div>
 </template>

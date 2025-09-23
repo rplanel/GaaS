@@ -30,14 +30,13 @@ export function synchronizeOutputDatasetEffect(galaxyDatasetId: string, analysis
         }
         const galaxyDataset = yield* bt.getDatasetEffect(galaxyDatasetId, historyDb.galaxyId)
         if (datasetDb.state !== galaxyDataset.state) {
-          yield* updateAnalysisOuputStateEffect(galaxyDataset.state, galaxyDatasetId, ownerId)
+          yield* updateAnalysisOutputStateEffect(galaxyDataset.state, galaxyDatasetId, ownerId)
         }
       }
     }
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetAnalysisOutputError extends Data.TaggedError('GetAnalysisOutputError')<{
   readonly message: string
 }> {}
@@ -92,7 +91,8 @@ export function getOrCreateOutputDatasetEffect(
             storageObjectId: data.id,
             historyId,
             uuid: galaxyDataset.uuid,
-            dataLines: galaxyDataset.metadata_comment_lines || 0,
+            dataLines: galaxyDataset.metadata_data_lines || 0,
+            miscBlurb: galaxyDataset.misc_blurb,
             extension: galaxyDataset.extension,
           })
           if (insertedDataset) {
@@ -109,7 +109,6 @@ export function getOrCreateOutputDatasetEffect(
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class InsertAnalysisOutputTagsError extends Data.TaggedError('InsertAnalysisOutputTagsError')<{
   readonly message: string
 }> {}
@@ -131,7 +130,7 @@ export function insertAnalysisOutputTags(datasetTags: GetTag[], analysisOutputId
     })
   })
 }
-// eslint-disable-next-line unicorn/throw-new-error
+
 export class InsertAnalysisOutputError extends Data.TaggedError('InsertAnalysisOutputError')<{
   readonly message: string
 
@@ -152,7 +151,6 @@ export function insertAnalysisOutputEffect(analysisId: number, datasetId: number
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetAnalysisOutputStateError extends Data.TaggedError('GetAnalysisOutputStateError')<{
   readonly message: string
 }> {}
@@ -194,12 +192,11 @@ export function isOutputDatasetSyncEffect(galaxyDatasetId: string, jobId: number
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class UpdateAnalysisOuputStateError extends Data.TaggedError('UpdateAnalysisOuputStateError')<{
   readonly message: string
 }> {}
 
-export function updateAnalysisOuputStateEffect(state: DatasetState, galaxyDatasetId: string, ownerId: string) {
+export function updateAnalysisOutputStateEffect(state: DatasetState, galaxyDatasetId: string, ownerId: string) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
     return yield* Effect.tryPromise({

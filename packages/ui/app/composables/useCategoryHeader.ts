@@ -21,40 +21,56 @@
  * });
  * ```
  */
-import type { Column } from '@tanstack/vue-table'
-import type { Selection } from '@uwdata/mosaic-core'
-import { coordinator as defaultCoordinator } from '@uwdata/mosaic-core'
-import { h } from 'vue'
+
+import type { Coordinator } from '@uwdata/mosaic-core'
+import type { GetHeaderParams, UseHeaderParams } from '../types/plotHeader'
+import { coordinator as defaultCoordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
+import { h, onBeforeMount, ref, watch } from 'vue'
 import PlotTableHeaderCategory from '../components/plot/table/header/Category.vue'
 
-interface GetHeaderParams<T> {
-  column: Column<T>
-  label: string
-  variable: string
-}
+export function useCategoryHeader(params: UseHeaderParams) {
+  const { table, selection, coordinator } = params
 
-interface UseHistogramHeaderParams {
-  table: string
-  selection: Selection
-}
+  const mosaicCoordinator = ref<Coordinator | undefined>(coordinator)
+  onBeforeMount(() => {
+    if (mosaicCoordinator.value === undefined) {
+      const wasm = new DuckDBWASMConnector()
+      const c = defaultCoordinator()
+      c.databaseConnector(wasm)
+      mosaicCoordinator.value = c
+    }
+  })
 
-const coordinator = defaultCoordinator()
-
-export function useCategoryHeader(params: UseHistogramHeaderParams) {
-  const { table, selection } = params
-  function getHeader<T>(params: GetHeaderParams<T>): VNode {
-    const { column, label, variable } = params
-    return h('div', { class: 'w-full' }, [
-      h('div', { class: 'text-sm font-semibold' }, label),
-      h(PlotTableHeaderCategory, {
-        table,
-        selection,
-        variableId: variable,
-        coordinator,
-        width: column.getSize() - 32,
-      }),
-    ])
+  // Wrap _getHeader in a function to capture the latest mosaicCoordinator value
+  function getHeaderFn() {
+    function _getHeader<T>(params: GetHeaderParams<T>): VNode {
+      const { column, label, variable } = params
+      const mosaicCoordinatorVal = mosaicCoordinator.value as Coordinator | undefined
+      if (!selection || !mosaicCoordinatorVal) {
+        console.warn('Missing required parameters for category header:', { table, selection, coordinator })
+        return h('div', { class: 'w-full' }, 'No data available')
+      }
+      return h('div', { class: 'w-full' }, [
+        h('div', { class: 'text-sm font-semibold' }, label),
+        h(PlotTableHeaderCategory, {
+          table,
+          selection,
+          variableId: variable,
+          coordinator: mosaicCoordinatorVal,
+          width: column.getSize() - 32,
+        }),
+      ])
+    }
+    return _getHeader
   }
+  const getHeader = ref<ReturnType<typeof getHeaderFn>>(getHeaderFn())
+
+  watch(mosaicCoordinator, () => {
+    // const getHeaderFn = () => _getHeader
+
+    getHeader.value = getHeaderFn()
+  })
+
   return {
     getHeader,
   }

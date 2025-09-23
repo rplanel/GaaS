@@ -38,7 +38,6 @@ export function getOrCreateJobEffect(analysisId: number, galaxyJobId: string, st
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class InsertAnalysisJobError extends Data.TaggedError('InsertAnalysisJobError')<{
   readonly message: string
 }> {}
@@ -62,7 +61,6 @@ export function insertAnalysisJob(galaxyJob: NewJob) {
   })
 }
 
-// eslint-disable-next-line unicorn/throw-new-error
 export class GetAnalysisJobsError extends Data.TaggedError('GetAnalysisJobsError')<{
   readonly message: string
 }> {}

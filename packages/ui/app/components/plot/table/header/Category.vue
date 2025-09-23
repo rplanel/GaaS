@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import type { PlotOptions } from '@observablehq/plot'
-import type { MosaicClient, Selection } from '@uwdata/mosaic-core'
+import type { Coordinator, MosaicClient, Selection } from '@uwdata/mosaic-core'
 import type { FilterExpr } from '@uwdata/mosaic-sql'
 import { ObservablePlotRender } from '#components'
 import * as Plot from '@observablehq/plot'
-import { clausePoint, coordinator as defaultCoordinator, isParam, isSelection, makeClient } from '@uwdata/mosaic-core'
+import { clausePoint, isParam, isSelection, makeClient } from '@uwdata/mosaic-core'
 import { count, Query } from '@uwdata/mosaic-sql'
 import * as d3 from 'd3'
 import * as htl from 'htl'
@@ -13,6 +13,8 @@ interface Props {
   table: string
   variableId: string
   selection: Selection
+  coordinator: Coordinator
+
   width?: number
   height?: number
 }
@@ -22,10 +24,10 @@ const props = withDefaults(defineProps<Props>(), {
   height: 70,
 })
 
-const coordinator = defaultCoordinator()
 const selection = toRef(() => props.selection)
 const table = toRef(() => props.table)
 const variableId = toRef(() => props.variableId)
+const coordinator = toRef(() => props.coordinator)
 const width = toRef(() => props.width)
 const height = toRef(() => props.height)
 
@@ -46,7 +48,7 @@ watchEffect((onCleanup) => {
   // const categoryFilterVal = toValue(categoryFilter)
 
   const client = makeClient({
-    coordinator,
+    coordinator: coordinator.value,
     selection: selection.value,
     prepare: async () => {
       // Preparation work before the client starts.
@@ -61,7 +63,7 @@ watchEffect((onCleanup) => {
       //   query = query.where(isIn(variableName, categoryFilterVal.map(d => literal(d))))
       // }
 
-      const result = await coordinator.query(
+      const result = await coordinator.value.query(
         query,
       )
       const groupedData = result.toArray()
