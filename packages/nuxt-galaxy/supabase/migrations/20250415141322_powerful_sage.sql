@@ -1,1 +1,0 @@
-ALTER TABLE "galaxy"."workflows" ADD COLUMN "auto_version" integer DEFAULT 1 NOT NULL;

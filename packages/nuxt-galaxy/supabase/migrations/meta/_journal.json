@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1744452747626,
-      "tag": "20250412101227_low_vance_astro",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1744719112680,
-      "tag": "20250415121152_rapid_the_twelve",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1744726402134,
-      "tag": "20250415141322_powerful_sage",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1744829346260,
-      "tag": "20250416184906_fat_living_mummy",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1758294104081,
-      "tag": "20250919150144_military_namor",
+      "when": 1758635130644,
+      "tag": "20250923134530_vengeful_lucky_pierre",
       "breakpoints": true
     }
   ]
