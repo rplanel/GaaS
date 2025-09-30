@@ -150,35 +150,4 @@ const providers = [
     close
     @update:open="() => loginError = null"
   />
-
-  <!-- <UCard>
-    <template #header>
-      <h2 class="text-lg font-bold">
-        Log in to
-      </h2>
-    </template>
-    <UForm :schema="schema" :state="state" class="space-y-4">
-      <UFormField label="Email address" name="email" required>
-        <UInput v-model="state.email" placeholder="johndoe@gmail.com" type="email" />
-      </UFormField>
-      <UFormField label="Password" name="password" help="Enter your password to access this website" required>
-        <UInput v-model="state.password" :type="showPassword ? 'text' : 'password'">
-          <template #trailing>
-            <UButton
-              color="neutral" variant="link" size="sm" :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-              aria-label="show ? 'Hide password' : 'Show password'" :aria-pressed="showPassword"
-              aria-controls="password" @click="showPassword = !showPassword"
-            />
-          </template>
-        </UInput>
-      </UFormField>
-
-      <UButton loading-auto class="mr-3" @click="handleSignIn">
-        Sign In
-      </UButton>
-      <UButton variant="subtle" @click="handleSignUp">
-        Sign Up
-      </UButton>
-    </UForm>
-  </UCard> -->
 </template>

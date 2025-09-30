@@ -23,7 +23,7 @@
     "@nuxt/content": "catalog:nuxt",
     "@nuxt/image": "catalog:nuxt",
     "@nuxt/test-utils": "catalog:nuxt",
-    "@nuxt/ui-pro": "catalog:nuxt",
+    "@nuxt/ui": "catalog:nuxt",
     "nuxt": "catalog:nuxt",
     "nuxt-llms": "catalog:nuxt",
     "nuxt-og-image": "catalog:nuxt"

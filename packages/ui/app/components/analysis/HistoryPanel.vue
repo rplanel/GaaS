@@ -260,7 +260,7 @@ const computedResultsMenuItems = computed(() => {
             <GalaxyAnalysisIoDatasets :items="inputs" />
           </UPageCard>
           <UPageCard v-if="jobs && toolsObj" title="Jobs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-            <UPageAccordion :default-value="[jobsAccordionItems?.[0]?.value ?? '0']" :items="jobsAccordionItems">
+            <UAccordion :default-value="[jobsAccordionItems?.[0]?.value ?? '0']" :items="jobsAccordionItems">
               <template #leading="{ item }">
                 <div>
                   <GalaxyStatus :state="item?.value && jobsMap ? jobsMap[item.value]?.state : undefined" size="25" />
@@ -268,7 +268,7 @@ const computedResultsMenuItems = computed(() => {
               </template>
               <template #body="{ item }">
                 <div v-if="jobDetailsAccordionItems && item.value" class="p-4">
-                  <UPageAccordion :items="jobDetailsAccordionItems[item.value]?.details">
+                  <UAccordion :items="jobDetailsAccordionItems[item.value]?.details">
                     <template #parameters>
                       <div
                         v-if="
@@ -299,10 +299,10 @@ const computedResultsMenuItems = computed(() => {
                         </div>
                       </div>
                     </template>
-                  </UPageAccordion>
+                  </UAccordion>
                 </div>
               </template>
-            </UPageAccordion>
+            </UAccordion>
           </UPageCard>
           <UPageCard title="Outputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
             <GalaxyAnalysisIoDatasets :items="sortedOutputs" />

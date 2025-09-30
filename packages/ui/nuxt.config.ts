@@ -19,7 +19,7 @@ export default defineNuxtConfig({
     name: '@gaas-ui',
   },
   modules: [
-    '@nuxt/ui-pro',
+    '@nuxt/ui',
     '@nuxt/test-utils/module',
     '@nuxt/eslint',
     'nuxt-galaxy',
@@ -34,7 +34,6 @@ export default defineNuxtConfig({
     optimizeDeps: {
       include: [
         '@vueuse/core',
-        '@nuxt/ui-pro',
         'zod',
         'jwt-decode',
         'effect',

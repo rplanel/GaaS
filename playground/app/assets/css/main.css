@@ -1,4 +1,4 @@
 @import 'tailwindcss';
-@import '@nuxt/ui-pro';
+@import '@nuxt/ui';
 
 @source "../../../../node_modules/@gaas/ui";

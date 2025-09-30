@@ -31,21 +31,7 @@
     "lint-staged": "catalog:",
     "simple-git-hooks": "catalog:"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@parcel/watcher",
-      "@tailwindcss/oxide",
-      "better-sqlite3",
-      "esbuild",
-      "sharp",
-      "simple-git-hooks",
-      "supabase",
-      "unrs-resolver"
-    ],
-    "ignoredBuiltDependencies": [
-      "vue-demi"
-    ]
-  },
+  "pnpm": {},
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"
   },
