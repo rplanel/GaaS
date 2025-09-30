@@ -33,6 +33,16 @@ export default defineNuxtConfig({
   vite: {
     optimizeDeps: {
       include: [
+        '@uwdata/mosaic-core',
+        '@uwdata/mosaic-sql',
+        'scule',
+        '@uwdata/vgplot',
+        '@observablehq/plot',
+        'd3',
+        'htl',
+        '@nuxt/content/utils',
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
         '@vueuse/core',
         'zod',
         'jwt-decode',

@@ -36,7 +36,6 @@ const pagination = ref({
 const columnVisibility = ref({
   id: false,
 })
-
 const tableElem = useTemplateRef('tableElem')
 
 const selectClause = computed(() => {
@@ -130,7 +129,7 @@ watchEffect((onCleanup) => {
       class="flex flex-col flex-1 w-full"
     >
       <div>
-        <div class="grid grid-cols-4 justify-between  items-center px-4 py-3.5">
+        <div class="grid grid-cols-4 justify-between items-center px-4 py-3.5">
           <div class="col-start-1 col-end-3">
             <PlotCount
               :table
@@ -138,8 +137,9 @@ watchEffect((onCleanup) => {
               :coordinator
             />
           </div>
-          <div class="col-start-4 col-end-5 justify-self-end">
+          <div class="col-start-3 col-span-2 justify-self-end">
             <UDropdownMenu
+              :ui="{ content: 'overflow-y-auto max-h-60' }"
               :items="
                 tableElem?.tableApi
                   ?.getAllColumns()
