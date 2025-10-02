@@ -92,5 +92,6 @@ export function useMosaic(params: useMosaicParams) {
     state,
     isReady,
     isLoading,
+    coordinator,
   }
 }

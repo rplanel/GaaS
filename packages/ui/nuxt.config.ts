@@ -19,7 +19,7 @@ export default defineNuxtConfig({
     name: '@gaas-ui',
   },
   modules: [
-    '@nuxt/ui-pro',
+    '@nuxt/ui',
     '@nuxt/test-utils/module',
     '@nuxt/eslint',
     'nuxt-galaxy',
@@ -33,8 +33,17 @@ export default defineNuxtConfig({
   vite: {
     optimizeDeps: {
       include: [
+        '@uwdata/mosaic-core',
+        '@uwdata/mosaic-sql',
+        'scule',
+        '@uwdata/vgplot',
+        '@observablehq/plot',
+        'd3',
+        'htl',
+        '@nuxt/content/utils',
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
         '@vueuse/core',
-        '@nuxt/ui-pro',
         'zod',
         'jwt-decode',
         'effect',

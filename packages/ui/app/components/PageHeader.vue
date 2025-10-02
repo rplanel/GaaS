@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { BreadcrumbItem } from '@nuxt/ui'
-import type { PageHeaderProps } from '@nuxt/ui-pro'
+import type { BreadcrumbItem, PageHeaderProps } from '@nuxt/ui'
 
 interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined

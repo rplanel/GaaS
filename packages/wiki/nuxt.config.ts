@@ -16,7 +16,7 @@ export default defineNuxtConfig({
   },
 
   modules: [
-    '@nuxt/ui-pro',
+    '@nuxt/ui',
     '@nuxt/test-utils/module',
     '@nuxt/eslint',
     '@nuxt/content',

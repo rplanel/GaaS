@@ -58,8 +58,7 @@
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "jwt-decode": "catalog:",
-    "postgres": "catalog:",
-    "supabase": "catalog:"
+    "postgres": "catalog:"
   },
   "devDependencies": {
     "@antfu/eslint-config": "catalog:",
@@ -76,6 +75,7 @@
     "happy-dom": "catalog:",
     "nuxt": "catalog:nuxt",
     "playwright-core": "catalog:",
+    "supabase": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "vue-tsc": "catalog:"
