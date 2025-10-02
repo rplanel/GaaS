@@ -10,7 +10,7 @@ export default defineNuxtConfig({
     '../packages/wiki',
   ],
   modules: [
-    '@nuxt/ui-pro',
+    '@nuxt/ui',
     '@nuxt/devtools',
     '@nuxt/content',
   ],

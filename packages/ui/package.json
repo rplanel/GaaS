@@ -32,7 +32,6 @@
     "@nuxt/eslint": "latest",
     "@nuxt/test-utils": "catalog:nuxt",
     "@nuxt/ui": "catalog:nuxt",
-    "@nuxt/ui-pro": "catalog:nuxt",
     "@nuxtjs/supabase": "catalog:nuxt",
     "@observablehq/plot": "catalog:dataviz",
     "@uwdata/mosaic-core": "catalog:dataviz",

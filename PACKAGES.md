@@ -261,7 +261,7 @@ export default defineNuxtConfig({
 ```css
 /* app/assets/css/main.css */
 @import 'tailwindcss';
-@import '@nuxt/ui-pro';
+@import '@nuxt/ui';
 
 @source "../../../node_modules/@gaas/ui";
 ```
