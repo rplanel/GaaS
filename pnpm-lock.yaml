@@ -207,8 +207,8 @@ catalogs:
       specifier: ^4.0.1
       version: 4.0.1
     '@nuxtjs/supabase':
-      specifier: ^1.6.0
-      version: 1.6.2
+      specifier: ^2.0.0
+      version: 2.0.0
     nuxt:
       specifier: ^4.1.2
       version: 4.1.2
@@ -371,7 +371,7 @@ importers:
         version: 4.1.2(magicast@0.3.5)
       '@nuxtjs/supabase':
         specifier: catalog:nuxt
-        version: 1.6.2
+        version: 2.0.0
       blendtype:
         specifier: workspace:*
         version: link:../blendtype
@@ -498,7 +498,7 @@ importers:
         version: 4.0.1(@babel/parser@7.28.4)(change-case@5.4.4)(db0@0.3.4(better-sqlite3@12.4.1)(drizzle-orm@0.44.6(@opentelemetry/api@1.9.0)(better-sqlite3@12.4.1)(postgres@3.4.7)))(embla-carousel@8.6.0)(ioredis@5.8.0)(jwt-decode@4.0.0)(magicast@0.3.5)(typescript@5.9.3)(vite@7.1.9(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1))(vue-router@4.5.1(vue@3.5.22(typescript@5.9.3)))(vue@3.5.22(typescript@5.9.3))(zod@3.25.76)
       '@nuxtjs/supabase':
         specifier: catalog:nuxt
-        version: 1.6.2
+        version: 2.0.0
       '@observablehq/plot':
         specifier: catalog:dataviz
         version: 0.6.17
@@ -1820,8 +1820,8 @@ packages:
   '@nuxtjs/mdc@0.17.4':
     resolution: {integrity: sha512-I5ZYUWVlE2xZAkfBG6B0/l2uddDZlr8X2WPVMPYNY4zocobBjMgykj4aqYXHY+N35HRYsa+IpuUCf30bR8xCbA==}
 
-  '@nuxtjs/supabase@1.6.2':
-    resolution: {integrity: sha512-/ugHRSWfPncCc2F6z5haa/L0hISrPNpfzciOlvSaCKi9079c+75ghf/TbFbjNn2YLu6396f5HTJlROypYyczeA==}
+  '@nuxtjs/supabase@2.0.0':
+    resolution: {integrity: sha512-mjSVDvjlnPNiekGyaIid2MDt8LotobIJbpRR18VTYghNKrBlFSQNaHHj4eQKotW2L7xql7UEa+w2MPyrM9jAHQ==}
 
   '@observablehq/plot@0.6.17':
     resolution: {integrity: sha512-/qaXP/7mc4MUS0s4cPPFASDRjtsWp85/TbfsciqDgU1HwYixbSbbytNuInD8AcTYC3xaxACgVX06agdfQy9W+g==}
@@ -10169,7 +10169,7 @@ snapshots:
       - magicast
       - supports-color
 
-  '@nuxtjs/supabase@1.6.2':
+  '@nuxtjs/supabase@2.0.0':
     dependencies:
       '@supabase/ssr': 0.7.0(@supabase/supabase-js@2.58.0)
       '@supabase/supabase-js': 2.58.0
