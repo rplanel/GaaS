@@ -131,7 +131,16 @@ const searchGroups = computed(() => {
   return [analysesSearchGroups.value, workflowsSearchGroups.value]
 })
 
-provide('datasetsCount', {
+export interface DatasetsCountProvide {
+  datasetsCount: Ref<number | null | undefined>
+  refreshDatasetsCount: () => Promise<void>
+}
+export interface AnalysesListProvide {
+  analysesList: Ref<typeof analyses.value>
+  refreshAnalysesList: () => Promise<void>
+}
+
+provide<DatasetsCountProvide>('datasetsCount', {
   datasetsCount,
   refreshDatasetsCount,
 })

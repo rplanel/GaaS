@@ -3,7 +3,7 @@ import type { SupabaseTypes } from '#build/types/database'
 import type { GalaxyTypes } from '#build/types/nuxt-galaxy'
 import { UBadge } from '#components'
 import { getHumanSize } from '#layers/@gaas-ui/app/utils'
-import { z } from 'zod'
+import * as z from 'zod'
 
 type AnalysisIOsWithStoratePath = GalaxyTypes.AnalysisInputsWithStoratePath | GalaxyTypes.AnalysisOutputsWithStoratePath
 

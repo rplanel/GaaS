@@ -2,7 +2,7 @@
 import type { SupabaseTypes } from '#build/types/database'
 import type { BreadcrumbItem, TableColumn } from '@nuxt/ui'
 import { h, resolveComponent } from 'vue'
-import { z } from 'zod'
+import * as z from 'zod'
 import { getHumanSize } from '../../utils'
 
 type Database = SupabaseTypes.Database

@@ -1,7 +1,7 @@
 import type { SupabaseTypes } from '#build/types/database'
 import type { GalaxyTypes } from '#build/types/nuxt-galaxy'
 import type { galaxyWorkflowExportSchema } from 'blendtype'
-import type { z } from 'zod'
+import type * as z from 'zod'
 
 export type Database = SupabaseTypes.Database
 

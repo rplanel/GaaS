@@ -2,7 +2,7 @@
 import type { Database, GalaxyWorkflowExportSchema, RowWorkflow, SanitizedWorkflowDbItem } from '../types'
 import * as bt from 'blendtype'
 import { galaxyWorkflowExportSchema } from 'blendtype'
-import { z } from 'zod'
+import * as z from 'zod'
 import { fromError } from 'zod-validation-error'
 
 const supabase = useSupabaseClient<Database>()

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ButtonProps } from '@nuxt/ui'
-// import type { RealtimeChannel } from '@supabase/supabase-js'
+import type { AnalysesListProvide } from '../../layouts/default.vue'
 import type { ListAnalysisWithWorkflow, SanitizedAnalysis } from '../../pages/analyses/index.vue'
 import type { Database } from '../../types'
 
@@ -12,7 +12,8 @@ const toast = useToast()
 const isEditingAnalyses = ref<Record<number, string>>({})
 const actionButtonProps = ref<ButtonProps>({ size: 'xs', variant: 'ghost', color: 'neutral' })
 
-const { refreshAnalysesList } = inject('analysesList')
+const analysesListInjected = inject<AnalysesListProvide>('analysesList')
+const { refreshAnalysesList } = analysesListInjected || {}
 // let realtimeChannel: RealtimeChannel
 
 const { data: analyses, refresh: refreshAnalyses } = await useAsyncData(
@@ -154,6 +155,9 @@ async function deleteItem(item: SanitizedAnalysis) {
   try {
     await $fetch(`/api/db/analyses/${item.id}`, { method: 'DELETE' })
     refreshAnalyses()
+    if (!refreshAnalysesList) {
+      throw createError('refreshAnalysesList not provided')
+    }
     refreshAnalysesList()
     toast.add({
       title: 'Analysis Deleted',

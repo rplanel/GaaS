@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SupabaseTypes } from '#build/types/database'
 import type { FormSubmitEvent } from '@nuxt/ui'
+import type { AuthError } from '@supabase/supabase-js'
 
 import {
   createError,
@@ -11,7 +12,7 @@ import {
 } from '#imports'
 import { ref, watchEffect } from 'vue'
 
-import { z } from 'zod'
+import * as z from 'zod'
 
 type Database = SupabaseTypes.Database
 

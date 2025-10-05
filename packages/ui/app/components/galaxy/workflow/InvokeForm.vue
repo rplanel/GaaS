@@ -8,11 +8,12 @@ import type {
 } from 'blendtype'
 import type { Props as WorkflowStepProps } from '../../../components/galaxy/workflow/Step.vue'
 import type { GalaxyToolInputComponent } from '../../../composables/galaxy/useGalaxyToolInputComponent'
+import type { AnalysesListProvide } from '../../../layouts/default.vue'
 import { NuxtErrorBoundary } from '#components'
 import { computed, ref, toValue } from '#imports'
-import * as bt from 'blendtype'
 
-import { z } from 'zod'
+import * as bt from 'blendtype'
+import * as z from 'zod'
 import { useGalaxyDecodeParameters } from '../../../composables/galaxy/useGalaxyDecodeParameters'
 import { useGalaxyEncodeParameters } from '../../../composables/galaxy/useGalaxyEncodeParameters'
 import {
@@ -47,7 +48,8 @@ const invokeWorkflowParameterModel = ref<Record<string, WorkflowToolParameters>>
 const user = useSupabaseUser()
 const supabase = useSupabaseClient<Database>()
 
-const { refreshAnalysesList } = inject('analysesList')
+const analysesListInjected = inject<AnalysesListProvide>('analysesList')
+const { refreshAnalysesList } = analysesListInjected || {}
 
 const schema = z.object({
   analysisName: z.string().max(256, 'Must be less than 256'),
@@ -182,6 +184,9 @@ async function runAnalysis() {
           method: 'POST',
           body: payload,
         })
+        if (!refreshAnalysesList) {
+          throw createError('refreshAnalysesList not provided')
+        }
         refreshAnalysesList()
 
         router.push(`/analyses/${newAnalysisId}`)

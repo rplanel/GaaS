@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { SupabaseTypes } from '#build/types/database'
 import type { BreadcrumbItem } from '#ui/types'
+import type { DatasetsCountProvide } from '../layouts/default.vue'
 import * as bt from 'blendtype'
-import { z } from 'zod'
+import * as z from 'zod'
 
 type Database = SupabaseTypes.Database
 
@@ -33,7 +34,9 @@ const state = reactive<Partial<Schema>>({
   file: undefined,
 })
 
-const { refreshDatasetsCount } = inject('datasetsCount')
+const datasetCountInjected = inject<DatasetsCountProvide>('datasetsCount')
+
+const { refreshDatasetsCount } = datasetCountInjected || {}
 
 const uploadError = ref<string | null>(null)
 
@@ -95,6 +98,9 @@ async function uploadFile(event: any) {
   }
   return uploadFileToStorage(file).then(() => {
     refreshDatasets()
+    if (!refreshDatasetsCount) {
+      throw createError('datasetsCount not provided')
+    }
     refreshDatasetsCount()
   })
 }

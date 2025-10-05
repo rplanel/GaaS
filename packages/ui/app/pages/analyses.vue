@@ -1,5 +1,8 @@
 <script setup lang="ts">
-const { analysesList } = inject('analysesList')
+import type { AnalysesListProvide } from '../layouts/default.vue'
+
+const analysesListInjected = inject<AnalysesListProvide>('analysesList')
+const { analysesList } = analysesListInjected || {}
 $fetch('/sync')
 </script>
 
