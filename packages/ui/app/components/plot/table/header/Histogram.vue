@@ -2,7 +2,7 @@
 import type { Coordinator, Selection } from '@uwdata/mosaic-core'
 import { PlotRange } from '#components'
 import * as vg from '@uwdata/vgplot'
-import { usePlotLayout } from '../../../../composables/usePlotLayout'
+import { usePlotLayout } from '../../../../composables/plot/usePlotLayout'
 
 interface Props {
   table: string

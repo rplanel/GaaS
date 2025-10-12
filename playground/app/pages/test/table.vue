@@ -34,12 +34,7 @@ const columns = ref<TableColumn<SatelliteData>[]>([
   { accessorKey: 'value', header: 'Value' },
 
 ])
-// const headerWithPlotWidth = ref(200) // Width for the header with plot
 
-// const { getHistogramHeader, getCategoryHeader } = useMosaicTable({
-//   tableName,
-//   selection,
-// })
 const loadingStatus = ref(0)
 
 const {

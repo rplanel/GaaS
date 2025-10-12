@@ -1,8 +1,8 @@
 import type { Coordinator } from '@uwdata/mosaic-core'
-import type { GetHeaderParams, UseHeaderParams } from '../types/plotHeader'
+import type { GetHeaderParams, UseHeaderParams } from '../../../types/plotHeader'
 import { coordinator as defaultCoordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { h, onBeforeMount, ref, watch } from 'vue'
-import PlotTableHeaderHistogram from '../components/plot/table/header/Histogram.vue'
+import PlotTableHeaderHistogram from '../../../components/plot/table/header/Histogram.vue'
 
 export function useHistogramHeader(params: UseHeaderParams) {
   const { table, selection, coordinator } = params

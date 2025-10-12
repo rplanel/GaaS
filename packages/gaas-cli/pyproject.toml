@@ -16,7 +16,7 @@ dependencies = [
 [project.scripts]
 gaas = "gaas_cli.main:app"
 
-[project.flake8]
+[tool.flake8]
 max-line-length = 88
 
 [tool.uv]
