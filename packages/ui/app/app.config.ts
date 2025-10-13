@@ -77,7 +77,10 @@ export default defineAppConfig({
       neutral: 'zinc',
     },
   },
-
+  meilisearch: {
+    hostUrl: 'http://my-meilisearch-server.domain.com', // reqired
+    searchApiKey: '<your_search_key>', // reqired
+  },
 })
 
 // should use extends NavigationMenuItem

@@ -22,3 +22,8 @@ dist
 
 # JetBrains/WebStorm
 .idea/
+
+
+#meilisearch 
+
+meili_data

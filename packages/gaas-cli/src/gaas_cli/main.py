@@ -4,6 +4,7 @@ from rich import print
 # from dotenv import dotenv_values
 import gaas_cli.biblio as biblio
 import gaas_cli.content as content
+import gaas_cli.meili as meili
 
 # config = dotenv_values()  # take environment variables
 
@@ -21,6 +22,12 @@ app.add_typer(
     content.app,
     name="content",
     help="Manage Nuxt content (Wiki).",
+)
+
+app.add_typer(
+    meili.app,
+    name="meili",
+    help="Manage MeiliSearch instances and indexes.",
 )
 
 # @app.command()

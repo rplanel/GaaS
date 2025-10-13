@@ -44,6 +44,7 @@
     "effect": "catalog:",
     "htl": "catalog:",
     "jwt-decode": "catalog:",
+    "meilisearch": "catalog:",
     "nuxt-galaxy": "workspace:*",
     "vitest": "catalog:",
     "zod": "catalog:",

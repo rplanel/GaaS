@@ -24,12 +24,22 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     'nuxt-galaxy',
   ],
+
+  runtimeConfig: {
+    public: {
+      meilisearch: {
+        hostUrl: 'http://localhost:7700', // reqired
+        searchApiKey: 'masterKey', // reqired
+      },
+    },
+  },
   css: [
     join(currentDir, './app/assets/css/main.css'),
   ],
   experimental: {
     typedPages: true,
   },
+
   vite: {
     optimizeDeps: {
       include: [
@@ -53,4 +63,5 @@ export default defineNuxtConfig({
       ],
     },
   },
+
 })
