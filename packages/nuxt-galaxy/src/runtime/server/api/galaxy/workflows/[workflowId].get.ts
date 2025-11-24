@@ -3,7 +3,7 @@ import * as bt from 'blendtype'
 import { Cause, Effect, Exit, Option } from 'effect'
 import { defineEventHandler, getRouterParam } from 'h3'
 import { Drizzle } from '../../../utils/drizzle'
-import { ServerSupabaseClient, ServerSupabaseUser } from '../../../utils/grizzle/supabase'
+import { ServerSupabaseClaims, ServerSupabaseClient } from '../../../utils/grizzle/supabase'
 
 export default defineEventHandler(async (event) => {
   const { public: { galaxy: { url } } } = useRuntimeConfig()
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     const workflowExit = await program.pipe(
       Effect.provide(bt.GalaxyFetch.Live),
       Effect.provide(Drizzle.Live),
-      Effect.provide(ServerSupabaseUser.Live),
+      Effect.provide(ServerSupabaseClaims.Live),
       Effect.provide(ServerSupabaseClient.Live),
       bt.runWithConfigExit,
     )

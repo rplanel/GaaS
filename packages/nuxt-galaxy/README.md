@@ -38,6 +38,123 @@ npx nuxi module add my-module
 
 That's it! You can now use My Module in your Nuxt app ✨
 
+## Using Database Types
+
+The module exports Supabase database types that are automatically available in your Nuxt application. You can use them in several ways:
+
+### 1. Direct Import from Module
+
+Import types directly from the module for use in your components or composables:
+
+```typescript
+import type { Database } from 'nuxt-galaxy'
+
+// Access table types directly from the Database type
+type Analysis = Database['galaxy']['Tables']['analyses']['Row']
+type AnalysisInsert = Database['galaxy']['Tables']['analyses']['Insert']
+type AnalysisUpdate = Database['galaxy']['Tables']['analyses']['Update']
+
+// Access enum types
+type JobState = Database['galaxy']['Enums']['job_state']
+type InvocationState = Database['galaxy']['Enums']['invocation_state']
+
+// Use in your code
+const analysis: Partial<Analysis> = {
+  name: 'My Analysis',
+  state: 'new',
+  // TypeScript will provide autocomplete for all fields
+}
+```
+
+### 2. Auto-generated Types in `.nuxt`
+
+The module automatically generates type definitions in your `.nuxt` directory that are globally available:
+
+```typescript
+// In any component or composable
+import type { GalaxyTypes } from '#build/types/nuxt-galaxy'
+import type { SupabaseTypes } from '#build/types/database'
+
+// Use the full Database type
+type DB = SupabaseTypes.Database
+```
+
+### 3. With Supabase Client
+
+When using the Supabase client provided by `@nuxtjs/supabase`, the database types are automatically typed:
+
+```typescript
+import type { Database } from 'nuxt-galaxy'
+
+const client = useSupabaseClient<Database>()
+
+// TypeScript knows about your schema
+const { data } = await client
+  .from('analyses')
+  .select('*')
+  .eq('id', 1)
+  .single()
+// data is typed as Database['galaxy']['Tables']['analyses']['Row']
+```
+
+### Available Types
+
+- `Database` - Complete database schema including all tables, views, functions, and enums for all schemas (galaxy, storage, etc.)
+- `Tables<TableName>` - Helper type for public schema tables
+- `TablesInsert<TableName>` - Helper type for insert payloads in public schema
+- `TablesUpdate<TableName>` - Helper type for update payloads in public schema
+- `Enums<EnumName>` - Helper type for public schema enums
+- `Json` - Generic JSON type
+
+**Note:** Since this module uses the `galaxy` schema (not `public`), it's recommended to access types directly via the `Database` type as shown in the examples above.
+
+### Example: Complete Type-Safe Query
+
+```typescript
+import type { Database } from 'nuxt-galaxy'
+
+type Analysis = Database['galaxy']['Tables']['analyses']['Row']
+type AnalysisInsert = Database['galaxy']['Tables']['analyses']['Insert']
+type InvocationState = Database['galaxy']['Enums']['invocation_state']
+
+const client = useSupabaseClient<Database>()
+
+// Insert with full type safety
+const newAnalysis: AnalysisInsert = {
+  name: 'RNA-Seq Analysis',
+  galaxy_id: 'abc123',
+  history_id: 1,
+  workflow_id: 1,
+  owner_id: 'user-123',
+  datamap: {},
+  parameters: {},
+  invocation: {},
+  state: 'new' as InvocationState,
+}
+
+const { data, error } = await client
+  .from('analyses')
+  .insert(newAnalysis)
+  .select()
+  .single()
+
+// data is typed as Analysis
+if (data) {
+  console.log(data.name) // TypeScript knows all properties
+}
+```
+
+### Regenerating Types
+
+To regenerate database types after schema changes:
+
+```bash
+cd packages/nuxt-galaxy
+pnpm run supabase:generate:types
+```
+
+This will update `src/runtime/types/database.ts` with the latest schema from your Supabase instance.
+
 ### Database schema
 
 If you are using kubernetes to deploy a webservices using GaaS nuxt-galaxy module, you might need to get the database schema as yaml.

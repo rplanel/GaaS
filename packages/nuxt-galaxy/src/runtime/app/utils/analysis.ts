@@ -1,7 +1,7 @@
 import type { RowAnalysis, RowWorkflow } from '../../types/nuxt-galaxy'
 import { Data, Effect } from 'effect'
 import { toValue } from 'vue'
-import { NoSupabaseUserError, SupabaseClientLayer, SupabaseUserLayer } from './supabase'
+import { NoSupabaseUserError, SupabaseClaimsLayer, SupabaseClientLayer } from './supabase'
 
 export interface WorkflowAnalysis extends RowAnalysis {
   workflows: RowWorkflow
@@ -23,7 +23,7 @@ export class GetWorkflowAnalysesError extends Data.TaggedError('GetWorkflowAnaly
 export function getWorkflowAnalysesEffect(workflowId: number) {
   return Effect.gen(function* () {
     const supabase = yield* SupabaseClientLayer
-    const user = yield* SupabaseUserLayer
+    const user = yield* SupabaseClaimsLayer
     const userVal = toValue(user)
 
     if (!userVal) {

@@ -20,6 +20,7 @@ export function useUploadFileToStorage({
     if (!uploadedFile) {
       return null
     }
+
     return yield* insertUploadedDatasetEffect({
       storageObjectId: uploadedFile.id,
       datasetName: file.name,

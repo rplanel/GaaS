@@ -45,7 +45,7 @@
     "supabase:migration:new": "pnpm supabase migration new",
     "supabase:migration:up": "pnpm supabase migration up",
     "supabase:migration:galaxy:create": "pnpm run supabase:migration:new bucket && sleep .5 && pnpm run drizzle:generate && sleep .5 && pnpm run supabase:migration:new galaxy && sleep .5 && pnpm run supabase:migration:new realtime && sleep .5 && pnpm run supabase:migration:new rbac && sleep .2 && pnpm run supabase:migration:new rls",
-    "supabase:generate:types": "pnpm supabase gen types typescript --local > src/runtime/types/database.ts",
+    "supabase:generate:types": "pnpm supabase gen types typescript --local > src/runtime/types/database.ts && cp src/runtime/types/database.ts src/runtime/augments.app.d.ts",
     "drizzle:generate": "pnpm drizzle-kit generate"
   },
   "dependencies": {

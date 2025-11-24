@@ -24,6 +24,10 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     'nuxt-galaxy',
   ],
+  // Supabase types are provided by nuxt-galaxy module
+  supabase: {
+    types: false, // Disable default type generation, use nuxt-galaxy's types
+  },
   css: [
     join(currentDir, './app/assets/css/main.css'),
   ],

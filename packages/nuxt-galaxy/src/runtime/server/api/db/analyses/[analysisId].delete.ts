@@ -3,7 +3,7 @@ import { Effect, Layer } from 'effect'
 import { defineEventHandler, getRouterParam } from 'h3'
 import { Drizzle } from '../../../utils/drizzle'
 import { deleteAnalysis } from '../../../utils/grizzle/analyses'
-import { ServerSupabaseClient, ServerSupabaseUser } from '../../../utils/grizzle/supabase'
+import { getSupabaseUser, ServerSupabaseClaims, ServerSupabaseClient } from '../../../utils/grizzle/supabase'
 
 export default defineEventHandler(
   async (event) => {
@@ -13,9 +13,8 @@ export default defineEventHandler(
 
     if (analysisId) {
       const program = Effect.gen(function* () {
-        const createServerSupabaseUser = yield* ServerSupabaseUser
-        const supabaseUser = yield* createServerSupabaseUser(event)
-        if (supabaseUser) {
+        const supabaseUser = yield* getSupabaseUser(event)
+        if (supabaseUser?.id) {
           return yield* deleteAnalysis(
             Number.parseInt(analysisId),
             supabaseUser.id,
@@ -24,7 +23,7 @@ export default defineEventHandler(
       })
       const finalLayer = Layer.mergeAll(
         ServerSupabaseClient.Live,
-        ServerSupabaseUser.Live,
+        ServerSupabaseClaims.Live,
         GalaxyFetch.Live,
         Drizzle.Live,
       )
