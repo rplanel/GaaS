@@ -2,7 +2,7 @@
   "name": "@gaas/ui",
   "type": "module",
   "version": "0.0.1-alpha.0",
-  "packageManager": "pnpm@10.14.0",
+  "packageManager": "pnpm@10.23.0",
   "main": "./nuxt.config.ts",
   "scripts": {
     "dev": "nuxi dev .playground",
@@ -38,7 +38,7 @@
     "@uwdata/mosaic-sql": "catalog:dataviz",
     "@uwdata/vgplot": "catalog:dataviz",
     "@vueuse/core": "catalog:",
-    "apache-arrow": "^21.0.0",
+    "apache-arrow": "^21.1.0",
     "d3": "catalog:dataviz",
     "drizzle-kit": "catalog:",
     "effect": "catalog:",
@@ -57,6 +57,6 @@
     "playwright-core": "catalog:",
     "typescript": "catalog:",
     "vue": "latest",
-    "vue-tsc": "^3.0.5"
+    "vue-tsc": "^3.1.5"
   }
 }
