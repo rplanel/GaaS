@@ -5,7 +5,7 @@ import type { ListAnalysisWithWorkflow, SanitizedAnalysis } from '../../pages/an
 import type { Database } from '../../types'
 
 const supabase = useSupabaseClient<Database>()
-const user = useSupabaseUser()
+const supabaseUser = useSupabaseUser()
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
@@ -19,9 +19,9 @@ const { refreshAnalysesList } = analysesListInjected || {}
 const { data: analyses, refresh: refreshAnalyses } = await useAsyncData(
   'analyses',
   async () => {
-    const userVal = toValue(user)
+    const supabaseUserVal = toValue(supabaseUser)
 
-    if (userVal === null) {
+    if (supabaseUserVal === null) {
       throw createError({
         statusMessage: 'User not found',
         statusCode: 404,
