@@ -1,5 +1,7 @@
 <script lang="ts" setup generic="T">
 import type { TableProps } from '@nuxt/ui'
+
+// import { useFacetSearch } from '../../composables/meili/useFacetSearch'
 import { useLoadMore } from '../../composables/meili/useLoadMore'
 
 interface Props {
@@ -9,11 +11,12 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  pageSize: 20,
+  pageSize: 10,
 })
 const tableProps = toRef(() => props.tableProps)
 const meiliIndex = toRef(() => props.meiliIndex)
-const pageSize = toRef(() => props.pageSize)
+const pageSize = toRef(props.pageSize)
+
 // const hits = ref<T[]>([])
 const {
   totalHits,
@@ -25,19 +28,39 @@ const {
   prev,
   next,
   result,
-  stats,
 } = useLoadMore({
   meiliIndex,
   pageSize,
 })
 
+const facetDistribution = computed(() => {
+  const resultVal = toValue(result)
+  if (!resultVal || !resultVal.facetDistribution) {
+    return undefined
+  }
+  return resultVal.facetDistribution
+})
+
+const facetStats = computed(() => {
+  const resultVal = toValue(result)
+  if (!resultVal || !resultVal.facetStats) {
+    return undefined
+  }
+  return resultVal.facetStats
+})
+
+const globalSearch = ref('')
+
 const computedTableProps = computed(() => {
   const resultVal = toValue(result)
-  if (!resultVal || !tableProps.value) {
-    return tableProps.value
+  // const resultVal = toValue(resultTest)
+  const tablePropsVal = toValue(tableProps)
+  if (!resultVal || !tablePropsVal) {
+    return tablePropsVal
   }
+
   return {
-    ...tableProps.value,
+    ...tablePropsVal,
     data: resultVal.hits as T[],
   }
 })
@@ -45,22 +68,25 @@ const computedTableProps = computed(() => {
 
 <template>
   <div>
-    <div>
-      <pre>{{ stats }}</pre>
-    </div>
+    <MeiliFilterBuilder
+      :meili-index="meiliIndex"
+      :facet-distribution="facetDistribution"
+      :facet-stats="facetStats"
+    />
     <div class="my-2">
+      <h4>Data Table</h4>
+      <UInput v-model="globalSearch" placeholder="Search..." />
       {{ totalHits }} total hits -
       Page {{ currentPage }} / {{ pageCount }} ({{ currentPageSize }} per page)
     </div>
-    <UButton :disabled="isFirstPage" @click="prev">
-      Previous
-    </UButton>
-    <UButton :disabled="isLastPage" @click="next">
-      Next
-    </UButton>
-    <UButton @click="next">
-      Load More
-    </UButton>
+    <div class="flex flex-row gap-2 my-2">
+      <UButton :disabled="isFirstPage" @click="prev">
+        Previous
+      </UButton>
+      <UButton :disabled="isLastPage" @click="next">
+        Next
+      </UButton>
+    </div>
     <UTable v-bind="computedTableProps" />
   </div>
 </template>

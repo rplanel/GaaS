@@ -2,10 +2,10 @@ from typing import Annotated
 import typer
 import meilisearch
 from rich.console import Console
-import json
 import requests
 import gaas_cli.meili.index as index
 import gaas_cli.meili.document as document
+import gaas_cli.meili.task as task
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -19,6 +19,12 @@ app.add_typer(
     document.app,
     name="document",
     help="Manage MeiliSearch documents.",
+)
+
+app.add_typer(
+    task.app,
+    name="task",
+    help="Manage MeiliSearch tasks.",
 )
 console = Console()
 
@@ -44,8 +50,6 @@ def get_index(ctx: typer.Context, name: str):
     client = ctx.obj["client"]
     index = client.get_index(name)
     print(f"Index details: {index}")
-
-
 
 
 @app.command()

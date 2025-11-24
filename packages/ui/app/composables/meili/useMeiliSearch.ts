@@ -15,7 +15,6 @@ export function useMeiliSearch(index: string) {
   if (!index)
     throw new Error('`[nuxt-meilisearch]` Cannot search  without `index`')
 
-  // const client = useMeiliSearchRef()
   const result = useState(`${index}-search-result`, () => null as SearchResponse | null)
   const search = async (query: string, searchParams?: SearchParams) => {
     const resp = await meilisearch.index(index).search(query, searchParams)

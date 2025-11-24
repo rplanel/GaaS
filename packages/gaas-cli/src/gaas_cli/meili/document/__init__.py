@@ -32,7 +32,9 @@ def add_movies(ctx: typer.Context):
     index_name = "movies"
     client.index(index_name).update_settings(
         {
-            "filterableAttributes": ["genre"],
+            "filterableAttributes": [
+                "genres",
+            ],
             "sortableAttributes": ["release_date"],
         }
     )
@@ -42,6 +44,40 @@ def add_movies(ctx: typer.Context):
     response = requests.get(url)
     movies = response.json()
     console.print(f"Adding {len(movies)} movie documents to index '{index_name}'...")
-    tasks = client.index(index_name).add_documents_in_batches(movies)
+    tasks = client.index(index_name).add_documents(movies)
+    for task in tasks:
+        console.print(task)
+
+
+@app.command()
+def add_books(ctx: typer.Context):
+    client = ctx.obj["client"]
+    index_name = "books"
+    client.index(index_name).update_settings(
+        {
+            "filterableAttributes": [
+                "author",
+                "language",
+                "publisher",
+                "cover",
+                "details.pages",
+                "details.rating"
+            ],
+            "sortableAttributes": ["title", "author", "isbn13"],
+        }
+    )
+    client.index(index_name).update_pagination_settings({"maxTotalHits": 40000})
+    url = "https://raw.githubusercontent.com/meilisearch/datasets/main/datasets/books/books.json"
+    console.print(f"Downloading sample books data from {url}...")
+    response = requests.get(url)
+    books = response.json()
+    # sanitized_books = []
+    for book in books:
+        if "author" in book and isinstance(book["author"], str):
+            book["author"] = book["author"].split("/")
+            book["details"]["pages"] = int(book["details"]["pages"])
+            book["details"]["rating"] = float(book["details"]["rating"])
+    console.print(f"Adding {len(books)} book documents to index '{index_name}'...")
+    tasks = client.index(index_name).add_documents(books)
     for task in tasks:
         console.print(task)
