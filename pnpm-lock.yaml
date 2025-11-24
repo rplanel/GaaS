@@ -207,8 +207,8 @@ catalogs:
       specifier: ^4.2.1
       version: 4.2.1
     '@nuxtjs/supabase':
-      specifier: ^1.6.2
-      version: 1.6.2
+      specifier: ^2.0.1
+      version: 2.0.1
     nuxt:
       specifier: ^4.2.1
       version: 4.2.1
@@ -371,7 +371,7 @@ importers:
         version: 4.2.1(magicast@0.5.1)
       '@nuxtjs/supabase':
         specifier: catalog:nuxt
-        version: 1.6.2
+        version: 2.0.1
       blendtype:
         specifier: workspace:*
         version: link:../blendtype
@@ -498,7 +498,7 @@ importers:
         version: 4.2.1(@babel/parser@7.28.5)(@nuxt/content@3.8.2(better-sqlite3@12.4.6)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(better-sqlite3@12.4.6)(postgres@3.4.7))(magicast@0.5.1))(change-case@5.4.4)(db0@0.3.4(better-sqlite3@12.4.6)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(better-sqlite3@12.4.6)(postgres@3.4.7)))(embla-carousel@8.6.0)(ioredis@5.8.2)(jwt-decode@4.0.0)(magicast@0.5.1)(typescript@5.9.3)(vite@7.2.4(@types/node@24.9.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.0)(yaml@2.8.1))(vue-router@4.6.3(vue@3.5.25(typescript@5.9.3)))(vue@3.5.25(typescript@5.9.3))(zod@4.1.13)
       '@nuxtjs/supabase':
         specifier: catalog:nuxt
-        version: 1.6.2
+        version: 2.0.1
       '@observablehq/plot':
         specifier: catalog:dataviz
         version: 0.6.17
@@ -1993,8 +1993,8 @@ packages:
   '@nuxtjs/mdc@0.18.4':
     resolution: {integrity: sha512-lM4R0Mbbhw5h5Fwj7LqGiw6eanqjjPkzi+9FaXfn1BdmfbW8GlR2quLIiBXTbw0wUrWYyOWoc5FGIE/gpZUTjQ==}
 
-  '@nuxtjs/supabase@1.6.2':
-    resolution: {integrity: sha512-/ugHRSWfPncCc2F6z5haa/L0hISrPNpfzciOlvSaCKi9079c+75ghf/TbFbjNn2YLu6396f5HTJlROypYyczeA==}
+  '@nuxtjs/supabase@2.0.1':
+    resolution: {integrity: sha512-hnNgb6pLAiAY7FpT5fYKUsaaNzGpx0UQkHmaka/yBiOeXuG7Y3MZnYSfaSYMBAwvi1EklEPHoWK59d9cIqy3gA==}
 
   '@observablehq/plot@0.6.17':
     resolution: {integrity: sha512-/qaXP/7mc4MUS0s4cPPFASDRjtsWp85/TbfsciqDgU1HwYixbSbbytNuInD8AcTYC3xaxACgVX06agdfQy9W+g==}
@@ -10793,7 +10793,7 @@ snapshots:
       - magicast
       - supports-color
 
-  '@nuxtjs/supabase@1.6.2':
+  '@nuxtjs/supabase@2.0.1':
     dependencies:
       '@supabase/ssr': 0.7.0(@supabase/supabase-js@2.76.1)
       '@supabase/supabase-js': 2.76.1
