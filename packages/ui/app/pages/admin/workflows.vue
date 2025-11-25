@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import type { SupabaseTypes } from '#build/types/database'
+// import type { SupabaseTypes } from '#build/types/database'
 import type { BreadcrumbItem, TableColumn } from '@nuxt/ui'
+
 import type { GalaxyWorkflowsItem } from 'blendtype'
+import type { Database } from 'nuxt-galaxy'
 import { USwitch } from '#components'
 import * as bt from 'blendtype'
 
-type Database = SupabaseTypes.Database
+// type Database = SupabaseTypes.Database
 
 interface ComputedGalaxyWorklowItem extends GalaxyWorkflowsItem {
   version: string | boolean

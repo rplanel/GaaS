@@ -6,7 +6,7 @@ import { Data, Effect } from 'effect'
 import { workflows } from '../../db/schema/galaxy/workflows'
 import { Drizzle } from '../drizzle'
 import { takeUniqueOrThrow } from './helper'
-import { ServerSupabaseClient, ServerSupabaseUser } from './supabase'
+import { ServerSupabaseClaims, ServerSupabaseClient } from './supabase'
 import { getCurrentUserEffect } from './user'
 
 export class GetWorkflowError extends Data.TaggedError('GetWorkflowError')<{
@@ -43,11 +43,11 @@ export function insertWorkflow(
   event: H3Event<EventHandlerRequest>,
 ) {
   return Effect.gen(function* () {
-    const createServerSupabaseUser = yield* ServerSupabaseUser
-    const supabaseUser = yield* createServerSupabaseUser(event)
+    const createServerSupabaseClaims = yield* ServerSupabaseClaims
+    const supabaseClaims = yield* createServerSupabaseClaims(event)
     const createServerSupabaseClient = yield* ServerSupabaseClient
     const supabaseClient = yield* createServerSupabaseClient(event)
-    if (supabaseUser) {
+    if (supabaseClaims) {
       const galaxyWorkflow = yield* bt.exportWorkflowEffect(galaxyWorkflowId)
       const galaxyUser = yield* getCurrentUserEffect(galaxyUrl, galaxyEmail)
       const tagVersion = bt.getWorkflowTagVersion(galaxyWorkflow.tags)

@@ -7,16 +7,15 @@ import { Drizzle } from '../../utils/drizzle.js'
 import { runAnalysis } from '../../utils/grizzle/analyses.js'
 import { uploadDatasetsEffect } from '../../utils/grizzle/datasets'
 import { addHistoryEffect } from '../../utils/grizzle/histories'
-import { GetSupabaseUserError, ServerSupabaseClient, ServerSupabaseUser } from '../../utils/grizzle/supabase.js'
+import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase.js'
 import { getWorkflowEffect } from '../../utils/grizzle/workflows'
 
 export default defineEventHandler<{ body: AnalysisBody }>(
   async (event) => {
     const { datamap, name, parameters, workflowId } = await readBody(event)
     const program = Effect.gen(function* () {
-      const createServerSupabaseUser = yield* ServerSupabaseUser
-      const supabaseUser = yield* createServerSupabaseUser(event)
-      if (supabaseUser) {
+      const supabaseUser = yield* getSupabaseUser(event)
+      if (supabaseUser?.id) {
         const workflow = yield* getWorkflowEffect(workflowId)
         const historyDb = yield* addHistoryEffect(name, supabaseUser.id)
         if (historyDb && workflow) {
@@ -61,7 +60,7 @@ export default defineEventHandler<{ body: AnalysisBody }>(
     })
     const finalLayer = Layer.mergeAll(
       ServerSupabaseClient.Live,
-      ServerSupabaseUser.Live,
+      ServerSupabaseClaims.Live,
       bt.GalaxyFetch.Live,
       Drizzle.Live,
     )

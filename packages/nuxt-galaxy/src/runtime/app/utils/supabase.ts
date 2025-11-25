@@ -20,6 +20,7 @@ import { Context, Data, Effect, Layer } from 'effect'
  * ```
  *
  */
+
 export class SupabaseClientLayer extends Context.Tag('@nuxt-galaxy/SupabaseClient')<
   SupabaseClientLayer,
   ReturnType<typeof useSupabaseClient<Database>>
@@ -40,15 +41,15 @@ export class NoSupabaseUserError extends Data.TaggedError('NoSupabaseUserError')
  * Effect layer for the user session in Supabase.
  * This layer provides access to the current authenticated user,
  * which can be used to perform user-specific operations.
- * @class SupabaseUserLayer
+ * @class SupabaseClaimsLayer
  * @extends Context.Tag
  */
-export class SupabaseUserLayer extends Context.Tag('@nuxt-galaxy/SupabaseUser')<
-  SupabaseUserLayer,
+export class SupabaseClaimsLayer extends Context.Tag('@nuxt-galaxy/SupabaseClaims')<
+  SupabaseClaimsLayer,
   ReturnType<typeof useSupabaseUser>
 >() {
   static readonly Live = Layer.effect(
-    SupabaseUserLayer,
+    SupabaseClaimsLayer,
     Effect.gen(function* () {
       return useSupabaseUser()
     }),
@@ -57,7 +58,7 @@ export class SupabaseUserLayer extends Context.Tag('@nuxt-galaxy/SupabaseUser')<
 
 export const SupabaseConfigLive = Layer.merge(
   SupabaseClientLayer.Live,
-  SupabaseUserLayer.Live,
+  SupabaseClaimsLayer.Live,
 )
 
 export class UploadFileToStorageError extends Data.TaggedError('UploadFileToStorageError')<{
@@ -81,6 +82,7 @@ export function uploadFileToStorageEffect(bucket: string, file: File) {
       () => supabase.storage.from(bucket).upload(`${uniqueDirectory}/${file.name}`, file),
     )
     if (error) {
+      console.error('Error uploading file to storage:', error)
       yield* Effect.fail(
         new UploadFileToStorageError({
           message: `Failed to upload file: ${error.message}`,
@@ -122,13 +124,22 @@ export class InsertUploadedDatasetEffect extends Data.TaggedError('InsertUploade
 export function insertUploadedDatasetEffect(uploadedDataset: { storageObjectId: string, datasetName: string }) {
   return Effect.gen(function* () {
     const supabase = yield* SupabaseClientLayer
-    const user = yield* SupabaseUserLayer
+    const user = yield* SupabaseClaimsLayer
     const userVal = toValue(user)
 
     if (!userVal) {
       return yield* Effect.fail(
         new NoSupabaseUserError({
           message: 'No supabase user found',
+        }),
+      )
+    }
+    const { error: authUserError, data: authUser } = yield* Effect.promise(() => supabase.auth.getUser())
+
+    if (authUserError) {
+      return yield* Effect.fail(
+        new NoSupabaseUserError({
+          message: `Failed to get auth user: ${authUserError.message}`,
         }),
       )
     }
@@ -139,7 +150,7 @@ export function insertUploadedDatasetEffect(uploadedDataset: { storageObjectId: 
         .insert({
           storage_object_id: uploadedDataset.storageObjectId,
           dataset_name: uploadedDataset.datasetName,
-          owner_id: userVal.id,
+          owner_id: authUser.user?.id,
         })
         .select(),
     )
@@ -151,5 +162,24 @@ export function insertUploadedDatasetEffect(uploadedDataset: { storageObjectId: 
       )
     }
     return data
+  })
+}
+
+export class GetSupabaseUserError extends Data.TaggedError('GetSupabaseUserError')<{
+  readonly message: string
+}> {}
+
+export function getSupabaseUser() {
+  return Effect.gen(function* () {
+    const supabase = yield* SupabaseClientLayer
+    const { data, error } = yield* Effect.promise(() => supabase.auth.getUser())
+    if (error) {
+      yield* Effect.fail(
+        new GetSupabaseUserError({
+          message: `Failed to get auth user: ${error.message}`,
+        }),
+      )
+    }
+    return data.user
   })
 }

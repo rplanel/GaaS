@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import type { SupabaseTypes } from '#build/types/database'
+// import type { SupabaseTypes } from '#build/types/database'
 import type { BreadcrumbItem, TableColumn } from '@nuxt/ui'
+
+import type { Database } from 'nuxt-galaxy'
 import { h, resolveComponent } from 'vue'
 import * as z from 'zod'
 import { getHumanSize } from '../../utils'
 
-type Database = SupabaseTypes.Database
+// type Database = SupabaseTypes.Database
 
 const props = withDefaults(defineProps<Props>(), {
   breadcrumbsItems: undefined,

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { AvatarProps, DropdownMenuItem } from '@nuxt/ui'
-import type { Database } from '../types'
+// import type { Database } from '../types'
+import type { Database } from 'nuxt-galaxy'
+
 import * as bt from 'blendtype'
 
 interface Props {

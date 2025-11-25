@@ -3,7 +3,7 @@ import * as bt from 'blendtype'
 import { Effect, Layer } from 'effect'
 import { defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle'
-import { ServerSupabaseClient, ServerSupabaseUser } from '../../utils/grizzle/supabase'
+import { ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase'
 import { insertWorkflow } from '../../utils/grizzle/workflows'
 
 export default defineEventHandler<
@@ -21,7 +21,7 @@ export default defineEventHandler<
     const { public: { galaxy: { url } }, galaxy: { email } } = useRuntimeConfig()
     const finalLayer = Layer.mergeAll(
       ServerSupabaseClient.Live,
-      ServerSupabaseUser.Live,
+      ServerSupabaseClaims.Live,
       bt.GalaxyFetch.Live,
       Drizzle.Live,
     )

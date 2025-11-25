@@ -1,11 +1,13 @@
 <!-- eslint-disable ts/no-use-before-define -->
 <script setup lang="ts">
-import type { SupabaseTypes } from '#build/types/database'
 import type { AccordionItem } from '@nuxt/ui'
+
 import type {
   GalaxyTool,
   WorkflowToolParameters,
 } from 'blendtype'
+// import type { SupabaseTypes } from '#build/types/database'
+import type { Database } from 'nuxt-galaxy'
 import type { Props as WorkflowStepProps } from '../../../components/galaxy/workflow/Step.vue'
 import type { GalaxyToolInputComponent } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 import type { AnalysesListProvide } from '../../../layouts/default.vue'
@@ -21,7 +23,7 @@ import {
   useGalaxyToolInputComponent,
 } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 
-type Database = SupabaseTypes.Database
+// type Database = SupabaseTypes.Database
 export type UploadedDatasetDb = Database['galaxy']['Views']['uploaded_datasets_with_storage_path']['Row']
 
 export interface Props {

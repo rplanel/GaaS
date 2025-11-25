@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { SupabaseTypes } from '#build/types/database'
 import type { GalaxyTypes } from '#build/types/nuxt-galaxy'
+// import type { SupabaseTypes } from '#build/types/database'
+import type { Database } from 'nuxt-galaxy'
 import { UBadge } from '#components'
 import { getHumanSize } from '#layers/@gaas-ui/app/utils'
 import * as z from 'zod'
@@ -11,7 +12,7 @@ export interface Props {
   items?: AnalysisIOsWithStoratePath[] | undefined
 }
 
-type Database = SupabaseTypes.Database
+// type Database = SupabaseTypes.Database
 const props = withDefaults(defineProps<Props>(), { items: undefined })
 const supabase = useSupabaseClient<Database>()
 const items = toRef(() => props.items)
