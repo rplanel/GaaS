@@ -10,12 +10,12 @@ catalog:
   '@antfu/eslint-config': ^5.4.1
   '@iconify-json/eos-icons': ^1.2.4
   '@iconify-json/ep': ^1.2.3
-  '@iconify-json/lucide': ^1.2.74
+  '@iconify-json/lucide': ^1.2.75
   '@iconify-json/majesticons': ^1.2.4
-  '@iconify-json/material-symbols': ^1.2.47
+  '@iconify-json/material-symbols': ^1.2.48
   '@iconify-json/mdi': ^1.2.3
   '@iconify-json/octicon': ^1.2.19
-  '@iconify-json/simple-icons': ^1.2.59
+  '@iconify-json/simple-icons': ^1.2.60
   '@iconify-json/stash': ^1.2.4
   '@iconify-json/streamline': ^1.2.5
   '@iconify-json/svg-spinners': ^1.2.4
@@ -50,7 +50,7 @@ catalog:
   playwright-core: ^1.56.1
   postgres: ^3.4.7
   simple-git-hooks: ^2.13.1
-  supabase: ^2.58.5
+  supabase: ^2.62.5
   tailwindcss: ^4.1.17
   typescript: ^5.9.3
   ufo: ^1.6.1
