@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import type { SupabaseTypes } from '#build/types/database'
+// import type { SupabaseTypes } from '#build/types/database'
 import type { BreadcrumbItem } from '#ui/types'
+
+import type { Database } from 'nuxt-galaxy'
 import type { DatasetsCountProvide } from '../layouts/default.vue'
 import * as bt from 'blendtype'
 import * as z from 'zod'
 
-type Database = SupabaseTypes.Database
+// type Database = SupabaseTypes.Database
 
 const breadcrumbsItems = ref<BreadcrumbItem[]>([
   {

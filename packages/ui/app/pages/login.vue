@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import type { SupabaseTypes } from '#build/types/database'
 import type { FormSubmitEvent } from '@nuxt/ui'
+// import type { SupabaseTypes } from '#build/types/database'
+
 import type { AuthError } from '@supabase/supabase-js'
+import type { Database } from 'nuxt-galaxy'
 
 import {
   createError,
@@ -14,7 +16,7 @@ import { ref, watchEffect } from 'vue'
 
 import * as z from 'zod'
 
-type Database = SupabaseTypes.Database
+// type Database = SupabaseTypes.Database
 
 definePageMeta({
   layout: 'auth',

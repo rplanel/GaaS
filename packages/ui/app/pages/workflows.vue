@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import type { Database, GalaxyWorkflowExportSchema, RowWorkflow, SanitizedWorkflowDbItem } from '../types'
+import type { Database, RowWorkflow } from 'nuxt-galaxy'
+
+import type { GalaxyWorkflowExportSchema, SanitizedWorkflowDbItem } from '../types'
 import * as bt from 'blendtype'
 import { galaxyWorkflowExportSchema } from 'blendtype'
 import * as z from 'zod'

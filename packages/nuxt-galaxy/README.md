@@ -97,16 +97,133 @@ const { data } = await client
 // data is typed as Database['galaxy']['Tables']['analyses']['Row']
 ```
 
-### Available Types
+### Available Database Types
 
 - `Database` - Complete database schema including all tables, views, functions, and enums for all schemas (galaxy, storage, etc.)
 - `Tables<TableName>` - Helper type for public schema tables
 - `TablesInsert<TableName>` - Helper type for insert payloads in public schema
 - `TablesUpdate<TableName>` - Helper type for update payloads in public schema
 - `Enums<EnumName>` - Helper type for public schema enums
+- `CompositeTypes<TypeName>` - Helper type for composite types
 - `Json` - Generic JSON type
 
 **Note:** Since this module uses the `galaxy` schema (not `public`), it's recommended to access types directly via the `Database` type as shown in the examples above.
+
+## Using Galaxy Types
+
+The module also exports domain-specific types for working with Galaxy analyses, workflows, and other entities:
+
+### Available Galaxy Types
+
+```typescript
+import type {
+  // Row types (what you get from queries)
+  RowAnalysis,
+  RowWorkflow,
+  RowHistory,
+  RowAnalysisJob,
+  RowAnalaysisDataset,
+  RowUploadedDataset,
+  RowAnalysisInput,
+  RowAnalysisOutputs,
+
+  // View types
+  AnalysisInputsWithStoratePath,
+  AnalysisOutputsWithStoratePath,
+
+  // Composite types
+  AnalysisDetail,
+  AnalysisInputsWithDatasets,
+  AnalysisOutputsWithDatasets,
+  AnalysisIOWithDatasets,
+  AnalysisJobs,
+  HistoryWithAnalysisDB,
+
+  // Insert types (for creating new records)
+  NewDataset,
+  NewJob,
+  NewHistory,
+  NewAnalysis,
+  NewWorkflow,
+
+  // Sync types (for synchronization operations)
+  Sync,
+  SyncDatasets,
+  SyncJob,
+  SyncHistory,
+  UpdatedAnalysisLog,
+
+  // Request/Response types
+  AnalysisBody,
+  WorkflowToolsParameters,
+  GalaxyInstanceDetails,
+
+  // Role-based access control
+  RoleType,
+  RoleTypes,
+  RolePermission,
+  RolePermissions,
+} from 'nuxt-galaxy'
+```
+
+### Example: Working with Analyses
+
+```typescript
+import type {
+  RowAnalysis,
+  AnalysisDetail,
+  AnalysisBody,
+  RoleType
+} from 'nuxt-galaxy'
+
+// Create a new analysis request
+const analysisRequest: AnalysisBody = {
+  name: 'My RNA-Seq Analysis',
+  workflowId: 1,
+  datamap: {
+    'input_fastq': { id: 123, src: 'hda' }
+  },
+  parameters: {}
+}
+
+// Type for analysis with related data
+function displayAnalysis(analysis: AnalysisDetail) {
+  console.log(`Analysis: ${analysis.name}`)
+  console.log(`Workflow: ${analysis.workflows.name}`)
+  console.log(`History: ${analysis.histories.name}`)
+
+  if (analysis.jobs) {
+    for (const job of analysis.jobs) {
+      console.log(`  Job ${job.id}: ${job.state}`)
+    }
+  }
+}
+
+// Role-based access
+const userRole: RoleType = 'admin' // or 'user'
+```
+
+### Example: Synchronization Types
+
+```typescript
+import type { UpdatedAnalysisLog, SyncJob, SyncHistory } from 'nuxt-galaxy'
+
+function handleSyncResult(result: UpdatedAnalysisLog) {
+  if (result.updated) {
+    console.log(`Analysis ${result.analysisId} updated to state: ${result.state}`)
+
+    if (result.history.updated) {
+      console.log(`History synced: ${result.history.state}`)
+
+      for (const job of result.history.jobs ?? []) {
+        if (job.updated) {
+          console.log(`Job ${job.jobId}: ${job.state}`)
+        }
+      }
+    }
+  }
+}
+```
 
 ### Example: Complete Type-Safe Query
 

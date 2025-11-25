@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import type { SupabaseTypes } from '#build/types/database'
-
 import type { CommandPaletteGroup, CommandPaletteItem, NavigationMenuItem } from '@nuxt/ui'
+
+// import type { SupabaseTypes } from '#build/types/database'
+import type { Database } from 'nuxt-galaxy'
 import type { OrderedNavigationMenuItem } from '../app.config'
 import { useAsyncData } from 'nuxt/app'
 import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
 
-type Database = SupabaseTypes.Database
+// type Database = SupabaseTypes.Database
 
 const { gaasUi: { footerItems, name, navigationMenuItems: navigationMenuItemsFromConfig } } = useAppConfig()
 

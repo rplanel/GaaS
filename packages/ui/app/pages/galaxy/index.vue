@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { GalaxyTypes } from '#build/types/nuxt-galaxy'
+import type { GalaxyInstanceDetails } from 'nuxt-galaxy'
 
 const breadcrumbsItems = ref([
   {
@@ -20,7 +20,7 @@ const pageHeaderProps = computed(() => {
 
   }
 })
-const { data: galaxyInstanceDetails } = await useFetch<GalaxyTypes.GalaxyInstanceDetails>('/api/galaxy/instance')
+const { data: galaxyInstanceDetails } = await useFetch<GalaxyInstanceDetails>('/api/galaxy/instance')
 </script>
 
 <template>

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { AccordionItem } from '@nuxt/ui'
 import type { GalaxyTool } from 'blendtype'
+import type { AnalysisDetail, RowAnalysisJob } from 'nuxt-galaxy'
 import type { GalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
-import type { AnalysisDetail, RowAnalysisJob } from '../../types'
 import * as bt from 'blendtype'
 import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDecodeParameters'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
@@ -45,7 +45,6 @@ if (error.value) {
     statusCode: 500,
     statusMessage: error.value?.message || 'Error fetching analysis details',
   })
-  console.error('Error fetching analysis details:', error.value)
 }
 
 const workflowGalaxyId = computed(() => {

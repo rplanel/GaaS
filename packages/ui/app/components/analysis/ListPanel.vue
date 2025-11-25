@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { ButtonProps } from '@nuxt/ui'
+// import type { Database } from '../../types'
+import type { Database } from 'nuxt-galaxy'
 import type { AnalysesListProvide } from '../../layouts/default.vue'
 import type { ListAnalysisWithWorkflow, SanitizedAnalysis } from '../../pages/analyses/index.vue'
-import type { Database } from '../../types'
 
 const supabase = useSupabaseClient<Database>()
 const supabaseUser = useSupabaseUser()
