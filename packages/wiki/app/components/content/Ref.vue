@@ -44,7 +44,7 @@ const { citations } = useCitations(sanitizedArticles)
 <template>
   (
   <template v-if="articles && articles.length > 0">
-    <template v-for="article, i in articles" :key="article.DOI">
+    <template v-for="article, i in sanitizedArticles" :key="article.DOI">
       <ULink @click="goToRef(article.DOI)">
         <template v-if="citations && citations[i]">
           {{ citations[i].label }}
