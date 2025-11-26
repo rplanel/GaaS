@@ -17,6 +17,7 @@ export function useBibliography(
     if (!articlesVal) {
       return
     }
+    const biblioIds = new Set<string>()
     return articlesVal.map((article) => {
       const firstAuthors = article.author[0]
       const authors: string[] = []
@@ -41,7 +42,7 @@ export function useBibliography(
         journal,
         abstract,
       } as BibliographyItem
-    })
+    }).filter(item => !biblioIds.has(item.doi) && biblioIds.add(item.doi))
   })
 
   return {
