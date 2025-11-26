@@ -29,9 +29,16 @@ const { data: articles } = await useAsyncData(`biblio-${toValue(dois)}`, () => {
 function goToRef(doi: string) {
   selectedRef.value = doi
 }
-
-// const { countBiblio } = await useBiblio(doisList)
-const { citations } = useCitations(articles)
+const sanitizedArticles = computed(() => {
+  const articlesVal = toValue(articles)
+  if (!articlesVal) {
+    return []
+  }
+  // remove duplicates
+  const seenDois = new Set<string>()
+  return articlesVal.filter(article => !seenDois.has(article.DOI) && seenDois.add(article.DOI))
+})
+const { citations } = useCitations(sanitizedArticles)
 </script>
 
 <template>
