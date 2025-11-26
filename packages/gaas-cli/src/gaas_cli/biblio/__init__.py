@@ -4,7 +4,11 @@ import typer
 from pathlib import Path
 from dotenv import load_dotenv
 from gaas_cli.biblio.crossref import gen_crossref_record
-from gaas_cli.biblio.zotero import add_doi, gen_dois, gen_fetch
+from gaas_cli.biblio.zotero import (
+    add_doi,
+    gen_get_dois_from_collection,
+    gen_fetch_from_zotero,
+)
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -66,7 +70,7 @@ def fetch(
         "lib_type": lib_type,
         "verbose": verbose,
     }
-    items = list(gen_fetch(**params))
+    items = list(gen_fetch_from_zotero(**params))
     if not output.exists():
         output.mkdir(parents=True, exist_ok=True)
     for item in items:
@@ -157,9 +161,9 @@ def dois_in_zotero(
 ):
     verbose = ctx.obj["verbose"]
 
-    collection_items = gen_fetch(
+    collection_items = gen_fetch_from_zotero(
         key, library_id, collection_id, lib_type, batch_size, verbose
     )
-    dois_in_collection = gen_dois(collection_items, verbose)
+    dois_in_collection = gen_get_dois_from_collection(collection_items, verbose)
     dois = list(dois_in_collection)
     print(dois)
