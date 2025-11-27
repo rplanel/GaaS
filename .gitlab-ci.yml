@@ -42,7 +42,7 @@ publish:gaas-cli:
       import json
       import sys
 
-      url = '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages?package_name=${PACKAGE_NAME}&package_version=${PACKAGE_VERSION}'
+      url = '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages'
       req = urllib.request.Request(url, headers={'JOB-TOKEN': '${CI_JOB_TOKEN}'})
 
       try:
