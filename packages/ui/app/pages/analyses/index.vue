@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import type { Database } from '../../types'
+import type { Database } from 'nuxt-galaxy'
+
+// import type { Database } from '../../types'
 
 export type ListAnalysis = Pick<
   Database['galaxy']['Tables']['analyses']['Row'],

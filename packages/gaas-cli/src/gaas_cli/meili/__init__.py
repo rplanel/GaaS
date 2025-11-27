@@ -37,38 +37,8 @@ def main(
     ] = "http://localhost:7700",
     key: Annotated[
         str, typer.Option(help="Meilisearch API master key", envvar="MEILI_MASTER_KEY")
-    ] = "masterKey",
+    ] = "MASTER_KEY",
 ):
     """Initialize MeiliSearch client."""
     client = meilisearch.Client(host, key)
     ctx.obj = {"client": client}
-
-
-@app.command()
-def get_index(ctx: typer.Context, name: str):
-    """Get details of a specific MeiliSearch index."""
-    client = ctx.obj["client"]
-    index = client.get_index(name)
-    print(f"Index details: {index}")
-
-
-@app.command()
-def add_movies_documents(ctx: typer.Context):
-    """Add sample movie documents to a specific MeiliSearch index."""
-    client = ctx.obj["client"]
-    index_name = "movies"
-    client.index(index_name).update_settings(
-        {
-            "filterableAttributes": ["genre"],
-            "sortableAttributes": ["release_date"],
-        }
-    )
-    client.index(index_name).update_pagination_settings({"maxTotalHits": 40000})
-    # download sample movies data and
-    # save it to a temporary JSON file
-    url = "https://raw.githubusercontent.com/meilisearch/datasets/main/datasets/movies/movies.json"
-    response = requests.get(url)
-    movies = response.json()
-    tasks = client.index("index_name").add_documents(movies)
-    for task in tasks:
-        console.print(task)

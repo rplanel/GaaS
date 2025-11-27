@@ -2,7 +2,7 @@
   "name": "@gaas/wiki",
   "type": "module",
   "version": "0.0.1-alpha.0",
-  "packageManager": "pnpm@10.14.0",
+  "packageManager": "pnpm@10.23.0",
   "main": "./nuxt.config.ts",
   "scripts": {
     "dev": "nuxi dev .playground",
@@ -35,6 +35,6 @@
     "playwright-core": "catalog:",
     "typescript": "catalog:",
     "vue": "latest",
-    "vue-tsc": "^3.0.5"
+    "vue-tsc": "^3.1.5"
   }
 }

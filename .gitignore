@@ -29,7 +29,7 @@ dist
 
 # Testing
 reports
-coverage
+coverage/**/*
 *.lcov
 .nyc_output
 
@@ -58,3 +58,5 @@ Temporary Items
 .apdisk
 
 
+# Meilisearch
+meili_data/

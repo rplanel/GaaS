@@ -43,7 +43,7 @@ export class GetSupabaseUserError extends Data.TaggedError('GetSupabaseUserError
   readonly message: string
 }> {}
 
-export function createServerSupabaseUser(event: H3Event<EventHandlerRequest>) {
+export function createServerSupabaseClaims(event: H3Event<EventHandlerRequest>) {
   return Effect.tryPromise({
     try: () => serverSupabaseUser(event),
     catch: e => new GetSupabaseUserError({ message: `Failed to get Supabase user: ${e}` }),
@@ -55,14 +55,14 @@ export function createServerSupabaseUser(event: H3Event<EventHandlerRequest>) {
  * This layer provides access to the current authenticated user,
  * which can be used to perform user-specific operations.
  */
-export class ServerSupabaseUser extends Context.Tag('@nuxt-galaxy/ServerSupabaseUser')<
-  ServerSupabaseUser,
- typeof createServerSupabaseUser
+export class ServerSupabaseClaims extends Context.Tag('@nuxt-galaxy/ServerSupabaseClaims')<
+  ServerSupabaseClaims,
+ typeof createServerSupabaseClaims
 >() {
   static readonly Live = Layer.effect(
-    ServerSupabaseUser,
+    ServerSupabaseClaims,
     Effect.gen(function* () {
-      return (event: H3Event<EventHandlerRequest>) => createServerSupabaseUser(event)
+      return (event: H3Event<EventHandlerRequest>) => createServerSupabaseClaims(event)
     }),
   )
 }
@@ -81,6 +81,7 @@ export function uploadFileToStorage(event: H3Event<EventHandlerRequest>, dataset
         .upload(`${crypto.randomUUID()}/${datasetName}`, datasetBlob),
     )
     if (error) {
+      console.error('Error uploading file to storage:', error)
       yield* Effect.fail(new UploadFileToStorageError({ message: error.message }))
     }
     return data
@@ -102,5 +103,21 @@ export function createSignedUrl(event: H3Event<EventHandlerRequest>, path: strin
       yield* Effect.fail(new CreateSignedUrlError({ message: error.message }))
     }
     return data?.signedUrl
+  })
+}
+
+export function getSupabaseUser(event: H3Event<EventHandlerRequest>) {
+  return Effect.gen(function* () {
+    const createServerSupabaseClient = yield* ServerSupabaseClient
+    const supabaseClient = yield* createServerSupabaseClient(event)
+    const { error: authUserError, data: authUser } = yield* Effect.promise(() => supabaseClient.auth.getUser())
+    if (authUserError) {
+      return yield* Effect.fail(
+        new GetSupabaseUserError({
+          message: `Failed to get auth user: ${authUserError.message}`,
+        }),
+      )
+    }
+    return authUser.user
   })
 }

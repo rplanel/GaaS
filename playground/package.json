@@ -13,6 +13,7 @@
   "dependencies": {
     "@nuxt/content": "catalog:nuxt",
     "@nuxt/ui": "catalog:nuxt",
+    "@vueuse/core": "catalog:",
     "nuxt": "catalog:nuxt",
     "vue": "latest",
     "vue-router": "latest"

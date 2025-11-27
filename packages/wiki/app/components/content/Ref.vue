@@ -29,15 +29,22 @@ const { data: articles } = await useAsyncData(`biblio-${toValue(dois)}`, () => {
 function goToRef(doi: string) {
   selectedRef.value = doi
 }
-
-// const { countBiblio } = await useBiblio(doisList)
-const { citations } = useCitations(articles)
+const sanitizedArticles = computed(() => {
+  const articlesVal = toValue(articles)
+  if (!articlesVal) {
+    return []
+  }
+  // remove duplicates
+  const seenDois = new Set<string>()
+  return articlesVal.filter(article => !seenDois.has(article.DOI) && seenDois.add(article.DOI))
+})
+const { citations } = useCitations(sanitizedArticles)
 </script>
 
 <template>
   (
   <template v-if="articles && articles.length > 0">
-    <template v-for="article, i in articles" :key="article.DOI">
+    <template v-for="article, i in sanitizedArticles" :key="article.DOI">
       <ULink @click="goToRef(article.DOI)">
         <template v-if="citations && citations[i]">
           {{ citations[i].label }}

@@ -22,5 +22,10 @@ export default defineNuxtConfig({
     join(currentDir, './app/assets/css/main.css'),
   ],
   devtools: { enabled: true },
+  vite: {
+    optimizeDeps: {
+      include: ['@vueuse/core'],
+    },
+  },
 
 })

@@ -9,7 +9,7 @@ from rich.columns import Columns
 console = Console()
 
 
-def gen_fetch(
+def gen_fetch_from_zotero(
     key: str,
     library_id: str,
     collection_id: str,
@@ -48,11 +48,11 @@ def gen_fetch(
             )
         for i, item in enumerate(items):
             if verbose:
-                print(f"Item {i+1}: {item['title']}")
+                print(f"Item {i + 1}: {item['title']}")
             yield item
 
 
-def gen_dois(
+def gen_get_dois_from_collection(
     collection_items,
 ):
     """
@@ -110,12 +110,11 @@ def add_doi(
     content_dir: str = "content",
     verbose: bool = False,
 ):
-
     # get dois in zotero collection
-    collection_items = gen_fetch(
+    collection_items = gen_fetch_from_zotero(
         key, library_id, collection_id, lib_type, batch_size, verbose
     )
-    dois_in_collection = gen_dois(collection_items)
+    dois_in_collection = gen_get_dois_from_collection(collection_items)
 
     # get dois in content
     dois_in_content = gen_content_dois(content_dir, verbose)

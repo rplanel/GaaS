@@ -2,7 +2,7 @@
   "name": "nuxt-galaxy",
   "type": "module",
   "version": "0.0.3-alpha.5",
-  "packageManager": "pnpm@10.14.0",
+  "packageManager": "pnpm@10.23.0",
   "description": "Galaxy module for Nuxt",
   "license": "MIT",
   "repository": {

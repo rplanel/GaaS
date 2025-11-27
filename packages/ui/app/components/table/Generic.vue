@@ -35,7 +35,7 @@ function updatePageSize(pageSize: number) {
     <h2 v-if="title" class="text-lg font-bold mb-2">
       {{ title }}
     </h2>
-    <UPageCard variant="ghost">
+    <UPageCard variant="outline">
       <div class="w-full space-y-4 pb-4">
         <div class="flex p-3 w-full">
           <UInput

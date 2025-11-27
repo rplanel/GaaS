@@ -28,10 +28,14 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       meilisearch: {
-        hostUrl: 'http://localhost:7700', // reqired
-        searchApiKey: 'masterKey', // reqired
+        hostUrl: 'http://localhost:7700', // required
+        searchApiKey: 'MASTER_KEY', // required
       },
     },
+  },
+  // Supabase types are provided by nuxt-galaxy module
+  supabase: {
+    types: false, // Disable default type generation, use nuxt-galaxy's types
   },
   css: [
     join(currentDir, './app/assets/css/main.css'),

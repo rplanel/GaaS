@@ -110,13 +110,14 @@ export function addHistoryEffect(name: string, ownerId: string) {
     if (currentUser) {
       const galaxyHistory = yield* bt.createHistoryEffect(name)
       if (galaxyHistory) {
-        const historyDb = yield* insertHistory({
+        const historyToInsert: NewHistory = {
           name,
           ownerId,
           userId: currentUser.user.id,
           galaxyId: galaxyHistory.id,
           state: 'new',
-        })
+        }
+        const historyDb = yield* insertHistory(historyToInsert)
         if (historyDb) {
           return historyDb
         }

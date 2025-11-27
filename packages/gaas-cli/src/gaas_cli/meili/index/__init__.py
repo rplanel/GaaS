@@ -64,3 +64,11 @@ def rm(
     client = ctx.obj["client"]
     client.index(name).delete()
     print(f"Index '{name}' deleted.")
+
+
+@app.command()
+def get(ctx: typer.Context, name: Annotated[str, typer.Argument(help="Index name")]):
+    """Get details of a specific MeiliSearch index."""
+    client = ctx.obj["client"]
+    index = client.get_index(name)
+    print(f"Index details: {index}")
