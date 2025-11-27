@@ -9,6 +9,10 @@ const rootNavigation = computed(() => {
   if (!navigation?.value) {
     return []
   }
+
+  if (!navigation.value[0]?.children || navigation.value[0]?.children.length === 0) {
+    return navigation.value
+  }
   // remove the first level which is just a container
   return navigation.value[0]?.children || []
 })
