@@ -2,11 +2,10 @@ from gaas_cli.biblio.content import gen_content_dois
 from gaas_cli.biblio.crossref import gen_crossref_record
 from pyzotero import zotero
 from typing import Any, Generator
-from rich import print
 from rich.console import Console
 from rich.columns import Columns
 
-console = Console()
+console = Console(stderr=True)
 
 
 def gen_fetch_from_zotero(
@@ -48,7 +47,7 @@ def gen_fetch_from_zotero(
             )
         for i, item in enumerate(items):
             if verbose:
-                print(f"Item {i + 1}: {item['title']}")
+                console.print(f"Item {i + 1}: {item['title']}")
             yield item
 
 
@@ -68,7 +67,7 @@ def gen_get_dois_from_collection(
             if doi:
                 yield doi
         except KeyError:
-            print(f"Item {item['title']} does not have a DOI.")
+            console.print(f"Item {item['title']} does not have a DOI.")
 
 
 def dois_not_in_collection(
@@ -91,13 +90,13 @@ def dois_not_in_collection(
     if verbose:
         console.rule("[bold blue]DOIs in zotero collection", style="blue")
         columns = Columns(dois_in_collection_set, equal=True, expand=False)
-        print(columns)
+        console.print(columns)
         console.rule("[bold blue]DOIs in content", style="blue")
         columns = Columns(dois_in_content_set, equal=True, expand=False)
-        print(columns)
+        console.print(columns)
         console.rule("[bold blue]Missing DOIs", style="blue")
         columns = Columns(missing_dois, equal=True, expand=False)
-        print(columns)
+        console.print(columns)
     return missing_dois
 
 

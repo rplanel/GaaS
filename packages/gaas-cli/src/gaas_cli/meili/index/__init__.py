@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.table import Table
 
 
-console = Console()
+console = Console(stderr=True)
 app = typer.Typer(no_args_is_help=True)
 
 
@@ -44,7 +44,7 @@ def ls(ctx: typer.Context, settings: bool = False):
         )
         table.add_section()
         statistics = client.index(index.uid).get_stats()
-        pprint(statistics, expand_all=True)
+        pprint(statistics, expand_all=True, console=console)
         table.add_row("Number of Documents", str(statistics.number_of_documents))
         table.add_row("Is Indexing", str(statistics.is_indexing))
         if settings:
@@ -54,16 +54,15 @@ def ls(ctx: typer.Context, settings: bool = False):
     """
     List all MeiliSearch indexes.
     """
-    print("Listing all MeiliSearch indexes...")
+    console.print("Listing all MeiliSearch indexes...")
+
 
 @app.command()
-def rm(
-    ctx: typer.Context, name: Annotated[str, typer.Argument(help="Index name")]
-):
+def rm(ctx: typer.Context, name: Annotated[str, typer.Argument(help="Index name")]):
     """Delete a specific MeiliSearch index."""
     client = ctx.obj["client"]
     client.index(name).delete()
-    print(f"Index '{name}' deleted.")
+    console.print(f"Index '{name}' deleted.")
 
 
 @app.command()
@@ -71,4 +70,4 @@ def get(ctx: typer.Context, name: Annotated[str, typer.Argument(help="Index name
     """Get details of a specific MeiliSearch index."""
     client = ctx.obj["client"]
     index = client.get_index(name)
-    print(f"Index details: {index}")
+    console.print(f"Index details: {index}")

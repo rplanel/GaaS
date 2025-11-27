@@ -1,12 +1,13 @@
 import typer
-from rich import print
-
+from rich.console import Console
 # from dotenv import dotenv_values
 import gaas_cli.biblio as biblio
 import gaas_cli.content as content
 import gaas_cli.meili as meili
 
 # config = dotenv_values()  # take environment variables
+
+console = Console(stderr=True)
 
 # print(config)
 
@@ -38,11 +39,11 @@ app.add_typer(
 @app.callback()
 def main(ctx: typer.Context, verbose: bool = False):
     """
-    Manage data used for the wiki.
+    Tool kit to manage gaas related tasks.
     """
-    print(f"About to execute command: {ctx.invoked_subcommand}")
+    console.print(f"About to execute command: {ctx.invoked_subcommand}")
     if verbose:
-        print("Verbose mode is enabled.")
+        console.print("Verbose mode is enabled.")
     ctx.obj = {"verbose": verbose}
 
 

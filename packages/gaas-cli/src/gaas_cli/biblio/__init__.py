@@ -9,6 +9,10 @@ from gaas_cli.biblio.zotero import (
     gen_get_dois_from_collection,
     gen_fetch_from_zotero,
 )
+from rich.console import Console
+
+
+console = Console(stderr=True)
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -94,7 +98,6 @@ def fetch_crossref():
     """
     doi = "10.1016/0042-6822(73)90432-7"
     record = gen_crossref_record(doi)
-    print(json.dumps(record, indent=2))
     return record
 
 
@@ -166,4 +169,4 @@ def dois_in_zotero(
     )
     dois_in_collection = gen_get_dois_from_collection(collection_items, verbose)
     dois = list(dois_in_collection)
-    print(dois)
+    console.print(dois)

@@ -2,7 +2,6 @@ from typing import Annotated
 import typer
 import meilisearch
 from rich.console import Console
-import requests
 import gaas_cli.meili.index as index
 import gaas_cli.meili.document as document
 import gaas_cli.meili.task as task

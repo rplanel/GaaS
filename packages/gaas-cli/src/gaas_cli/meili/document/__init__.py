@@ -1,11 +1,13 @@
-from typing import Annotated
+import json
+import sys
+from pathlib import Path
+from typing import Annotated, Optional
+
 import requests
 import typer
-import json
-from rich import print
 from rich.console import Console
 
-console = Console()
+console = Console(stderr=True)
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -15,15 +17,25 @@ def add(
     ctx: typer.Context,
     index_name: str,
     documents: Annotated[
-        str, typer.Argument(help="Path to JSON file containing documents to add.")
-    ],
+        Optional[Path],
+        typer.Argument(
+            help="Path to JSON file containing documents to add. "
+            "Use '-' or omit to read from stdin."
+        ),
+    ] = None,
 ):
     """Add documents to a specific MeiliSearch index."""
     client = ctx.obj["client"]
-    with open(documents, "r") as f:
-        docs = json.load(f)
-        response = client.index(index_name).add_documents(docs)
-        print(f"Add documents response: {response}")
+
+    # Read documents from file or stdin
+    if documents is None or str(documents) == "-":
+        docs = json.load(sys.stdin)
+    else:
+        with open(documents, "r") as f:
+            docs = json.load(f)
+
+    response = client.index(index_name).add_documents(docs)
+    console.print(f"Add documents response: {response}")
 
 
 @app.command()
