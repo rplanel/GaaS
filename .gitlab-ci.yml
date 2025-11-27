@@ -30,14 +30,35 @@ publish:gaas-cli:
     # - VERSION=$(git describe --exact-match --tags)
     # - uv version --dry-run $VERSION
     # Build and publish the package
-    # before publishinng, test if release already exists
+    # Before publishing, check if release already exists
     - |
+      PACKAGE_NAME="gaas-cli"
       PACKAGE_VERSION=$(uv version --project $UV_PROJECT)
-      RESPONSE=$(curl --silent --head "${UV_PUBLISH_URL}/simple/gaas-cli/${PACKAGE_VERSION}/" --header "PRIVATE-TOKEN: ${CI_JOB_TOKEN}")
-      if echo "$RESPONSE" | grep -q "200 OK"; then
-      echo "Version ${PACKAGE_VERSION} already exists in the registry. Skipping publish."
-      exit 0
-      fi
+      echo "Checking if ${PACKAGE_NAME} version ${PACKAGE_VERSION} exists..."
+
+      # Query GitLab Package Registry API using Python (curl not available in uv image)
+      python -c "
+      import urllib.request
+      import json
+      import sys
+
+      url = '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages?package_name=${PACKAGE_NAME}&package_version=${PACKAGE_VERSION}'
+      req = urllib.request.Request(url, headers={'JOB-TOKEN': '${CI_JOB_TOKEN}'})
+
+      try:
+          with urllib.request.urlopen(req) as response:
+              packages = json.loads(response.read().decode())
+              print(packages)
+              if packages:
+                  print(f'Version ${PACKAGE_VERSION} already exists in the registry. Skipping publish.')
+                  sys.exit(100)
+              else:
+                  print(f'Version ${PACKAGE_VERSION} not found. Proceeding with publish...')
+                  sys.exit(0)
+      except urllib.error.HTTPError as e:
+          print(f'Error checking package: {e}')
+          sys.exit(0)  # Proceed with publish on error
+      " || { [ $? -eq 100 ] && exit 0; }
     - uv build
     - uv publish packages/gaas-cli/dist/*.whl
     - uv cache prune --ci
