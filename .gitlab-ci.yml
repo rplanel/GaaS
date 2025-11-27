@@ -30,6 +30,14 @@ publish:gaas-cli:
     # - VERSION=$(git describe --exact-match --tags)
     # - uv version --dry-run $VERSION
     # Build and publish the package
+    # before publishinng, test if release already exists
+    - |
+      PACKAGE_VERSION=$(uv version --project $UV_PROJECT)
+      RESPONSE=$(curl --silent --head "${UV_PUBLISH_URL}/simple/gaas-cli/${PACKAGE_VERSION}/" --header "PRIVATE-TOKEN: ${CI_JOB_TOKEN}")
+      if echo "$RESPONSE" | grep -q "200 OK"; then
+      echo "Version ${PACKAGE_VERSION} already exists in the registry. Skipping publish."
+      exit 0
+      fi
     - uv build
     - uv publish packages/gaas-cli/dist/*.whl
     - uv cache prune --ci
