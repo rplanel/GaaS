@@ -59,7 +59,7 @@ catalog:
   vitest: ^3.2.4
   vue-tsc: ^3.1.5
   zod: ^4.1.13
-  zod-validation-error: ^4.0.2
+  zod-validation-error: ^5.0.0
 
 catalogs:
   dataviz:
