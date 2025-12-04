@@ -76,7 +76,7 @@ export default defineNuxtModule<ModuleOptions>({
           callback: '/confirm',
           include: [],
           exclude: ['/', '/login', '/signup', '/confirm'],
-          cookieRedirect: true,
+          saveRedirectToCookie: true,
         },
         clientOptions: {
           db: {
