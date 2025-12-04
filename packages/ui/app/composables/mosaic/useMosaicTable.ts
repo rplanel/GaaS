@@ -1,4 +1,6 @@
 import type { Selection } from '@uwdata/mosaic-core'
+import { useCategoryHeader } from '../plot/table/useCategoryHeader'
+import { useHistogramHeader } from '../plot/table/useHistogramHeader'
 
 export interface MosaicTableParams {
   tableName: Ref<string>
