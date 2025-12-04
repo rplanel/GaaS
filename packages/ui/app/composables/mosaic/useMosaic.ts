@@ -73,7 +73,7 @@ export function useMosaic(params: useMosaicParams) {
     })
   }
   const { state, isReady, isLoading, execute } = useAsyncState(execQuery(queryString), false, {
-    immediate: false,
+    immediate: true,
 
   })
 
@@ -82,7 +82,7 @@ export function useMosaic(params: useMosaicParams) {
     if (queryString.value && tableName.value) {
       execute(0, execQuery(queryString))
     }
-  })
+  }, { immediate: true })
 
   return {
     queryString,
