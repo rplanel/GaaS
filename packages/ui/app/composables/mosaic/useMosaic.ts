@@ -73,7 +73,7 @@ export function useMosaic(params: useMosaicParams) {
     })
   }
   const { state, isReady, isLoading, execute } = useAsyncState(execQuery(queryString), false, {
-    immediate: true,
+    immediate: false,
 
   })
 
