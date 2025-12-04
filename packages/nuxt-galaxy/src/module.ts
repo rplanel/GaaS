@@ -69,7 +69,7 @@ export default defineNuxtModule<ModuleOptions>({
   },
   moduleDependencies: {
     '@nuxtjs/supabase': {
-      version: '^2.0.1',
+      version: '^2.0.2',
       defaults: {
         redirectOptions: {
           login: '/login',
