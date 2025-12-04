@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
+import { useCategoryHeader } from '#layers/@gaas-ui/app/composables/plot/table/useCategoryHeader'
+import { useHistogramHeader } from '#layers/@gaas-ui/app/composables/plot/table/useHistogramHeader'
 import { coordinator, DuckDBWASMConnector, Selection } from '@uwdata/mosaic-core'
 import { ref } from 'vue'
 
@@ -26,13 +28,21 @@ const tableName = ref('satellitetestdata')
 const wasm = new DuckDBWASMConnector()
 const defaultCoordinator = ref(coordinator())
 defaultCoordinator.value.databaseConnector(wasm)
-
+const { getHeader: getCategoryHeader } = useCategoryHeader({
+  coordinator: defaultCoordinator.value,
+  table: tableName.value,
+  selection,
+})
+const { getHeader: getHistogramHeader } = useHistogramHeader({
+  coordinator: defaultCoordinator.value,
+  table: tableName.value,
+  selection,
+})
 const columns = ref<TableColumn<SatelliteData>[]>([
   { accessorKey: 'id', header: 'ID' },
-  { accessorKey: 'name', header: 'Name' },
-  { accessorKey: 'type', header: 'Type' },
-  { accessorKey: 'value', header: 'Value' },
-
+  { accessorKey: 'name', header: ({ column }) => toValue(getCategoryHeader)({ column, label: 'Name', variable: 'name' }) },
+  { accessorKey: 'type', header: ({ column }) => toValue(getCategoryHeader)({ column, label: 'Type', variable: 'type' }) },
+  { accessorKey: 'value', header: ({ column }) => toValue(getHistogramHeader)({ column, label: 'Value', variable: 'value' }) },
 ])
 
 const loadingStatus = ref(0)

@@ -23,10 +23,10 @@
  */
 
 import type { Coordinator } from '@uwdata/mosaic-core'
-import type { GetHeaderParams, UseHeaderParams } from '../types/plotHeader'
+import type { GetHeaderParams, UseHeaderParams } from '../../../types/plotHeader'
 import { coordinator as defaultCoordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { h, onBeforeMount, ref, watch } from 'vue'
-import PlotTableHeaderCategory from '../components/plot/table/header/Category.vue'
+import PlotTableHeaderCategory from '../../../components/plot/table/header/Category.vue'
 
 export function useCategoryHeader(params: UseHeaderParams) {
   const { table, selection, coordinator } = params
@@ -66,8 +66,6 @@ export function useCategoryHeader(params: UseHeaderParams) {
   const getHeader = ref<ReturnType<typeof getHeaderFn>>(getHeaderFn())
 
   watch(mosaicCoordinator, () => {
-    // const getHeaderFn = () => _getHeader
-
     getHeader.value = getHeaderFn()
   })
 
