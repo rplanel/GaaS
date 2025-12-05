@@ -6,6 +6,11 @@ export default defineContentConfig({
     content: defineCollection({
       type: 'page',
       source: 'wiki/**/*.md',
+      schema: z.object({
+        tags: z.array(z.string()).optional(),
+        image: z.string().optional(),
+        date: z.date().optional(),
+      }),
     }),
     bibliography: defineCollection({
       type: 'data',
