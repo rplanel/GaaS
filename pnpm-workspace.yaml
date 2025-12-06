@@ -10,17 +10,17 @@ catalog:
   '@antfu/eslint-config': ^5.4.1
   '@iconify-json/eos-icons': ^1.2.4
   '@iconify-json/ep': ^1.2.3
-  '@iconify-json/lucide': ^1.2.75
+  '@iconify-json/lucide': ^1.2.79
   '@iconify-json/majesticons': ^1.2.4
-  '@iconify-json/material-symbols': ^1.2.48
+  '@iconify-json/material-symbols': ^1.2.49
   '@iconify-json/mdi': ^1.2.3
   '@iconify-json/octicon': ^1.2.19
-  '@iconify-json/simple-icons': ^1.2.60
+  '@iconify-json/simple-icons': ^1.2.61
   '@iconify-json/stash': ^1.2.4
   '@iconify-json/streamline': ^1.2.5
   '@iconify-json/svg-spinners': ^1.2.4
   '@iconify-json/tabler': ^1.2.23
-  '@iconify-json/vscode-icons': ^1.2.36
+  '@iconify-json/vscode-icons': ^1.2.37
   '@release-it/conventional-changelog': ^10.0.2
   '@types/node': ^22.19.1
   '@vitest/coverage-v8': ^3.2.4
@@ -28,18 +28,18 @@ catalog:
   '@vueuse/core': ^13.9.0
   apache-arrow: ^21.1.0
   automd: ^0.4.2
-  better-sqlite3: ^12.4.6
-  bumpp: ^10.3.1
+  better-sqlite3: ^12.5.0
+  bumpp: ^10.3.2
   changelogen: ^0.6.2
   defu: ^6.1.4
   dotenv: ^17.2.3
-  drizzle-kit: ^0.31.7
-  drizzle-orm: ^0.44.7
-  effect: ^3.19.6
+  drizzle-kit: ^0.31.8
+  drizzle-orm: ^0.45.0
+  effect: ^3.19.9
   embla-carousel: ^8.6.0
   eslint: ^9.39.1
   eslint-config-unjs: ^0.5.0
-  eslint-plugin-format: ^1.0.2
+  eslint-plugin-format: ^1.1.0
   fs-extra: ^11.3.2
   h3: ^1.15.4
   happy-dom: ^17.6.3
@@ -47,18 +47,18 @@ catalog:
   jiti: ^2.6.1
   jwt-decode: ^4.0.0
   lint-staged: ^16.2.7
-  meilisearch: ^0.53.0
+  meilisearch: ^0.54.0
   ofetch: ^1.5.1
-  playwright-core: ^1.56.1
+  playwright-core: ^1.57.0
   postgres: ^3.4.7
   simple-git-hooks: ^2.13.1
-  supabase: ^2.62.6
+  supabase: ^2.65.6
   tailwindcss: ^4.1.17
   typescript: ^5.9.3
   ufo: ^1.6.1
   unbuild: ^3.6.1
   vitest: ^3.2.4
-  vue-tsc: ^3.1.5
+  vue-tsc: ^3.1.6
   zod: ^4.1.13
   zod-validation-error: ^4.0.2
 
@@ -71,20 +71,20 @@ catalogs:
     d3: ^7.9.0
     d3-dsv: ^3.0.1
   nuxt:
-    '@nuxt/content': ^3.8.2
+    '@nuxt/content': ^3.9.0
     '@nuxt/devtools': ^2.7.0
-    '@nuxt/eslint': ^1.10.0
-    '@nuxt/eslint-config': ^1.10.0
+    '@nuxt/eslint': ^1.11.0
+    '@nuxt/eslint-config': ^1.11.0
     '@nuxt/image': ^1.11.0
     '@nuxt/kit': ^4.2.1
     '@nuxt/module-builder': ^1.0.2
     '@nuxt/schema': ^4.2.1
-    '@nuxt/test-utils': ^3.20.1
+    '@nuxt/test-utils': ^3.21.0
     '@nuxt/ui': ^4.2.1
-    '@nuxtjs/supabase': ^2.0.2
+    '@nuxtjs/supabase': ^2.0.3
     nuxt: ^4.2.1
     nuxt-llms: ^0.1.3
-    nuxt-meilisearch: ^1.3.10
+    nuxt-meilisearch: ^1.4.17
     nuxt-og-image: ^5.1.12
 
 ignoredBuiltDependencies:
