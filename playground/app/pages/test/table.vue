@@ -26,15 +26,15 @@ const data = shallowRef<Record<string, unknown>[] | undefined>([
 ])
 const tableName = ref('satellitetestdata')
 const wasm = new DuckDBWASMConnector()
-const defaultCoordinator = ref(coordinator())
-defaultCoordinator.value.databaseConnector(wasm)
+const defaultCoordinator = coordinator()
+defaultCoordinator.databaseConnector(wasm)
 const { getHeader: getCategoryHeader } = useCategoryHeader({
-  coordinator: defaultCoordinator.value,
+  coordinator: defaultCoordinator,
   table: tableName.value,
   selection,
 })
 const { getHeader: getHistogramHeader } = useHistogramHeader({
-  coordinator: defaultCoordinator.value,
+  coordinator: defaultCoordinator,
   table: tableName.value,
   selection,
 })

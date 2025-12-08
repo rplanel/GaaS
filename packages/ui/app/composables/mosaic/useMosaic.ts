@@ -1,12 +1,11 @@
 import type { Coordinator } from '@uwdata/mosaic-core'
 import type { ShallowRef } from 'vue'
-import { coordinator as defaultCoordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
 import { loadCSV, loadObjects } from '@uwdata/mosaic-sql'
 import { useAsyncState } from '@vueuse/core'
 
 interface UseMosaicBaseParams {
   tableName: Ref<string>
-  coordinator?: Ref<Coordinator>
+  coordinator: Coordinator
 }
 
 interface UseMosaicFromFileParams extends UseMosaicBaseParams {
@@ -27,17 +26,17 @@ export function useMosaic(params: useMosaicParams) {
   const error = ref<Error | undefined>(undefined)
   const pending = ref(false)
   const queryResult = ref<unknown | undefined>(undefined)
+  const coordinator: Coordinator = params.coordinator
+  // const coordinator: Coordinator = (params.coordinator ? params.coordinator : undefined)
 
-  const coordinator = ref<Coordinator | undefined>(params.coordinator ? toValue(params.coordinator) : undefined)
-
-  onBeforeMount(() => {
-    if (coordinator.value === undefined) {
-      const wasm = new DuckDBWASMConnector()
-      const c = defaultCoordinator()
-      c.databaseConnector(wasm)
-      coordinator.value = c
-    }
-  })
+  // onBeforeMount(() => {
+  //   if (coordinator === undefined) {
+  //     const wasm = new DuckDBWASMConnector()
+  //     const c = defaultCoordinator()
+  //     c.databaseConnector(wasm)
+  //     coordinator = c
+  //   }
+  // })
 
   /**
    * Generate the appropriate query string based on the provided parameters.
@@ -61,13 +60,12 @@ export function useMosaic(params: useMosaicParams) {
 
   async function execQuery(qs: MaybeRef<string | undefined>) {
     const query = toValue(qs)
-    const coordinatorVal = toValue(coordinator)
     pending.value = true
-    if (!query || !coordinatorVal) {
+    if (!query || !coordinator) {
       pending.value = false
       return Promise.resolve('no query to execute')
     }
-    return coordinatorVal.exec(query).then((result) => {
+    return coordinator.exec(query).then((result) => {
       pending.value = false
       return result
     })

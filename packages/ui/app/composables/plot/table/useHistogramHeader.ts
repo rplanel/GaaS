@@ -1,27 +1,25 @@
-import type { Coordinator } from '@uwdata/mosaic-core'
 import type { GetHeaderParams, UseHeaderParams } from '../../../types/plotHeader'
-import { coordinator as defaultCoordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
-import { h, onBeforeMount, ref, watch } from 'vue'
+import { h, ref, watch } from 'vue'
 import PlotTableHeaderHistogram from '../../../components/plot/table/header/Histogram.vue'
 
 export function useHistogramHeader(params: UseHeaderParams) {
   const { table, selection, coordinator } = params
 
-  const mosaicCoordinator = ref<Coordinator | undefined>(coordinator)
+  // const mosaicCoordinator = ref<Coordinator | undefined>(coordinator)
 
-  onBeforeMount(() => {
-    if (mosaicCoordinator.value === undefined) {
-      const wasm = new DuckDBWASMConnector()
-      const c = defaultCoordinator()
-      c.databaseConnector(wasm)
-      mosaicCoordinator.value = c
-    }
-  })
+  // onBeforeMount(() => {
+  //   if (mosaicCoordinator.value === undefined) {
+  //     const wasm = new DuckDBWASMConnector()
+  //     const c = defaultCoordinator()
+  //     c.databaseConnector(wasm)
+  //     mosaicCoordinator.value = c
+  //   }
+  // })
   function getHeaderFn() {
     function _getHeader<T>(params: GetHeaderParams<T>): VNode {
       const { column, label, variable } = params
-      const mosaicCoordinatorVal = mosaicCoordinator.value as Coordinator | undefined
-      if (!selection || !mosaicCoordinatorVal) {
+      // const mosaicCoordinatorVal = mosaicCoordinator.value as Coordinator | undefined
+      if (!selection || !coordinator) {
         console.warn('Missing required parameters for histogram header:', { table, selection, coordinator })
         return h('div', { class: 'w-full' }, 'No data available')
       }
@@ -34,7 +32,7 @@ export function useHistogramHeader(params: UseHeaderParams) {
           table,
           selection,
           variable,
-          coordinator: mosaicCoordinatorVal,
+          coordinator,
           width: column.getSize() - 32,
         }),
       ])
@@ -43,7 +41,7 @@ export function useHistogramHeader(params: UseHeaderParams) {
   }
 
   const getHeader = ref<ReturnType<typeof getHeaderFn>>(getHeaderFn())
-  watch(mosaicCoordinator, () => {
+  watch(coordinator, () => {
     getHeader.value = getHeaderFn()
   })
   return {

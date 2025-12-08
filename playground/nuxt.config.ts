@@ -23,8 +23,26 @@ export default defineNuxtConfig({
   ],
   devtools: { enabled: true },
   vite: {
+    server: {
+      watch: {
+        ignored: ['**/content.config.*'],
+      },
+    },
     optimizeDeps: {
-      include: ['@vueuse/core'],
+      exclude: ['@nuxt/content'],
+      include: [
+        'blendtype',
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+        'd3-dsv',
+        'd3-fetch',
+        '@observablehq/plot',
+        'apache-arrow',
+        '@supabase/supabase-js',
+        '@uwdata/mosaic-core',
+        '@uwdata/mosaic-sql',
+        '@uwdata/vgplot',
+      ],
     },
   },
 

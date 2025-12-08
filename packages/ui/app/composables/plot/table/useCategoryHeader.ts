@@ -22,31 +22,29 @@
  * ```
  */
 
-import type { Coordinator } from '@uwdata/mosaic-core'
 import type { GetHeaderParams, UseHeaderParams } from '../../../types/plotHeader'
-import { coordinator as defaultCoordinator, DuckDBWASMConnector } from '@uwdata/mosaic-core'
-import { h, onBeforeMount, ref, watch } from 'vue'
+import { h, ref, watch } from 'vue'
 import PlotTableHeaderCategory from '../../../components/plot/table/header/Category.vue'
 
 export function useCategoryHeader(params: UseHeaderParams) {
   const { table, selection, coordinator } = params
 
-  const mosaicCoordinator = ref<Coordinator | undefined>(coordinator)
-  onBeforeMount(() => {
-    if (mosaicCoordinator.value === undefined) {
-      const wasm = new DuckDBWASMConnector()
-      const c = defaultCoordinator()
-      c.databaseConnector(wasm)
-      mosaicCoordinator.value = c
-    }
-  })
+  // const mosaicCoordinator = ref<Coordinator | undefined>(coordinator)
+  // onBeforeMount(() => {
+  //   if (mosaicCoordinator.value === undefined) {
+  //     const wasm = new DuckDBWASMConnector()
+  //     const c = defaultCoordinator()
+  //     c.databaseConnector(wasm)
+  //     mosaicCoordinator.value = c
+  //   }
+  // })
 
   // Wrap _getHeader in a function to capture the latest mosaicCoordinator value
   function getHeaderFn() {
     function _getHeader<T>(params: GetHeaderParams<T>): VNode {
       const { column, label, variable } = params
-      const mosaicCoordinatorVal = mosaicCoordinator.value as Coordinator | undefined
-      if (!selection || !mosaicCoordinatorVal) {
+      // const mosaicCoordinatorVal = coordinator as
+      if (!selection || !coordinator) {
         console.warn('Missing required parameters for category header:', { table, selection, coordinator })
         return h('div', { class: 'w-full' }, 'No data available')
       }
@@ -56,7 +54,7 @@ export function useCategoryHeader(params: UseHeaderParams) {
           table,
           selection,
           variableId: variable,
-          coordinator: mosaicCoordinatorVal,
+          coordinator,
           width: column.getSize() - 32,
         }),
       ])
@@ -65,7 +63,7 @@ export function useCategoryHeader(params: UseHeaderParams) {
   }
   const getHeader = ref<ReturnType<typeof getHeaderFn>>(getHeaderFn())
 
-  watch(mosaicCoordinator, () => {
+  watch(coordinator, () => {
     getHeader.value = getHeaderFn()
   })
 
