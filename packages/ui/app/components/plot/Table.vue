@@ -51,7 +51,6 @@ const selectClause = computed(() => {
 // Use composables
 const {
   tableData,
-  isPending,
 } = useMosaicData<T>(table, selection, selectClause, coordinator)
 
 const {
@@ -175,13 +174,11 @@ const {
       </div>
       <div v-if="columns">
         <UTable
-
           ref="tableElem"
           v-model:pagination="pagination"
           v-model:column-visibility="columnVisibility"
           :columns
           :data="tableData"
-          :loading="isPending"
           :pagination-options="{
             getPaginationRowModel: getPaginationRowModel(),
           }"
