@@ -1,6 +1,6 @@
 import type { Coordinator } from '@uwdata/mosaic-core'
 import type { ShallowRef } from 'vue'
-import { loadCSV, loadObjects } from '@uwdata/mosaic-sql'
+import { loadCSV, loadObjects, loadParquet } from '@uwdata/mosaic-sql'
 import { useAsyncState } from '@vueuse/core'
 
 interface UseMosaicBaseParams {
@@ -10,6 +10,7 @@ interface UseMosaicBaseParams {
 
 interface UseMosaicFromFileParams extends UseMosaicBaseParams {
   filePath: Ref<string>
+  format?: 'csv' | 'parquet'
 }
 
 interface UseMosaicFromObjectParams extends UseMosaicBaseParams {
@@ -44,9 +45,14 @@ export function useMosaic(params: useMosaicParams) {
   const queryString = computed(() => {
     const tableNameVal = toValue(tableName)
     if ('filePath' in params) {
-      const { filePath } = params
+      const { filePath, format = 'csv' } = params
       const filePathVal = toValue(filePath)
-      return loadCSV(tableNameVal, filePathVal)
+      if (format === 'parquet') {
+        return loadParquet(tableNameVal, filePathVal)
+      }
+      else {
+        return loadCSV(tableNameVal, filePathVal)
+      }
     }
     else if ('object' in params) {
       const dataObject = toValue(params.object)
