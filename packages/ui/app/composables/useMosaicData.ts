@@ -1,7 +1,7 @@
 import type { Coordinator, Selection } from '@uwdata/mosaic-core'
 import type { FilterExpr, SelectExpr } from '@uwdata/mosaic-sql'
 import type { Ref } from 'vue'
-import { coordinator as defaultCoordinator, makeClient } from '@uwdata/mosaic-core'
+import { makeClient } from '@uwdata/mosaic-core'
 
 import { Query } from '@uwdata/mosaic-sql'
 
@@ -12,25 +12,25 @@ export function useMosaicData<T>(
   table: Ref<string>,
   selection: Ref<Selection>,
   selectClause: Ref<SelectExpr | undefined>,
-  coordinator?: Ref<Coordinator | undefined>,
+  coordinator: Coordinator,
 ) {
   const tableData = ref<T[] | undefined>(undefined)
   const isError = ref(false)
   const isPending = ref(false)
 
-  const effectiveCoordinator = computed(() => {
-    const coordinatorVal = toValue(coordinator)
-    return coordinatorVal || defaultCoordinator()
-  })
+  // const effectiveCoordinator = computed(() => {
+  //   const coordinatorVal = toValue(coordinator)
+  //   return coordinatorVal || defaultCoordinator()
+  // })
 
   watchEffect((onCleanup) => {
     const selectClauseVal = toValue(selectClause)
     const tableName = toValue(table)
     const selectionVal = toValue(selection)
-    const coordinatorVal = toValue(effectiveCoordinator)
+    // const coordinatorVal = toValue(effectiveCoordinator)
 
     // Early returns for missing dependencies
-    if (!coordinatorVal || !selectionVal) {
+    if (!coordinator || !selectionVal) {
       console.warn('Coordinator or selection is not defined.')
       return
     }
@@ -44,11 +44,11 @@ export function useMosaicData<T>(
     }
 
     const client = makeClient({
-      coordinator: coordinatorVal,
+      coordinator,
       selection: selectionVal,
       prepare: async () => {
         try {
-          const result = await coordinatorVal.query(
+          const result = await coordinator.query(
             Query.from(tableName).select(selectClauseVal),
           )
           tableData.value = result.toArray() as T[]

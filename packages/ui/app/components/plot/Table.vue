@@ -4,7 +4,7 @@ import type { Table } from '@tanstack/vue-table'
 import type { Coordinator, Selection } from '@uwdata/mosaic-core'
 import type { SelectExpr } from '@uwdata/mosaic-sql'
 import { getPaginationRowModel } from '@tanstack/vue-table'
-import { coordinator as defaultCoordinator } from '@uwdata/mosaic-core'
+// import { coordinator as defaultCoordinator } from '@uwdata/mosaic-core'
 import { upperFirst } from 'scule'
 import { useMosaicData } from '../../composables/useMosaicData'
 import { useTableColumnManagement } from '../../composables/useTableColumnManagement'
@@ -13,18 +13,18 @@ interface Props {
   table: string
   selection: Selection
   columns: TableColumn<T>[] | undefined
-  coordinator?: Coordinator
+  coordinator: Coordinator
 }
 
 const props = defineProps<Props>()
-const propsCoordinator = toRef(() => props.coordinator)
-const coordinator = computed(() => {
-  const coordinatorVal = toValue(propsCoordinator)
-  if (coordinatorVal) {
-    return coordinatorVal
-  }
-  return defaultCoordinator()
-})
+const coordinator = props.coordinator
+// const coordinator = computed(() => {
+//   const coordinatorVal = toValue(propsCoordinator)
+//   if (coordinatorVal) {
+//     return coordinatorVal
+//   }
+//   return defaultCoordinator()
+// })
 const table = toRef(() => props.table)
 const selection = toRef(() => props.selection)
 const columns = toRef(() => props.columns)
