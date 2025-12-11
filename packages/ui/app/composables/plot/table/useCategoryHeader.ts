@@ -23,11 +23,12 @@
  */
 
 import type { GetHeaderParams, UseHeaderParams } from '../../../types/plotHeader'
-import { h, ref, watch } from 'vue'
+import { h } from 'vue'
 import PlotTableHeaderCategory from '../../../components/plot/table/header/Category.vue'
 
 export function useCategoryHeader(params: UseHeaderParams) {
   const { table, selection, coordinator } = params
+  const hasSelection = ref<boolean>(false)
 
   // const mosaicCoordinator = ref<Coordinator | undefined>(coordinator)
   // onBeforeMount(() => {
@@ -40,34 +41,27 @@ export function useCategoryHeader(params: UseHeaderParams) {
   // })
 
   // Wrap _getHeader in a function to capture the latest mosaicCoordinator value
-  function getHeaderFn() {
-    function _getHeader<T>(params: GetHeaderParams<T>): VNode {
-      const { column, label, variable } = params
-      // const mosaicCoordinatorVal = coordinator as
-      if (!selection || !coordinator) {
-        console.warn('Missing required parameters for category header:', { table, selection, coordinator })
-        return h('div', { class: 'w-full' }, 'No data available')
-      }
-      return h('div', { class: 'w-full' }, [
-        h('div', { class: 'text-sm font-semibold' }, label),
-        h(PlotTableHeaderCategory, {
-          table,
-          selection,
-          variableId: variable,
-          coordinator,
-          width: column.getSize() - 32,
-        }),
-      ])
+  function getHeader<T>(params: GetHeaderParams<T>): VNode {
+    const { column, label, variable } = params
+    // const mosaicCoordinatorVal = coordinator as
+    if (!selection || !coordinator) {
+      console.warn('Missing required parameters for category header:', { table, selection, coordinator })
+      return h('div', { class: 'w-full' }, 'No data available')
     }
-    return _getHeader
+    return h('div', { class: 'w-full' }, [
+      h('div', { class: 'text-sm font-semibold' }, label),
+      h(PlotTableHeaderCategory, {
+        table,
+        selection,
+        variableId: variable,
+        coordinator,
+        width: column.getSize() - 32,
+      }),
+    ])
   }
-  const getHeader = ref<ReturnType<typeof getHeaderFn>>(getHeaderFn())
-
-  watch(coordinator, () => {
-    getHeader.value = getHeaderFn()
-  })
 
   return {
+    hasSelection,
     getHeader,
   }
 }

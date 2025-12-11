@@ -12,9 +12,8 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const coordinator = toRef(() => props.coordinator)
+const { coordinator, selection } = props
 const table = toRef(() => props.table)
-const selection = toRef(() => props.selection)
 const isError = ref(false)
 const isPending = ref(false)
 const totalCount = ref<number | null>(null)
@@ -37,12 +36,12 @@ const progressLabel = computed(() => {
 watchEffect((onCleanup) => {
   const tableName = toValue(table)
   const client = makeClient({
-    coordinator: coordinator.value,
-    selection: selection.value,
+    coordinator,
+    selection,
     prepare: async () => {
       // Preparation work before the client starts.
       // Here we get the total number of rows in the table.
-      const result = await coordinator.value.query(
+      const result = await coordinator.query(
         Query.from(tableName).select({ count: count() }),
       )
       totalCount.value = result.get(0).count
@@ -93,11 +92,5 @@ watchEffect((onCleanup) => {
     <div class="text-dimmed text-sm mt-1">
       {{ progressLabel }}
     </div>
-    <!-- <p>
-      {{ isPending ? "(pending)" : "" }}
-    </p>
-    <p>
-      {{ isError ? "(error)" : "" }}
-    </p> -->
   </div>
 </template>

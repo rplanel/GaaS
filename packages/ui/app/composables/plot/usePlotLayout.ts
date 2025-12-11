@@ -8,7 +8,7 @@ interface LayoutParams {
 }
 
 export function usePlotLayout(params: LayoutParams) {
-  const { width, height, marginTop = 0, marginBottom = 0, marginLeft = 0, marginRight = 0 } = params
+  const { width, height, marginTop = 2, marginBottom = 0, marginLeft = 2, marginRight = 2 } = params
 
   const plotWidth = computed(() => {
     return width.value - toValue(marginLeft) - toValue(marginRight)
