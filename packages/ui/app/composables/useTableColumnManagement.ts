@@ -7,6 +7,7 @@ import type { Ref } from 'vue'
 export function useTableColumnManagement<T>(tableElem: Ref<{ tableApi: Table<T> } | null>) {
   const filteredColumns = ref<Column<T, unknown>[]>([])
   const columnFilterQuery = ref<string | undefined>(undefined)
+  const visibleColumns = ref<Column<T, unknown>[]>([])
   const visibleColumnsCount = ref<number>(0)
   const totalColumnsCount = ref<number>(0)
   const filteredColumnsCount = computed(() => filteredColumns.value.length)
@@ -27,6 +28,7 @@ export function useTableColumnManagement<T>(tableElem: Ref<{ tableApi: Table<T> 
 
     const visibleCols = allColumns
       .filter(col => col.getIsVisible())
+    visibleColumns.value = visibleCols
     visibleColumnsCount.value = visibleCols.length
   }
 
@@ -115,8 +117,10 @@ export function useTableColumnManagement<T>(tableElem: Ref<{ tableApi: Table<T> 
 
   return {
     // State
+
     filteredColumns: readonly(filteredColumns),
     columnFilterQuery,
+    visibleColumns: readonly(visibleColumns),
     visibleColumnsCount: readonly(visibleColumnsCount),
     totalColumnsCount: readonly(totalColumnsCount),
     filteredColumnsCount,

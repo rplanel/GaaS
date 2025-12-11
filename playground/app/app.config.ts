@@ -6,5 +6,14 @@ export default defineAppConfig({
   },
   gaasUi: {
     name: 'GaaS Playground',
+    navigationMenuItems: [
+      {
+        label: 'Test',
+        icon: 'mdi:flask',
+        exact: true,
+        to: '/test',
+        order: 6,
+      },
+    ],
   },
 })

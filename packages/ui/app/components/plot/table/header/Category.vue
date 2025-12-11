@@ -24,10 +24,10 @@ const props = withDefaults(defineProps<Props>(), {
   height: 70,
 })
 
-const selection = toRef(() => props.selection)
+const selection = props.selection
 const table = toRef(() => props.table)
 const variableId = toRef(() => props.variableId)
-const coordinator = toRef(() => props.coordinator)
+const coordinator = props.coordinator
 const width = toRef(() => props.width)
 const height = toRef(() => props.height)
 
@@ -48,8 +48,8 @@ watchEffect((onCleanup) => {
   // const categoryFilterVal = toValue(categoryFilter)
 
   const client = makeClient({
-    coordinator: coordinator.value,
-    selection: selection.value,
+    coordinator,
+    selection,
     prepare: async () => {
       // Preparation work before the client starts.
       // Here we get the total number of rows in the table.
@@ -63,7 +63,7 @@ watchEffect((onCleanup) => {
       //   query = query.where(isIn(variableName, categoryFilterVal.map(d => literal(d))))
       // }
 
-      const result = await coordinator.value.query(
+      const result = await coordinator.query(
         query,
       )
       const groupedData = result.toArray()
@@ -313,10 +313,10 @@ function publish(value) {
     if (value === '' || value === null)
       value = undefined // 'All' option
     const clause = clausePoint(variableId.value, value, { source: mosaicClientVal })
-    selection.value.update(clause)
+    selection.update(clause)
   }
   else if (isParam(selectionVal)) {
-    selection.value.update(value)
+    selection.update(value)
   }
 }
 
@@ -344,25 +344,23 @@ watch(categoryFilter, (newFilter) => {
 </script>
 
 <template>
-  <div class="flex">
-    <div class="flex flex-col items-center justify-center">
-      <div v-if="data">
-        <ObservablePlotRender
-          :options="plotOptions"
-          defer
-          :input-listener="handleInput"
-          :click-listener="handleClick"
-        />
-        <div
-          ref="inputLabel"
-          class="flex h-5 text-xs text-dimmed justify-center"
-        >
-          {{ infoLabel }}
-        </div>
-        <!-- <div v-if="selectedCategory">
+  <div v-if="data">
+    <ObservablePlotRender
+      :options="plotOptions"
+      defer
+      :input-listener="handleInput"
+      :click-listener="handleClick"
+    />
+    <div
+      ref="inputLabel"
+      class="h-5 text-xs text-dimmed justify-center"
+    >
+      <span class="truncate">
+        {{ infoLabel }}
+      </span>
+    </div>
+    <!-- <div v-if="selectedCategory">
           {{ selectedCategory[variable] }}
         </div> -->
-      </div>
-    </div>
   </div>
 </template>

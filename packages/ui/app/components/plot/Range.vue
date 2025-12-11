@@ -1,21 +1,19 @@
 <script lang="ts" setup>
-import type { Selection } from '@uwdata/mosaic-core'
+import type { Coordinator, Selection } from '@uwdata/mosaic-core'
 import type { FilterExpr } from '@uwdata/mosaic-sql'
-import { coordinator as defaultCoordinator, makeClient } from '@uwdata/mosaic-core'
+import { makeClient } from '@uwdata/mosaic-core'
 import { max, min, Query } from '@uwdata/mosaic-sql'
 
 interface Props {
   table: string
   selection: Selection
   variable: string
+  coordinator: Coordinator
 }
 
 const props = defineProps<Props>()
-
-const coordinator = defaultCoordinator()
-
+const { coordinator, selection } = props
 const table = toRef(() => props.table)
-const selection = toRef(() => props.selection)
 const variable = toRef(() => props.variable)
 const isError = ref(false)
 const isPending = ref(false)
@@ -24,6 +22,7 @@ const variableMax = ref<number | null>(null)
 
 const selectClause = computed(() => {
   // Generate the select clause for the variable.
+  // console.log('variable in selectClause:', variable.value)
   return { min: min(variable.value), max: max(variable.value) }
 })
 
@@ -31,7 +30,7 @@ watchEffect((onCleanup) => {
   const tableName = toValue(table)
   const client = makeClient({
     coordinator,
-    selection: selection.value,
+    selection,
     prepare: async () => {
       // Preparation work before the client starts.
       // Here we get the total number of rows in the table.

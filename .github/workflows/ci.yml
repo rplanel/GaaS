@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - docs
-      - fix
+      - 'fix/**'
   pull_request:
     branches:
       - main

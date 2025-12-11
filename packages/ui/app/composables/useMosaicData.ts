@@ -5,19 +5,21 @@ import { makeClient } from '@uwdata/mosaic-core'
 
 import { Query } from '@uwdata/mosaic-sql'
 
+export interface UseMosaicDataParams {
+  table: Ref<string>
+  selection: Selection
+  selectClause: Ref<SelectExpr | undefined>
+  coordinator: Coordinator
+}
+
 /**
  * Composable for managing Mosaic data queries and client connection
  */
-export function useMosaicData<T>(
-  table: Ref<string>,
-  selection: Ref<Selection>,
-  selectClause: Ref<SelectExpr | undefined>,
-  coordinator: Coordinator,
-) {
+export function useMosaicData<T>(params: UseMosaicDataParams) {
   const tableData = ref<T[] | undefined>(undefined)
   const isError = ref(false)
   const isPending = ref(false)
-
+  const { table, selection, coordinator, selectClause } = params
   // const effectiveCoordinator = computed(() => {
   //   const coordinatorVal = toValue(coordinator)
   //   return coordinatorVal || defaultCoordinator()
@@ -25,10 +27,22 @@ export function useMosaicData<T>(
 
   watchEffect((onCleanup) => {
     const selectClauseVal = toValue(selectClause)
+    // console.info(selectClauseVal)
     const tableName = toValue(table)
-    const selectionVal = toValue(selection)
+    const selectionVal = selection
     // const coordinatorVal = toValue(effectiveCoordinator)
-
+    if (!tableName) {
+      console.warn('Table name is not defined.')
+      return
+    }
+    if (!selectionVal) {
+      console.warn('Selection is not defined.')
+      return
+    }
+    if (!selectClauseVal) {
+      console.warn('Select clause is not defined.')
+      return
+    }
     // Early returns for missing dependencies
     if (!coordinator || !selectionVal) {
       console.warn('Coordinator or selection is not defined.')
@@ -88,6 +102,7 @@ export function useMosaicData<T>(
     })
 
     onCleanup(() => {
+      // console.info('Destroying Mosaic client in useMosaicData cleanup.')
       client.destroy()
     })
   })
