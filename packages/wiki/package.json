@@ -19,7 +19,7 @@
   "dependencies": {
     "@gaas/ui": "workspace:^",
     "@nuxt/content": "catalog:nuxt",
-    "@nuxt/eslint": "latest",
+    "@nuxt/eslint": "catalog:nuxt",
     "@nuxt/ui": "catalog:nuxt",
     "better-sqlite3": "catalog:",
     "zod": "catalog:",
@@ -34,7 +34,7 @@
     "nuxt": "catalog:nuxt",
     "playwright-core": "catalog:",
     "typescript": "catalog:",
-    "vue": "latest",
-    "vue-tsc": "^3.1.5"
+    "vue": "catalog:",
+    "vue-tsc": "catalog:"
   }
 }

@@ -72,8 +72,8 @@ The module automatically generates type definitions in your `.nuxt` directory th
 
 ```typescript
 // In any component or composable
-import type { GalaxyTypes } from '#build/types/nuxt-galaxy'
 import type { SupabaseTypes } from '#build/types/database'
+import type { GalaxyTypes } from '#build/types/nuxt-galaxy'
 
 // Use the full Database type
 type DB = SupabaseTypes.Database
@@ -117,52 +117,52 @@ The module also exports domain-specific types for working with Galaxy analyses, 
 
 ```typescript
 import type {
-  // Row types (what you get from queries)
-  RowAnalysis,
-  RowWorkflow,
-  RowHistory,
-  RowAnalysisJob,
-  RowAnalaysisDataset,
-  RowUploadedDataset,
-  RowAnalysisInput,
-  RowAnalysisOutputs,
-
-  // View types
-  AnalysisInputsWithStoratePath,
-  AnalysisOutputsWithStoratePath,
-
+  // Request/Response types
+  AnalysisBody,
   // Composite types
   AnalysisDetail,
   AnalysisInputsWithDatasets,
-  AnalysisOutputsWithDatasets,
+  // View types
+  AnalysisInputsWithStoratePath,
   AnalysisIOWithDatasets,
   AnalysisJobs,
+  AnalysisOutputsWithDatasets,
+  AnalysisOutputsWithStoratePath,
+
+  GalaxyInstanceDetails,
   HistoryWithAnalysisDB,
 
+  NewAnalysis,
   // Insert types (for creating new records)
   NewDataset,
-  NewJob,
   NewHistory,
-  NewAnalysis,
+  NewJob,
   NewWorkflow,
+  RolePermission,
 
-  // Sync types (for synchronization operations)
-  Sync,
-  SyncDatasets,
-  SyncJob,
-  SyncHistory,
-  UpdatedAnalysisLog,
-
-  // Request/Response types
-  AnalysisBody,
-  WorkflowToolsParameters,
-  GalaxyInstanceDetails,
-
+  RolePermissions,
   // Role-based access control
   RoleType,
   RoleTypes,
-  RolePermission,
-  RolePermissions,
+  RowAnalaysisDataset,
+  // Row types (what you get from queries)
+  RowAnalysis,
+
+  RowAnalysisInput,
+  RowAnalysisJob,
+  RowAnalysisOutputs,
+  RowHistory,
+  RowUploadedDataset,
+
+  RowWorkflow,
+  // Sync types (for synchronization operations)
+  Sync,
+  SyncDatasets,
+
+  SyncHistory,
+  SyncJob,
+  UpdatedAnalysisLog,
+  WorkflowToolsParameters,
 } from 'nuxt-galaxy'
 ```
 
@@ -170,10 +170,10 @@ import type {
 
 ```typescript
 import type {
-  RowAnalysis,
-  AnalysisDetail,
   AnalysisBody,
-  RoleType
+  AnalysisDetail,
+  RoleType,
+  RowAnalysis
 } from 'nuxt-galaxy'
 
 // Create a new analysis request
@@ -181,7 +181,7 @@ const analysisRequest: AnalysisBody = {
   name: 'My RNA-Seq Analysis',
   workflowId: 1,
   datamap: {
-    'input_fastq': { id: 123, src: 'hda' }
+    input_fastq: { id: 123, src: 'hda' }
   },
   parameters: {}
 }
@@ -206,7 +206,7 @@ const userRole: RoleType = 'admin' // or 'user'
 ### Example: Synchronization Types
 
 ```typescript
-import type { UpdatedAnalysisLog, SyncJob, SyncHistory } from 'nuxt-galaxy'
+import type { SyncHistory, SyncJob, UpdatedAnalysisLog } from 'nuxt-galaxy'
 
 function handleSyncResult(result: UpdatedAnalysisLog) {
   if (result.updated) {

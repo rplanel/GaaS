@@ -24,7 +24,6 @@ interface OperatorItem {
  * composable for building Meili facet filters
  * for a meili index and from user input
  *
- * @returns
  */
 export function useFacetFilterBuilder(options: UseFacetFilterOptions) {
   const { facetDistribution, facetStats, addFilter } = options
