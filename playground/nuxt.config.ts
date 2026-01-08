@@ -13,6 +13,7 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@nuxt/devtools',
     '@nuxt/content',
+    '@nuxt/eslint',
   ],
   compatibilityDate: '2024-11-01',
   future: {
@@ -43,6 +44,11 @@ export default defineNuxtConfig({
         '@uwdata/mosaic-sql',
         '@uwdata/vgplot',
       ],
+    },
+  },
+  eslint: {
+    config: {
+      stylistic: true, // <---
     },
   },
 

@@ -1,19 +1,21 @@
 {
-  // Disable the default formatter, use eslint instead
-  "prettier.enable": false,
-  "editor.formatOnSave": false,
-  "files.associations": {
-    "*.css": "tailwindcss"
-  },
   "editor.quickSuggestions": {
     "strings": "on"
   },
+  // Enable eslint for all supported languages
+  "nuxtr.defaultPackageManager": "pnpm",
+  "nuxtr.vueFiles.style.addStyleTag": false,
+  "eslint.format.enable": true,
+  "nuxtr.openItemsAfterCreation": true,
+  // Disable the default formatter, use eslint instead
+  "prettier.enable": false,
+  "editor.formatOnSave": false,
   // Auto fix
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",
     "source.organizeImports": "never"
   },
-  // Silent the stylistic rules in you IDE, but still auto fix them
+  // Silent the stylistic rules in your IDE, but still auto fix them
   "eslint.rules.customizations": [
     {
       "rule": "style/*",
@@ -84,14 +86,11 @@
     "gql",
     "graphql",
     "astro",
+    "svelte",
     "css",
     "less",
     "scss",
     "pcss",
     "postcss"
-  ],
-  "nuxtr.defaultPackageManager": "pnpm",
-  "nuxtr.vueFiles.style.addStyleTag": false,
-  "eslint.format.enable": true,
-  "nuxtr.openItemsAfterCreation": true
+  ]
 }

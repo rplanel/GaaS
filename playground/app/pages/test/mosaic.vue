@@ -166,16 +166,7 @@ const columns = ref<TableColumn<SatelliteData>[]>([
 
 const computedColumns = computed(() => columns.value.map(col => ({
   ...col,
-  // meta: {
-  //   class: {
-  //     th: 'w-[250px]',
-  //     td: 'w-[250px]',
-  //   },
-  //   style: {
-  //     th: 'width: 250px; text-align: left;',
-  //     td: 'text-align: left;',
-  //   },
-  // },
+
 })))
 
 const loadingStatus = ref(0)
@@ -205,8 +196,7 @@ watchEffect(() => {
   else if (isDBReady.value) {
     loadingStatus.value = 4
   }
-},
-)
+})
 
 const columnVisibility = ref<Record<string, boolean>>({ type: false })
 </script>
@@ -215,13 +205,8 @@ const columnVisibility = ref<Record<string, boolean>>({ type: false })
   <UDashboardPanel id="test-table-page">
     <template #body>
       <UPage>
-        <UPageHeader
-          title="Test table"
-          description="test the table"
-        />
-        <UPageBody
-          class="flex flex-col justify-stretch"
-        >
+        <UPageHeader title="Test table" description="test the table" />
+        <UPageBody class="flex flex-col justify-stretch">
           <div v-if="!isDBReady" class="flex flex-col">
             <UAlert variant="subtle" title="Loading..." class="m-4">
               Loading...
@@ -229,11 +214,8 @@ const columnVisibility = ref<Record<string, boolean>>({ type: false })
           </div>
           <div v-else>
             <PlotTable
-              v-model:column-visibility="columnVisibility"
-              :columns="computedColumns"
-              :table="tableName"
-              :selection
-              :coordinator="defaultCoordinator"
+              v-model:column-visibility="columnVisibility" :columns="computedColumns" :table="tableName"
+              :selection :coordinator="defaultCoordinator"
             />
           </div>
         </UPageBody>

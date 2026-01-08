@@ -3,9 +3,26 @@ import type { Ref } from 'vue'
 
 /**
  * Composable for managing table column visibility and filtering
+ * @param tableElem - A Ref to the table element containing the Table API
+ * @returns An object containing state and actions for column management
+ * @template T - The type of data in the table rows
+ *
  */
+
 export function useTableColumnManagement<T>(tableElem: Ref<{ tableApi: Table<T> } | null>) {
+  /**
+   * Columns filtered based on the current column filter query.
+   * This is a reactive reference that updates whenever the filter query changes.
+   * @type {Ref<Column<T, unknown>[]>}
+   */
   const filteredColumns = ref<Column<T, unknown>[]>([])
+
+  /**
+   * Query string for filtering columns by their ID.
+   * When set, `filteredColumns` will only include columns whose IDs
+   * contain this substring (case-insensitive).
+   * @type {Ref<string | undefined>}
+   */
   const columnFilterQuery = ref<string | undefined>(undefined)
   const visibleColumns = ref<Column<T, unknown>[]>([])
   const visibleColumnsCount = ref<number>(0)
@@ -28,7 +45,7 @@ export function useTableColumnManagement<T>(tableElem: Ref<{ tableApi: Table<T> 
 
     const visibleCols = allColumns
       .filter(col => col.getIsVisible())
-    visibleColumns.value = visibleCols
+    visibleColumns.value = visibleCols as Column<T, unknown>[]
     visibleColumnsCount.value = visibleCols.length
   }
 
@@ -117,7 +134,6 @@ export function useTableColumnManagement<T>(tableElem: Ref<{ tableApi: Table<T> 
 
   return {
     // State
-
     filteredColumns: readonly(filteredColumns),
     columnFilterQuery,
     visibleColumns: readonly(visibleColumns),

@@ -3,6 +3,7 @@ import type { PlotOptions } from '@observablehq/plot'
 import type { Coordinator, MosaicClient, Selection } from '@uwdata/mosaic-core'
 import type { FilterExpr } from '@uwdata/mosaic-sql'
 import { ObservablePlotRender } from '#components'
+import { useGroupLowFrequency } from '#layers/@gaas-ui/app/composables/useGroupLowFrequency'
 import * as Plot from '@observablehq/plot'
 import { clausePoint, isParam, isSelection, makeClient } from '@uwdata/mosaic-core'
 import { count, Query } from '@uwdata/mosaic-sql'
@@ -21,8 +22,17 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   width: 200,
-  height: 70,
+  height: 40,
 })
+
+interface DataItem {
+  count: number
+  [key: string]: string | number
+}
+
+interface DataItemWithFrequency extends DataItem {
+  frequency: number
+}
 
 const selection = props.selection
 const table = toRef(() => props.table)
@@ -30,13 +40,15 @@ const variableId = toRef(() => props.variableId)
 const coordinator = props.coordinator
 const width = toRef(() => props.width)
 const height = toRef(() => props.height)
+const predicate = ref<FilterExpr | undefined>(undefined)
 
 const categoryCount = ref<number>(0)
 const isError = ref(false)
 const isPending = ref(false)
 const categoryFilter = ref<string | undefined>(undefined)
-const data = ref<Array<Record<string, string> & { count: number }> | undefined>(undefined)
-const filteredData = ref<Array<Record<string, string> & { count: number }> | undefined>(undefined)
+
+const data = ref<Array<DataItem> | undefined>(undefined)
+const filteredData = ref<Array<DataItem> | undefined>(undefined)
 const mosaicClient = ref<MosaicClient | undefined>(undefined)
 
 /**
@@ -53,40 +65,34 @@ watchEffect((onCleanup) => {
     prepare: async () => {
       // Preparation work before the client starts.
       // Here we get the total number of rows in the table.
-
       const query = Query
         .from(tableName)
         .select(variableName, { count: count() })
         .groupby(variableName)
-
-      // if (categoryFilterVal.length > 0) {
-      //   query = query.where(isIn(variableName, categoryFilterVal.map(d => literal(d))))
-      // }
-
       const result = await coordinator.query(
         query,
       )
-      const groupedData = result.toArray()
+      const groupedData = result.toArray() as Array<DataItem>
       categoryCount.value = groupedData.length
       data.value = groupedData
       filteredData.value = groupedData
     },
-    query: (predicate: FilterExpr) => {
+    query: (mozPredicate: FilterExpr) => {
       // Returns a query to retrieve the data.
       // The `predicate` is the selection's predicate for this client.
       // Here we use it to get the filtered count.
-
+      predicate.value = mozPredicate
       const query = Query
         .from(tableName)
         .select(variableName, { count: count() })
-        .where(predicate)
+        .where(mozPredicate)
         .groupby(variableName)
 
       return query
     },
     queryResult: (queryData) => {
       // The query result is available.
-      const groupedData = queryData.toArray()
+      const groupedData = queryData.toArray() as Array<DataItem>
       categoryCount.value = groupedData.length
       filteredData.value = groupedData
       isError.value = false
@@ -124,7 +130,7 @@ const selectedCategory = computed(() => {
   return undefined
 })
 
-const { plotWidth, marginBottom, marginTop, marginLeft, marginRight } = useLayout(width, height)
+const { plotWidth, marginBottom, marginTop, marginLeft, marginRight, plotHeight } = useLayout(width, height)
 
 function useLayout(width: Ref<number>, height: Ref<number>) {
   const marginTop = ref(0)
@@ -139,9 +145,9 @@ function useLayout(width: Ref<number>, height: Ref<number>) {
 
   watchEffect(() => {
     const heightVal = toValue(height)
-    if (heightVal > 40) {
-      marginTop.value = heightVal - 40
-    }
+    // if (heightVal > 40) {
+    //   marginTop.value = heightVal - 40
+    // }
     plotHeight.value = heightVal - marginTop.value - marginBottom.value
   })
 
@@ -173,11 +179,65 @@ const sortedData = computed(() => {
   }).sort((a, b) => b.count - a.count)
 })
 
-const dataWithPercent = computed(() => {
+const dataWithFrequency = computed<DataItemWithFrequency[]>(() => {
   if (!sortedData.value) {
     return []
   }
+  const total = totalCount.value
   return sortedData.value.map(item => ({
+    ...item,
+    frequency: total > 0 ? item.count / total : 0,
+  }))
+})
+const filteredDataWithFrequency = computed<DataItemWithFrequency[]>(() => {
+  if (!filteredData.value) {
+    return []
+  }
+  const total = totalCount.value
+  return filteredData.value.map(item => ({
+    ...item,
+    frequency: total > 0 ? item.count / total : 0,
+  }))
+})
+function aggregateLowFrequencyItems(items: DataItemWithFrequency[]): DataItemWithFrequency {
+  const variableVal = toValue(variableId)
+  const otherGroup: DataItemWithFrequency = { [variableVal]: 'Other', count: 0, frequency: 0 }
+  return items.reduce((group, curr) => {
+    group.count += curr.count
+    group.frequency = group.count / totalCount.value
+    return group
+  }, otherGroup)
+}
+
+function getFrequency(item: DataItemWithFrequency): number {
+  return item.frequency || 0
+}
+function getId(item: DataItemWithFrequency) {
+  return item[variableId.value]
+}
+const frequencyThreshold = 0.021
+
+const { groupedItems: groupedOtherData, lowFrequencyItemIds: lowFrequencyItemIdsOtherData } = useGroupLowFrequency<DataItemWithFrequency>({
+  getId,
+  items: dataWithFrequency,
+  getFrequency,
+  threshold: frequencyThreshold,
+  aggregateFn: aggregateLowFrequencyItems,
+})
+
+const { groupedItems: groupedOtherFilteredData } = useGroupLowFrequency<DataItemWithFrequency>({
+  getId,
+  items: filteredDataWithFrequency,
+  getFrequency,
+  threshold: frequencyThreshold,
+  aggregateFn: aggregateLowFrequencyItems,
+})
+
+const dataWithPercent = computed(() => {
+  if (!groupedOtherData.value) {
+    return []
+  }
+  return groupedOtherData.value.map(item => ({
     ...item,
     percent: d3.format('.1%')(totalCount.value > 0 ? (item.count / totalCount.value) : 0),
   }))
@@ -189,9 +249,9 @@ function normalizeCategoryName(name: string): string {
 }
 
 const linearGradients = computed(() => {
-  const sortedDataVal = toValue(dataWithPercent)
-  const filteredDataVal = toValue(filteredData)
-  const variableVal = toValue(variableId)
+  const sortedDataVal = toValue(groupedOtherData)
+  const filteredDataVal = toValue(groupedOtherFilteredData)
+  const variableVal = toValue(lowFrequencyItemIdsOtherData).has(variableId.value) ? 'Other' : toValue(variableId)
   if (filteredDataVal) {
     return sortedDataVal.map((item) => {
       const normalizeGradientId = normalizeCategoryName(item[variableVal])
@@ -236,19 +296,20 @@ const sortedDataWithGradient = computed(() => {
 })
 
 const defaultBarOptions = {
-  inset: 0.5,
+  inset: 0.3,
   fillOpacity: 0.8,
-  r: 2,
+  // r: 2,
 }
 
 const plotOptions = computed<PlotOptions>(() => {
   return {
     width: toValue(plotWidth),
+    height: toValue(plotHeight),
     marginTop: toValue(marginTop),
     marginBottom: toValue(marginBottom),
     marginLeft: toValue(marginLeft),
     marginRight: toValue(marginRight),
-    height: toValue(height),
+    // height: toValue(height),
     x: {
       label: null,
       tickSize: 0,
@@ -261,10 +322,21 @@ const plotOptions = computed<PlotOptions>(() => {
     },
     marks: [
       ...linearGradients.value.map(gradient => () => gradient),
+      // Plot.barX(
+      //   sortedDataWithGradient.value,
+      //   Plot.groupZ(
+      //     { x: 'count'}, {fill: 'var(--ui-color-secondary-50)', ...defaultBarOptions },
+      //   ),
+      // ),
+      // Plot.barX(
+      //   sortedDataWithGradient.value,
+      //   Plot.groupZ(
+      //     { x: 'count',  }, { ...defaultBarOptions, fill: 'gradient' },
+      //   ),
+      // ),
       Plot.barX(
         sortedDataWithGradient.value,
         Plot.stackX({
-
         }, Plot.pointerX({
           x: 'count',
           fill: 'var(--ui-color-secondary-50)',
@@ -273,8 +345,11 @@ const plotOptions = computed<PlotOptions>(() => {
       ),
       Plot.barX(
         sortedDataWithGradient.value,
+        // Plot.groupY({})
         Plot.stackX({
-          x: 'count',
+          x: (d) => {
+            return d.count
+          },
           fill: 'gradient',
           ...defaultBarOptions,
         }),
@@ -345,22 +420,11 @@ watch(categoryFilter, (newFilter) => {
 
 <template>
   <div v-if="data">
-    <ObservablePlotRender
-      :options="plotOptions"
-      defer
-      :input-listener="handleInput"
-      :click-listener="handleClick"
-    />
-    <div
-      ref="inputLabel"
-      class="h-5 text-xs text-dimmed justify-center"
-    >
+    <ObservablePlotRender :options="plotOptions" defer :input-listener="handleInput" :click-listener="handleClick" />
+    <div ref="inputLabel" class="h-5 text-xs text-dimmed justify-center">
       <span class="truncate">
         {{ infoLabel }}
       </span>
     </div>
-    <!-- <div v-if="selectedCategory">
-          {{ selectedCategory[variable] }}
-        </div> -->
   </div>
 </template>

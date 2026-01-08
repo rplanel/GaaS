@@ -3,39 +3,9 @@ import { PlotTableHeaderHistogram } from '#components'
 import { ref } from 'vue'
 
 export function useHistogramHeader(params: UseHeaderParams) {
-  const { table, selection, coordinator } = params
+  const { table, selection, coordinator, ids } = params
 
   const hasSelection = ref<boolean>(false)
-
-  // function getHeaderFn() {
-  //   function _getHeader<T>(params: GetHeaderParams<T>): VNode {
-  //     const { column, label, variable } = params
-  //     // const mosaicCoordinatorVal = mosaicCoordinator.value as Coordinator | undefined
-  //     if (!selection || !coordinator) {
-  //       console.warn('Missing required parameters for histogram header:', { table, selection, coordinator })
-  //       return h('div', { class: 'w-full' }, 'No data available')
-  //     }
-  //     return h('div', { class: 'w-full' }, [
-  //       h('div', { class: 'text-sm font-semibold' }, label),
-  //       // switch to filter data for getting nullish values
-  //       // h(USwitch, {
-  //       // }),
-  //       h(PlotTableHeaderHistogram, {
-  //         table,
-  //         selection,
-  //         variable,
-  //         coordinator,
-  //         width: column.getSize() - 32,
-  //       }),
-  //     ])
-  //   }
-  //   return _getHeader
-  // }
-
-  // const getHeader = ref<ReturnType<typeof getHeaderFn>>(getHeaderFn())
-  // watch(coordinator, () => {
-  //   getHeader.value = getHeaderFn()
-  // })
 
   function getHeader<T>(params: GetHeaderParams<T>) {
     const { column, label, variable } = params
@@ -44,11 +14,14 @@ export function useHistogramHeader(params: UseHeaderParams) {
       return h('div', { class: 'w-full' }, 'No data available')
     }
     return h('div', { class: 'w-full' }, [
-      h('div', { class: 'text-sm font-semibold' }, label),
+      ...(label ? [h('div', { class: 'mb-1 text-sm font-semibold' }, label)] : []),
+      // h('div', { class: 'text-sm font-semibold' }, label),
       // switch to filter data for getting nullish values
       // h(USwitch, {
       // }),
       h(PlotTableHeaderHistogram, {
+        itemIds: ids,
+        // 'onUpdate:itemIds': (newIds: string[]) => { console.log('Updated item IDs:', newIds) },
         table,
         selection,
         variable,
@@ -57,7 +30,9 @@ export function useHistogramHeader(params: UseHeaderParams) {
       }),
     ])
   }
-
+  // watch(ids, (newIds) => {
+  //   console.log('IDs updated in histogram header:', newIds)
+  // })
   return {
     hasSelection,
     getHeader,

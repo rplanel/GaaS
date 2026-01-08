@@ -28,16 +28,6 @@ export function useMosaic(params: useMosaicParams) {
   const pending = ref(false)
   const queryResult = ref<unknown | undefined>(undefined)
   const coordinator: Coordinator = params.coordinator
-  // const coordinator: Coordinator = (params.coordinator ? params.coordinator : undefined)
-
-  // onBeforeMount(() => {
-  //   if (coordinator === undefined) {
-  //     const wasm = new DuckDBWASMConnector()
-  //     const c = defaultCoordinator()
-  //     c.databaseConnector(wasm)
-  //     coordinator = c
-  //   }
-  // })
 
   /**
    * Generate the appropriate query string based on the provided parameters.

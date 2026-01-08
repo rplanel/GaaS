@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { StepperItem } from '@nuxt/ui'
 import type { FacetDistribution, FacetStats } from 'meilisearch'
-import type { FacetFilter, FacetOperators, FacetValues, FilterType } from '../../utils/filterSchema'
+import type { FacetFilter, FacetOperators, FacetValues, FilterType } from '../../../../utils/filterSchema'
 import { ref } from 'vue'
-import { useFacetFilter } from '../../composables/meili/useFacetFilter'
+import { useFacetFilter } from '../../../../composables/meili/useFacetFilter'
 import {
   categoricalOperators,
   comparisonOperators,
@@ -12,7 +12,7 @@ import {
   filterSchemas,
   rangeOperators,
   setOperators,
-} from '../../utils/filterSchema'
+} from '../../../../utils/filterSchema'
 
 type DataType = 'categorical' | 'continuous'
 
@@ -38,7 +38,6 @@ const filterAttribute = ref<string>('')
 const filterOperator = ref<FacetOperators | undefined>(undefined)
 const filterValues = ref<FacetValues | undefined>(undefined)
 const filterNegationOperator = ref<boolean | undefined>(undefined)
-
 // Refs
 
 const meiliIndex = toRef(() => props.meiliIndex)
@@ -54,7 +53,9 @@ const {
   // slicedFacetFilters,
   // facetFilterToInputMenuItem,
   // facetFiltersToInputMenuItems,
-} = useFacetFilter({ meiliIndex })
+} = useFacetFilter(
+  // { meiliIndex }
+)
 
 // const inputsMenuItems = shallowRef<InputMenuItems>([])
 const facetList = computed(() => {
@@ -70,6 +71,13 @@ const facetList = computed(() => {
     count: Object.keys(facetDistributionVal[key]).length,
   }))
 })
+
+const facetOptions = computed(() => facetList.value.map(facet => ({
+  value: facet.label,
+  label: facet.label,
+  // description: facet.count,
+  badge: String(facet.count),
+})))
 
 // if the data contains numbers so the type is continuous
 // if the data contains only strings, the type is categorical
@@ -161,6 +169,12 @@ function setFilterAttribute(attribute: string) {
   nextStep()
 }
 
+function handleFacetChange(value: unknown) {
+  if (typeof value === 'string' && value) {
+    setFilterAttribute(value)
+  }
+}
+
 function setFilterOperator(operatorItem: OperatorItem) {
   filterOperator.value = operatorItem.operator
   nextStep()
@@ -250,6 +264,74 @@ function checkAndAddFilter() {
       </div>
     </div>
 
+    <div class="grid grid-cols-3 gap-2">
+      <UCard>
+        <template #header>
+          Select an attribute
+        </template>
+        <div class="p-4">
+          <CardRadioGroup
+            v-model="filterAttribute"
+            :items="facetOptions"
+            grid-class="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            card-class="h-full"
+            @change="handleFacetChange"
+          />
+        </div>
+      </UCard>
+      <UCard>
+        <template #header>
+          Select an operator
+        </template>
+        <div class="flex flex-col gap-2">
+          <div>
+            <USwitch v-model="filterNegationOperator" label="NOT" />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2">
+            <UButton
+              v-for="operator in computedFacetOperators"
+              :key="operator.operator"
+              variant="subtle"
+              :color="operator.preferred ? 'success' : 'warning'"
+              @click="setFilterOperator(operator) "
+            >
+              {{ operator.label }}
+            </UButton>
+          </div>
+        </div>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          Provide values
+        </template>
+        <div>
+          <MeiliFilterInputValueSet
+            v-if="filterType === 'set'"
+            v-model="filterValues"
+            :meili-index="meiliIndex"
+            :filter-attribute="filterAttribute"
+            :filter-operator="filterOperator"
+            :facet-distribution="facetDistribution"
+          />
+
+          <MeiliFilterInputValueRange
+            v-else-if="filterType === 'range'"
+            v-model="filterValues"
+            :meili-index="meiliIndex"
+            :filter-attribute="filterAttribute"
+            :filter-operator="filterOperator"
+            :facet-stats="facetStats"
+          />
+          <UInputMenu v-else placeholder="single list" class="w-full" />
+          <UButton @click="checkAndAddFilter">
+            Add
+          </UButton>
+        </div>
+      </UCard>
+    </div>
+
     <div class="flex justify-start my-10">
       <UStepper v-model="stepperActiveItem" :items="stepperItems" orientation="vertical">
         <!-- Attribute -->
@@ -322,70 +404,9 @@ function checkAndAddFilter() {
         </template>
       </UStepper>
     </div>
-    <div class="flex flex-col-2 gap-1">
-      <div>
-        facetDistribution
-        <!-- <pre>{{ facetDistribution }}</pre> -->
-      </div>
-      <div>
-        <!-- <UFormField label="Facet Filter" hint="OR relation between values">
-          <UInputMenu
-            v-model="facetSearch"
-            multiple
-            variant="subtle"
-            placeholder="Search facets..."
-            class="w-full"
-          />
-        </UFormField> -->
 
-        <!-- <div v-for="(_, index) in inputsMenuItems" :key="index" class="w-full">
-          <UFormField label="Facet Filter" hint="OR relation between values">
-            <div class="flex flex-row gap-1">
-              <UInputMenu
-                v-model="inputsMenuItems[index]"
-                class="ml-4 w-full"
-                variant="subtle"
-                multiple
-                @focus="editFacetFilter(index)"
-              />
-              <UButton @click="removeFilter(index)">
-                Remove
-              </UButton>
-            </div>
-          </UFormField>
-          <div>
-            <USeparator label="AND" class="my-2" />
-          </div>
-        </div> -->
+    <Ucard title="Manual filter" />
 
-        <!-- <UButton
-          @click="addFilter([{
-            attribute: 'test', values: facetFilters.length, operator: '=',
-          }])"
-        >
-          AND
-        </UButton> -->
-        <!-- focus : {{ slicedFacetFilterEnd }} -->
-        <!-- <div class="my-2 pa-2">
-          <h5>Inputs Menu Items</h5>
-          <div>{{ inputsMenuItems }}</div>
-        </div>
-        <div class="my-2 pa-2">
-          <h5>Sliced Facet Filters</h5>
-          <div>{{ slicedFacetFilters }}</div>
-        </div>
-
-        <div class="my-2 pa-2">
-          <h5>Facet Filters</h5>
-          <div>{{ facetFilters }}</div>
-        </div>
-
-        <div class="my-2 pa-2">
-          <h5>Facet Search Results</h5>
-          <div>{{ facetResult }}</div>
-        </div> -->
-      </div>
-    </div>
     <!-- <USelect v-model="selectedFacet" :options="availableFacets.map(f => ({ label: f.value, value: f.value }))" multiple /> -->
   </div>
 </template>

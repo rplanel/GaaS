@@ -1,16 +1,32 @@
+<script setup lang="ts">
+const cards = [
+  {
+    title: 'Mosaic table',
+    description: 'the data table is powered by Mosaic',
+    to: '/test/mosaic',
+  },
+  {
+    title: 'Meili table',
+    description: 'the data table is powered by Meili',
+    to: '/test/meili',
+  },
+
+  {
+    title: 'Meili with Mosaic table',
+    description: 'the data table is powered by Meili with Mosaic',
+    to: '/test/meili-with-mosaic',
+  },
+]
+</script>
+
 <template>
   <UDashboardPanel id="list-tests-page">
-    <div>
-      <p>
-        <NuxtLink to="/test/table">
-          Go to Table
-        </NuxtLink>
-      </p>
-      <p>
-        <NuxtLink to="/test/meili">
-          Go to meili
-        </NuxtLink>
-      </p>
-    </div>
+    <template #body>
+      <UPage>
+        <UPageGrid>
+          <UPageCard v-for="(card, index) in cards" :key="index" v-bind="card" />
+        </UPageGrid>
+      </UPage>
+    </template>
   </UDashboardPanel>
 </template>

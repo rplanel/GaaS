@@ -19,7 +19,7 @@ export function useMeiliFacetSearch(index: string) {
   async function searchForFacetValues(facetName: string, facetQuery: string, filter?: Filter) {
     const resp = await meilisearch
       .index(index)
-      .searchForFacetValues({ facetName, facetQuery, filter })
+      .searchForFacetValues({ facetName, facetQuery, filter, exhaustiveFacetCount: true })
     facetResult.value = resp as SearchForFacetValuesResponse
     return resp
   }

@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import type { InputMenuItem, InputMenuProps } from '@nuxt/ui'
 import type { FacetDistribution } from 'meilisearch'
-import { useFacetSearch } from '../../../composables/meili/useFacetSearch'
+import { useFacetSearch } from '../../../../../composables/meili/useFacetSearch'
 
 interface Props {
   meiliIndex: string
   filterAttribute: string
   filterOperator: SetOperator
-  facetDistribution?: Ref<FacetDistribution>
+  facetDistribution?: FacetDistribution
   inputMenuProps?: InputMenuProps
 }
 
 // props
 const props = defineProps<Props>()
-// const model = defineModel<string[] | undefined>()
+const model = defineModel<string[] | undefined>()
 const values = ref<SetValues | undefined>(undefined)
 const selectedValues = ref<{ label: string, count: number }[]>([])
 const inputMenuProps = toRef(() => props.inputMenuProps)
@@ -29,7 +29,7 @@ onMounted(() => {
   searchForFacetValues(filterAttribute.value, '')
 })
 
-if (filterOperator.value !== 'IN') {
+if (!setOperators.includes(filterOperator.value)) {
   console.warn(`MeiliFilterInputSet: filterOperator should be 'in' or 'not in', got '${filterOperator.value}'`)
   throw createError(`MeiliFilterInputSet: filterOperator should be 'in', got '${filterOperator.value}'`)
 }
@@ -98,9 +98,10 @@ watch(selectedValues, (newVal) => {
 
     <UInputMenu
       v-bind="sanitizedInputMenuProps"
-      v-model="selectedValues"
+      v-model="model"
       v-model:search-term="searchTerm"
       ignore-filter
+      value-key="label"
       class="w-full"
     >
       <template #item-label="{ item }">

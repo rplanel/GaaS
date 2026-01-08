@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "catalog:",
+    "@unocss/eslint-plugin": "catalog:",
     "bumpp": "catalog:",
     "changelogen": "catalog:",
     "eslint": "catalog:",
@@ -34,7 +35,6 @@
     "lint-staged": "catalog:",
     "simple-git-hooks": "catalog:"
   },
-  "pnpm": {},
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"
   },

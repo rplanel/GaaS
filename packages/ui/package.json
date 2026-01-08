@@ -25,11 +25,12 @@
     "@iconify-json/mdi": "catalog:",
     "@iconify-json/octicon": "catalog:",
     "@iconify-json/simple-icons": "catalog:",
+    "@iconify-json/solar": "catalog:",
     "@iconify-json/stash": "catalog:",
     "@iconify-json/streamline": "catalog:",
     "@iconify-json/svg-spinners": "catalog:",
     "@iconify-json/tabler": "catalog:",
-    "@nuxt/eslint": "latest",
+    "@nuxt/eslint": "catalog:nuxt",
     "@nuxt/test-utils": "catalog:nuxt",
     "@nuxt/ui": "catalog:nuxt",
     "@nuxtjs/supabase": "catalog:nuxt",
@@ -38,7 +39,7 @@
     "@uwdata/mosaic-sql": "catalog:dataviz",
     "@uwdata/vgplot": "catalog:dataviz",
     "@vueuse/core": "catalog:",
-    "apache-arrow": "^21.1.0",
+    "apache-arrow": "catalog:",
     "d3": "catalog:dataviz",
     "drizzle-kit": "catalog:",
     "effect": "catalog:",
@@ -46,6 +47,7 @@
     "jwt-decode": "catalog:",
     "meilisearch": "catalog:",
     "nuxt-galaxy": "workspace:*",
+    "uuid": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:",
     "zod-validation-error": "catalog:"
@@ -57,7 +59,7 @@
     "nuxt": "catalog:nuxt",
     "playwright-core": "catalog:",
     "typescript": "catalog:",
-    "vue": "latest",
-    "vue-tsc": "^3.1.5"
+    "vue": "catalog:",
+    "vue-tsc": "catalog:"
   }
 }
