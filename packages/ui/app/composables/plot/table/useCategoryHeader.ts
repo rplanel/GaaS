@@ -29,17 +29,7 @@ import PlotTableHeaderCategory from '../../../components/plot/table/header/Categ
 export function useCategoryHeader(params: UseHeaderParams) {
   const { table, selection, coordinator } = params
   const hasSelection = ref<boolean>(false)
-
-  // const mosaicCoordinator = ref<Coordinator | undefined>(coordinator)
-  // onBeforeMount(() => {
-  //   if (mosaicCoordinator.value === undefined) {
-  //     const wasm = new DuckDBWASMConnector()
-  //     const c = defaultCoordinator()
-  //     c.databaseConnector(wasm)
-  //     mosaicCoordinator.value = c
-  //   }
-  // })
-
+  // const
   // Wrap _getHeader in a function to capture the latest mosaicCoordinator value
   function getHeader<T>(params: GetHeaderParams<T>): VNode {
     const { column, label, variable } = params

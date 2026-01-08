@@ -11,7 +11,6 @@ interface Props {
   coordinator: Coordinator
   width?: number
   height?: number
-
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -31,37 +30,46 @@ const height = toRef(() => props.height)
 const defaultRectYAttributes = {
   inset: 0.5,
   fillOpacity: 0.8,
-
 }
-const { marginBottom, marginTop, marginLeft, marginRight } = usePlotLayout({ width, height })
+const { marginBottom, marginTop, marginLeft, marginRight } = usePlotLayout({
+  width,
+  height,
+})
 
-const plot = computed(() => {
+const marks = computed(() => {
+  const tableVal = toValue(table)
   const variableVal = toValue(variable)
   const selectionVal = selection
-  const tableVal = toValue(table)
 
-  const mark = vg.rectY(
-    vg.from(tableVal, {}),
-    {
+  return [
+    vg.rectY(vg.from(tableVal, {}), {
       x: vg.bin(variableVal),
       y: vg.count(),
       fill: '#ccc',
       ...defaultRectYAttributes,
-    },
-  )
+    }),
+    vg.rectY(vg.from(tableVal, { filterBy: selectionVal }), {
+      x: vg.bin(variableVal),
+      y: vg.count(),
+      fill: 'var(--ui-secondary)',
+      // tip: true,
+      ...defaultRectYAttributes,
+    }),
+  ]
+})
+
+const plot = computed(() => {
+  const selectionVal = selection
+  const marksVal = toValue(marks)
+  // const mark = vg.rectY(vg.from(tableVal, {}), {
+  //   x: vg.bin(variableVal),
+  //   y: vg.count(),
+  //   fill: "#ccc",
+  //   ...defaultRectYAttributes,
+  // });
   const dataPlot = vg.plot(
     // vg.frame('#ccc'),
-    mark,
-    vg.rectY(
-      vg.from(tableVal, { filterBy: selectionVal }),
-      {
-        x: vg.bin(variableVal),
-        y: vg.count(),
-        fill: 'var(--ui-secondary)',
-        // tip: true,
-        ...defaultRectYAttributes,
-      },
-    ),
+    ...marksVal,
 
     vg.intervalX({ as: selectionVal }),
     vg.marginLeft(toValue(marginLeft)),
@@ -77,7 +85,6 @@ const plot = computed(() => {
     vg.yDomain(vg.Fixed),
     vg.width(width.value),
     vg.height(height.value),
-
   )
 
   return dataPlot
@@ -90,6 +97,9 @@ onMounted(() => {
     containerVal.appendChild(plotVal)
   }
 })
+onUnmounted(() => {
+  console.warn('Unmounting histogram plot for variable:', toValue(variable))
+})
 </script>
 
 <template>
@@ -98,23 +108,7 @@ onMounted(() => {
     <div class="flex flex-col">
       <!-- this is the plot container -->
       <div ref="container" />
-      <PlotRange
-        :table="table"
-        :variable="variable"
-        :selection="selection"
-        :coordinator
-      />
+      <PlotRange :table="table" :variable="variable" :selection="selection" :coordinator />
     </div>
-    <!-- <div>
-      <ObservablePlotRender
-        v-if="nullData"
-        :options="plotOptions"
-        defer
-        :input-listener="({ plot, event }) => {
-          console.log('input', event)
-          console.log('plot', plot.value)
-        }"
-      />
-    </div> -->
   </div>
 </template>

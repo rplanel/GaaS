@@ -4,81 +4,6 @@ import type { FacetFilter } from '../../utils/filterSchema'
 
 export type InputMenuItems = Array<InputMenuItem>
 
-// Comparison operators (equality, inequality, and relational)
-// export const comparaisonOperators = ['=', '!=', '>', '>=', '<', '<='] as const
-// export type ComparisonOperator = typeof comparaisonOperators[number]
-
-// Range operator
-// export const rangeOperators = ['TO'] as const
-// export type RangeOperator = typeof rangeOperators[number]
-
-// Existence operators
-// export const existenceOperators = ['EXISTS', 'IS EMPTY', 'IS NULL'] as const
-// export type ExistenceOperator = typeof existenceOperators[number]
-
-// Set operators
-// export const setOperators = ['IN'] as const
-// export type SetOperator = typeof setOperators[number]
-
-// Negation operator
-// export const negationOperators = ['NOT'] as const
-// export type NegationOperator = typeof negationOperators[number]
-
-// Logical operators (conjunction and disjunction)
-// export const groupingOperators = ['AND', 'OR'] as const
-// export type GroupingOperator = typeof groupingOperators[number]
-
-// Combined type
-// export type FacetOperators
-//   = | ComparisonOperator
-//     | RangeOperator
-//     | ExistenceOperator
-//     | SetOperator
-// | NegationOperator
-// | GroupingOperator
-
-// export type SetValues = string[]
-// export type RangeValues = [number | string | null, number | string | null]
-// export type ComparisonValues = string | number
-
-// export type FacetValues = SetValues | RangeValues | ComparisonValues
-
-// interface BaseFacetFilter {
-//   attribute: string
-// }
-
-// export interface SetFacetFilter extends BaseFacetFilter {
-//   type: 'set'
-//   operator: SetOperator
-//   negation?: NegationOperator
-//   values: SetValues
-// }
-
-// export interface ExistenceFacetFilter extends BaseFacetFilter {
-//   type: 'existence'
-//   operator: ExistenceOperator
-//   negation?: NegationOperator
-// }
-
-// export interface RangeFacetFilter extends BaseFacetFilter {
-//   type: 'range'
-//   operator: RangeOperator
-//   values: RangeValues
-// }
-
-// export interface ComparisonFacetFilter extends BaseFacetFilter {
-//   type: 'comparison'
-//   operator: ComparisonOperator
-//   values: ComparisonValues
-// }
-
-// export type FacetFilter
-//   = | ComparisonFacetFilter
-//     | RangeFacetFilter
-//     | ExistenceFacetFilter
-//     | SetFacetFilter
-
-// //
 export type OrFacetFilterGroup = Array<FacetFilter>
 export type AndFacetFilterGroup = Array<FacetFilter | OrFacetFilterGroup>
 
@@ -94,17 +19,7 @@ export function useFacetFilter(
   // const slicedFacetFilters = shallowRef<Array<FacetFilter | FacetFilterGroup> | undefined>(undefined)
   const slicedFacetFilterEnd = shallowRef<number | undefined>(undefined)
   const facetFilters = shallowRef<AndFacetFilterGroup>([
-  //   {
-  //   type: 'comparison',
-  //   attribute: 'genres',
-  //   operator: '=',
-  //   values: 'drama',
-  // }, {
-  //   type: 'range',
-  //   attribute: 'price',
-  //   operator: 'TO',
-  //   values: ['0', '100'],
-  // }
+
   ])
   const editingFacetFilter = ref<FacetFilter | undefined>(undefined)
   // const { searchForFacetValues, facetResult } = useFacetSearch({ meiliIndex })
@@ -169,13 +84,6 @@ export function useFacetFilter(
     }
     return [{ label: 'Unsupported facet filter type' }]
   }
-
-  // function isComparisonFilter(filter: Omit<FacetFilter, 'type'>) {
-  //   const result = ComparisonFacetFilterSchema.safeParse({ ...filter, type: 'comparison' })
-  //   if (!result.success)
-  //     return false
-  //   return true
-  // }
 
   return {
     addFilter,

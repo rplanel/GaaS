@@ -47,7 +47,7 @@ def add_movies(ctx: typer.Context):
             "filterableAttributes": [
                 "genres",
             ],
-            "sortableAttributes": ["release_date"],
+            "sortableAttributes": ["release_date", "title", "genres"],
         }
     )
     client.index(index_name).update_pagination_settings({"maxTotalHits": 40000})
@@ -55,6 +55,7 @@ def add_movies(ctx: typer.Context):
     console.print(f"Downloading sample movies data from {url}...")
     response = requests.get(url)
     movies = response.json()
+
     console.print(f"Adding {len(movies)} movie documents to index '{index_name}'...")
     tasks = client.index(index_name).add_documents(movies)
     for task in tasks:
@@ -73,7 +74,7 @@ def add_books(ctx: typer.Context):
                 "publisher",
                 "cover",
                 "details.pages",
-                "details.rating"
+                "details.rating",
             ],
             "sortableAttributes": ["title", "author", "isbn13"],
         }
@@ -91,5 +92,49 @@ def add_books(ctx: typer.Context):
             book["details"]["rating"] = float(book["details"]["rating"])
     console.print(f"Adding {len(books)} book documents to index '{index_name}'...")
     tasks = client.index(index_name).add_documents(books)
+    for task in tasks:
+        console.print(task)
+
+
+@app.command()
+def add_world_cities(ctx: typer.Context):
+    client = ctx.obj["client"]
+    index_name = "world_cities"
+    client.index(index_name).update_settings(
+        {
+            "filterableAttributes": [
+                "country",
+                "country_code",
+                "timezone",
+                "population",
+            ],
+            "sortableAttributes": [
+                "name",
+                "population",
+                "timezone",
+                "country",
+                "country_code",
+            ],
+        }
+    )
+    client.index(index_name).update_pagination_settings({"maxTotalHits": 40000})
+
+    client.index(index_name).update_faceting_settings(
+        {
+            "sortFacetValuesBy": {
+                "*": "count",
+            }
+        }
+    )
+
+    url = "https://raw.githubusercontent.com/meilisearch/datasets/main/datasets/world_cities/world-cities.json"
+    console.print(f"Downloading sample world cities data from {url}...")
+    response = requests.get(url)
+    cities = response.json()
+
+    console.print(
+        f"Adding {len(cities)} world city documents to index '{index_name}'..."
+    )
+    tasks = client.index(index_name).add_documents(cities)
     for task in tasks:
         console.print(task)
