@@ -1,8 +1,12 @@
-import json
-import sys
+from enum import Enum
 from pathlib import Path
 from typing import Annotated, Optional
 
+from gaas_cli.meili.document.loader import (
+    load_csv_documents,
+    load_json_documents,
+    load_parquet_documents,
+)
 import requests
 import typer
 from rich.console import Console
@@ -12,14 +16,30 @@ console = Console(stderr=True)
 app = typer.Typer(no_args_is_help=True)
 
 
+class DocumentFormat(str, Enum):
+    json = "json"
+    csv = "csv"
+    parquet = "parquet"
+
+
 @app.command()
 def add(
     ctx: typer.Context,
     index_name: str,
+    primary_key: Annotated[
+        Optional[str],
+        typer.Option(
+            help="Primary key for the documents. If not provided, uses 'id' as the default."
+        ),
+    ] = "id",
+    format: Annotated[
+        DocumentFormat,
+        typer.Option(help="Format of the documents: json, parquet, or csv"),
+    ] = DocumentFormat.json,
     documents: Annotated[
         Optional[Path],
         typer.Argument(
-            help="Path to JSON file containing documents to add. "
+            help="Path to file containing documents to add. "
             "Use '-' or omit to read from stdin."
         ),
     ] = None,
@@ -28,13 +48,17 @@ def add(
     client = ctx.obj["client"]
 
     # Read documents from file or stdin
-    if documents is None or str(documents) == "-":
-        docs = json.load(sys.stdin)
+    if format == DocumentFormat.json:
+        docs = load_json_documents(documents)
+    elif format == DocumentFormat.csv:
+        docs = load_csv_documents(documents)
+    elif format == DocumentFormat.parquet:
+        docs = load_parquet_documents(documents)
     else:
-        with open(documents, "r") as f:
-            docs = json.load(f)
+        console.print(f"[red]Unsupported document format: {format}[/red]")
+        raise typer.Exit(code=1)
 
-    response = client.index(index_name).add_documents(docs)
+    response = client.index(index_name).add_documents(docs, primary_key)
     console.print(f"Add documents response: {response}")
 
 
