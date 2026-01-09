@@ -1,9 +1,13 @@
-catalogMode: prefer
+# catalogMode: prefer
 
 shellEmulator: true
 
 trustPolicy: no-downgrade
-
+trustPolicyExclude:
+  - chokidar@4.0.3
+  - undici-types@6.21.0
+  - undici@6.22.0
+  - semver@6.3.1
 packages:
   - packages/blendtype
   - packages/nuxt-galaxy
@@ -28,8 +32,8 @@ catalog:
   '@iconify-json/svg-spinners': ^1.2.4
   '@iconify-json/tabler': ^1.2.23
   '@iconify-json/vscode-icons': ^1.2.36
-  '@release-it/conventional-changelog': ^10.0.2
-  '@types/node': ^22.19.1
+  '@release-it/conventional-changelog': ^10.0.4
+  '@types/node': ^24.1.0
   '@unocss/eslint-plugin': ^66.5.10
   '@vitest/coverage-v8': ^3.2.4
   '@vue/compiler-core': ^3.5.25
