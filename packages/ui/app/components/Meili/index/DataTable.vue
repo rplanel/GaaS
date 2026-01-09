@@ -38,7 +38,7 @@ const globalSearch = ref('')
 
 // -- filters --
 // model that store the filters added by the different filter builders
-const modelFilters = defineModel<Record<string, FacetFilter | undefined>>('filters')
+// const modelFilters = defineModel<Record<string, FacetFilter | undefined>>('filters')
 const manualFilter = ref<{ label: string | undefined, uuid: string }>({ label: undefined, uuid: uuidv4() })
 const filterBuild = toRef(props.filterBuild)
 
@@ -77,14 +77,14 @@ function toMeiliFilter(filter: FacetFilter): string {
       return ''
   }
 }
-const modelFiltersList = computed<FacetFilter[] | undefined>(() => {
-  const filtersVal = toValue(modelFilters)
-  return filtersVal ? Object.values(filtersVal).map(f => f).filter((f): f is FacetFilter => f !== undefined) : undefined
-})
+// const modelFiltersList = computed<FacetFilter[] | undefined>(() => {
+//   const filtersVal = toValue(modelFilters)
+//   return filtersVal ? Object.values(filtersVal).map(f => f).filter((f): f is FacetFilter => f !== undefined) : undefined
+// })
 const mergedFilters = computed(() => {
   const manual = toValue(manualFilter)
   const builder = toValue(builderFilters)
-  const modelFiltersVal = toValue(modelFiltersList)
+  // const modelFiltersVal = toValue(modelFiltersList)
   const filters: { label: string, manual: boolean, uuid: string, type: 'build' | 'model' | 'manual' }[] = []
   if (Array.isArray(builder) && builder.length > 0) {
     filters.push(...builder.map((f, index) => {
@@ -97,17 +97,17 @@ const mergedFilters = computed(() => {
     }))
   }
 
-  if (Array.isArray(modelFiltersVal) && modelFiltersVal.length > 0) {
-    filters.push(...modelFiltersVal.map((f, index) => {
-      return {
-        ...f,
-        label: toMeiliFilter(f),
-        uuid: uuidv4(),
-        manual: false,
-        type: 'model' as const,
-      }
-    }))
-  }
+  // if (Array.isArray(modelFiltersVal) && modelFiltersVal.length > 0) {
+  //   filters.push(...modelFiltersVal.map((f, index) => {
+  //     return {
+  //       ...f,
+  //       label: toMeiliFilter(f),
+  //       uuid: uuidv4(),
+  //       manual: false,
+  //       type: 'model' as const,
+  //     }
+  //   }))
+  // }
 
   if (manual && manual.label && manual.label.length > 0) {
     filters.push({
@@ -132,13 +132,13 @@ const meiliFilters = computed<Filter | undefined>(() => {
 })
 const throttledMeiliFilters = refThrottled(meiliFilters, 300)
 
-function clearModelFilters(filter: FacetFilter) {
-  const modelFiltersVal = toValue(modelFilters)
-  if (!modelFiltersVal) {
-    return
-  }
-  modelFiltersVal[filter.attribute as string] = undefined
-}
+// function clearModelFilters(filter: FacetFilter) {
+//   const modelFiltersVal = toValue(modelFilters)
+//   if (!modelFiltersVal) {
+//     return
+//   }
+//   modelFiltersVal[filter.attribute as string] = undefined
+// }
 
 // -- search for results --
 const {
@@ -366,7 +366,7 @@ const facetSlotProps = computed(() => {
               <template #trailing>
                 <UButton
                   icon="lucide:x" size="sm" variant="ghost"
-                  @click="filter.type === 'model' ? clearModelFilters(filter) : filter.type === 'manual' ? manualFilter.label = undefined : removeBuildFilter(filter.uuid)"
+                  @click="filter.type === 'manual' ? manualFilter.label = undefined : removeBuildFilter(filter.uuid)"
                 />
               </template>
             </UBadge>

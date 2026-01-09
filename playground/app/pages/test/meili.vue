@@ -5,15 +5,6 @@ import { MeiliIndexDataTableSortColumn, MeiliIndexFilterPlotCategoryBuilder, Mei
 const metaClass = {
   th: 'truncate align-top',
 }
-// const facetDistribution = ref<FacetDistribution | undefined>(undefined)
-// const facetStats = ref<FacetStats | undefined>(undefined)
-// const totalHits = ref(0)
-// should get the meili index information
-// in order to know which columns are sortable, filterable, etc.
-
-// const countryFilter = ref<FacetFilter | undefined>(undefined)
-const categoricalHeaderFilters: Ref<Record<string, FacetFilter | undefined>> = ref({
-})
 
 const populationModel = ref<number[]>([0, 0])
 const continuousMeilifilter = computed(() => {
@@ -86,7 +77,7 @@ const index = computed(() => {
     </template>
     <template #body>
       <MeiliIndexDataTable
-        v-model:filters="categoricalHeaderFilters" :meili-index="index.name"
+        :meili-index="index.name"
         :sorting-state="index.sorting"
         :meili-filters="continuousMeilifilter"
         :table-props="{
