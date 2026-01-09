@@ -70,8 +70,8 @@ export function useLoadMore(options: UseLoadMoreOptions) {
    */
   const runPaginatedSearch = async ({ currentPage, currentPageSize }: PaginationState) => {
     const currentSearchParams: SearchParams = {
-      hitsPerPage: currentPageSize,
-      page: currentPage,
+      limit: currentPageSize,
+      offset: (currentPage - 1) * currentPageSize,
       facets: ['*'],
       filter: toValue(filterRef),
       q: toValue(searchTermRef),
@@ -119,7 +119,7 @@ export function useLoadMore(options: UseLoadMoreOptions) {
     currentPage: page.value,
     currentPageSize: toValue(pageSize),
   })
-  const totalHits = computed(() => result.value?.totalHits ?? 0)
+  const totalHits = computed(() => result.value?.estimatedTotalHits ?? 0)
   const { history: totalHitsHistory } = useRefHistory(totalHits)
 
   watch(totalHits, (newTotalHits, oldTotalHits) => {
