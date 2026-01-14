@@ -1,4 +1,4 @@
-import type { Filter, SearchForFacetValuesResponse } from 'meilisearch'
+import type { SearchForFacetValuesParams, SearchForFacetValuesResponse } from 'meilisearch'
 import { useState } from '#imports'
 
 import { MeiliSearch } from 'meilisearch'
@@ -16,10 +16,11 @@ export function useMeiliFacetSearch(index: string) {
 
   const facetResult = useState(`${index}-facet-search-result`, () => null as SearchForFacetValuesResponse | null)
 
-  async function searchForFacetValues(facetName: string, facetQuery: string, filter?: Filter) {
+  async function searchForFacetValues(params: SearchForFacetValuesParams) {
+    const { facetName, facetQuery, filter, q } = params
     const resp = await meilisearch
       .index(index)
-      .searchForFacetValues({ facetName, facetQuery, filter, exhaustiveFacetCount: true })
+      .searchForFacetValues({ facetName, facetQuery, filter, exhaustiveFacetCount: true, q })
     facetResult.value = resp as SearchForFacetValuesResponse
     return resp
   }

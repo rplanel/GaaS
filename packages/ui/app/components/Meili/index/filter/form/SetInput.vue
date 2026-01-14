@@ -26,7 +26,7 @@ const searchTerm = ref<string>('')
 const { searchForFacetValues, facetResult } = useFacetSearch({ meiliIndex })
 
 onMounted(() => {
-  searchForFacetValues(filterAttribute.value, '')
+  searchForFacetValues({ facetName: filterAttribute.value, facetQuery: '' })
 })
 
 if (!setOperators.includes(filterOperator.value)) {
@@ -41,7 +41,7 @@ watch(searchTerm, (newVal) => {
   }
   // console.log('searchTerm changed', newVal)
   // console.log('filterAttribute', filterAttribute.value)
-  searchForFacetValues(filterAttribute.value, newVal)
+  searchForFacetValues({ facetName: filterAttribute.value, facetQuery: newVal })
 })
 
 const facetDistributionItems = computed<InputMenuItem[]>(() => {

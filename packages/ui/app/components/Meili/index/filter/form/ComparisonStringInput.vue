@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { InputMenuItem, InputMenuProps } from '@nuxt/ui'
-import type { FacetDistribution } from 'meilisearch'
+import type { FacetDistribution, SearchParams } from 'meilisearch'
 import { useFacetSearch } from '../../../../../composables/meili/useFacetSearch'
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   filterOperator: SetOperator
   facetDistribution?: FacetDistribution
   inputMenuProps?: InputMenuProps
+  searchParams: SearchParams
 }
 
 // props
@@ -18,21 +19,15 @@ const value = ref<Exclude<ComparisonValues, number> | undefined>(undefined)
 const selectedValue = ref<{ label: string, count: number } | undefined>(undefined)
 const inputMenuProps = toRef(() => props.inputMenuProps)
 const meiliIndex = toRef(() => props.meiliIndex)
+const searchParams = toRef(() => props.searchParams)
 const filterAttribute = toRef(() => props.filterAttribute)
 const facetDistribution = toRef(() => props.facetDistribution)
 const searchTerm = ref<string>('')
 const { searchForFacetValues, facetResult } = useFacetSearch({ meiliIndex })
 
 onMounted(() => {
-  searchForFacetValues(filterAttribute.value, '')
+  searchForFacetValues({ ...searchParams.value, facetName: filterAttribute.value, facetQuery: '' })
 })
-
-// ComparisonOperatorEnum.safeParse(filterOperator.value)
-
-// if (filterOperator.value !== 'IN') {
-//   console.warn(`MeiliFilterInputSet: filterOperator should be 'in' or 'not in', got '${filterOperator.value}'`)
-//   throw createError(`MeiliFilterInputSet: filterOperator should be 'in', got '${filterOperator.value}'`)
-// }
 
 watch(searchTerm, (newVal) => {
   // console.log('watch searchTerm', newVal)
@@ -41,7 +36,7 @@ watch(searchTerm, (newVal) => {
   }
   // console.log('searchTerm changed', newVal)
   // console.log('filterAttribute', filterAttribute.value)
-  searchForFacetValues(filterAttribute.value, newVal)
+  searchForFacetValues({ ...searchParams.value, facetName: filterAttribute.value, facetQuery: newVal })
 })
 
 const facetDistributionItems = computed<InputMenuItem[]>(() => {

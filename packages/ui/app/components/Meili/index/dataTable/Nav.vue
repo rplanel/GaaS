@@ -24,7 +24,7 @@ const props = withDefaults(defineProps<DataTableNavProps>(), {
 const pageSize = defineModel<number>('page-size')
 const totalHits = toRef(() => props.totalHits)
 const currentPageSize = toRef(() => props.currentPageSize)
-const pageCount = toRef(() => props.pageCount)
+// const pageCount = toRef(() => props.pageCount)
 const isFirstPage = toRef(() => props.isFirstPage)
 const isLastPage = toRef(() => props.isLastPage)
 const pageSizeItems = computed(() => [10, 25, 50].map(value => ({
@@ -60,11 +60,13 @@ const pageSummary = computed(() => {
   <div class="mt-4 flex flex-col gap-4 border-t border-gray-200 pt-4 md:flex-row md:items-center md:justify-between dark:border-gray-800">
     <div class="flex flex-col gap-1 text-sm text-muted md:flex-row md:items-center md:gap-3">
       <span>
-        Showing {{ pageSummary.from }} - {{ pageSummary.to }} of {{ totalHits }} results
+        <!-- Showing {{ pageSummary.from }} - {{ pageSummary.to }} of {{ totalHits }} results -->
+        Showing {{ pageSummary.from }} - {{ pageSummary.to }}
       </span>
-      <span>
+      <!-- <span>
         Page {{ currentPage }} of {{ pageCount }} ({{ currentPageSize }} per page)
-      </span>
+      </span> -->
+      <span> Page {{ currentPage }} ({{ currentPageSize }} per page)</span>
     </div>
     <div class="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
       <div class="flex items-center gap-2">

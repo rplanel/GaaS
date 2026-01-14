@@ -3,7 +3,7 @@ import type { PlotOptions } from '@observablehq/plot'
 import type { Coordinator, MosaicClient, Selection } from '@uwdata/mosaic-core'
 import type { FilterExpr } from '@uwdata/mosaic-sql'
 import { ObservablePlotRender } from '#components'
-import { useGroupLowFrequency } from '#layers/@gaas-ui/app/composables/useGroupLowFrequency'
+import { useFrequencyPartition } from '#layers/@gaas-ui/app/composables/useFrequencyPartition'
 import * as Plot from '@observablehq/plot'
 import { clausePoint, isParam, isSelection, makeClient } from '@uwdata/mosaic-core'
 import { count, Query } from '@uwdata/mosaic-sql'
@@ -217,19 +217,19 @@ function getId(item: DataItemWithFrequency) {
 }
 const frequencyThreshold = 0.021
 
-const { groupedItems: groupedOtherData, lowFrequencyItemIds: lowFrequencyItemIdsOtherData } = useGroupLowFrequency<DataItemWithFrequency>({
+const { groupedItems: groupedOtherData, aggregatedItemIds: aggregatedItemIdsOtherData } = useFrequencyPartition<DataItemWithFrequency>({
   getId,
   items: dataWithFrequency,
   getFrequency,
-  threshold: frequencyThreshold,
+  frequencyThreshold,
   aggregateFn: aggregateLowFrequencyItems,
 })
 
-const { groupedItems: groupedOtherFilteredData } = useGroupLowFrequency<DataItemWithFrequency>({
+const { groupedItems: groupedOtherFilteredData } = useFrequencyPartition<DataItemWithFrequency>({
   getId,
   items: filteredDataWithFrequency,
   getFrequency,
-  threshold: frequencyThreshold,
+  frequencyThreshold,
   aggregateFn: aggregateLowFrequencyItems,
 })
 
@@ -251,7 +251,7 @@ function normalizeCategoryName(name: string): string {
 const linearGradients = computed(() => {
   const sortedDataVal = toValue(groupedOtherData)
   const filteredDataVal = toValue(groupedOtherFilteredData)
-  const variableVal = toValue(lowFrequencyItemIdsOtherData).has(variableId.value) ? 'Other' : toValue(variableId)
+  const variableVal = toValue(aggregatedItemIdsOtherData).has(variableId.value) ? 'Other' : toValue(variableId)
   if (filteredDataVal) {
     return sortedDataVal.map((item) => {
       const normalizeGradientId = normalizeCategoryName(item[variableVal])

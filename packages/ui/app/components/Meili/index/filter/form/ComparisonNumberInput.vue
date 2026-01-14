@@ -34,7 +34,7 @@ const { searchForFacetValues,
 } = useFacetSearch({ meiliIndex })
 
 onMounted(() => {
-  searchForFacetValues(filterAttribute.value, '')
+  searchForFacetValues({ facetName: filterAttribute.value, facetQuery: '' })
 })
 
 watch([facetStats, filterAttribute], (newVal) => {

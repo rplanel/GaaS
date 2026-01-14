@@ -219,6 +219,9 @@ export default {
           }
 
           if (clickListener) {
+            // console.log('adding click listener in mounted')
+            // console.log(plot)
+            // console.log(plot.value)
             plot.addEventListener('click', () => clickListener(plot))
           }
           el.append(plot)
@@ -277,6 +280,7 @@ export default {
       }
 
       if (clickListener) {
+        // console.log('adding click listener in render')
         plot.addEventListener('click', () => clickListener(plot))
       }
       const replace = (el) => {

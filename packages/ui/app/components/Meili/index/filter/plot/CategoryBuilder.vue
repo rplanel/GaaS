@@ -3,11 +3,14 @@ import type { Column } from '@tanstack/table-core'
 import type { CategoriesDistribution, Facet, FacetDistribution } from 'meilisearch'
 import { ObservablePlotRender } from '#components'
 import * as Plot from '@observablehq/plot'
+import { useFrequencyPartition } from '../../../../../composables/useFrequencyPartition'
 
 export interface CategoryHeaderProps<T> {
   column: Column<T>
   label?: string
   totalHits: number
+  numberOfDocuments: number
+  maxValuesPerFacet?: number | undefined
   facetDistribution?: FacetDistribution | undefined
   aggregateFrequencyThreshold?: number
   addFilter?: (filter: FacetFilter) => FacetFilter & { uuid: string }
@@ -26,70 +29,117 @@ const props = withDefaults(defineProps<CategoryHeaderProps<T>>(), {
 const currentFilterId = ref<string | undefined>(undefined)
 const { aggregateFrequencyThreshold, addFilter } = props
 const facetDistribution = toRef(props, 'facetDistribution')
-const totalHits = toRef(props, 'totalHits')
+// const maxValuesPerFacet = toRef(props, 'maxValuesPerFacet')
+// const totalHits = toRef(props, 'totalHits')
+const numberOfDocuments = toRef(props, 'numberOfDocuments')
 const { column, label } = toRefs(props)
-
 const modelFilter = defineModel<FacetFilter | undefined>('filter')
 
-const sanitizedFacetDistribution = computed<FacetCategory[]>(() => {
+const facetCategoryDistribution = computed<CategoriesDistribution | undefined>(() => {
   const facetDistributionVal = toValue(facetDistribution)
-  const columnId = column.value.id as Facet
-  const total = toValue(totalHits)
-
-  if (!facetDistributionVal || !facetDistributionVal[columnId]) {
-    return []
+  const columnId = toValue(column)?.id as Facet
+  if (!facetDistributionVal || !columnId || !facetDistributionVal[columnId]) {
+    return undefined
   }
-  const facetCategory: CategoriesDistribution = facetDistributionVal[columnId]
-  return Object.entries(facetCategory).map(([key, value]) => ({
+  return facetDistributionVal[columnId]
+})
+
+// const facetCategoryCount = computed(() => {
+//   const facetCategoryDistributionVal = toValue(facetCategoryDistribution)
+
+//   if (!facetCategoryDistributionVal) {
+//     return 0
+//   }
+//   return facetCategoryDistributionVal ? Object.keys(facetCategoryDistributionVal).length : 0
+// })
+
+// const isFacetCategoryDistributionPartial = computed(() => {
+//   const facetCategoryCountVal = toValue(facetCategoryCount)
+//   const maxValuesPerFacetVal = toValue(maxValuesPerFacet)
+//   if (maxValuesPerFacetVal === undefined) {
+//     return false
+//   }
+//   return facetCategoryCountVal >= maxValuesPerFacetVal
+// })
+
+const sanitizedFacetDistribution = computed<FacetCategory[]>(() => {
+  const facetCategoryDistributionVal = toValue(facetCategoryDistribution)
+  const numberOfDocumentsVal = toValue(numberOfDocuments)
+
+  if (!facetCategoryDistributionVal) {
+    return [] as FacetCategory[]
+  }
+
+  return Object.entries(facetCategoryDistributionVal).map(([key, value]) => ({
     name: key,
     count: value,
-    frequency: total > 0 ? value / total : 0,
+    frequency: numberOfDocumentsVal > 0 ? value / numberOfDocumentsVal : 0,
   }))
 })
 
-const itemsCountInFacet = computed(() => sanitizedFacetDistribution.value.reduce((sum, item) => sum + item.count, 0))
+// const itemsCountInFacet = computed(() => sanitizedFacetDistribution.value.reduce((sum, item) => sum + item.count, 0))
 
 function aggregateLowFrequencyItems(items: FacetCategory[]): FacetCategory {
-  // const otherGroup: FacetCategory = { name: 'Other', count: 0, frequency: 0 }
-  const total = toValue(totalHits)
-  const countHitsInFacet = toValue(itemsCountInFacet)
-  let missingItems = 0
-  // there is not all the data in the facet distribution
-  // count the missing items in the other group
-  if (total > countHitsInFacet) {
-    missingItems = total - countHitsInFacet
-  }
-
+  // const countHitsInFacet = toValue(itemsCountInFacet)
+  const numberOfDocumentsVal = toValue(numberOfDocuments)
   const otherGroup = items.reduce((group, curr) => {
     group.count += curr.count
 
     group.items?.push(curr.name)
     // group.frequency = total > 0 ? group.count / total : 0
     return group
-  }, { name: 'Other', count: 0, frequency: 0, items: [] as string[] })
-  const otherCount = otherGroup.count + missingItems
+  }, { name: 'Aggregate', count: 0, frequency: 0, items: [] as string[] })
+  const otherCount = otherGroup.count
   return {
     ...otherGroup,
     count: otherCount,
-    frequency: total > 0 ? otherCount / total : 0,
+    frequency: numberOfDocumentsVal > 0 ? otherCount / numberOfDocumentsVal : 0,
   }
 }
 
-const { groupedItems, highFrequencyItemIds } = useGroupLowFrequency<FacetCategory>({
+const { displayedItems, displayedItemCount } = useFrequencyPartition<FacetCategory>({
   items: sanitizedFacetDistribution,
   getId: item => item.name,
   getFrequency: item => item.frequency,
-  threshold: aggregateFrequencyThreshold,
+  frequencyThreshold: aggregateFrequencyThreshold,
   aggregateFn: aggregateLowFrequencyItems,
+  sizeThreshold: 15,
 })
 
 function renameXPx({ x, ...options }) {
   return { ...options, px: x }
 }
 
+const normalizedHighFrequencyItems = computed<FacetCategory[]>(() => {
+  return displayedItems.value.map(item => ({
+    ...item,
+    frequency: displayedItemCount.value > 0 ? item.count / displayedItemCount.value : 0,
+  }))
+})
+
+// const otherData = computed<FacetCategory[]>(() => {
+//   const isPartial = toValue(isFacetCategoryDistributionPartial)
+
+//   if (isPartial) {
+//     return [
+//       {
+//         name: 'Other',
+//         count: 100,
+//       },
+//     ]
+//   }
+//   else {
+//     return []
+//   }
+// })
+
 const plotOptions = computed(() => {
+  // if true, should display an additional bar for "Other" category
+
   return {
     marginTop: 20,
+    marginRight: 0,
+    marginLeft: 0,
     width: 180,
     height: 40,
     marginBottom: 0,
@@ -105,15 +155,16 @@ const plotOptions = computed(() => {
     },
     marks: [
       Plot.barX(
-        groupedItems.value,
+        normalizedHighFrequencyItems.value,
         Plot.stackX({
           x: 'frequency',
           fill: d => d.name === 'Other' ? 'var(--ui-color-neutral-300)' : 'var(--ui-color-primary-400)',
           inset: 0.4,
         }),
       ),
+
       Plot.text(
-        groupedItems.value,
+        normalizedHighFrequencyItems.value,
         Plot.pointerX(
           renameXPx(
             Plot.stackX({
@@ -125,14 +176,48 @@ const plotOptions = computed(() => {
               lineAnchor: 'bottom',
               fontVariant: 'tabular-nums',
               textOverflow: 'ellipsis',
-              text: (d: FacetCategory) => `${d.name}: ${d.count} (${(d.frequency * 100).toFixed(1)}%)`,
+              text: (d: FacetCategory) => `${d.name}: ${d.count}`,
             }),
           ),
         ),
       ),
+
     ],
   }
 })
+
+// const otherPlotOptions = computed(() => {
+//   return {
+//     marginTop: 20,
+//     marginRight: 0,
+//     marginLeft: 10,
+//     width: 100,
+//     height: 40,
+//     marginBottom: 0,
+//     x: {
+//       label: null,
+//       tickSize: 0,
+//       ticks: [],
+//     },
+//     y: {
+//       label: null,
+//       tickSize: 0,
+//       ticks: [],
+//     },
+//     marks: [
+//       Plot.barX(
+//         otherData.value,
+//         {
+//           x: 'name',
+//           y: 'count',
+//           fill: 'orange',
+//           inset: 0.4,
+//         },
+
+//       ),
+//     ],
+//   }
+// })
 
 function createFilter(value: string | Array<string>) {
   const filter = toValue(modelFilter)
@@ -167,17 +252,41 @@ function createFilter(value: string | Array<string>) {
   }
 }
 
+// function createOtherFilter(values: Array<string>) {
+//   const columnVal = toValue(column)
+//   if (!columnVal) {
+//     console.warn('Column is undefined, cannot create filter')
+//     return
+//   }
+//   if (addFilter) {
+//     const { uuid } = addFilter({
+//       attribute: columnVal.id as Facet,
+//       type: 'set',
+//       operator: 'NOT IN',
+//       values,
+//     })
+//     return uuid
+//   }
+// }
+
+// function clickOtherBar(plot) {
+//   // console.log('other bar clicked', plot)
+//   // console.log(plot.name)
+//   // const plotValue = plot.value
+//   const plotValue = true
+//   if (plotValue) {
+//     const values = Array.from(displayedItemIds.value).map(id => id.toString())
+//     // console.log('other values', values)
+//     createOtherFilter(values)
+//   }
+// }
+
 function handleBarClick(plot) {
   const plotValue = plot.value
   // console.log('bar clicked', plotValue)
   if (plotValue) {
     const value = plotValue.name
-    if (value !== 'Other') {
-      currentFilterId.value = createFilter(value)
-    }
-    else {
-      currentFilterId.value = createFilter(Array.from(highFrequencyItemIds.value).map(id => id.toString()))
-    }
+    currentFilterId.value = createFilter(value)
   }
 }
 </script>
@@ -187,8 +296,13 @@ function handleBarClick(plot) {
     <span v-if="label">
       {{ label }}
     </span>
-    <div v-if="sanitizedFacetDistribution.length > 0" class="mt-1">
-      <ObservablePlotRender :options="plotOptions" defer :click-listener="handleBarClick" />
+    <div class="flex flex-row gap-1">
+      <div v-if="sanitizedFacetDistribution.length > 0" class="mt-1">
+        <ObservablePlotRender :options="plotOptions" defer :click-listener="handleBarClick" />
+      </div>
+      <!-- <div class="mt-1">
+        <ObservablePlotRender :options="otherPlotOptions" defer :click-listener="clickOtherBar" />
+      </div> -->
     </div>
   </div>
 </template>

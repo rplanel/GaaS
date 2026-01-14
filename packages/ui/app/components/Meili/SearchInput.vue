@@ -10,9 +10,7 @@ const searchTerm = defineModel<string>()
 
 <template>
   <UForm class="space-y-4">
-    <UFormField
-      :label="`Search term for '${props.meiliIndex}' index`"
-    >
+    <UFormField>
       <UInput
         v-model="searchTerm"
         :placeholder="`Enter search term for '${props.meiliIndex}' index`"

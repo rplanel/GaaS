@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { FacetDistribution, FacetStats } from 'meilisearch'
+import type { InputMenuProps } from '@nuxt/ui'
+import type { FacetDistribution, FacetStats, SearchParams } from 'meilisearch'
 import { useFacetFilterBuilder } from '../../../../composables/meili/useFacetFilterBuilder'
 import MeiliIndexFilterFormComparisonNumberInput from './form/ComparisonNumberInput.vue'
 import MeiliIndexFilterFormComparisonStringInput from './form/ComparisonStringInput.vue'
@@ -19,12 +20,21 @@ interface SimpleFilterBuilderProps {
   facetDistribution: FacetDistribution | undefined
 
   facetStats: FacetStats | undefined
+
+  searchParams: SearchParams
+
+  facetAttribute?: string | undefined
+
+  compact?: boolean
+
   /**
    * Function to add a filter to the filter list.
    * @param filter The FacetFilter object to add. Must be a valid FacetFilter with attribute, operator, and values properties.
    * @see FacetFilter
    */
   addFilter: (filter: FacetFilter) => void
+
+  inputMenuProps?: InputMenuProps
 }
 
 const props = defineProps<SimpleFilterBuilderProps>()
@@ -34,7 +44,9 @@ const { addFilter } = props
 const meiliIndex = toRef(() => props.meiliIndex)
 const facetDistribution = toRef(() => props.facetDistribution)
 const facetStats = toRef(() => props.facetStats)
-
+const searchParams = toRef(() => props.searchParams)
+const facetAttribute = toRef(() => props.facetAttribute)
+const inputMenuProps = toRef(() => props.inputMenuProps || {})
 const {
   state,
   facetOptions,
@@ -53,6 +65,12 @@ const {
 async function onSubmit() {
   validateAndAddFilter()
 }
+
+watch(facetAttribute, (newVal) => {
+  if (newVal) {
+    state.attribute = newVal
+  }
+}, { immediate: true })
 
 const inputValueComponent = computed(() => {
   if (filterType.value === 'set') {
@@ -76,37 +94,34 @@ const inputValueComponent = computed(() => {
 
 <template>
   <div>
-    <div class="mb-4">
-      Filter
-      <UBadge color="neutral" variant="soft" :label="meiliIndex" />
-      index
-    </div>
     <pre v-if="filterError">Error: {{ filterError }}</pre>
     <UForm :schema="FacetFilterSchema" :state="state" @submit="onSubmit">
       <div class="flex flex-col gap-2">
         <div class="flex gap-2">
-          <UFormField label="Attribute" name="attribute">
-            <!-- <template #description>
-            <div v-if="attributeType !== undefined">
-              <UBadge size="sm" variant="subtle" :label="attributeType" color="neutral" />
-            </div>
-          </template> -->
+          <UFormField v-if="!facetAttribute" label="Attribute" name="attribute">
             <UInputMenu v-model="state.attribute" :items="facetOptions" value-key="id" />
           </UFormField>
 
-          <!-- <UFormField label="Negation" name="negation">
-        <USwitch v-model="operatorNegation" />
-      </UFormField> -->
-
           <UFormField label="Operator" name="operator">
-            <UInputMenu v-model="state.operator" :items="facetOperators" value-key="operator" label-key="label" />
+            <UInputMenu
+              v-model="state.operator"
+              v-bind="inputMenuProps"
+              :items="facetOperators"
+              value-key="operator"
+              label-key="label"
+            />
           </UFormField>
 
           <UFormField v-if="inputValueComponent" label="Values" name="values">
             <component
-              :is="inputValueComponent" v-if="inputValueComponent" v-model="state.values"
-              :meili-index="meiliIndex" :filter-attribute="state.attribute" :filter-operator="state.operator"
-              :facet-distribution="facetDistribution" :facet-stats="facetStats"
+              :is="inputValueComponent" v-if="inputValueComponent"
+              v-model="state.values"
+              :meili-index="meiliIndex"
+              :filter-attribute="state.attribute"
+              :filter-operator="state.operator"
+              :facet-distribution="facetDistribution"
+              :facet-stats="facetStats"
+              :search-params="searchParams"
             />
           </UFormField>
         </div>

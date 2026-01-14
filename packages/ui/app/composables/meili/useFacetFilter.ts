@@ -22,7 +22,6 @@ export function useFacetFilter(
 
   ])
   const editingFacetFilter = ref<FacetFilter | undefined>(undefined)
-  // const { searchForFacetValues, facetResult } = useFacetSearch({ meiliIndex })
 
   /**
    * Add a facet filter to the current filters

@@ -1,8 +1,7 @@
 // type
 import type { SortingState } from '@tanstack/table-core'
-import type { UseOffsetPaginationReturn } from '@vueuse/core'
 import type { Filter, IndexStats, SearchParams } from 'meilisearch'
-import type { Ref, UnwrapNestedRefs } from 'vue'
+import type { Ref } from 'vue'
 
 import { useOffsetPagination, useRefHistory, watchThrottled } from '@vueuse/core'
 import { computed, ref, toValue, watch } from 'vue'
@@ -25,7 +24,7 @@ export interface FetchDataParams {
   searchParams?: SearchParams
 }
 
-type PaginationState = Pick<UnwrapNestedRefs<UseOffsetPaginationReturn>, 'currentPage' | 'currentPageSize'>
+// type PaginationState = Pick<UnwrapNestedRefs<UseOffsetPaginationReturn>, 'currentPage' | 'currentPageSize'>
 
 export function useLoadMore(options: UseLoadMoreOptions) {
   const initialTotalHits = ref<number>(0)
@@ -37,7 +36,6 @@ export function useLoadMore(options: UseLoadMoreOptions) {
   const page = shallowRef(1)
   const stats = ref<IndexStats | undefined>(undefined)
   const { search, result, error } = useMeiliSearch(meiliIndex.value)
-  // const runOnce = ref(false)
   const meiliSort = computed(() => {
     if (!sortingState?.value || sortingState.value.length === 0) {
       return undefined
@@ -46,6 +44,14 @@ export function useLoadMore(options: UseLoadMoreOptions) {
       return `${sort.id}:${sort.desc ? 'desc' : 'asc'}`
     })
   })
+  const searchParams = computed<SearchParams>(() => ({
+    limit: toValue(pageSize),
+    offset: (toValue(page) - 1) * toValue(pageSize),
+    facets: ['*'],
+    filter: toValue(filterRef),
+    q: toValue(searchTermRef),
+    sort: toValue(meiliSort),
+  }))
 
   // const error = ref<string | undefined>(undefined)
   async function fetchData({ searchTerm, searchParams }: FetchDataParams) {
@@ -68,19 +74,11 @@ export function useLoadMore(options: UseLoadMoreOptions) {
    * await runPaginatedSearch({ currentPage: 1, currentPageSize: 20 })
    * ```
    */
-  const runPaginatedSearch = async ({ currentPage, currentPageSize }: PaginationState) => {
-    const currentSearchParams: SearchParams = {
-      limit: currentPageSize,
-      offset: (currentPage - 1) * currentPageSize,
-      facets: ['*'],
-      filter: toValue(filterRef),
-      q: toValue(searchTermRef),
-      sort: toValue(meiliSort),
-    }
+  const runPaginatedSearch = async () => {
     try {
       await fetchData({
         searchTerm: toValue(searchTermRef),
-        searchParams: currentSearchParams,
+        searchParams: toValue(searchParams),
       })
       // runOnce.value = true
     }
@@ -89,41 +87,23 @@ export function useLoadMore(options: UseLoadMoreOptions) {
     }
   }
 
-  // const handlePaginationUpdate = async (state: PaginationState) => {
-  //   await runPaginatedSearch(state)
-  // }
-
   watch(filterRef, () => {
     page.value = 1
-    void runPaginatedSearch({
-      currentPage: page.value,
-      currentPageSize: toValue(pageSize),
-    })
+    void runPaginatedSearch()
   })
   watch(sortingState, () => {
-    void runPaginatedSearch({
-      currentPage: page.value,
-      currentPageSize: toValue(pageSize),
-    })
+    void runPaginatedSearch()
   })
 
   watchThrottled(searchTermRef, () => {
     page.value = 1
-    void runPaginatedSearch({
-      currentPage: page.value,
-      currentPageSize: toValue(pageSize),
-    })
+    void runPaginatedSearch()
   }, { throttle: 500 })
 
-  void runPaginatedSearch({
-    currentPage: page.value,
-    currentPageSize: toValue(pageSize),
-  })
+  void runPaginatedSearch()
   const totalHits = computed(() => result.value?.estimatedTotalHits ?? 0)
-  const { history: totalHitsHistory } = useRefHistory(totalHits)
 
   watch(totalHits, (newTotalHits, oldTotalHits) => {
-    // console.log('totalHits changed from', oldTotalHits, 'to', newTotalHits)
     if (oldTotalHits === 0 && newTotalHits > 0) {
       initialTotalHits.value = newTotalHits
     }
@@ -149,13 +129,13 @@ export function useLoadMore(options: UseLoadMoreOptions) {
     pageSize,
     currentPage,
     currentPageSize,
+    searchParams,
     pageCount,
     isFirstPage,
     isLastPage,
     initialTotalHits,
     initialTotalHitsHistory,
     totalHits,
-    totalHitsHistory,
     prev,
     next,
     result,

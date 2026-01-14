@@ -57,5 +57,9 @@ export function useFacetFilters<T extends object>() {
     }
   }
 
-  return { addFilter, removeFilter, updateFilter, filters }
+  function resetFilters() {
+    filters.value = undefined
+  }
+
+  return { addFilter, removeFilter, updateFilter, resetFilters, filters }
 }

@@ -141,7 +141,7 @@ def add_world_cities(ctx: typer.Context):
             ],
         }
     )
-    client.index(index_name).update_pagination_settings({"maxTotalHits": 40000})
+    # client.index(index_name).update_pagination_settings({"maxTotalHits": 40000})
 
     client.index(index_name).update_faceting_settings(
         {

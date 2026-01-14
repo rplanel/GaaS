@@ -77,6 +77,8 @@ const index = computed(() => {
     </template>
     <template #body>
       <MeiliIndexDataTable
+        :debug="false"
+        :title="`Data Table for '${index.name}' Meili Index`"
         :meili-index="index.name"
         :sorting-state="index.sorting"
         :meili-filters="continuousMeilifilter"
@@ -84,24 +86,54 @@ const index = computed(() => {
           columns: index.columns,
         }"
       >
-        <template #country-header="{ column, facetDistribution, totalHits, addFilter }">
+        <template #header>
+          <span class="text-lg font-medium">
+            Data Table for
+            <span class="bg-neutral-600 rounded-md p-1">{{ index.name }} </span>
+            Meili Index
+          </span>
+        </template>
+        <template #country-header="{ column, searchParams, numberOfDocuments, facetDistribution, totalHits, addFilter, maxValuesPerFacet, facetStats }">
           <div class="w-full">
-            <MeiliIndexDataTableSortColumn :column="column" label="Country" />
+            <div class="flex flex-row justify-start gap-1">
+              <MeiliIndexDataTableSortColumn :column="column" label="Country" />
+              <UModal>
+                <UButton icon="i-lucide:filter" variant="link" size="sm" color="neutral" />
+                <template #header>
+                  <span class="text-lg font-medium">Add Country Filter</span>
+                </template>
+                <template #body>
+                  <MeiliIndexFilterSimpleBuilder
+                    :meili-index="index.name"
+                    :facet-distribution="facetDistribution"
+                    :facet-stats="facetStats"
+                    :search-params="searchParams"
+                    :add-filter="addFilter"
+                    :facet-attribute="column.id"
+                  />
+                </template>
+              </UModal>
+            </div>
             <MeiliIndexFilterPlotCategoryBuilder
               :facet-distribution="facetDistribution"
               :column="column"
               :total-hits="totalHits"
+              :number-of-documents="numberOfDocuments"
+              :max-values-per-facet="maxValuesPerFacet"
               :add-filter="addFilter"
             />
           </div>
+          <div />
         </template>
-        <template #timezone-header="{ column, facetDistribution, totalHits, addFilter }">
+        <template #timezone-header="{ column, facetDistribution, numberOfDocuments, totalHits, addFilter, maxValuesPerFacet }">
           <div class="w-full">
             <MeiliIndexDataTableSortColumn :column="column" label="Timezone" />
             <MeiliIndexFilterPlotCategoryBuilder
               :facet-distribution="facetDistribution"
               :column="column"
               :total-hits="totalHits"
+              :number-of-documents="numberOfDocuments"
+              :max-values-per-facet="maxValuesPerFacet"
               :add-filter="addFilter"
             />
           </div>

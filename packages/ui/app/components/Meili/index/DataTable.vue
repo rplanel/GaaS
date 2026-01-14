@@ -7,6 +7,7 @@ import type { TableProps, TabsItem } from '@nuxt/ui'
 import type { SortingState, Table } from '@tanstack/table-core'
 import type { FacetDistribution, FacetStats, Filter } from 'meilisearch'
 import { useFacetFilters } from '#layers/@gaas-ui/app/composables/meili/useFacetFilters'
+import { useMeiliIndex } from '#layers/@gaas-ui/app/composables/meili/useMeiliIndex'
 import { refThrottled } from '@vueuse/core'
 import { v4 as uuidv4 } from 'uuid'
 import { useLoadMore } from '../../../composables/meili/useLoadMore'
@@ -19,6 +20,7 @@ export interface DataTableProps<T> {
   sortingState: SortingState | undefined
   meiliFilters?: string[] | undefined
   debug?: boolean
+  title?: string
 }
 
 const props = withDefaults(defineProps<DataTableProps<T>>(), {
@@ -29,6 +31,7 @@ const props = withDefaults(defineProps<DataTableProps<T>>(), {
 
 const tableElem = useTemplateRef<{ tableApi: Table<T> }>('tableElem')
 const debug = toRef(props, 'debug')
+const title = toRef(props, 'title')
 const sortingState = toRef(props.sortingState)
 const tableProps = toRef(() => props.tableProps)
 const meiliIndex = toRef(() => props.meiliIndex)
@@ -42,11 +45,28 @@ const globalSearch = ref('')
 const manualFilter = ref<{ label: string | undefined, uuid: string }>({ label: undefined, uuid: uuidv4() })
 const filterBuild = toRef(props.filterBuild)
 
+// index information
+const { stats: indexStats, settings: indexSettings } = useMeiliIndex({
+  index: meiliIndex,
+})
+
+const numberOfDocuments = computed(() => {
+  return indexStats.value?.state?.numberOfDocuments ?? 0
+})
+
+const maxValuesPerFacet = computed(() => {
+  const indexSettingsValue = toValue(indexSettings)
+  if (!indexSettingsValue) {
+    return undefined
+  }
+  return indexSettingsValue.state?.faceting?.maxValuesPerFacet ?? undefined
+})
 // composable that manage the facet filters
 const {
   filters: builderFilters,
   addFilter: addBuildFilter,
   removeFilter: removeBuildFilter,
+  resetFilters: resetBuildFilters,
 } = useFacetFilters<FacetFilter>()
 
 function toMeiliFilter(filter: FacetFilter): string {
@@ -77,10 +97,7 @@ function toMeiliFilter(filter: FacetFilter): string {
       return ''
   }
 }
-// const modelFiltersList = computed<FacetFilter[] | undefined>(() => {
-//   const filtersVal = toValue(modelFilters)
-//   return filtersVal ? Object.values(filtersVal).map(f => f).filter((f): f is FacetFilter => f !== undefined) : undefined
-// })
+
 const mergedFilters = computed(() => {
   const manual = toValue(manualFilter)
   const builder = toValue(builderFilters)
@@ -132,21 +149,13 @@ const meiliFilters = computed<Filter | undefined>(() => {
 })
 const throttledMeiliFilters = refThrottled(meiliFilters, 300)
 
-// function clearModelFilters(filter: FacetFilter) {
-//   const modelFiltersVal = toValue(modelFilters)
-//   if (!modelFiltersVal) {
-//     return
-//   }
-//   modelFiltersVal[filter.attribute as string] = undefined
-// }
-
 // -- search for results --
 const {
-  initialTotalHits,
   totalHits,
   currentPage,
   currentPageSize,
   pageCount,
+  searchParams,
   isFirstPage,
   isLastPage,
   prev,
@@ -256,11 +265,14 @@ const facetSlotProps = computed(() => {
     facetStats: facetStats.value,
     facetDistribution: facetDistribution.value,
     totalHits: totalHits.value,
+    numberOfDocuments: numberOfDocuments.value,
     initialFacetStats: initialFacetStats.value,
     initialFacetDistribution: initialFacetDistribution.value,
     addFilter: addBuildFilter,
     removeFilter: removeBuildFilter,
     filters: builderFilters,
+    maxValuesPerFacet: maxValuesPerFacet.value,
+    searchParams: searchParams.value,
 
   }
 })
@@ -272,21 +284,19 @@ const facetSlotProps = computed(() => {
       <template #header>
         <div class="flex flex-row justify-between">
           <div>
-            <slot name="header" />
+            <slot name="header">
+              <span class="text-lg font-medium">{{ title }}</span>
+            </slot>
           </div>
           <div class="flex flex-col gap-1">
-            <div class="flex flex-row justify-center">
-              <UProgress v-model="totalHits" :max="initialTotalHits" size="xl" color="secondary" />
-            </div>
+            <!-- <div class="flex flex-row justify-center">
+              <UProgress v-model="totalHits" :max="numberOfDocuments" size="xl" color="secondary" />
+            </div> -->
             <div class="flex flex-row gap-2">
-              <div class="text-xs">
-                {{ totalHits }} / {{ initialTotalHits }} hits
-              </div>
-              <div class="flex self-end-safe ">
-                <UBadge v-if="processingTimeMs !== undefined" color="neutral" variant="soft" size="sm">
-                  Processing in {{ processingTimeMs }} ms
-                </UBadge>
-              </div>
+              <!-- <div class="text-xs">
+                {{ totalHits }} / {{ numberOfDocuments }} hits
+              </div> -->
+              <div class="flex self-end-safe " />
             </div>
           </div>
         </div>
@@ -322,59 +332,96 @@ const facetSlotProps = computed(() => {
           <div class="flex flex-col grow gap-1">
             <MeiliSearchInput v-model="globalSearch" :meili-index="meiliIndex" />
           </div>
-          <UModal title="Modal without overlay">
-            <UButton label="Filter..." color="neutral" />
-
-            <template #body>
-              <slot name="filter-builder" :filters="builderFilters" :add-filter="addBuildFilter" :remove-filter="removeBuildFilter">
-                <UTabs
-                  v-model="filterBuild" :items="filterBuildOptions" variant="link"
-                  class="mb-4 gap-4"
-                >
-                  <template #advanced>
-                    <MeiliIndexFilterAdvancedBuilder
-                      v-model:filter="manualFilter" v-model:search-error="error"
-                      :meili-index="meiliIndex"
-                    />
-                  </template>
-                  <template #simple>
-                    <MeiliIndexFilterSimpleBuilder
-                      :meili-index="meiliIndex"
-                      :facet-distribution="facetDistribution"
-                      :facet-stats="facetStats"
-                      :add-filter="addBuildFilter"
-                    />
-                  </template>
-
-                  <template #assisted>
-                    <MeiliIndexFilterAssistedBuilder
-                      :meili-index="meiliIndex" :facet-distribution="facetDistribution"
-                      :facet-stats="facetStats"
-                    />
-                  </template>
-                </UTabs>
-              </slot>
-            </template>
-          </UModal>
         </div>
-        <div class="flex flex-col gap-2">
-          <div v-if="meiliFilters && meiliFilters.length > 0" class="flex flex-row items-center gap-2 ">
+        <div class="flex flex-col gap-1">
+          <div v-if="meiliFilters && meiliFilters.length > 0" class="flex flex-row items-center gap-1">
             <div>
-              Filters:
+              <UButton
+                label="Reset"
+                variant="subtle"
+                size="sm"
+                icon="i-lucide:trash"
+                color="neutral"
+                @click="resetBuildFilters"
+              />
             </div>
-            <UBadge v-for="filter in mergedFilters" :key="filter.uuid" :label="`${filter.label}`" variant="subtle">
-              <template #trailing>
-                <UButton
-                  icon="lucide:x" size="sm" variant="ghost"
-                  @click="filter.type === 'manual' ? manualFilter.label = undefined : removeBuildFilter(filter.uuid)"
-                />
-              </template>
-            </UBadge>
+            <div>
+              <UModal title="Build a filter">
+                <div class="flex items-center">
+                  <UButton
+                    label="Filter"
+                    icon="i-lucide:filter"
+                    variant="subtle"
+                    size="sm"
+                    color="neutral"
+                  />
+                </div>
+
+                <template #body>
+                  <slot
+                    name="filter-builder"
+                    :meili-index="meiliIndex"
+                    v-bind="facetSlotProps"
+                  >
+                    <UTabs
+                      v-model="filterBuild" :items="filterBuildOptions" variant="link"
+                      class="mb-4 gap-4"
+                    >
+                      <template #advanced>
+                        <MeiliIndexFilterAdvancedBuilder
+                          v-model:filter="manualFilter" v-model:search-error="error"
+                          :meili-index="meiliIndex"
+                        />
+                      </template>
+                      <template #simple>
+                        <MeiliIndexFilterSimpleBuilder
+                          :meili-index="meiliIndex"
+                          v-bind="facetSlotProps"
+                        />
+                      </template>
+
+                      <template #assisted>
+                        <MeiliIndexFilterAssistedBuilder
+                          :meili-index="meiliIndex" :facet-distribution="facetDistribution"
+                          :facet-stats="facetStats"
+                        />
+                      </template>
+                    </UTabs>
+                  </slot>
+                </template>
+              </UModal>
+            </div>
+            <USeparator v-if="mergedFilters && mergedFilters.length > 0" orientation="vertical" class="mx-2 h-8" />
+
+            <div class="flex flex-row gap-2">
+              <UBadge
+                v-for="filter in mergedFilters"
+                :key="filter.uuid"
+                variant="soft"
+              >
+                <template #trailing>
+                  <UButton
+                    icon="lucide:x" size="xs" variant="ghost"
+                    class="p-1"
+                    @click="filter.type === 'manual' ? manualFilter.label = undefined : removeBuildFilter(filter.uuid)"
+                  />
+                </template>
+                {{ filter.label }}
+              </UBadge>
+            </div>
           </div>
         </div>
 
-        <div class="flex items-end justify-end">
-          <TableColumnVisibility :table-elem="tableElem" />
+        <div class="flex flex-row justify-between">
+          <span
+            v-if="processingTimeMs !== undefined"
+            class="text-xs text-dimmed"
+          >
+            Processing in {{ processingTimeMs }} ms
+          </span>
+          <div>
+            <TableColumnVisibility :table-elem="tableElem" />
+          </div>
         </div>
         <UTable v-bind="computedTableProps" ref="tableElem" v-model:sorting="sortingState" class="flex-1">
           <template v-for="(_, slotName) in $slots" #[slotName]="slotProps">
@@ -384,7 +431,7 @@ const facetSlotProps = computed(() => {
           </template>
         </UTable>
         <MeiliIndexDataTableNav
-          v-model:page-size="pageSize" :total-hits="totalHits" :current-page="currentPage"
+          v-model:page-size="pageSize" :total-hits="numberOfDocuments" :current-page="currentPage"
           :current-page-size="currentPageSize" :page-count="pageCount" :is-first-page="isFirstPage"
           :is-last-page="isLastPage" :prev="prev" :next="next"
         />
