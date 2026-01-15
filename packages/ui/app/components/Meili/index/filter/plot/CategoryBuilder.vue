@@ -42,7 +42,7 @@ const currentFilterId = ref<string | undefined>(undefined)
 const { aggregateFrequencyThreshold, addFilter } = props
 const meiliIndex = toRef(props, 'meiliIndex')
 const searchParams = toRef(props, 'searchParams')
-// const width = toRef(props, 'width')
+const width = toRef(props, 'width')
 const height = toRef(props, 'height')
 const facetDistribution = toRef(() => props.facetDistribution)
 // const maxValuesPerFacet = toRef(props, 'maxValuesPerFacet')
@@ -50,8 +50,6 @@ const facetDistribution = toRef(() => props.facetDistribution)
 const numberOfDocuments = toRef(props, 'numberOfDocuments')
 const { column, label } = toRefs(props)
 const modelFilter = defineModel<FacetFilter | undefined>('filter')
-const plotContainer = useTemplateRef('plotContainer')
-const { width } = useElementSize(plotContainer)
 
 const columnFacet = computed<Facet | undefined>(() => {
   const columnVal = toValue(column)
@@ -158,15 +156,18 @@ const normalizedHighFrequencyItems = computed<FacetCategory[]>(() => {
 })
 const navPreviousEl = useTemplateRef('navPrevious')
 const navNextEl = useTemplateRef('navNext')
+const plotContainer = useTemplateRef('plotContainer')
 const { width: navPreviousWidth } = useElementSize(navPreviousEl)
 const { width: navNextWidth } = useElementSize(navNextEl)
-
+const { width: plotContainerWidth } = useElementSize(plotContainer)
 const navWidth = computed(() => {
   return (toValue(navPreviousWidth) || 0) + (toValue(navNextWidth) || 0)
 })
 
 const computedWidth = computed(() => {
   const widthVal = toValue(width)
+  const plotContainerWidthVal = toValue(plotContainerWidth)
+  console.warn('plotContainerWidthVal', plotContainerWidthVal, ' - widthVal', widthVal)
   const navWidthAndGap = navWidth.value + 8 // 8px gap
   return widthVal > navWidthAndGap ? widthVal - navWidthAndGap : widthVal
 })
@@ -224,13 +225,13 @@ const plotOptions = computed(() => {
           renameXPx(
             Plot.stackX({
               x: 'frequency',
-              dx: -100,
+              dx: 0,
               dy: -5,
-              frameAnchor: 'top',
-              textAnchor: 'start',
+              frameAnchor: 'top-right',
               lineAnchor: 'bottom',
               fontVariant: 'tabular-nums',
               textOverflow: 'ellipsis',
+
               text: (d: FacetCategory) => `${d.name}: ${d.count}`,
             }),
           ),

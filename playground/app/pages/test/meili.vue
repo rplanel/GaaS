@@ -2,17 +2,18 @@
 // import type { FacetDistribution, FacetStats } from 'meilisearch'
 import { MeiliIndexDataTableSortColumn, MeiliIndexFilterPlotCategoryBuilder, MeiliIndexFilterPlotContinuousBuilder } from '#components'
 
-const categoryWidth = ref(300)
+const categoryWidth = ref(200)
 
 const categoryHeight = ref(45)
 const categoryMetaClass = computed(() => {
   return {
-    th: `truncate align-top max-w-[${categoryWidth.value}px] w-[${categoryWidth.value}px]`,
+    th: `truncate align-top w-[${categoryWidth.value}px] max-w-[${categoryWidth.value}px]`,
+    // th: `truncate align-top`,
   }
 })
 
 const metaClass = {
-  th: 'truncate align-top',
+  th: 'truncate align-top w-[80px]',
 }
 
 const populationModel = ref<number[]>([0, 0])
@@ -27,7 +28,12 @@ const index = computed(() => {
   return {
     name: 'world_cities',
     columns: [
-      { accessorKey: 'geonameid', header: 'ID' },
+      {
+        accessorKey: 'geonameid',
+        header: 'ID',
+        //  size: 80,
+        meta: { class: { ...metaClass } },
+      },
       {
         accessorKey: 'name',
         header: ({ column }) => {
@@ -35,7 +41,10 @@ const index = computed(() => {
         },
         meta: {
           class: { ...metaClass },
+
         },
+        // size: 80,
+        // enableResizing: false,
       },
       {
         accessorKey: 'country',
@@ -43,21 +52,31 @@ const index = computed(() => {
         meta: {
           class: { ...toValue(categoryMetaClass) },
         },
+        // minSize: 150,
+        // size: categoryWidth.value,
+        // enableResizing: false,
+        // maxSize: categoryWidth.value + 30,
+
       },
       {
         accessorKey: 'timezone',
         meta: {
           class: { ...toValue(categoryMetaClass) },
         },
+        // minSize: 150,
+        // size: categoryWidth.value,
+        // enableResizing: false,
+        // maxSize: categoryWidth.value + 30,
+
       },
       {
         accessorKey: 'population',
         meta: {
           class: { ...toValue(categoryMetaClass) },
         },
-        size: 200,
-        maxSize: 400,
-        minSize: 200,
+        // minSize: 150,
+        // size: 200,
+        // enableResizing: false,
       },
     ],
     sorting: [
@@ -102,7 +121,7 @@ const index = computed(() => {
           </span>
         </template>
         <template #country-header="{ column, searchParams, numberOfDocuments, facetDistribution, totalHits, addFilter, maxValuesPerFacet, facetStats }">
-          <div class="w-full">
+          <div>
             <div class="flex flex-row justify-start gap-1">
               <MeiliIndexDataTableSortColumn :column="column" label="Country" />
               <UModal>
@@ -131,14 +150,14 @@ const index = computed(() => {
               :number-of-documents="numberOfDocuments"
               :max-values-per-facet="maxValuesPerFacet"
               :add-filter="addFilter"
-              :width="categoryWidth - 120"
+              :width="categoryWidth"
               :height="categoryHeight"
             />
           </div>
           <div />
         </template>
         <template #timezone-header="{ searchParams, column, facetDistribution, numberOfDocuments, totalHits, addFilter, maxValuesPerFacet, facetStats }">
-          <div class="w-full">
+          <div>
             <div class="flex flex-row justify-start gap-1">
               <MeiliIndexDataTableSortColumn :column="column" label="Timezone" />
               <UModal>
@@ -167,13 +186,13 @@ const index = computed(() => {
               :number-of-documents="numberOfDocuments"
               :max-values-per-facet="maxValuesPerFacet"
               :add-filter="addFilter"
-              :width="categoryWidth - 120"
+              :width="categoryWidth"
               :height="categoryHeight"
             />
           </div>
         </template>
         <template #population-header="{ column, facetStats, totalHits, initialFacetStats }">
-          <div class="w-full">
+          <div>
             <MeiliIndexDataTableSortColumn :column="column" label="Population" />
             <MeiliIndexFilterPlotContinuousBuilder
               v-model="populationModel"

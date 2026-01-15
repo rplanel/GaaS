@@ -270,6 +270,7 @@ const facetSlotProps = computed(() => {
     filters: builderFilters,
     maxValuesPerFacet: maxValuesPerFacet.value,
     searchParams: searchParams.value,
+    table: tableElem.value?.tableApi,
 
   }
 })
@@ -420,7 +421,7 @@ const facetSlotProps = computed(() => {
             <TableColumnVisibility :table-elem="tableElem" />
           </div>
         </div>
-        <UTable v-bind="computedTableProps" ref="tableElem" v-model:sorting="sortingState" class="flex-1">
+        <UTable v-bind="computedTableProps" ref="tableElem" v-model:sorting="sortingState" class="flex-1 table-fixed">
           <template v-for="(_, slotName) in $slots" #[slotName]="slotProps">
             <slot
               v-if="slotName.endsWith('-header')" :name="slotName" v-bind="{ ...slotProps || {}, ...facetSlotProps }"
