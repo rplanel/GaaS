@@ -63,7 +63,7 @@ export function useFacetFilterBuilder(options: UseFacetFilterOptions) {
    */
   function validateAndAddFilter() {
     if (isFilterValid.value) {
-      addFilter({ ...state } as FacetFilterIdentified)
+      addFilter({ ...state })
       // reset state
       state.attribute = undefined
       state.operator = undefined

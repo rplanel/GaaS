@@ -7,6 +7,7 @@ import type { TableProps, TabsItem } from '@nuxt/ui'
 import type { SortingState, Table } from '@tanstack/table-core'
 import type { FacetDistribution, FacetStats, Filter } from 'meilisearch'
 import { useFacetFilters } from '#layers/@gaas-ui/app/composables/meili/useFacetFilters'
+import { useMeiliFilter } from '#layers/@gaas-ui/app/composables/meili/useMeiliFilter'
 import { useMeiliIndex } from '#layers/@gaas-ui/app/composables/meili/useMeiliIndex'
 import { refThrottled } from '@vueuse/core'
 import { v4 as uuidv4 } from 'uuid'
@@ -69,62 +70,58 @@ const {
   resetFilters: resetBuildFilters,
 } = useFacetFilters<FacetFilter>()
 
-function toMeiliFilter(filter: FacetFilter): string {
-  const attribute = filter.attribute
-  const operator = filter.operator
-  const values = filter.values
-  switch (operator) {
-    case 'NOT IN':
-    case 'IN':
-      return `${attribute} ${operator} [${(values as string[]).map(v => `"${v}"`).join(', ')}]`
-    case '>':
-    case '>=':
-    case '<':
-    case '<=':
-    case '=':
-    case '!=':
-      return `${attribute} ${operator} "${values as ComparisonValues}"`
-    case 'TO':
-      return `${attribute} ${values[0]} TO ${values[1]}`
-    case 'EXISTS':
-    case 'NOT EXISTS':
-    case 'IS EMPTY':
-    case 'IS NOT EMPTY':
-    case 'IS NULL':
-    case 'IS NOT NULL':
-      return `${attribute} ${operator}`
-    default:
-      return ''
-  }
-}
+const { meiliFilters: builderMeiliFilters } = useMeiliFilter(builderFilters)
+
+// function toMeiliFilter(filter: FacetFilter): string {
+//   const attribute = filter.attribute
+//   const operator = filter.operator
+//   const values = filter.values
+//   switch (operator) {
+//     case 'NOT IN':
+//     case 'IN':
+//       return `${attribute} ${operator} [${(values as string[]).map(v => `"${v}"`).join(', ')}]`
+//     case '>':
+//     case '>=':
+//     case '<':
+//     case '<=':
+//     case '=':
+//     case '!=':
+//       return `${attribute} ${operator} "${values as ComparisonValues}"`
+//     case 'TO':
+//       return `${attribute} ${values[0]} TO ${values[1]}`
+//     case 'EXISTS':
+//     case 'NOT EXISTS':
+//     case 'IS EMPTY':
+//     case 'IS NOT EMPTY':
+//     case 'IS NULL':
+//     case 'IS NOT NULL':
+//       return `${attribute} ${operator}`
+//     default:
+//       return ''
+//   }
+// }
 
 const mergedFilters = computed(() => {
   const manual = toValue(manualFilter)
   const builder = toValue(builderFilters)
+  const builderMeiliFiltersVal = toValue(builderMeiliFilters)
   // const modelFiltersVal = toValue(modelFiltersList)
   const filters: { label: string, manual: boolean, uuid: string, type: 'build' | 'model' | 'manual' }[] = []
-  if (Array.isArray(builder) && builder.length > 0) {
-    filters.push(...builder.map((f, index) => {
-      return {
-        ...f,
-        label: toMeiliFilter(f),
-        manual: false,
-        type: 'build' as const,
-      }
-    }))
+  if (Array.isArray(builderMeiliFiltersVal) && builderMeiliFiltersVal.length > 0 && builder) {
+    filters.push(
+      ...builderMeiliFiltersVal
+        .map((f, index) => {
+          const builderItem = builder[index] as FacetFilter & { uuid: string }
+          return {
+            uuid: builderItem.uuid,
+            label: f,
+            manual: false,
+            type: 'build' as const,
+          }
+        })
+        .filter(f => f.uuid !== undefined),
+    )
   }
-
-  // if (Array.isArray(modelFiltersVal) && modelFiltersVal.length > 0) {
-  //   filters.push(...modelFiltersVal.map((f, index) => {
-  //     return {
-  //       ...f,
-  //       label: toMeiliFilter(f),
-  //       uuid: uuidv4(),
-  //       manual: false,
-  //       type: 'model' as const,
-  //     }
-  //   }))
-  // }
 
   if (manual && manual.label && manual.label.length > 0) {
     filters.push({

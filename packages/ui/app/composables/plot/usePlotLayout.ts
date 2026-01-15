@@ -8,22 +8,33 @@ interface LayoutParams {
 }
 
 export function usePlotLayout(params: LayoutParams) {
-  const { width, height, marginTop = 2, marginBottom = 0, marginLeft = 2, marginRight = 2 } = params
+  const { width, height, marginTop = ref(0), marginBottom = ref(0), marginLeft = ref(0), marginRight = ref(0) } = params
 
   const plotWidth = computed(() => {
-    return width.value - toValue(marginLeft) - toValue(marginRight)
+    return toValue(width) - toValue(marginLeft) - toValue(marginRight)
   })
 
   const plotHeight = computed(() => {
     return toValue(height) - toValue(marginTop) - toValue(marginBottom)
   })
 
+  function increaseMarginTop(amount: number) {
+    marginTop.value += amount
+  }
+  function decreaseMarginTop(amount: number) {
+    marginTop.value = Math.max(0, marginTop.value - amount)
+  }
+
   return {
+
     plotHeight,
     marginBottom,
     marginTop,
     marginRight,
     marginLeft,
     plotWidth,
+    // functions
+    increaseMarginTop,
+    decreaseMarginTop,
   }
 }

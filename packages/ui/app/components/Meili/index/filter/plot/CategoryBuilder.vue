@@ -1,11 +1,20 @@
 <script setup lang="ts" generic="T">
 import type { Column } from '@tanstack/table-core'
-import type { CategoriesDistribution, Facet, FacetDistribution } from 'meilisearch'
+import type { Facet, FacetDistribution, SearchForFacetValuesParams, SearchParams } from 'meilisearch'
 import { ObservablePlotRender } from '#components'
+import { useFacetFilters } from '#layers/@gaas-ui/app/composables/meili/useFacetFilters'
+import { useFacetSearch } from '#layers/@gaas-ui/app/composables/meili/useFacetSearch'
+import { useMeiliFilter } from '#layers/@gaas-ui/app/composables/meili/useMeiliFilter'
+import { usePlotLayout } from '#layers/@gaas-ui/app/composables/plot/usePlotLayout'
 import * as Plot from '@observablehq/plot'
+import { useElementSize } from '@vueuse/core'
 import { useFrequencyPartition } from '../../../../../composables/useFrequencyPartition'
 
 export interface CategoryHeaderProps<T> {
+  width?: number
+  height?: number
+  meiliIndex: string
+  searchParams?: SearchParams
   column: Column<T>
   label?: string
   totalHits: number
@@ -25,55 +34,86 @@ interface FacetCategory {
 
 const props = withDefaults(defineProps<CategoryHeaderProps<T>>(), {
   aggregateFrequencyThreshold: 0.015,
+  width: 300,
+  height: 50,
 })
+
 const currentFilterId = ref<string | undefined>(undefined)
 const { aggregateFrequencyThreshold, addFilter } = props
-const facetDistribution = toRef(props, 'facetDistribution')
+const meiliIndex = toRef(props, 'meiliIndex')
+const searchParams = toRef(props, 'searchParams')
+// const width = toRef(props, 'width')
+const height = toRef(props, 'height')
+const facetDistribution = toRef(() => props.facetDistribution)
 // const maxValuesPerFacet = toRef(props, 'maxValuesPerFacet')
 // const totalHits = toRef(props, 'totalHits')
 const numberOfDocuments = toRef(props, 'numberOfDocuments')
 const { column, label } = toRefs(props)
 const modelFilter = defineModel<FacetFilter | undefined>('filter')
+const plotContainer = useTemplateRef('plotContainer')
+const { width } = useElementSize(plotContainer)
 
-const facetCategoryDistribution = computed<CategoriesDistribution | undefined>(() => {
-  const facetDistributionVal = toValue(facetDistribution)
-  const columnId = toValue(column)?.id as Facet
-  if (!facetDistributionVal || !columnId || !facetDistributionVal[columnId]) {
+const columnFacet = computed<Facet | undefined>(() => {
+  const columnVal = toValue(column)
+  if (!columnVal) {
     return undefined
   }
-  return facetDistributionVal[columnId]
+  return columnVal.id
 })
 
-// const facetCategoryCount = computed(() => {
-//   const facetCategoryDistributionVal = toValue(facetCategoryDistribution)
+const { addFilter: addFacetFilter, removeFilter: removeFacetFilter, filters: filtersForFacetSearch, resetFilters: resetFacetFilters } = useFacetFilters()
 
-//   if (!facetCategoryDistributionVal) {
-//     return 0
-//   }
-//   return facetCategoryDistributionVal ? Object.keys(facetCategoryDistributionVal).length : 0
-// })
+const { searchForFacetValues, facetResult } = useFacetSearch({ meiliIndex })
 
-// const isFacetCategoryDistributionPartial = computed(() => {
-//   const facetCategoryCountVal = toValue(facetCategoryCount)
-//   const maxValuesPerFacetVal = toValue(maxValuesPerFacet)
-//   if (maxValuesPerFacetVal === undefined) {
-//     return false
-//   }
-//   return facetCategoryCountVal >= maxValuesPerFacetVal
-// })
+watch([facetResult, facetDistribution], ([newFacetResult]) => {
+  if (!newFacetResult) {
+    searchForFacetValues({
+      ...toValue(searchParams),
+      facetName: columnFacet.value as string,
+      filter: [...(toValue(searchParams)?.filter ?? [])],
+    })
+  }
+})
+
+const { meiliFilters } = useMeiliFilter(filtersForFacetSearch)
+
+/**
+ * compute facet search params
+ */
+
+const computedFacetSearchParams = computed<SearchForFacetValuesParams | undefined>(() => {
+  const searchParamsVal = toValue(searchParams)
+  const columnFacetVal = toValue(columnFacet)
+  const meiliFiltersVal = toValue(meiliFilters)
+
+  return {
+    ...searchParamsVal,
+    filter: [...(searchParamsVal?.filter ?? []), ...meiliFiltersVal],
+    facetName: columnFacetVal,
+  }
+})
+
+watch(computedFacetSearchParams, (newVal) => {
+  const columnFacetVal = toValue(columnFacet)
+  if (columnFacetVal && newVal) {
+    searchForFacetValues(newVal)
+  }
+}, { immediate: true })
 
 const sanitizedFacetDistribution = computed<FacetCategory[]>(() => {
-  const facetCategoryDistributionVal = toValue(facetCategoryDistribution)
+  // await nextTick()
+  const facetResultVal = toValue(facetResult)
   const numberOfDocumentsVal = toValue(numberOfDocuments)
 
-  if (!facetCategoryDistributionVal) {
-    return [] as FacetCategory[]
+  if (!facetResultVal) {
+    return []
   }
 
-  return Object.entries(facetCategoryDistributionVal).map(([key, value]) => ({
-    name: key,
-    count: value,
-    frequency: numberOfDocumentsVal > 0 ? value / numberOfDocumentsVal : 0,
+  return facetResultVal.facetHits.map((facet, index) => ({
+    index,
+    name: facet.value,
+    count: facet.count,
+    frequency: numberOfDocumentsVal > 0 ? facet.count / numberOfDocumentsVal : 0,
   }))
 })
 
@@ -97,7 +137,7 @@ function aggregateLowFrequencyItems(items: FacetCategory[]): FacetCategory {
   }
 }
 
-const { displayedItems, displayedItemCount } = useFrequencyPartition<FacetCategory>({
+const { displayedItems, displayedItemCount, aggregatedItems } = useFrequencyPartition<FacetCategory>({
   items: sanitizedFacetDistribution,
   getId: item => item.name,
   getFrequency: item => item.frequency,
@@ -116,32 +156,35 @@ const normalizedHighFrequencyItems = computed<FacetCategory[]>(() => {
     frequency: displayedItemCount.value > 0 ? item.count / displayedItemCount.value : 0,
   }))
 })
+const navPreviousEl = useTemplateRef('navPrevious')
+const navNextEl = useTemplateRef('navNext')
+const { width: navPreviousWidth } = useElementSize(navPreviousEl)
+const { width: navNextWidth } = useElementSize(navNextEl)
 
-// const otherData = computed<FacetCategory[]>(() => {
-//   const isPartial = toValue(isFacetCategoryDistributionPartial)
+const navWidth = computed(() => {
+  return (toValue(navPreviousWidth) || 0) + (toValue(navNextWidth) || 0)
+})
 
-//   if (isPartial) {
-//     return [
-//       {
-//         name: 'Other',
-//         count: 100,
-//       },
-//     ]
-//   }
-//   else {
-//     return []
-//   }
-// })
+const computedWidth = computed(() => {
+  const widthVal = toValue(width)
+  const navWidthAndGap = navWidth.value + 8 // 8px gap
+  return widthVal > navWidthAndGap ? widthVal - navWidthAndGap : widthVal
+})
 
+const { plotWidth, marginTop } = usePlotLayout({
+  width: computedWidth,
+  height,
+  marginTop: ref(15),
+
+})
 const plotOptions = computed(() => {
   // if true, should display an additional bar for "Other" category
-
   return {
-    marginTop: 20,
+    marginTop: toValue(marginTop),
     marginRight: 0,
     marginLeft: 0,
-    width: 180,
-    height: 40,
+    width: plotWidth.value,
+    height: height.value,
     marginBottom: 0,
     x: {
       label: null,
@@ -158,9 +201,21 @@ const plotOptions = computed(() => {
         normalizedHighFrequencyItems.value,
         Plot.stackX({
           x: 'frequency',
-          fill: d => d.name === 'Other' ? 'var(--ui-color-neutral-300)' : 'var(--ui-color-primary-400)',
+          fill: d => d.index % 2 === 0 ? 'var(--ui-color-primary-400)' : 'var(--ui-color-primary-300)',
           inset: 0.4,
         }),
+      ),
+      Plot.barX(
+        normalizedHighFrequencyItems.value,
+        Plot.pointerX(
+          renameXPx(
+            Plot.stackX({
+              x: 'frequency',
+              fill: 'var(--ui-color-primary-100)',
+              inset: 0.4,
+            }),
+          ),
+        ),
       ),
 
       Plot.text(
@@ -169,7 +224,7 @@ const plotOptions = computed(() => {
           renameXPx(
             Plot.stackX({
               x: 'frequency',
-              dx: -70,
+              dx: -100,
               dy: -5,
               frameAnchor: 'top',
               textAnchor: 'start',
@@ -184,6 +239,69 @@ const plotOptions = computed(() => {
 
     ],
   }
+})
+
+const displayedFacetEndpoints = computed(() => {
+  const items = toValue(normalizedHighFrequencyItems)
+  if (items.length === 0) {
+    return []
+  }
+  const firstItem = items[0]
+  const lastItem = items[items.length - 1]
+  return [firstItem, lastItem]
+})
+const itemToFilterOnNext = computed(() => {
+  const itemEndpoints = toValue(displayedFacetEndpoints)
+  if (!itemEndpoints || itemEndpoints.length < 2) {
+    return undefined
+  }
+  return itemEndpoints[0]
+})
+
+const itemToFilterOnPrev = computed(() => {
+  // get the uid of the filter to remove
+  const filtersForFacetSearchVal = toValue(filtersForFacetSearch)
+  if (!filtersForFacetSearchVal || filtersForFacetSearchVal.length === 0) {
+    return undefined
+  }
+
+  return filtersForFacetSearchVal[filtersForFacetSearchVal.length - 1]?.uuid
+})
+
+function nextFacet() {
+  const itemToFilterOnNextVal = toValue(itemToFilterOnNext)
+  const columnFacetVal = toValue(columnFacet)
+  // const searchParamsVal = toValue(computedFacetSearchParams)
+  addFacetFilter({
+    attribute: columnFacetVal as Facet,
+    type: 'comparison',
+    operator: '!=',
+    values: itemToFilterOnNextVal ? [itemToFilterOnNextVal.name] : [],
+  })
+  // if (itemToFilterOnNextVal && columnFacetVal && searchParamsVal) {
+  //   searchForFacetValues(
+  //     searchParamsVal,
+  //   )
+  // }
+}
+
+const hasNextFacet = computed(() => {
+  const aggregatedItemsVal = toValue(aggregatedItems)
+  const itemToFilterOnNextVal = toValue(itemToFilterOnNext)
+  return aggregatedItemsVal.length > 0 && itemToFilterOnNextVal !== undefined
+})
+
+function prevFacet() {
+  const itemToFilterOnPrevVal = toValue(itemToFilterOnPrev)
+
+  if (itemToFilterOnPrevVal) {
+    removeFacetFilter(itemToFilterOnPrevVal)
+  }
+}
+
+const hasPrevFacet = computed(() => {
+  const itemToFilterOnPrevVal = toValue(itemToFilterOnPrev)
+  return itemToFilterOnPrevVal !== undefined
 })
 
 // const otherPlotOptions = computed(() => {
@@ -230,6 +348,7 @@ function createFilter(value: string | Array<string>) {
       console.warn('Column is undefined, cannot create filter')
     }
     if (addFilter) {
+      resetFacetFilters()
       if (Array.isArray(value)) {
         const { uuid } = addFilter({
           attribute: columnVal.id as Facet,
@@ -292,17 +411,61 @@ function handleBarClick(plot) {
 </script>
 
 <template>
-  <div>
-    <span v-if="label">
+  <div class="flex flex-col gap-2">
+    <div v-if="label">
       {{ label }}
-    </span>
-    <div class="flex flex-row gap-1">
-      <div v-if="sanitizedFacetDistribution.length > 0" class="mt-1">
+    </div>
+
+    <!-- facet Browser -->
+    <div ref="plotContainer" class="flex flex-row gap-2 items-start">
+      <!-- Nav previous -->
+      <div ref="navPrevious" class="flex flex-row items-center justify-start mt-4">
+        <div>
+          <UIcon v-if="hasPrevFacet" name="i-mdi:dots-horizontal" class="text-dimmed" />
+        </div>
+        <div>
+          <UButton
+            icon="lucide:chevron-left"
+            variant="link"
+            size="xl"
+            class="p-0"
+            :disabled="!hasPrevFacet"
+            @click="prevFacet"
+          />
+        </div>
+      </div>
+      <!-- content -->
+      <div class="flex items-center">
         <ObservablePlotRender :options="plotOptions" defer :click-listener="handleBarClick" />
       </div>
-      <!-- <div class="mt-1">
-        <ObservablePlotRender :options="otherPlotOptions" defer :click-listener="clickOtherBar" />
-      </div> -->
+      <!-- Nav next -->
+      <div ref="navNext" class="flex flex-row items-center justify-end mt-4">
+        <div>
+          <UButton
+            :disabled="!hasNextFacet"
+            icon="lucide:chevron-right"
+            size="xl"
+            variant="link"
+            class="p-0"
+            @click="nextFacet"
+          />
+        </div>
+        <div>
+          <UIcon v-if="hasNextFacet" name="i-mdi:dots-horizontal" class="text-dimmed" />
+        </div>
+      </div>
+    </div>
+    <!--  -->
+    <div class="flex flex-row justify-between text-dimmed text-xs font-medium">
+      <div class="truncate">
+        {{ displayedFacetEndpoints[0]?.name }} ({{ displayedFacetEndpoints[0]?.count }})
+      </div>
+      <div class="text-dimmed">
+        <UIcon name="i-mdi:dots-horizontal" class="text-dimmed" />
+      </div>
+      <div class="truncate">
+        {{ displayedFacetEndpoints[displayedFacetEndpoints.length - 1]?.name }} ({{ displayedFacetEndpoints[displayedFacetEndpoints.length - 1]?.count }})
+      </div>
     </div>
   </div>
 </template>

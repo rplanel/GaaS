@@ -29,12 +29,40 @@ export function useFrequencyPartition<T>(options: UseFrequencyPartitionOptions<T
     return { toDisplay: highFreqIds, toGroup: lowFreqIds }
   })
 
+  // displayed items
+
   const displayedItemIds = computed(() => {
     return itemIdPartition.value.toDisplay
   })
 
+  const displayedItems = computed(() => {
+    const displayedItemIdsVal = toValue(displayedItemIds)
+    return toValue(items).filter((item) => {
+      const id = getId(item)
+      return id !== undefined && displayedItemIdsVal.has(id)
+    })
+  })
+
+  const displayedItemCount = computed(() => {
+    return displayedItems.value.reduce((sum, item) => sum + getFrequency(item), 0)
+  })
+
+  // aggregated items
+
   const aggregatedItemIds = computed(() => {
     return itemIdPartition.value.toGroup
+  })
+
+  const aggregatedItems = computed(() => {
+    const aggregatedItemIdsVal = toValue(aggregatedItemIds)
+    return toValue(items).filter((item) => {
+      const id = getId(item)
+      return id !== undefined && aggregatedItemIdsVal.has(id)
+    })
+  })
+
+  const aggregatedItemCount = computed(() => {
+    return aggregatedItems.value.reduce((sum, item) => sum + getFrequency(item), 0)
   })
 
   const partitionedItems = computed(() => {
@@ -61,23 +89,13 @@ export function useFrequencyPartition<T>(options: UseFrequencyPartitionOptions<T
     ]
   })
 
-  const displayedItems = computed(() => {
-    const displayedItemIdsVal = toValue(displayedItemIds)
-    return toValue(items).filter((item) => {
-      const id = getId(item)
-      return id !== undefined && displayedItemIdsVal.has(id)
-    })
-  })
-
-  const displayedItemCount = computed(() => {
-    return displayedItems.value.reduce((sum, item) => sum + getFrequency(item), 0)
-  })
-
   return {
     partitionedItems,
     displayedItems,
     displayedItemCount,
     displayedItemIds,
     aggregatedItemIds,
+    aggregatedItems,
+    aggregatedItemCount,
   }
 }
