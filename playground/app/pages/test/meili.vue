@@ -146,6 +146,10 @@ const sorting = computed(() => {
     },
   ]
 })
+
+const columnPinning = ref({
+  left: ['geonameid'],
+})
 </script>
 
 <template>
@@ -159,6 +163,7 @@ const sorting = computed(() => {
     </template>
     <template #body>
       <MeiliIndexDataTable
+        v-model:column-pinning="columnPinning"
         :debug="false"
         :title="`Data Table for '${indexName}' Meili Index`"
         :meili-index="indexName"

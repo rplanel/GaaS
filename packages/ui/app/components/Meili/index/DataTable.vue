@@ -30,6 +30,8 @@ const props = withDefaults(defineProps<DataTableProps<T>>(), {
   debug: false,
 })
 
+const columnPinning = defineModel<any>('columnPinning')
+
 const tableElem = useTemplateRef<{ tableApi: Table<T> }>('tableElem')
 const debug = toRef(props, 'debug')
 const title = toRef(props, 'title')
@@ -390,7 +392,7 @@ const facetSlotProps = computed(() => {
             <TableColumnVisibility :table-elem="tableElem" />
           </div>
         </div>
-        <UTable v-bind="computedTableProps" ref="tableElem" v-model:sorting="sortingState" class="flex-1 table-fixed">
+        <UTable v-bind="computedTableProps" ref="tableElem" v-model:sorting="sortingState" v-model:column-pinning="columnPinning" class="flex-1 table-fixed">
           <template v-for="(_, slotName) in $slots" #[slotName]="slotProps">
             <slot
               v-if="slotName.endsWith('-header')" :name="slotName" v-bind="{ ...slotProps || {}, ...facetSlotProps }"
