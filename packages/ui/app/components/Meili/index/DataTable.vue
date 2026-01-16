@@ -301,7 +301,7 @@ const facetSlotProps = computed(() => {
           </div>
         </div>
         <div class="flex flex-col gap-1">
-          <div v-if="meiliFilters && meiliFilters.length > 0" class="flex flex-row items-center gap-1">
+          <div class="flex flex-row items-center gap-1">
             <div>
               <UButton
                 label="Reset"
