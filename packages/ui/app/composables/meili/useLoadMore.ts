@@ -3,7 +3,7 @@ import type { SortingState } from '@tanstack/table-core'
 import type { Filter, IndexStats, SearchParams } from 'meilisearch'
 import type { Ref } from 'vue'
 
-import { useOffsetPagination, useRefHistory, watchThrottled } from '@vueuse/core'
+import { useOffsetPagination, watchThrottled } from '@vueuse/core'
 import { computed, ref, toValue, watch } from 'vue'
 import { useMeiliSearch } from './useMeiliSearch'
 
@@ -27,8 +27,6 @@ export interface FetchDataParams {
 // type PaginationState = Pick<UnwrapNestedRefs<UseOffsetPaginationReturn>, 'currentPage' | 'currentPageSize'>
 
 export function useLoadMore(options: UseLoadMoreOptions) {
-  const initialTotalHits = ref<number>(0)
-  const { history: initialTotalHitsHistory } = useRefHistory(initialTotalHits)
   const pageSize = options.pageSize ?? ref(20)
   const { sortingState, meiliIndex } = options
   const filterRef = (options.filter ?? ref([] as Filter)) as Ref<Filter>
@@ -45,7 +43,7 @@ export function useLoadMore(options: UseLoadMoreOptions) {
     })
   })
   const searchParams = computed<SearchParams>(() => ({
-    limit: toValue(pageSize),
+    limit: toValue(pageSize) + 1,
     offset: (toValue(page) - 1) * toValue(pageSize),
     facets: ['*'],
     filter: toValue(filterRef),
@@ -101,28 +99,35 @@ export function useLoadMore(options: UseLoadMoreOptions) {
   }, { throttle: 500 })
 
   void runPaginatedSearch()
-  const totalHits = computed(() => result.value?.estimatedTotalHits ?? 0)
+  const estimatedTotalHits = computed(() => result.value?.estimatedTotalHits ?? 0)
 
-  watch(totalHits, (newTotalHits, oldTotalHits) => {
-    if (oldTotalHits === 0 && newTotalHits > 0) {
-      initialTotalHits.value = newTotalHits
-    }
-  }, { once: true })
+  const hitsCount = computed(() => result.value?.hits.length ?? 0)
+
+  const sanitizedResults = computed(() => {
+    const resultVal = toValue(result)
+    if (!resultVal)
+      return
+    return { ...resultVal, hits: resultVal.hits.slice(0, toValue(pageSize)) }
+  })
 
   const {
     currentPage,
     currentPageSize,
     pageCount,
     isFirstPage,
-    isLastPage,
+    // isLastPage,
     prev,
     next,
   } = useOffsetPagination({
-    total: totalHits,
+    // total: totalHits,
     page,
     pageSize,
     onPageChange: runPaginatedSearch,
     onPageSizeChange: runPaginatedSearch,
+  })
+
+  const isLastPage = computed(() => {
+    return hitsCount.value < toValue(pageSize)
   })
 
   return {
@@ -133,12 +138,10 @@ export function useLoadMore(options: UseLoadMoreOptions) {
     pageCount,
     isFirstPage,
     isLastPage,
-    initialTotalHits,
-    initialTotalHitsHistory,
-    totalHits,
+    totalHits: estimatedTotalHits,
     prev,
     next,
-    result,
+    result: sanitizedResults,
     search,
     stats,
     error,
