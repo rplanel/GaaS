@@ -2,7 +2,7 @@
 import type { ContentNavigationItem } from '@nuxt/content'
 import { findPageHeadline } from '@nuxt/content/utils'
 
-definePageMeta({ layout: 'wiki' })
+definePageMeta({ layout: 'article' })
 
 const route = useRoute()
 const navigation = inject<Ref<ContentNavigationItem[]>>('navigation')
