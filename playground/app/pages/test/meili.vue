@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui'
 // import type { FacetDistribution, FacetStats } from 'meilisearch'
-import { MeiliIndexDataTableSortColumn, MeiliIndexFilterPlotCategoryBuilder, MeiliIndexFilterPlotContinuousBuilder } from '#components'
+import { MeiliIndexDataTableSortColumn } from '#components'
 
 const categoryWidth = ref(200)
 
-const categoryHeight = ref(45)
+// const categoryHeight = ref(45)
 const categoryMetaClass = computed(() => {
   return {
     th: `truncate align-top w-[${categoryWidth.value}px] max-w-[${categoryWidth.value}px]`,
@@ -12,84 +13,138 @@ const categoryMetaClass = computed(() => {
   }
 })
 
+interface WorldCity {
+  geonameid: number
+  name: string
+  country: string
+  timezone: string
+  population: number
+}
+
 const metaClass = {
   th: 'truncate align-top w-[80px]',
 }
+// const continuousColumnModels = ref<Record<string, number[]> | undefined>({})
+// const populationModel = ref<number[]>([0, 0])
 
-const populationModel = ref<number[]>([0, 0])
-const continuousMeilifilter = computed(() => {
-  const populationModelVal = toValue(populationModel)
-  if (populationModelVal.length !== 2 || (populationModelVal[0] === 0 && populationModelVal[1] === 0)) {
-    return ['']
-  }
-  return [`population ${populationModelVal[0]} TO ${populationModelVal[1]}`]
+const indexName = 'world_cities'
+
+type TableColumnType = 'categorical' | 'continuous' | 'none'
+
+const columns = computed<Array<TableColumn<WorldCity> & { type?: TableColumnType }>>(() => {
+  return [{
+    accessorKey: 'geonameid',
+    header: 'ID',
+    //  size: 80,
+    meta: { class: { ...metaClass } },
+    type: 'none',
+
+  }, {
+    accessorKey: 'name',
+    header: ({ column }) => {
+      return h(MeiliIndexDataTableSortColumn, { column, label: 'Name' })
+    },
+    meta: {
+      class: { ...metaClass },
+
+    },
+    type: 'none',
+    // size: 80,
+    // enableResizing: false,
+  }, {
+    accessorKey: 'country',
+    enableSorting: false,
+    meta: {
+      class: { ...toValue(categoryMetaClass) },
+    },
+    header: 'Country',
+    // minSize: 150,
+    size: categoryWidth.value,
+    // enableResizing: false,
+    // maxSize: categoryWidth.value + 30,
+    type: 'categorical',
+  }, {
+    accessorKey: 'timezone',
+    meta: {
+      class: { ...toValue(categoryMetaClass) },
+    },
+    header: 'Timezone',
+    // minSize: 150,
+    // size: categoryWidth.value,
+    // enableResizing: false,
+    // maxSize: categoryWidth.value + 30,
+    type: 'categorical',
+  }, {
+    accessorKey: 'population',
+    header: 'Population',
+    meta: {
+      class: { ...toValue(categoryMetaClass) },
+    },
+    // minSize: 150,
+    // size: 200,
+    // enableResizing: false,
+    type: 'continuous',
+  }]
 })
-const index = computed(() => {
-  return {
-    name: 'world_cities',
-    columns: [
-      {
-        accessorKey: 'geonameid',
-        header: 'ID',
-        //  size: 80,
-        meta: { class: { ...metaClass } },
-      },
-      {
-        accessorKey: 'name',
-        header: ({ column }) => {
-          return h(MeiliIndexDataTableSortColumn, { column, label: 'Name' })
-        },
-        meta: {
-          class: { ...metaClass },
 
-        },
-        // size: 80,
-        // enableResizing: false,
-      },
-      {
-        accessorKey: 'country',
-        enableSorting: false,
-        meta: {
-          class: { ...toValue(categoryMetaClass) },
-        },
-        // minSize: 150,
-        // size: categoryWidth.value,
-        // enableResizing: false,
-        // maxSize: categoryWidth.value + 30,
-
-      },
-      {
-        accessorKey: 'timezone',
-        meta: {
-          class: { ...toValue(categoryMetaClass) },
-        },
-        // minSize: 150,
-        // size: categoryWidth.value,
-        // enableResizing: false,
-        // maxSize: categoryWidth.value + 30,
-
-      },
-      {
-        accessorKey: 'population',
-        meta: {
-          class: { ...toValue(categoryMetaClass) },
-        },
-        // minSize: 150,
-        // size: 200,
-        // enableResizing: false,
-      },
-    ],
-    sorting: [
-      {
-        id: 'country',
-        desc: false,
-      },
-      {
-        id: 'name',
-        desc: true,
-      },
-    ],
+const categoricalColumns = computed(() => {
+  const columnsVal = toValue(columns)
+  if (!columnsVal) {
+    return []
   }
+  return columnsVal.filter(col => col.type === 'categorical')
+})
+
+const continuousColumns = computed(() => {
+  const columnsVal = toValue(columns)
+  if (!columnsVal) {
+    return []
+  }
+  return columnsVal.filter(col => col.type === 'continuous')
+})
+
+const continuousColumnModels = reactive<Record<string, number[]>>({})
+
+const continuousMeilifilter = computed(() => {
+  if (!continuousColumnModels || Object.keys(continuousColumnModels).length === 0) {
+    return []
+  }
+
+  return Object.entries(continuousColumnModels)
+    .map(([key, range]) => {
+      if (!range || !key || range.length !== 2) {
+        return ''
+      }
+      // if (range[0] === 0 && range[1] === 0) {
+      //   return undefined
+      // }
+      return `${key} ${range[0]} TO ${range[1]}`
+    })
+    .filter(Boolean)
+})
+
+onMounted(() => {
+  // initialize the continuous column models
+  const contColumns = toValue(continuousColumns)
+  contColumns.forEach((col) => {
+    const accessorKey = col.accessorKey
+    if (accessorKey) {
+      continuousColumnModels[accessorKey] = [0, 0]
+    }
+  })
+})
+
+const sorting = computed(() => {
+  return [
+    {
+      id: 'country',
+      desc: false,
+    },
+    {
+      id: 'name',
+      desc: true,
+    },
+  ]
 })
 </script>
 
@@ -105,93 +160,41 @@ const index = computed(() => {
     <template #body>
       <MeiliIndexDataTable
         :debug="false"
-        :title="`Data Table for '${index.name}' Meili Index`"
-        :meili-index="index.name"
-        :sorting-state="index.sorting"
+        :title="`Data Table for '${indexName}' Meili Index`"
+        :meili-index="indexName"
+        :sorting-state="sorting"
         :meili-filters="continuousMeilifilter"
         :table-props="{
-          columns: index.columns,
+          columns,
         }"
       >
         <template #header>
           <span class="text-lg font-medium">
             Data Table for
-            <span class="bg-neutral-600 rounded-md p-1">{{ index.name }} </span>
+            <span class="bg-neutral-600 rounded-md p-1">{{ indexName }} </span>
             Meili Index
           </span>
         </template>
-        <template #country-header="{ column, searchParams, numberOfDocuments, facetDistribution, totalHits, addFilter, maxValuesPerFacet, facetStats }">
-          <div>
-            <div class="flex flex-row justify-start gap-1">
-              <MeiliIndexDataTableSortColumn :column="column" label="Country" />
-              <UModal>
-                <UButton icon="i-lucide:filter" variant="link" size="sm" color="neutral" />
-                <template #header>
-                  <span class="text-lg font-medium">Add Country Filter</span>
-                </template>
-                <template #body>
-                  <MeiliIndexFilterSimpleBuilder
-                    :meili-index="index.name"
-                    :facet-distribution="facetDistribution"
-                    :facet-stats="facetStats"
-                    :search-params="searchParams"
-                    :add-filter="addFilter"
-                    :facet-attribute="column.id"
-                  />
-                </template>
-              </UModal>
-            </div>
-            <MeiliIndexFilterPlotCategoryBuilder
-              :meili-index="index.name"
-              :search-params="searchParams"
-              :facet-distribution="facetDistribution"
-              :column="column"
-              :total-hits="totalHits"
-              :number-of-documents="numberOfDocuments"
-              :max-values-per-facet="maxValuesPerFacet"
-              :add-filter="addFilter"
-              :width="categoryWidth"
-              :height="categoryHeight"
-            />
-          </div>
-          <div />
+
+        <template v-for="catColumn in categoricalColumns" :key="catColumn.accessorKey" #[`${catColumn.accessorKey}-header`]="headerProps">
+          <MeiliIndexDataTableHeaderCategorical
+            :index-name="indexName"
+            :title="typeof headerProps.column.columnDef.header === 'string' ? headerProps.column.columnDef.header : headerProps.column.id"
+            :facet-attribute="headerProps.column.id"
+            v-bind="headerProps"
+          />
         </template>
-        <template #timezone-header="{ searchParams, column, facetDistribution, numberOfDocuments, totalHits, addFilter, maxValuesPerFacet, facetStats }">
-          <div>
-            <div class="flex flex-row justify-start gap-1">
-              <MeiliIndexDataTableSortColumn :column="column" label="Timezone" />
-              <UModal>
-                <UButton icon="i-lucide:filter" variant="link" size="sm" color="neutral" />
-                <template #header>
-                  <span class="text-lg font-medium">Add Timezone Filter</span>
-                </template>
-                <template #body>
-                  <MeiliIndexFilterSimpleBuilder
-                    :meili-index="index.name"
-                    :facet-distribution="facetDistribution"
-                    :facet-stats="facetStats"
-                    :search-params="searchParams"
-                    :add-filter="addFilter"
-                    :facet-attribute="column.id"
-                  />
-                </template>
-              </UModal>
-            </div>
-            <MeiliIndexFilterPlotCategoryBuilder
-              :meili-index="index.name"
-              :search-params="searchParams"
-              :facet-distribution="facetDistribution"
-              :column="column"
-              :total-hits="totalHits"
-              :number-of-documents="numberOfDocuments"
-              :max-values-per-facet="maxValuesPerFacet"
-              :add-filter="addFilter"
-              :width="categoryWidth"
-              :height="categoryHeight"
-            />
-          </div>
+
+        <!-- continuous column -->
+        <template v-for="contColumn in continuousColumns" :key="contColumn.accessorKey" #[`${contColumn.accessorKey}-header`]="headerProps">
+          <MeiliIndexDataTableHeaderContinuous
+            v-model="continuousColumnModels[contColumn.accessorKey as string]"
+            :index-name="indexName"
+            :title="typeof headerProps.column.columnDef.header === 'string' ? headerProps.column.columnDef.header : headerProps.column.id"
+            v-bind="headerProps"
+          />
         </template>
-        <template #population-header="{ column, facetStats, totalHits, initialFacetStats }">
+        <!-- <template #population-header="{ column, facetStats, totalHits, initialFacetStats }">
           <div>
             <MeiliIndexDataTableSortColumn :column="column" label="Population" />
             <MeiliIndexFilterPlotContinuousBuilder
@@ -202,7 +205,7 @@ const index = computed(() => {
               :total-hits="totalHits"
             />
           </div>
-        </template>
+        </template> -->
       </MeiliIndexDataTable>
     </template>
   </UDashboardPanel>

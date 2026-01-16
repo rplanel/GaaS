@@ -72,35 +72,6 @@ const {
 
 const { meiliFilters: builderMeiliFilters } = useMeiliFilter(builderFilters)
 
-// function toMeiliFilter(filter: FacetFilter): string {
-//   const attribute = filter.attribute
-//   const operator = filter.operator
-//   const values = filter.values
-//   switch (operator) {
-//     case 'NOT IN':
-//     case 'IN':
-//       return `${attribute} ${operator} [${(values as string[]).map(v => `"${v}"`).join(', ')}]`
-//     case '>':
-//     case '>=':
-//     case '<':
-//     case '<=':
-//     case '=':
-//     case '!=':
-//       return `${attribute} ${operator} "${values as ComparisonValues}"`
-//     case 'TO':
-//       return `${attribute} ${values[0]} TO ${values[1]}`
-//     case 'EXISTS':
-//     case 'NOT EXISTS':
-//     case 'IS EMPTY':
-//     case 'IS NOT EMPTY':
-//     case 'IS NULL':
-//     case 'IS NOT NULL':
-//       return `${attribute} ${operator}`
-//     default:
-//       return ''
-//   }
-// }
-
 const mergedFilters = computed(() => {
   const manual = toValue(manualFilter)
   const builder = toValue(builderFilters)
@@ -257,6 +228,7 @@ const computedTableProps = computed(() => {
 // })
 
 // -- slot props --
+
 const facetSlotProps = computed(() => {
   return {
     facetStats: facetStats.value,
@@ -306,12 +278,9 @@ const facetSlotProps = computed(() => {
             :items="[{
               id: 'all-ids-info',
               label: 'All Ids Info',
-            // data: sanitizedDocumentIds
             }]"
           >
             <template #body="{ item }">
-              <!-- <pre>{{ numberOfDocumentsAllIds }}</pre> -->
-              <!-- <pre>{{ allIdsResult?.estimatedTotalHits }} </pre> -->
               <pre>{{ item.data }}</pre>
             </template>
           </UAccordion>
