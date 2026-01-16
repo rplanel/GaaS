@@ -2,8 +2,6 @@
 import type { ContentNavigationItem } from '@nuxt/content'
 import { findPageHeadline } from '@nuxt/content/utils'
 
-definePageMeta({ layout: 'wiki-article' })
-
 const route = useRoute()
 const navigation = inject<Ref<ContentNavigationItem[]>>('navigation')
 
@@ -13,6 +11,12 @@ const { data: page } = await useAsyncData(route.path, () => {
 if (!page.value) {
   throw createError({ statusCode: 404, statusMessage: 'Page not found', fatal: true })
 }
+
+// Set layout dynamically based on page frontmatter
+const layoutName = page.value.layout || 'wiki-article'
+definePageMeta({ layout: false })
+setPageLayout(layoutName)
+
 const { data: surround } = await useAsyncData(`${route.path}-surround`, () => {
   return queryCollectionItemSurroundings('content', route.path, {
     fields: ['description'],
