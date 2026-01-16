@@ -422,9 +422,6 @@ function handleBarClick(plot) {
       <!-- Nav previous -->
       <div ref="navPrevious" class="flex flex-row items-center justify-start mt-4">
         <div>
-          <UIcon v-if="hasPrevFacet" name="i-mdi:dots-horizontal" class="text-dimmed" />
-        </div>
-        <div>
           <UButton
             icon="lucide:chevron-left"
             variant="link"
@@ -434,6 +431,9 @@ function handleBarClick(plot) {
             @click="prevFacet"
           />
         </div>
+        <div>
+          <UIcon v-if="hasPrevFacet" name="i-mdi:dots-horizontal" class="text-dimmed" />
+        </div>
       </div>
       <!-- content -->
       <div class="flex items-center">
@@ -441,6 +441,9 @@ function handleBarClick(plot) {
       </div>
       <!-- Nav next -->
       <div ref="navNext" class="flex flex-row items-center justify-end mt-4">
+        <div>
+          <UIcon v-if="hasNextFacet" name="i-mdi:dots-horizontal" class="text-dimmed" />
+        </div>
         <div>
           <UButton
             :disabled="!hasNextFacet"
@@ -450,9 +453,6 @@ function handleBarClick(plot) {
             class="p-0"
             @click="nextFacet"
           />
-        </div>
-        <div>
-          <UIcon v-if="hasNextFacet" name="i-mdi:dots-horizontal" class="text-dimmed" />
         </div>
       </div>
     </div>
