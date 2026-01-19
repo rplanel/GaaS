@@ -14,6 +14,7 @@ export default defineNuxtConfig({
     '@nuxt/devtools',
     '@nuxt/content',
     '@nuxt/eslint',
+    'nuxt-studio',
   ],
   compatibilityDate: '2024-11-01',
   future: {

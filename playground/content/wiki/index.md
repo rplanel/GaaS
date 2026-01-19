@@ -1,6 +1,9 @@
 ---
 title: Welcome to GaaS playground
-description: "this in wiki in GaaS playground"
+description: this in wiki in GaaS playground
+navigation:
+  description: welcome page for the GaaS playground. It is for test only
+  title: Home
 ---
 
 ## test references

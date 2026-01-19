@@ -15,8 +15,9 @@
     "@nuxt/ui": "catalog:nuxt",
     "@vueuse/core": "catalog:",
     "nuxt": "catalog:nuxt",
-    "vue": "latest",
-    "vue-router": "latest"
+    "nuxt-studio": "catalog:nuxt",
+    "vue": "catalog:",
+    "vue-router": "catalog:"
   },
   "devDependencies": {
     "@nuxt/devtools": "catalog:nuxt",

@@ -20,18 +20,20 @@ const rootNavigation = computed(() => {
 
 <template>
   <AppHeader />
-  <UPage>
-    <template #left>
-      <UPageAside>
-        <template #top>
-          <UContentSearchButton :collapsed="false" />
-        </template>
-        <UContentNavigation
-          highlight
-          :navigation="rootNavigation || []"
-        />
-      </UPageAside>
-    </template>
-    <slot />
-  </UPage>
+  <div class="w-full mx-auto px-4 sm:px-6 lg:px-8">
+    <UPage>
+      <template #left>
+        <UPageAside>
+          <template #top>
+            <UContentSearchButton :collapsed="false" />
+          </template>
+          <UContentNavigation
+            highlight
+            :navigation="rootNavigation || []"
+          />
+        </UPageAside>
+      </template>
+      <slot />
+    </UPage>
+  </div>
 </template>

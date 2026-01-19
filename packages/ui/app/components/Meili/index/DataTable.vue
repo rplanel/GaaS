@@ -4,7 +4,7 @@
 <script lang="ts" setup generic="T">
 import type { TableProps, TabsItem } from '@nuxt/ui'
 
-import type { SortingState, Table } from '@tanstack/table-core'
+import type { ColumnPinningState, SortingState, Table, VisibilityState } from '@tanstack/table-core'
 import type { FacetDistribution, FacetStats, Filter } from 'meilisearch'
 import { useFacetFilters } from '#layers/@gaas-ui/app/composables/meili/useFacetFilters'
 import { useMeiliFilter } from '#layers/@gaas-ui/app/composables/meili/useMeiliFilter'
@@ -30,8 +30,9 @@ const props = withDefaults(defineProps<DataTableProps<T>>(), {
   debug: false,
 })
 
-const columnPinning = defineModel<any>('columnPinning')
-
+// models
+const columnPinning = defineModel<ColumnPinningState>('columnPinning')
+const columnVisibility = defineModel<VisibilityState>('columnVisibility')
 const tableElem = useTemplateRef<{ tableApi: Table<T> }>('tableElem')
 const debug = toRef(props, 'debug')
 const title = toRef(props, 'title')
@@ -392,7 +393,15 @@ const facetSlotProps = computed(() => {
             <TableColumnVisibility :table-elem="tableElem" />
           </div>
         </div>
-        <UTable v-bind="computedTableProps" ref="tableElem" v-model:sorting="sortingState" v-model:column-pinning="columnPinning" class="flex-1 table-fixed">
+        <UTable
+          v-bind="computedTableProps"
+          ref="tableElem"
+          v-model:sorting="sortingState"
+          v-model:column-pinning="columnPinning"
+          v-model:column-visibility="columnVisibility"
+
+          class="flex-1 table-fixed"
+        >
           <template v-for="(_, slotName) in $slots" #[slotName]="slotProps">
             <slot
               v-if="slotName.endsWith('-header')" :name="slotName" v-bind="{ ...slotProps || {}, ...facetSlotProps }"

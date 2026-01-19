@@ -120,24 +120,6 @@ const inputNumberProps = ref<InputNumberProps>({
   variant: 'soft',
 
 })
-
-// const facetFilter = computed<FacetFilter | undefined>(() => {
-//   const columnVal = toValue(column)
-//   const range = toValue(modelValue)
-//   if (range) {
-//     return {
-//       attribute: columnVal.id as Facet,
-//       type: 'range',
-//       operator: 'TO',
-//       values: range,
-//     }
-//   }
-//   return undefined
-// })
-
-// watch(facetFilter, (newFilter) => {
-//   modelFilter.value = newFilter
-// })
 </script>
 
 <template>
@@ -145,7 +127,6 @@ const inputNumberProps = ref<InputNumberProps>({
     <div class="flex flex-col gap-3 w-full">
       <div class="flex flex-row gap-1 justify-between">
         <UInputNumber v-model="rangeMin" :min="initialMin" :max="initialMax" v-bind="inputNumberProps" />
-
         <UInputNumber v-model="rangeMax" :min="initialMin" :max="initialMax" v-bind="inputNumberProps" />
       </div>
       <div>
