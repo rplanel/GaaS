@@ -47,7 +47,7 @@ const indexName = toRef(props.indexName)
             :facet-stats="facetStats"
             :search-params="searchParams"
             :add-filter="addFilter"
-            :facet-attribute="column.id"
+            :facet-attribute="facetAttribute"
           />
         </template>
       </UModal>
@@ -56,7 +56,7 @@ const indexName = toRef(props.indexName)
       :meili-index="indexName"
       :search-params="searchParams"
       :facet-distribution="facetDistribution"
-      :column="column"
+      :facet-attribute="facetAttribute"
       :total-hits="totalHits"
       :number-of-documents="numberOfDocuments"
       :max-values-per-facet="maxValuesPerFacet"

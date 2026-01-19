@@ -15,7 +15,13 @@ export default defineNuxtConfig({
     compatibilityVersion: 4,
   },
 
-  modules: ['@nuxt/ui', '@nuxt/test-utils/module', '@nuxt/eslint', '@nuxt/content', 'nuxt-studio'],
+  modules: [
+    '@nuxt/ui',
+    '@nuxt/test-utils/module',
+    '@nuxt/eslint',
+    '@nuxt/content',
+    'nuxt-studio',
+  ],
   css: [
     join(currentDir, './app/assets/css/main.css'),
   ],

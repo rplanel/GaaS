@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T">
-import type { Column } from '@tanstack/table-core'
+// import type { Column } from '@tanstack/table-core'
 import type { Facet, FacetDistribution, SearchForFacetValuesParams, SearchParams } from 'meilisearch'
 import { ObservablePlotRender } from '#components'
 import { useFacetFilters } from '#layers/@gaas-ui/app/composables/meili/useFacetFilters'
@@ -10,12 +10,13 @@ import * as Plot from '@observablehq/plot'
 import { useElementSize } from '@vueuse/core'
 import { useFrequencyPartition } from '../../../../../composables/useFrequencyPartition'
 
-export interface CategoryHeaderProps<T> {
+export interface CategoryHeaderProps {
   width?: number
   height?: number
   meiliIndex: string
   searchParams?: SearchParams
-  column: Column<T>
+  // column: Column<T>
+  facetAttribute: string | undefined
   label?: string
   totalHits: number
   numberOfDocuments: number
@@ -32,7 +33,7 @@ interface FacetCategory {
   items?: string[]
 }
 
-const props = withDefaults(defineProps<CategoryHeaderProps<T>>(), {
+const props = withDefaults(defineProps<CategoryHeaderProps>(), {
   aggregateFrequencyThreshold: 0.015,
   width: 300,
   height: 50,
@@ -48,16 +49,8 @@ const facetDistribution = toRef(() => props.facetDistribution)
 // const maxValuesPerFacet = toRef(props, 'maxValuesPerFacet')
 // const totalHits = toRef(props, 'totalHits')
 const numberOfDocuments = toRef(props, 'numberOfDocuments')
-const { column, label } = toRefs(props)
+const { label, facetAttribute } = toRefs(props)
 const modelFilter = defineModel<FacetFilter | undefined>('filter')
-
-const columnFacet = computed<Facet | undefined>(() => {
-  const columnVal = toValue(column)
-  if (!columnVal) {
-    return undefined
-  }
-  return columnVal.id
-})
 
 const { addFilter: addFacetFilter, removeFilter: removeFacetFilter, filters: filtersForFacetSearch, resetFilters: resetFacetFilters } = useFacetFilters()
 
@@ -67,7 +60,7 @@ watch([facetResult, facetDistribution], ([newFacetResult]) => {
   if (!newFacetResult) {
     searchForFacetValues({
       ...toValue(searchParams),
-      facetName: columnFacet.value as string,
+      facetName: facetAttribute.value as string,
       filter: [...(toValue(searchParams)?.filter ?? [])],
     })
   }
@@ -81,19 +74,19 @@ const { meiliFilters } = useMeiliFilter(filtersForFacetSearch)
 
 const computedFacetSearchParams = computed<SearchForFacetValuesParams | undefined>(() => {
   const searchParamsVal = toValue(searchParams)
-  const columnFacetVal = toValue(columnFacet)
+  const facetAttributeVal = toValue(facetAttribute)
   const meiliFiltersVal = toValue(meiliFilters)
 
   return {
     ...searchParamsVal,
     filter: [...(searchParamsVal?.filter ?? []), ...meiliFiltersVal],
-    facetName: columnFacetVal,
+    facetName: facetAttributeVal,
   }
 })
 
 watch(computedFacetSearchParams, (newVal) => {
-  const columnFacetVal = toValue(columnFacet)
-  if (columnFacetVal && newVal) {
+  const facetAttributeVal = toValue(facetAttribute)
+  if (facetAttributeVal && newVal) {
     searchForFacetValues(newVal)
   }
 }, { immediate: true })
@@ -271,10 +264,10 @@ const itemToFilterOnPrev = computed(() => {
 
 function nextFacet() {
   const itemToFilterOnNextVal = toValue(itemToFilterOnNext)
-  const columnFacetVal = toValue(columnFacet)
+  const facetAttributeVal = toValue(facetAttribute)
   // const searchParamsVal = toValue(computedFacetSearchParams)
   addFacetFilter({
-    attribute: columnFacetVal as Facet,
+    attribute: facetAttributeVal as Facet,
     type: 'comparison',
     operator: '!=',
     values: itemToFilterOnNextVal ? [itemToFilterOnNextVal.name] : [],
@@ -340,19 +333,19 @@ const hasPrevFacet = computed(() => {
 
 function createFilter(value: string | Array<string>) {
   const filter = toValue(modelFilter)
-  const columnVal = toValue(column)
+  const facetAttributeVal = toValue(facetAttribute)
   if (filter) {
     modelFilter.value = undefined
   }
   else {
-    if (!columnVal) {
+    if (!facetAttributeVal) {
       console.warn('Column is undefined, cannot create filter')
     }
     if (addFilter) {
       resetFacetFilters()
       if (Array.isArray(value)) {
         const { uuid } = addFilter({
-          attribute: columnVal.id as Facet,
+          attribute: facetAttributeVal as Facet,
           type: 'set',
           operator: 'NOT IN',
           values: value,
@@ -361,7 +354,7 @@ function createFilter(value: string | Array<string>) {
       }
       else {
         const { uuid } = addFilter({
-          attribute: columnVal.id as Facet,
+          attribute: facetAttributeVal as Facet,
           type: 'comparison',
           operator: '=',
           values: value,
