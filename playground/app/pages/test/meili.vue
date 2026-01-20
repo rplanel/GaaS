@@ -1,8 +1,18 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui'
 // import type { FacetDistribution, FacetStats } from 'meilisearch'
+import type { MeiliDataTableColumnType } from '#components/meili/MeiliDataTable/types/meili-data-table-column-type'
+import type { TableColumn } from '@nuxt/ui'
+import type { SortingState } from '@tanstack/table-core'
 import { MeiliIndexDataTableSortColumn } from '#components'
+import { useMeiliDataTableColumns } from '#layers/@gaas-ui/app/composables/meili/useMeiliDataTableColumns'
 
+const defaultColumnWidth = 80
+
+const metaClass = {
+  th: `truncate align-top w-[${defaultColumnWidth}px] max-w-[${defaultColumnWidth}px]`,
+}
+
+// category column conf
 const categoryWidth = ref(200)
 
 // const categoryHeight = ref(45)
@@ -21,21 +31,13 @@ interface WorldCity {
   population: number
 }
 
-const metaClass = {
-  th: 'truncate align-top w-[80px]',
-}
-// const continuousColumnModels = ref<Record<string, number[]> | undefined>({})
-// const populationModel = ref<number[]>([0, 0])
-
 const indexName = 'world_cities'
 
-type TableColumnType = 'categorical' | 'continuous' | 'none'
-
-const columns = computed<Array<TableColumn<WorldCity> & { type?: TableColumnType }>>(() => {
+const columns = computed<Array<TableColumn<WorldCity> & { type?: MeiliDataTableColumnType }>>(() => {
   return [{
     accessorKey: 'geonameid',
     header: 'ID',
-    //  size: 80,
+    size: defaultColumnWidth,
     meta: { class: { ...metaClass } },
     type: 'none',
 
@@ -44,6 +46,7 @@ const columns = computed<Array<TableColumn<WorldCity> & { type?: TableColumnType
     header: ({ column }) => {
       return h(MeiliIndexDataTableSortColumn, { column, label: 'Name' })
     },
+    size: defaultColumnWidth,
     meta: {
       class: { ...metaClass },
 
@@ -87,54 +90,14 @@ const columns = computed<Array<TableColumn<WorldCity> & { type?: TableColumnType
   }]
 })
 
-const categoricalColumns = computed(() => {
-  const columnsVal = toValue(columns)
-  if (!columnsVal) {
-    return []
-  }
-  return columnsVal.filter(col => col.type === 'categorical')
-})
+const {
+  categoricalColumns,
+  continuousColumns,
+  continuousColumnModels,
+  continuousMeilifilter,
+} = useMeiliDataTableColumns<WorldCity>({ columns })
 
-const continuousColumns = computed(() => {
-  const columnsVal = toValue(columns)
-  if (!columnsVal) {
-    return []
-  }
-  return columnsVal.filter(col => col.type === 'continuous')
-})
-
-const continuousColumnModels = reactive<Record<string, number[]>>({})
-
-const continuousMeilifilter = computed(() => {
-  if (!continuousColumnModels || Object.keys(continuousColumnModels).length === 0) {
-    return []
-  }
-
-  return Object.entries(continuousColumnModels)
-    .map(([key, range]) => {
-      if (!range || !key || range.length !== 2) {
-        return ''
-      }
-      // if (range[0] === 0 && range[1] === 0) {
-      //   return undefined
-      // }
-      return `${key} ${range[0]} TO ${range[1]}`
-    })
-    .filter(Boolean)
-})
-
-onMounted(() => {
-  // initialize the continuous column models
-  const contColumns = toValue(continuousColumns)
-  contColumns.forEach((col) => {
-    const accessorKey = col.accessorKey
-    if (accessorKey) {
-      continuousColumnModels[accessorKey] = [0, 0]
-    }
-  })
-})
-
-const sorting = computed(() => {
+const sorting = computed<SortingState>(() => {
   return [
     {
       id: 'country',
@@ -199,18 +162,6 @@ const columnPinning = ref({
             v-bind="headerProps"
           />
         </template>
-        <!-- <template #population-header="{ column, facetStats, totalHits, initialFacetStats }">
-          <div>
-            <MeiliIndexDataTableSortColumn :column="column" label="Population" />
-            <MeiliIndexFilterPlotContinuousBuilder
-              v-model="populationModel"
-              :initial-facet-stats="initialFacetStats"
-              :facet-stats="facetStats"
-              :column="column"
-              :total-hits="totalHits"
-            />
-          </div>
-        </template> -->
       </MeiliIndexDataTable>
     </template>
   </UDashboardPanel>
