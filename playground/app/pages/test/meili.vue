@@ -163,6 +163,15 @@ const columnPinning = ref({
           />
         </template>
       </MeiliIndexDataTable>
+
+      <div>
+        group badge test
+        <BadgeGroup :max="2">
+          <UBadge label="Badge 1" />
+          <UBadge label="Badge 2" />
+          <UBadge label="Badge 3" />
+        </BadgeGroup>
+      </div>
     </template>
   </UDashboardPanel>
 </template>
