@@ -408,6 +408,7 @@ const facetSlotProps = computed(() => {
             <slot
               v-if="slotName.endsWith('-header')" :name="slotName" v-bind="{ ...slotProps || {}, ...facetSlotProps }"
             />
+            <slot v-else :name="slotName" v-bind="slotProps" />
           </template>
         </UTable>
         <MeiliIndexDataTableNav
