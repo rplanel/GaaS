@@ -16,6 +16,15 @@ export function useMeiliDataTableColumns<T>(options: MeiliDataTableColumnOptions
     return columnsVal.filter(col => col.type === 'categorical')
   })
 
+  /**
+   * Type guard to validate that a range is defined and contains valid numbers
+   */
+  function isValidRange(range: number[] | undefined) {
+    return !!range && range.length === 2
+      && typeof range[0] === 'number' && typeof range[1] === 'number'
+      && !Number.isNaN(range[0]) && !Number.isNaN(range[1])
+  }
+
   const continuousColumns = computed(() => {
     const columnsVal = toValue(columns)
     if (!columnsVal) {
@@ -26,22 +35,12 @@ export function useMeiliDataTableColumns<T>(options: MeiliDataTableColumnOptions
 
   const continuousColumnModels = reactive<Record<string, number[] | undefined>>({})
 
-  const continuousMeilifilter = computed(() => {
-    if (!continuousColumnModels || Object.keys(continuousColumnModels).length === 0) {
-      return []
-    }
-
+  const continuousMeiliFilter = computed<string[]>(() => {
     return Object.entries(continuousColumnModels)
-      .map(([key, range]) => {
-        if (!range || !key || range.length !== 2) {
-          return false
-        }
-        // if (range[0] === 0 && range[1] === 0) {
-        //   return undefined
-        // }
-        return `${key} ${range[0]} TO ${range[1]}`
+      .filter(([key, range]) => {
+        return key && isValidRange(range)
       })
-      .filter(Boolean)
+      .map(([key, range]) => `${key} ${range![0]} TO ${range![1]}`)
   })
 
   onMounted(() => {
@@ -59,6 +58,6 @@ export function useMeiliDataTableColumns<T>(options: MeiliDataTableColumnOptions
     categoricalColumns,
     continuousColumns,
     continuousColumnModels,
-    continuousMeilifilter,
+    continuousMeiliFilter,
   }
 }

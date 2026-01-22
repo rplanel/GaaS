@@ -13,7 +13,7 @@ export interface ContinuousHeaderProps<T> {
 const props = defineProps<ContinuousHeaderProps<T>>()
 const { title, initialFacetStats, facetStats, column, totalHits } = toRefs(props)
 
-const rangeModel = defineModel<number[]>()
+const rangeModel = defineModel<number[] | undefined>(undefined)
 </script>
 
 <template>

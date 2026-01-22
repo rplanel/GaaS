@@ -94,7 +94,7 @@ const {
   categoricalColumns,
   continuousColumns,
   continuousColumnModels,
-  continuousMeilifilter,
+  continuousMeiliFilter,
 } = useMeiliDataTableColumns<WorldCity>({ columns })
 
 const sorting = computed<SortingState>(() => {
@@ -131,7 +131,7 @@ const columnPinning = ref({
         :title="`Data Table for '${indexName}' Meili Index`"
         :meili-index="indexName"
         :sorting-state="sorting"
-        :meili-filters="continuousMeilifilter"
+        :meili-filters="continuousMeiliFilter"
         :table-props="{
           columns,
         }"
