@@ -4,7 +4,7 @@
 <script lang="ts" setup generic="T">
 import type { TableProps, TabsItem } from '@nuxt/ui'
 
-import type { ColumnPinningState, SortingState, Table, VisibilityState } from '@tanstack/table-core'
+import type { ColumnPinningState, ExpandedState, SortingState, Table, VisibilityState } from '@tanstack/table-core'
 import type { FacetDistribution, FacetStats, Filter } from 'meilisearch'
 import { useFacetFilters } from '#layers/@gaas-ui/app/composables/meili/useFacetFilters'
 import { useMeiliFilter } from '#layers/@gaas-ui/app/composables/meili/useMeiliFilter'
@@ -33,6 +33,7 @@ const props = withDefaults(defineProps<DataTableProps<T>>(), {
 // models
 const columnPinning = defineModel<ColumnPinningState>('columnPinning')
 const columnVisibility = defineModel<VisibilityState>('columnVisibility')
+const expanded = defineModel<ExpandedState>('expanded')
 const tableElem = useTemplateRef<{ tableApi: Table<T> }>('tableElem')
 const debug = toRef(props, 'debug')
 const title = toRef(props, 'title')
@@ -399,6 +400,7 @@ const facetSlotProps = computed(() => {
           v-model:sorting="sortingState"
           v-model:column-pinning="columnPinning"
           v-model:column-visibility="columnVisibility"
+          v-model:expanded="expanded"
 
           class="flex-1 table-fixed"
         >
