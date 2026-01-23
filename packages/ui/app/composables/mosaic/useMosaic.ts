@@ -6,6 +6,7 @@ import { useAsyncState } from '@vueuse/core'
 interface UseMosaicBaseParams {
   tableName: Ref<string>
   coordinator: Coordinator
+  options?: Record<string, unknown>
 }
 
 interface UseMosaicFromFileParams extends UseMosaicBaseParams {
@@ -22,6 +23,7 @@ type useMosaicParams = UseMosaicFromFileParams | UseMosaicFromObjectParams
 export function useMosaic(params: useMosaicParams) {
   const {
     tableName,
+    options,
   } = params
 
   const error = ref<Error | undefined>(undefined)
@@ -38,16 +40,16 @@ export function useMosaic(params: useMosaicParams) {
       const { filePath, format = 'csv' } = params
       const filePathVal = toValue(filePath)
       if (format === 'parquet') {
-        return loadParquet(tableNameVal, filePathVal)
+        return loadParquet(tableNameVal, filePathVal, options)
       }
       else {
-        return loadCSV(tableNameVal, filePathVal)
+        return loadCSV(tableNameVal, filePathVal, options)
       }
     }
     else if ('object' in params) {
       const dataObject = toValue(params.object)
       if (dataObject) {
-        const qs = loadObjects(tableNameVal, dataObject, { })
+        const qs = loadObjects(tableNameVal, dataObject, options)
         return qs
       }
     }
