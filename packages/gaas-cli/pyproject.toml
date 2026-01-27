@@ -8,6 +8,7 @@ dependencies = [
   "meilisearch>=0.37.0",
   "pandas>=2.3.3",
   "pyarrow>=22.0.0",
+  "pydantic>=2.12.5",
   "python-dotenv>=1.2.1",
   "python-frontmatter>=1.1.0",
   "pyzotero>=1.7.5",
