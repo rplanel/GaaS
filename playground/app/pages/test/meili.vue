@@ -9,16 +9,16 @@ import { useMeiliDataTableColumns } from '#layers/@gaas-ui/app/composables/meili
 const defaultColumnWidth = 80
 
 const metaClass = {
-  th: `truncate align-top w-[${defaultColumnWidth}px] max-w-[${defaultColumnWidth}px]`,
+  th: 'truncate align-top min-w-[80px] w-[80px] max-w-[80px]',
 }
 
 // category column conf
-const categoryWidth = ref(200)
+const categoryWidth = 200
 
 // const categoryHeight = ref(45)
 const categoryMetaClass = computed(() => {
   return {
-    th: `truncate align-top w-[${categoryWidth.value}px] max-w-[${categoryWidth.value}px]`,
+    th: 'truncate align-top min-w-[200px] w-[200px] max-w-[200px]',
     // th: `truncate align-top`,
   }
 })
@@ -73,7 +73,7 @@ const columns = computed<Array<TableColumn<WorldCity> & { type?: MeiliDataTableC
     },
     header: 'Timezone',
     // minSize: 150,
-    // size: categoryWidth.value,
+    size: categoryWidth.value,
     // enableResizing: false,
     // maxSize: categoryWidth.value + 30,
     type: 'categorical',
@@ -83,6 +83,7 @@ const columns = computed<Array<TableColumn<WorldCity> & { type?: MeiliDataTableC
     meta: {
       class: { ...toValue(categoryMetaClass) },
     },
+    size: categoryWidth.value,
     // minSize: 150,
     // size: 200,
     // enableResizing: false,
@@ -149,6 +150,7 @@ const columnPinning = ref({
             :index-name="indexName"
             :title="typeof headerProps.column.columnDef.header === 'string' ? headerProps.column.columnDef.header : headerProps.column.id"
             :facet-attribute="headerProps.column.id"
+            :width="categoryWidth"
             v-bind="headerProps"
           />
         </template>
@@ -159,6 +161,7 @@ const columnPinning = ref({
             v-model="continuousColumnModels[contColumn.accessorKey as string]"
             :index-name="indexName"
             :title="typeof headerProps.column.columnDef.header === 'string' ? headerProps.column.columnDef.header : headerProps.column.id"
+            :width="categoryWidth"
             v-bind="headerProps"
           />
         </template>

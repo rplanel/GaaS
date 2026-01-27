@@ -171,6 +171,17 @@ const { plotWidth, marginTop } = usePlotLayout({
   marginTop: ref(15),
 
 })
+
+function truncateString(str: string, num: number): string {
+  // If the length of str is less than or equal to num
+  // just return str--don't truncate it.
+  if (str.length <= num) {
+    return str
+  }
+  // Return str truncated with '...' concatenated to the end of str.
+  return `${str.slice(0, num)}...`
+}
+
 const plotOptions = computed(() => {
   // if true, should display an additional bar for "Other" category
   return {
@@ -224,8 +235,7 @@ const plotOptions = computed(() => {
               lineAnchor: 'bottom',
               fontVariant: 'tabular-nums',
               textOverflow: 'ellipsis',
-
-              text: (d: FacetCategory) => `${d.name}: ${d.count}`,
+              text: (d: FacetCategory) => `${truncateString(d.name, 50)}: ${d.count}`,
             }),
           ),
         ),
@@ -298,39 +308,6 @@ const hasPrevFacet = computed(() => {
   return itemToFilterOnPrevVal !== undefined
 })
 
-// const otherPlotOptions = computed(() => {
-//   return {
-//     marginTop: 20,
-//     marginRight: 0,
-//     marginLeft: 10,
-//     width: 100,
-//     height: 40,
-//     marginBottom: 0,
-//     x: {
-//       label: null,
-//       tickSize: 0,
-//       ticks: [],
-//     },
-//     y: {
-//       label: null,
-//       tickSize: 0,
-//       ticks: [],
-//     },
-//     marks: [
-//       Plot.barX(
-//         otherData.value,
-//         {
-//           x: 'name',
-//           y: 'count',
-//           fill: 'orange',
-//           inset: 0.4,
-//         },
-
-//       ),
-//     ],
-//   }
-// })
-
 function createFilter(value: string | Array<string>) {
   const filter = toValue(modelFilter)
   const facetAttributeVal = toValue(facetAttribute)
@@ -364,35 +341,6 @@ function createFilter(value: string | Array<string>) {
     }
   }
 }
-
-// function createOtherFilter(values: Array<string>) {
-//   const columnVal = toValue(column)
-//   if (!columnVal) {
-//     console.warn('Column is undefined, cannot create filter')
-//     return
-//   }
-//   if (addFilter) {
-//     const { uuid } = addFilter({
-//       attribute: columnVal.id as Facet,
-//       type: 'set',
-//       operator: 'NOT IN',
-//       values,
-//     })
-//     return uuid
-//   }
-// }
-
-// function clickOtherBar(plot) {
-//   // console.log('other bar clicked', plot)
-//   // console.log(plot.name)
-//   // const plotValue = plot.value
-//   const plotValue = true
-//   if (plotValue) {
-//     const values = Array.from(displayedItemIds.value).map(id => id.toString())
-//     // console.log('other values', values)
-//     createOtherFilter(values)
-//   }
-// }
 
 function handleBarClick(plot) {
   const plotValue = plot.value
@@ -451,13 +399,13 @@ function handleBarClick(plot) {
     </div>
     <!--  -->
     <div class="flex flex-row justify-between text-dimmed text-xs font-medium">
-      <div class="truncate">
+      <div class="truncate max-w-32">
         {{ displayedFacetEndpoints[0]?.name }} ({{ displayedFacetEndpoints[0]?.count }})
       </div>
       <div class="text-dimmed">
         <UIcon name="i-mdi:dots-horizontal" class="text-dimmed" />
       </div>
-      <div class="truncate">
+      <div class="truncate max-w-32">
         {{ displayedFacetEndpoints[displayedFacetEndpoints.length - 1]?.name }} ({{ displayedFacetEndpoints[displayedFacetEndpoints.length - 1]?.count }})
       </div>
     </div>
