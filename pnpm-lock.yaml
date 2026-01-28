@@ -173,7 +173,7 @@ catalogs:
       specifier: ^2.13.1
       version: 2.13.1
     supabase:
-      specifier: ^2.62.6
+      specifier: ^2.72.8
       version: 2.72.8
     typescript:
       specifier: ^5.9.3
@@ -207,7 +207,7 @@ catalogs:
       version: 4.0.2
   nuxt:
     '@nuxt/content':
-      specifier: ^3.8.2
+      specifier: ^3.11.0
       version: 3.11.0
     '@nuxt/devtools':
       specifier: ^2.7.0
@@ -231,7 +231,7 @@ catalogs:
       specifier: ^3.20.1
       version: 3.23.0
     '@nuxt/ui':
-      specifier: ^4.2.1
+      specifier: ^4.4.0
       version: 4.4.0
     '@nuxtjs/supabase':
       specifier: ^2.0.3

@@ -280,7 +280,7 @@ function nextFacet() {
     attribute: facetAttributeVal as Facet,
     type: 'comparison',
     operator: '!=',
-    values: itemToFilterOnNextVal ? [itemToFilterOnNextVal.name] : [],
+    values: itemToFilterOnNextVal ? itemToFilterOnNextVal.name : undefined,
   })
   // if (itemToFilterOnNextVal && columnFacetVal && searchParamsVal) {
   //   searchForFacetValues(
@@ -362,19 +362,18 @@ function handleBarClick(plot) {
     <div ref="plotContainer" class="flex flex-row gap-2 items-start">
       <!-- Nav previous -->
       <div ref="navPrevious" class="flex flex-row items-center justify-start mt-4">
-        <div>
-          <UButton
-            icon="lucide:chevron-left"
-            variant="link"
-            size="xl"
-            class="p-0"
-            :disabled="!hasPrevFacet"
-            @click="prevFacet"
-          />
-        </div>
-        <div>
-          <UIcon v-if="hasPrevFacet" name="i-mdi:dots-horizontal" class="text-dimmed" />
-        </div>
+        <template v-if="hasPrevFacet">
+          <div>
+            <UButton
+              icon="lucide:chevron-left"
+              variant="link"
+              size="xl"
+              class="p-0"
+              :disabled="!hasPrevFacet"
+              @click="prevFacet"
+            />
+          </div>
+        </template>
       </div>
       <!-- content -->
       <div class="flex items-center">
@@ -382,19 +381,18 @@ function handleBarClick(plot) {
       </div>
       <!-- Nav next -->
       <div ref="navNext" class="flex flex-row items-center justify-end mt-4">
-        <div>
-          <UIcon v-if="hasNextFacet" name="i-mdi:dots-horizontal" class="text-dimmed" />
-        </div>
-        <div>
-          <UButton
-            :disabled="!hasNextFacet"
-            icon="lucide:chevron-right"
-            size="xl"
-            variant="link"
-            class="p-0"
-            @click="nextFacet"
-          />
-        </div>
+        <template v-if="hasNextFacet">
+          <div>
+            <UButton
+              :disabled="!hasNextFacet"
+              icon="lucide:chevron-right"
+              size="xl"
+              variant="link"
+              class="p-0"
+              @click="nextFacet"
+            />
+          </div>
+        </template>
       </div>
     </div>
     <!--  -->
