@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import type { MeiliDataTableColumnType } from '#layers/@gaas-ui/app/composables/meili/useMeiliDataTableColumns'
 // import type { FacetDistribution, FacetStats } from 'meilisearch'
-import type { MeiliDataTableColumnType } from '#components/meili/MeiliDataTable/types/meili-data-table-column-type'
+// import type { MeiliDataTableColumnType } from '#components/meili/MeiliDataTable/types/meili-data-table-column-type'
 import type { TableColumn } from '@nuxt/ui'
 import type { SortingState } from '@tanstack/table-core'
 import { MeiliIndexDataTableSortColumn } from '#components'

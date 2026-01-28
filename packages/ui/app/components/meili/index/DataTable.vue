@@ -401,7 +401,6 @@ const facetSlotProps = computed(() => {
           v-model:column-pinning="columnPinning"
           v-model:column-visibility="columnVisibility"
           v-model:expanded="expanded"
-
           class="flex-1 table-fixed"
         >
           <template v-for="(_, slotName) in $slots" #[slotName]="slotProps">
