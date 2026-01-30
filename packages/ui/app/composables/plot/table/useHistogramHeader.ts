@@ -3,18 +3,18 @@ import { PlotTableHeaderHistogram } from '#components'
 import { ref } from 'vue'
 
 export function useHistogramHeader(params: UseHeaderParams) {
-  const { table, selection, coordinator, ids } = params
+  const { table, coordinator, ids } = params
 
   const hasSelection = ref<boolean>(false)
 
   function getHeader<T>(params: GetHeaderParams<T>) {
-    const { column, label, variable } = params
+    const { column, label, variable, selection } = params
     if (!selection || !coordinator) {
       console.warn('Missing required parameters for histogram header:', { table, selection, coordinator })
       return h('div', { class: 'w-full' }, 'No data available')
     }
     return h('div', { class: 'w-full' }, [
-      ...(label ? [h('div', { class: 'mb-1 text-sm font-semibold' }, label)] : []),
+      h('div', { class: 'text-sm font-semibold' }, label),
       // h('div', { class: 'text-sm font-semibold' }, label),
       // switch to filter data for getting nullish values
       // h(USwitch, {

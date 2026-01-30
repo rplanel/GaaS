@@ -26,6 +26,7 @@ const variable = toRef(() => props.variable)
 const coordinator = props.coordinator
 const width = toRef(() => props.width)
 const height = toRef(() => props.height)
+const initMarginTop = ref(4)
 
 const defaultRectYAttributes = {
   inset: 0.5,
@@ -34,6 +35,7 @@ const defaultRectYAttributes = {
 const { marginBottom, marginTop, marginLeft, marginRight } = usePlotLayout({
   width,
   height,
+  marginTop: initMarginTop,
 })
 
 const marks = computed(() => {
@@ -59,7 +61,7 @@ const marks = computed(() => {
 })
 
 const plot = computed(() => {
-  const selectionVal = selection
+  const selectionVal = toValue(selection)
   const marksVal = toValue(marks)
   // const mark = vg.rectY(vg.from(tableVal, {}), {
   //   x: vg.bin(variableVal),
@@ -67,7 +69,9 @@ const plot = computed(() => {
   //   fill: "#ccc",
   //   ...defaultRectYAttributes,
   // });
+
   const dataPlot = vg.plot(
+    vg.name(`histogram-${toValue(variable)}`),
     // vg.frame('#ccc'),
     ...marksVal,
 
@@ -108,7 +112,7 @@ onUnmounted(() => {
     <div class="flex flex-col">
       <!-- this is the plot container -->
       <div ref="container" />
-      <PlotRange :table="table" :variable="variable" :selection="selection" :coordinator />
+      <PlotRange :table="table" :variable="variable" :selection="selection" :coordinator="coordinator" />
     </div>
   </div>
 </template>

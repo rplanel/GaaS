@@ -5,11 +5,12 @@ export interface GetHeaderParams<T> {
   column: Column<T>
   label?: string
   variable: string
+  selection: Selection
 }
 
 export interface UseHeaderParams {
   table: string
-  selection: Selection | undefined
+  // selection: Selection | undefined
   coordinator: Coordinator
   ids?: Ref<string[]>
 

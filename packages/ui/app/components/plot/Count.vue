@@ -80,12 +80,11 @@ watchEffect((onCleanup) => {
 </script>
 
 <template>
-  <div class="w-full">
+  <div v-if="percent" class="w-full">
     <UProgress
       v-model="percent"
-      status
       color="info"
-      size="md"
+      size="2xl"
       :max="100"
     />
 

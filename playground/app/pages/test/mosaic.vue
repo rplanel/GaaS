@@ -33,7 +33,7 @@ interface SatelliteData {
   accuracy: number
 }
 
-const selection = Selection.intersect()
+// const selection = Selection.intersect()
 const data = shallowRef<Record<string, unknown>[] | undefined>([
   { id: 1, name: 'Satellite A', type: 'Type 1', value: 0, status: 'Active', priority: 1, category: 'Alpha', score: 85, rating: 4, level: 'High', group: 'G1', weight: 120, height: 45, speed: 7500, distance: 400, duration: 90, frequency: 2400, power: 500, temperature: 25, pressure: 101, humidity: 45, altitude: 408, latitude: 51.5, longitude: -0.1, accuracy: 98 },
   { id: 2, name: 'Satellite B', type: 'Type 2', value: 1, status: 'Inactive', priority: 2, category: 'Beta', score: 72, rating: 3, level: 'Medium', group: 'G2', weight: 150, height: 52, speed: 7200, distance: 450, duration: 95, frequency: 2600, power: 450, temperature: 22, pressure: 102, humidity: 50, altitude: 420, latitude: 48.8, longitude: 2.3, accuracy: 95 },
@@ -55,119 +55,176 @@ defaultCoordinator.databaseConnector(wasm)
 const { getHeader: getCategoryHeader } = useCategoryHeader({
   coordinator: defaultCoordinator,
   table: tableName.value,
-  selection,
+  // selection,
 })
 
 const { getHeader: getHistogramHeader } = useHistogramHeader({
   coordinator: defaultCoordinator,
   table: tableName.value,
-  selection,
+  // selection,
 })
 
-const columns = ref<TableColumn<SatelliteData>[]>([
+const columns = ref<(TableColumn<SatelliteData> & { type?: 'categorical' | 'continuous' | 'none' })[]>([
   { accessorKey: 'id', header: 'ID' },
   {
     accessorKey: 'name',
-    header: ({ column }) => getCategoryHeader({ column, label: 'Name', variable: 'name' }),
+    type: 'categorical',
+
+    // header: ({ column }) => getCategoryHeader({ column, label: 'Name', variable: 'name' }),
   },
   {
     accessorKey: 'type',
-    header: ({ column }) => getCategoryHeader({ column, label: 'Type', variable: 'type' }),
+    type: 'categorical',
+    // header: ({ column }) => getCategoryHeader({ column, label: 'Type', variable: 'type' }),
   },
   {
     accessorKey: 'value',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Value', variable: 'value' }),
+    type: 'continuous',
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Value', variable: 'value' }),
   },
   {
     accessorKey: 'status',
-    header: ({ column }) => getCategoryHeader({ column, label: 'Status', variable: 'status' }),
+    type: 'categorical',
+    // header: ({ column }) => getCategoryHeader({ column, label: 'Status', variable: 'status' }),
   },
   {
     accessorKey: 'priority',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Priority', variable: 'priority' }),
+    type: 'continuous',
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Priority', variable: 'priority' }),
   },
   {
     accessorKey: 'category',
-    header: ({ column }) => getCategoryHeader({ column, label: 'Category', variable: 'category' }),
+    type: 'categorical',
+    // header: ({ column }) => getCategoryHeader({ column, label: 'Category', variable: 'category' }),
   },
   {
     accessorKey: 'score',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Score', variable: 'score' }),
+    type: 'continuous',
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Score', variable: 'score' }),
   },
   {
     accessorKey: 'rating',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Rating', variable: 'rating' }),
+    type: 'continuous',
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Rating', variable: 'rating' }),
   },
   {
     accessorKey: 'level',
-    header: ({ column }) => getCategoryHeader({ column, label: 'Level', variable: 'level' }),
+    // header: ({ column }) => getCategoryHeader({ column, label: 'Level', variable: 'level' }),
   },
   {
     accessorKey: 'group',
-    header: ({ column }) => getCategoryHeader({ column, label: 'Group', variable: 'group' }),
+    // header: ({ column }) => getCategoryHeader({ column, label: 'Group', variable: 'group' }),
   },
   {
     accessorKey: 'weight',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Weight', variable: 'weight' }),
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Weight', variable: 'weight' }),
   },
   {
     accessorKey: 'height',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Height', variable: 'height' }),
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Height', variable: 'height' }),
   },
   {
     accessorKey: 'speed',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Speed', variable: 'speed' }),
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Speed', variable: 'speed' }),
   },
   {
     accessorKey: 'distance',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Distance', variable: 'distance' }),
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Distance', variable: 'distance' }),
   },
   {
     accessorKey: 'duration',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Duration', variable: 'duration' }),
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Duration', variable: 'duration' }),
   },
   {
     accessorKey: 'frequency',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Frequency', variable: 'frequency' }),
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Frequency', variable: 'frequency' }),
   },
   {
     accessorKey: 'power',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Power', variable: 'power' }),
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Power', variable: 'power' }),
   },
   {
     accessorKey: 'temperature',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Temperature', variable: 'temperature' }),
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Temperature', variable: 'temperature' }),
   },
   {
     accessorKey: 'pressure',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Pressure', variable: 'pressure' }),
+    // header: ({ column }) => getHistogramHeader({ column, label: 'Pressure', variable: 'pressure' }),
   },
-  {
-    accessorKey: 'humidity',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Humidity', variable: 'humidity' }),
-  },
-  {
-    accessorKey: 'altitude',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Altitude', variable: 'altitude' }),
-  },
-  {
-    accessorKey: 'latitude',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Latitude', variable: 'latitude' }),
-  },
-  {
-    accessorKey: 'longitude',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Longitude', variable: 'longitude' }),
-  },
-  {
-    accessorKey: 'accuracy',
-    header: ({ column }) => getHistogramHeader({ column, label: 'Accuracy', variable: 'accuracy' }),
-  },
+
 ])
 
-const computedColumns = computed(() => columns.value.map(col => ({
-  ...col,
+// const categoricalColumnSelections = computed(() => {
+//   return columns.value.reduce((acc, col) => {
+//     if (col.type === 'categorical') {
+//       acc[col.accessorKey as string] = Selection.crossfilter()
+//     }
 
-})))
+//     return acc
+//   }, {} as Record<string, Selection>)
+// })
+
+// const continuousColumnSelections = computed(() => {
+//   return columns.value.reduce((acc, col) => {
+//     if (col.type === 'continuous') {
+//       acc[col.accessorKey as string] = Selection.crossfilter()
+//     }
+//     return acc
+//   }, {} as Record<string, Selection>)
+// })
+
+// const continuousSelectionsToInclude = computed(() => {
+//   return Object.values(continuousColumnSelections.value)
+// })
+
+// const categoricalColumnSelectionsToInclude = computed(() => {
+//   return Object.values(categoricalColumnSelections.value)
+// })
+
+// const includeSelections = computed(() => {
+//   return [...categoricalColumnSelectionsToInclude.value]
+// })
+// const continuousSelection = Selection.intersect({ include: continuousSelectionsToInclude.value })
+// const selection = Selection.intersect({ include: [...includeSelections.value, continuousSelection] })
+const selection = Selection.crossfilter()
+
+const columnsWithHeader = computed(() => {
+  const columnsVal = toValue(columns)
+  // const continuousColumnSelectionsVal = toValue(continuousColumnSelections)
+  // const categoricalColumnSelectionsVal = toValue(categoricalColumnSelections)
+  if (!columnsVal) {
+    return []
+  }
+  return columnsVal.map((col) => {
+    if (col.type === 'categorical') {
+      // const columnSelection = categoricalColumnSelectionsVal[col.accessorKey as string]
+      const columnSelection = selection
+      return {
+        ...col,
+        header: ({ column }: { column: TableColumn<SatelliteData> }) =>
+          getCategoryHeader({ selection: columnSelection, column, label: col.header as string, variable: col.accessorKey as string, selection }),
+      }
+    }
+    else if (col.type === 'continuous') {
+      // const columnSelection = continuousColumnSelectionsVal[col.accessorKey as string]
+      const columnSelection = selection
+
+      return {
+        ...col,
+        header: ({ column }: { column: TableColumn<SatelliteData> }) =>
+          getHistogramHeader({ selection: columnSelection, column, label: col.header as string, variable: col.accessorKey as string }),
+      }
+    }
+    else {
+      return col
+    }
+  })
+})
+
+// const computedColumns = computed(() => columns.value.map(col => ({
+//   ...col,
+
+// })))
 
 const loadingStatus = ref(0)
 
@@ -214,7 +271,7 @@ const columnVisibility = ref<Record<string, boolean>>({ type: false })
           </div>
           <div v-else>
             <PlotTable
-              v-model:column-visibility="columnVisibility" :columns="computedColumns" :table="tableName"
+              v-model:column-visibility="columnVisibility" :columns="columnsWithHeader" :table="tableName"
               :selection :coordinator="defaultCoordinator"
             />
           </div>

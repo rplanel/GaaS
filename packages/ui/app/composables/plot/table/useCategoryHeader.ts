@@ -27,12 +27,12 @@ import { h } from 'vue'
 import PlotTableHeaderCategory from '../../../components/plot/table/header/Category.vue'
 
 export function useCategoryHeader(params: UseHeaderParams) {
-  const { table, selection, coordinator } = params
+  const { table, coordinator } = params
   const hasSelection = ref<boolean>(false)
   // const
   // Wrap _getHeader in a function to capture the latest mosaicCoordinator value
   function getHeader<T>(params: GetHeaderParams<T>): VNode {
-    const { column, label, variable } = params
+    const { column, label, variable, selection } = params
     // const mosaicCoordinatorVal = coordinator as
     if (!selection || !coordinator) {
       console.warn('Missing required parameters for category header:', { table, selection, coordinator })

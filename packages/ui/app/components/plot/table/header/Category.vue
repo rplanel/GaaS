@@ -217,7 +217,7 @@ function getId(item: DataItemWithFrequency) {
 }
 const frequencyThreshold = 0.021
 
-const { groupedItems: groupedOtherData, aggregatedItemIds: aggregatedItemIdsOtherData } = useFrequencyPartition<DataItemWithFrequency>({
+const { partitionedItems: groupedOtherData, aggregatedItemIds: aggregatedItemIdsOtherData } = useFrequencyPartition<DataItemWithFrequency>({
   getId,
   items: dataWithFrequency,
   getFrequency,
@@ -225,7 +225,7 @@ const { groupedItems: groupedOtherData, aggregatedItemIds: aggregatedItemIdsOthe
   aggregateFn: aggregateLowFrequencyItems,
 })
 
-const { groupedItems: groupedOtherFilteredData } = useFrequencyPartition<DataItemWithFrequency>({
+const { partitionedItems: groupedOtherFilteredData } = useFrequencyPartition<DataItemWithFrequency>({
   getId,
   items: filteredDataWithFrequency,
   getFrequency,

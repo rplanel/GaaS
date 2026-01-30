@@ -69,16 +69,15 @@ const {
 
 <template>
   <div v-if="tableData" class="flex flex-col">
-    <div class="grid grid-cols-4 justify-between items-center px-4 py-3.5">
-      <div class="col-start-1 col-end-3">
+    <div class="grid grid-cols-6 justify-between items-top px-4 py-3.5">
+      <div class="col-start-1 col-end-1">
         <PlotCount :table :selection :coordinator />
       </div>
-      <div class="col-start-3 col-span-2 justify-self-end">
+      <div class="col-start-6 justify-self-end">
         <TableColumnVisibility :table-elem="tableElem" />
       </div>
     </div>
     <div v-if="columns">
-      <pre>{{ selectClause }}</pre>
       <div class="px-4">
         <div class="overflow-x-auto scrollbar-hide">
           <UTable
