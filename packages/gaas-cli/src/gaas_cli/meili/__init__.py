@@ -5,6 +5,7 @@ from rich.console import Console
 import gaas_cli.meili.index as index
 import gaas_cli.meili.document as document
 import gaas_cli.meili.task as task
+import gaas_cli.meili.key as key
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -25,6 +26,14 @@ app.add_typer(
     name="task",
     help="Manage MeiliSearch tasks.",
 )
+
+
+app.add_typer(
+    key.app,
+    name="key",
+    help="Manage MeiliSearch API keys.",
+)
+
 console = Console()
 
 
@@ -40,4 +49,4 @@ def main(
 ):
     """Initialize MeiliSearch client."""
     client = meilisearch.Client(host, key)
-    ctx.obj = {"client": client}
+    ctx.obj = {"client": client, "host": host}
