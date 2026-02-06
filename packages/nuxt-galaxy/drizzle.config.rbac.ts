@@ -5,8 +5,8 @@ import { defineConfig } from 'drizzle-kit'
 config({ path: '.env' })
 
 export default defineConfig({
-  schemaFilter: ['galaxy_rbac', 'galaxy'],
-  schema: ['./src/runtime/server/db/schema/galaxyRbac/**/*.ts', './src/runtime/server/db/schema/galaxy/**/*.ts'],
+  schemaFilter: ['galaxy_rbac'],
+  schema: './src/runtime/server/db/schema/galaxyRbac/**/*.ts',
   out: './src/runtime/server/db/migrations',
   dialect: 'postgresql',
   dbCredentials: {

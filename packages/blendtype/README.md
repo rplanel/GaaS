@@ -16,22 +16,22 @@ Install package:
 
 ```sh
 # ✨ Auto-detect
-npx nypm install packageName
+npx nypm install blendtype
 
 # npm
-npm install packageName
+npm install blendtype
 
 # yarn
-yarn add packageName
+yarn add blendtype
 
 # pnpm
-pnpm install packageName
+pnpm add blendtype
 
 # bun
-bun install packageName
+bun install blendtype
 
 # deno
-deno install packageName
+deno install npm:blendtype
 ```
 
 <!-- /automd -->
@@ -43,16 +43,10 @@ Import:
 **ESM** (Node.js, Bun, Deno)
 
 ```js
-import { GalaxyClient } from 'blendtype'
+import {} from 'pkg'
 ```
 
-**CommonJS** (Legacy Node.js)
-
-```js
-const { GalaxyClient } = require('blendtype')
-```
-
-**CDN** (Deno, Bun and Browsers)
+**CDN** (Deno and Browsers)
 
 ```js
 import {} from 'https://esm.sh/pkg'
@@ -78,11 +72,11 @@ import {} from 'https://esm.sh/pkg'
 
 <!-- automd:contributors license=MIT -->
 
-Published under the [MIT](https://github.com/unjs/packageName/blob/main/LICENSE) license.
-Made by [community](https://github.com/unjs/packageName/graphs/contributors) 💛
+Published under the [MIT](https://github.com/rplanel/gaas/blob/main/LICENSE) license.
+Made by [community](https://github.com/rplanel/gaas/graphs/contributors) 💛
 <br><br>
-<a href="https://github.com/unjs/packageName/graphs/contributors">
-<img src="https://contrib.rocks/image?repo=unjs/packageName" />
+<a href="https://github.com/rplanel/gaas/graphs/contributors">
+<img src="https://contrib.rocks/image?repo=rplanel/gaas" />
 </a>
 
 <!-- /automd -->

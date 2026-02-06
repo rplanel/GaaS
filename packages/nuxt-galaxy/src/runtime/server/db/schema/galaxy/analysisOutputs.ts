@@ -1,24 +1,39 @@
 import type { DatasetState } from 'blendtype'
-import { relations } from 'drizzle-orm'
-import { index, integer, primaryKey, serial, unique } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { index, integer, pgPolicy, primaryKey, serial, unique } from 'drizzle-orm/pg-core'
+import { authenticatedRole } from 'drizzle-orm/supabase'
 import { datasetStateEnum, galaxy } from '../galaxy'
 import { analyses } from './analyses'
 import { datasets } from './datasets'
 import { jobs } from './jobs'
 import { tags } from './tags'
 
-export const analysisOutputs = galaxy.table('analysis_outputs', {
-  id: serial('id').primaryKey(),
-  state: datasetStateEnum('state').$type<DatasetState>().notNull(),
-  datasetId: integer('dataset_id').references(() => datasets.id, { onDelete: 'cascade' }).notNull(),
-  analysisId: integer('analysis_id').references(() => analyses.id, { onDelete: 'cascade' }).notNull(),
-  jobId: integer('job_id').references(() => jobs.id).notNull(),
-}, table => [
-  unique().on(table.datasetId, table.jobId),
-  index().on(table.datasetId),
-  index().on(table.analysisId),
-  index().on(table.jobId),
-])
+export const analysisOutputs = galaxy.table(
+  'analysis_outputs',
+  {
+    id: serial('id').primaryKey(),
+    state: datasetStateEnum('state').$type<DatasetState>().notNull(),
+    datasetId: integer('dataset_id').references(() => datasets.id, { onDelete: 'cascade' }).notNull(),
+    analysisId: integer('analysis_id').references(() => analyses.id, { onDelete: 'cascade' }).notNull(),
+    jobId: integer('job_id').references(() => jobs.id).notNull(),
+  },
+  table => [
+    unique().on(table.datasetId, table.jobId),
+    index().on(table.datasetId),
+    index().on(table.analysisId),
+    index().on(table.jobId),
+    pgPolicy('User can see their own output data', {
+      for: 'select',
+      to: authenticatedRole,
+      using: sql`${table.datasetId} IN (SELECT ${datasets.id} FROM ${datasets} WHERE ${datasets.ownerId} = (SELECT auth.uid()))`,
+    }),
+    pgPolicy('Users can insert output datasets', {
+      for: 'insert',
+      to: authenticatedRole,
+      withCheck: sql`${table.datasetId} IN (SELECT ${datasets.id} FROM ${datasets} WHERE ${datasets.ownerId} = (SELECT auth.uid()))`,
+    }),
+  ],
+)
 
 /**
  * outputAnalysis tags
@@ -32,21 +47,3 @@ export const analysisOutputsToTags = galaxy.table('analysis_outputs_to_tags', {
 }, t => ({
   pk: primaryKey({ columns: [t.analysisOutputId, t.tagId] }),
 }))
-
-export const analysisOutputsRelations = relations(analysisOutputs, ({ one, many }) => {
-  return {
-    dataset: one(datasets, {
-      fields: [analysisOutputs.datasetId],
-      references: [datasets.id],
-    }),
-    analysis: one(analyses, {
-      fields: [analysisOutputs.analysisId],
-      references: [analyses.id],
-    }),
-    job: one(jobs, {
-      fields: [analysisOutputs.jobId],
-      references: [jobs.id],
-    }),
-    analysisOutputsTags: many(analysisOutputsToTags),
-  }
-})

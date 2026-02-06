@@ -42,10 +42,11 @@ catalog:
   better-sqlite3: ^12.4.6
   bumpp: ^10.3.1
   changelogen: ^0.6.2
+  citty: ^0.2.0
   defu: ^6.1.4
   dotenv: ^17.2.3
-  drizzle-kit: ^0.31.7
-  drizzle-orm: ^0.44.7
+  drizzle-kit: ^1.0.0-beta.13
+  drizzle-orm: ^1.0.0-beta.13
   effect: ^3.19.6
   embla-carousel: ^8.6.0
   esbuild: ^0.27.0

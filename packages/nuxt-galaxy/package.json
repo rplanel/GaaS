@@ -45,8 +45,11 @@
     "supabase:migration:new": "pnpm supabase migration new",
     "supabase:migration:up": "pnpm supabase migration up",
     "supabase:migration:galaxy:create": "pnpm run supabase:migration:new bucket && sleep .5 && pnpm run drizzle:generate && sleep .5 && pnpm run supabase:migration:new galaxy && sleep .5 && pnpm run supabase:migration:new realtime && sleep .5 && pnpm run supabase:migration:new rbac && sleep .2 && pnpm run supabase:migration:new rls",
-    "supabase:generate:types": "pnpm supabase gen types typescript --local > src/runtime/types/database.ts",
-    "drizzle:generate": "pnpm drizzle-kit generate"
+    "supabase:generate:types": "pnpm supabase gen types typescript --local --schema 'galaxy_rbac,galaxy' > src/runtime/types/database.ts",
+    "drizzle:generate": "pnpm drizzle-kit generate",
+    "db:seed": "tsx src/runtime/server/db/seed.ts",
+    "db:seed:example": "tsx src/runtime/server/db/seed.ts --url https://galaxy.pasteur.fr --name 'Galaxy@Pasteur' --email admin@example.com",
+    "db:seed:help": "tsx src/runtime/server/db/seed.ts --help"
   },
   "dependencies": {
     "@nuxt/content": "catalog:nuxt",
@@ -71,6 +74,7 @@
     "@types/node": "catalog:",
     "@vue/test-utils": "catalog:",
     "changelogen": "catalog:",
+    "citty": "catalog:",
     "eslint": "catalog:",
     "happy-dom": "catalog:",
     "nuxt": "catalog:nuxt",

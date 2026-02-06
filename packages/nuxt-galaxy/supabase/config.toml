@@ -14,13 +14,15 @@ schemas = [
   "public",
   "graphql_public",
   "galaxy",
+  "galaxy_rbac",
   "storage"
 ]
 # Extra schemas to add to the search_path of every request. `public` is always included.
 extra_search_path = [
   "public",
   "extensions",
-  "galaxy"
+  "galaxy",
+  "galaxy_rbac"
 ]
 # The maximum number of rows returns from a view, table, or stored procedure. Limits payload size
 # for accidental or malicious requests.
@@ -113,9 +115,14 @@ file_size_limit = "5MB"
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "http://localhost:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = [ "https://127.0.0.1:3000" ]
+additional_redirect_urls = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:3000/confirm",
+  "http://127.0.0.1:3000/confirm"
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # If disabled, the refresh token will never expire.
@@ -198,7 +205,7 @@ max_frequency = "5s"
 [auth.hook.custom_access_token]
 enabled = true
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
-uri = "pg-functions://postgres/galaxy/custom_access_token_hook"
+uri = "pg-functions://postgres/galaxy_rbac/custom_access_token_hook"
 
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]
@@ -240,7 +247,7 @@ enabled = true
 client_id = "env(GITHUB_CLIENT_ID)"
 # DO NOT commit your OAuth provider secret to git. Use environment variable substitution
 secret = "env(GITHUB_CLIENT_SECRET)"
-redirect_uri = "http://localhost:54321/auth/v1/callback"
+redirect_uri = "http://127.0.0.1:54321/auth/v1/callback"
 
 [auth.external.apple]
 enabled = false
