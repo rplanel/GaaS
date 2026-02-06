@@ -25,6 +25,7 @@
   },
   "files": [
     "dist",
+    "drizzle.config.ts",
     "supabase"
   ],
   "scripts": {
