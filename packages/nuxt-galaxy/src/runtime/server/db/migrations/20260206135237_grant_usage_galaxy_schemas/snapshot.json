@@ -1,0 +1,3221 @@
+{
+  "id": "2b40ed3c-9ca8-40de-b75a-e5a561a69a68",
+  "prevIds": [
+    "2e806967-4298-4f02-ac2d-c24375eec050"
+  ],
+  "version": "8",
+  "dialect": "postgres",
+  "ddl": [
+    {
+      "name": "galaxy_rbac",
+      "entityType": "schemas"
+    },
+    {
+      "name": "galaxy",
+      "entityType": "schemas"
+    },
+    {
+      "values": [
+        "workflows.insert",
+        "workflows.update",
+        "workflows.select",
+        "workflows.delete",
+        "instances.insert",
+        "instances.delete",
+        "instances.update",
+        "instances.select",
+        "users.select",
+        "users.insert",
+        "users.update",
+        "users.delete",
+        "roles.select",
+        "roles.insert",
+        "roles.update",
+        "roles.delete",
+        "role_permissions.select",
+        "role_permissions.insert",
+        "role_permissions.update",
+        "role_permissions.delete",
+        "tags.select",
+        "tags.insert",
+        "tags.update",
+        "tags.delete",
+        "user_roles.select",
+        "user_roles.insert",
+        "user_roles.update",
+        "user_roles.delete"
+      ],
+      "name": "role_permissions_type",
+      "entityType": "enums",
+      "schema": "galaxy_rbac"
+    },
+    {
+      "values": [
+        "admin",
+        "user"
+      ],
+      "name": "role_type",
+      "entityType": "enums",
+      "schema": "galaxy_rbac"
+    },
+    {
+      "values": [
+        "ok",
+        "empty",
+        "error",
+        "discarded",
+        "failed_metadata",
+        "new",
+        "upload",
+        "queued",
+        "running",
+        "paused",
+        "setting_metadata",
+        "deferred"
+      ],
+      "name": "dataset_state",
+      "entityType": "enums",
+      "schema": "galaxy"
+    },
+    {
+      "values": [
+        "new",
+        "upload",
+        "queued",
+        "running",
+        "ok",
+        "empty",
+        "error",
+        "paused",
+        "setting_metadata",
+        "failed_metadata",
+        "deferred",
+        "discarded"
+      ],
+      "name": "history_state",
+      "entityType": "enums",
+      "schema": "galaxy"
+    },
+    {
+      "values": [
+        "cancelled",
+        "failed",
+        "scheduled",
+        "new",
+        "ready",
+        "cancelling"
+      ],
+      "name": "invocation_state",
+      "entityType": "enums",
+      "schema": "galaxy"
+    },
+    {
+      "values": [
+        "deleted",
+        "deleting",
+        "error",
+        "ok",
+        "new",
+        "resubmitted",
+        "upload",
+        "waiting",
+        "queued",
+        "running",
+        "failed",
+        "paused",
+        "stop",
+        "stopped",
+        "skipped"
+      ],
+      "name": "job_state",
+      "entityType": "enums",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "role_permissions",
+      "entityType": "tables",
+      "schema": "galaxy_rbac"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "roles",
+      "entityType": "tables",
+      "schema": "galaxy_rbac"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "user_roles",
+      "entityType": "tables",
+      "schema": "galaxy_rbac"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "analyses",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "analysis_inputs",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "analysis_outputs",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "analysis_outputs_to_tags",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "datasets",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "datasets_to_tags",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "histories",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "instances",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "jobs",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "tags",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "uploaded_datasets",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "user",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "workflows",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "workflows_to_tags",
+      "entityType": "tables",
+      "schema": "galaxy"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy_rbac",
+      "table": "role_permissions"
+    },
+    {
+      "type": "role_permissions_type",
+      "typeSchema": "galaxy_rbac",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "permission",
+      "entityType": "columns",
+      "schema": "galaxy_rbac",
+      "table": "role_permissions"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "role_id",
+      "entityType": "columns",
+      "schema": "galaxy_rbac",
+      "table": "role_permissions"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy_rbac",
+      "table": "roles"
+    },
+    {
+      "type": "role_type",
+      "typeSchema": "galaxy_rbac",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "galaxy_rbac",
+      "table": "roles"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy_rbac",
+      "table": "user_roles"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "schema": "galaxy_rbac",
+      "table": "user_roles"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "role_id",
+      "entityType": "columns",
+      "schema": "galaxy_rbac",
+      "table": "user_roles"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "invocation_state",
+      "typeSchema": "galaxy",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "state",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "json",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "parameters",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "json",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "datamap",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "owner_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "history_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "workflow_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "galaxy_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "stderr",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "stdout",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "json",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "invocation",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "is_sync",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analysis_inputs"
+    },
+    {
+      "type": "dataset_state",
+      "typeSchema": "galaxy",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "state",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analysis_inputs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dataset_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analysis_inputs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "analysis_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analysis_inputs"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "type": "dataset_state",
+      "typeSchema": "galaxy",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "state",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dataset_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "analysis_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "job_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "analysis_output_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analysis_outputs_to_tags"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tag_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "analysis_outputs_to_tags"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "owner_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "history_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "storage_object_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "uuid",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "extension",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "data_lines",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "type": "varchar(512)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "misc_blurb",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dataset_name",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "galaxy_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "type": "varchar(200)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "annotation",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dataset_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets_to_tags"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tag_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "datasets_to_tags"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "type": "history_state",
+      "typeSchema": "galaxy",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "state",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "owner_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "is_deleted",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "is_sync",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "galaxy_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "type": "varchar(200)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "annotation",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "instances"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "url",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "instances"
+    },
+    {
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "instances"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "type": "job_state",
+      "typeSchema": "galaxy",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "state",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tool_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "exit_code",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "stdout",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "stderr",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "owner_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "galaxy_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "step_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "analysis_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "is_sync",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "tags"
+    },
+    {
+      "type": "varchar(75)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "label",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "tags"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "uploaded_datasets"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "owner_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "uploaded_datasets"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dataset_name",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "uploaded_datasets"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "storage_object_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "uploaded_datasets"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "user"
+    },
+    {
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "email",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "user"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "instance_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "user"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "1",
+      "generated": null,
+      "identity": null,
+      "name": "auto_version",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "version_key",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name_key",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "type": "json",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "definition",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "galaxy_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "type": "varchar(200)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "annotation",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "workflow_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "workflows_to_tags"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tag_id",
+      "entityType": "columns",
+      "schema": "galaxy",
+      "table": "workflows_to_tags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "role_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "role_permissions_role_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy_rbac",
+      "table": "role_permissions"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "permission",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "role_permissions_permission_index",
+      "entityType": "indexes",
+      "schema": "galaxy_rbac",
+      "table": "role_permissions"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "owner_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "analyses_owner_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "history_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "analyses_history_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "workflow_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "analyses_workflow_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "galaxy_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "analyses_galaxy_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "dataset_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "analysis_inputs_dataset_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "analysis_inputs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "analysis_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "analysis_inputs_analysis_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "analysis_inputs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "dataset_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "analysis_outputs_dataset_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "analysis_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "analysis_outputs_analysis_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "job_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "analysis_outputs_job_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "owner_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "datasets_owner_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "history_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "datasets_history_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "storage_object_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "datasets_storage_object_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "galaxy_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "datasets_galaxy_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "histories_user_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "owner_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "histories_owner_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "galaxy_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "histories_galaxy_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "owner_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "jobs_owner_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "analysis_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "jobs_analysis_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "galaxy_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "jobs_galaxy_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "owner_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "uploaded_datasets_owner_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "uploaded_datasets"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        {
+          "value": "storage_object_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "uploaded_datasets_storage_object_id_index",
+      "entityType": "indexes",
+      "schema": "galaxy",
+      "table": "uploaded_datasets"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "role_id"
+      ],
+      "schemaTo": "galaxy_rbac",
+      "tableTo": "roles",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "role_permissions_role_id_roles_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy_rbac",
+      "table": "role_permissions"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "user_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "user_roles_user_id_users_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy_rbac",
+      "table": "user_roles"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "role_id"
+      ],
+      "schemaTo": "galaxy_rbac",
+      "tableTo": "roles",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "user_roles_role_id_roles_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy_rbac",
+      "table": "user_roles"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "owner_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "analyses_owner_id_users_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "history_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "histories",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "analyses_history_id_histories_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "workflow_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "workflows",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "analyses_workflow_id_workflows_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "dataset_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "datasets",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "analysis_inputs_dataset_id_datasets_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "analysis_inputs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "analysis_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "analyses",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "analysis_inputs_analysis_id_analyses_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "analysis_inputs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "dataset_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "datasets",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "analysis_outputs_dataset_id_datasets_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "analysis_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "analyses",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "analysis_outputs_analysis_id_analyses_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "job_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "jobs",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "analysis_outputs_job_id_jobs_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "analysis_output_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "analysis_outputs",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "analysis_outputs_to_tags_fYukbuGjHKjM_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "analysis_outputs_to_tags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "tag_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "tags",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "analysis_outputs_to_tags_tag_id_tags_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "analysis_outputs_to_tags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "owner_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "datasets_owner_id_users_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "history_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "histories",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "datasets_history_id_histories_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "storage_object_id"
+      ],
+      "schemaTo": "storage",
+      "tableTo": "objects",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "datasets_storage_object_id_objects_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "dataset_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "datasets",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "datasets_to_tags_dataset_id_datasets_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "datasets_to_tags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "tag_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "tags",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "datasets_to_tags_tag_id_tags_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "datasets_to_tags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "user_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "histories_user_id_user_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "owner_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "histories_owner_id_users_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "owner_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "jobs_owner_id_users_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "analysis_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "analyses",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "jobs_analysis_id_analyses_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "owner_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "uploaded_datasets_owner_id_users_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "uploaded_datasets"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "storage_object_id"
+      ],
+      "schemaTo": "storage",
+      "tableTo": "objects",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "uploaded_datasets_storage_object_id_objects_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "uploaded_datasets"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "instance_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "instances",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "user_instance_id_instances_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "user"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "user_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "workflows_user_id_user_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "workflow_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "workflows",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "workflows_to_tags_workflow_id_workflows_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "workflows_to_tags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "tag_id"
+      ],
+      "schemaTo": "galaxy",
+      "tableTo": "tags",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "workflows_to_tags_tag_id_tags_id_fkey",
+      "entityType": "fks",
+      "schema": "galaxy",
+      "table": "workflows_to_tags"
+    },
+    {
+      "columns": [
+        "analysis_output_id",
+        "tag_id"
+      ],
+      "nameExplicit": false,
+      "name": "analysis_outputs_to_tags_pkey",
+      "entityType": "pks",
+      "schema": "galaxy",
+      "table": "analysis_outputs_to_tags"
+    },
+    {
+      "columns": [
+        "dataset_id",
+        "tag_id"
+      ],
+      "nameExplicit": false,
+      "name": "datasets_to_tags_pkey",
+      "entityType": "pks",
+      "schema": "galaxy",
+      "table": "datasets_to_tags"
+    },
+    {
+      "columns": [
+        "workflow_id",
+        "tag_id"
+      ],
+      "nameExplicit": false,
+      "name": "workflows_to_tags_pkey",
+      "entityType": "pks",
+      "schema": "galaxy",
+      "table": "workflows_to_tags"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "role_permissions_pkey",
+      "schema": "galaxy_rbac",
+      "table": "role_permissions",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "roles_pkey",
+      "schema": "galaxy_rbac",
+      "table": "roles",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "user_roles_pkey",
+      "schema": "galaxy_rbac",
+      "table": "user_roles",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "analyses_pkey",
+      "schema": "galaxy",
+      "table": "analyses",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "analysis_inputs_pkey",
+      "schema": "galaxy",
+      "table": "analysis_inputs",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "analysis_outputs_pkey",
+      "schema": "galaxy",
+      "table": "analysis_outputs",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "datasets_pkey",
+      "schema": "galaxy",
+      "table": "datasets",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "histories_pkey",
+      "schema": "galaxy",
+      "table": "histories",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "instances_pkey",
+      "schema": "galaxy",
+      "table": "instances",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "jobs_pkey",
+      "schema": "galaxy",
+      "table": "jobs",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "tags_pkey",
+      "schema": "galaxy",
+      "table": "tags",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "uploaded_datasets_pkey",
+      "schema": "galaxy",
+      "table": "uploaded_datasets",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "user_pkey",
+      "schema": "galaxy",
+      "table": "user",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "workflows_pkey",
+      "schema": "galaxy",
+      "table": "workflows",
+      "entityType": "pks"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "permission",
+        "role_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "role_permissions_permission_role_id_unique",
+      "entityType": "uniques",
+      "schema": "galaxy_rbac",
+      "table": "role_permissions"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "user_id",
+        "role_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "user_roles_user_id_role_id_unique",
+      "entityType": "uniques",
+      "schema": "galaxy_rbac",
+      "table": "user_roles"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "dataset_id",
+        "job_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "analysis_outputs_dataset_id_job_id_unique",
+      "entityType": "uniques",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "history_id",
+        "galaxy_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "datasets_history_id_galaxy_id_unique",
+      "entityType": "uniques",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "galaxy_id",
+        "analysis_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "jobs_galaxy_id_analysis_id_unique",
+      "entityType": "uniques",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "email",
+        "instance_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "user_email_instance_id_unique",
+      "entityType": "uniques",
+      "schema": "galaxy",
+      "table": "user"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "version_key",
+        "name_key"
+      ],
+      "nullsNotDistinct": false,
+      "name": "workflows_version_key_name_key_unique",
+      "entityType": "uniques",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "galaxy_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "workflows_galaxy_id_unique",
+      "entityType": "uniques",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "history_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "analyses_history_id_key",
+      "schema": "galaxy",
+      "table": "analyses",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "dataset_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "analysis_inputs_dataset_id_key",
+      "schema": "galaxy",
+      "table": "analysis_inputs",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "uuid"
+      ],
+      "nullsNotDistinct": false,
+      "name": "datasets_uuid_key",
+      "schema": "galaxy",
+      "table": "datasets",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "url"
+      ],
+      "nullsNotDistinct": false,
+      "name": "instances_url_key",
+      "schema": "galaxy",
+      "table": "instances",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "galaxy_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "jobs_galaxy_id_key",
+      "schema": "galaxy",
+      "table": "jobs",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "label"
+      ],
+      "nullsNotDistinct": false,
+      "name": "tags_label_key",
+      "schema": "galaxy",
+      "table": "tags",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "storage_object_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "uploaded_datasets_storage_object_id_key",
+      "schema": "galaxy",
+      "table": "uploaded_datasets",
+      "entityType": "uniques"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "supabase_auth_admin"
+      ],
+      "using": "true",
+      "withCheck": null,
+      "name": "Allow auth admin to read roles",
+      "entityType": "policies",
+      "schema": "galaxy_rbac",
+      "table": "roles"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "supabase_auth_admin"
+      ],
+      "using": "true",
+      "withCheck": null,
+      "name": "Allow auth admin to read user roles",
+      "entityType": "policies",
+      "schema": "galaxy_rbac",
+      "table": "user_roles"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "INSERT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": null,
+      "withCheck": "\"galaxy\".\"analyses\".\"owner_id\" = (select auth.uid())",
+      "name": "Authenticated users can create their own analysis",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"analyses\".\"owner_id\" = (select auth.uid())",
+      "withCheck": null,
+      "name": "Users can view their own analysis",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "UPDATE",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"analyses\".\"owner_id\" = (select auth.uid())",
+      "withCheck": "\"galaxy\".\"analyses\".\"owner_id\" = (select auth.uid())",
+      "name": "Users can update their own analysis",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "DELETE",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"analyses\".\"owner_id\" = (select auth.uid())",
+      "withCheck": null,
+      "name": "Users can delete their own analysis",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "analyses"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"analysis_inputs\".\"dataset_id\" IN (SELECT \"galaxy\".\"datasets\".\"id\" FROM \"galaxy\".\"datasets\" WHERE \"galaxy\".\"datasets\".\"owner_id\" = (SELECT auth.uid()))",
+      "withCheck": null,
+      "name": "User can see their own input data",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "analysis_inputs"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "INSERT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": null,
+      "withCheck": "\"galaxy\".\"analysis_inputs\".\"dataset_id\" IN (SELECT \"galaxy\".\"datasets\".\"id\" FROM \"galaxy\".\"datasets\" WHERE \"galaxy\".\"datasets\".\"owner_id\" = (SELECT auth.uid()))",
+      "name": "Users can insert input datasets",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "analysis_inputs"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"analysis_outputs\".\"dataset_id\" IN (SELECT \"galaxy\".\"datasets\".\"id\" FROM \"galaxy\".\"datasets\" WHERE \"galaxy\".\"datasets\".\"owner_id\" = (SELECT auth.uid()))",
+      "withCheck": null,
+      "name": "User can see their own output data",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "INSERT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": null,
+      "withCheck": "\"galaxy\".\"analysis_outputs\".\"dataset_id\" IN (SELECT \"galaxy\".\"datasets\".\"id\" FROM \"galaxy\".\"datasets\" WHERE \"galaxy\".\"datasets\".\"owner_id\" = (SELECT auth.uid()))",
+      "name": "Users can insert output datasets",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "analysis_outputs"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "INSERT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": null,
+      "withCheck": "\"galaxy\".\"datasets\".\"owner_id\" = (select auth.uid())",
+      "name": "Users can insert documents",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"datasets\".\"owner_id\" = (select auth.uid())",
+      "withCheck": null,
+      "name": "Users can query their own documents",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "datasets"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "INSERT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": null,
+      "withCheck": "\"galaxy\".\"histories\".\"owner_id\" = (select auth.uid())",
+      "name": "Authenticated users can create their own history",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"histories\".\"owner_id\" = (select auth.uid())",
+      "withCheck": null,
+      "name": "Users can view their own history",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "UPDATE",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"histories\".\"owner_id\" = (select auth.uid())",
+      "withCheck": "\"galaxy\".\"histories\".\"owner_id\" = (select auth.uid())",
+      "name": "Users can update their own history",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "DELETE",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"histories\".\"owner_id\" = (select auth.uid())",
+      "withCheck": null,
+      "name": "Users can delete their own history",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "histories"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "true",
+      "withCheck": null,
+      "name": "Users can query instances",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "instances"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "INSERT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": null,
+      "withCheck": "(SELECT galaxy_rbac.authorize('instances.insert')) = TRUE",
+      "name": "Admin can insert instances",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "instances"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "INSERT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": null,
+      "withCheck": "\"galaxy\".\"jobs\".\"owner_id\" = (select auth.uid())",
+      "name": "Authenticated users can create their own jobs",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"jobs\".\"owner_id\" = (select auth.uid())",
+      "withCheck": null,
+      "name": "Users can view their own jobs",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "UPDATE",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"jobs\".\"owner_id\" = (select auth.uid())",
+      "withCheck": "\"galaxy\".\"jobs\".\"owner_id\" = (select auth.uid())",
+      "name": "Users can update their own jobs",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "DELETE",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"jobs\".\"owner_id\" = (select auth.uid())",
+      "withCheck": null,
+      "name": "Users can delete their own jobs",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "jobs"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "INSERT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": null,
+      "withCheck": "\"galaxy\".\"uploaded_datasets\".\"owner_id\" = (select auth.uid())",
+      "name": "Users can insert datasets",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "uploaded_datasets"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "\"galaxy\".\"uploaded_datasets\".\"owner_id\" = (select auth.uid())",
+      "withCheck": null,
+      "name": "Users can query their own uploaded datasets",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "uploaded_datasets"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "(SELECT galaxy_rbac.authorize('users.select')) = TRUE",
+      "withCheck": null,
+      "name": "Admin can view user",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "user"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "true",
+      "withCheck": null,
+      "name": "Users can query workflows",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "INSERT",
+      "roles": [
+        "authenticated"
+      ],
+      "using": null,
+      "withCheck": "(SELECT galaxy_rbac.authorize('workflows.insert')) = TRUE",
+      "name": "Admin can insert workflows",
+      "entityType": "policies",
+      "schema": "galaxy",
+      "table": "workflows"
+    },
+    {
+      "definition": "select \"galaxy\".\"datasets\".\"owner_id\", \"galaxy\".\"datasets\".\"history_id\", \"galaxy\".\"datasets\".\"storage_object_id\", \"storage\".\"objects\".\"created_at\", \"galaxy\".\"datasets\".\"uuid\", \"galaxy\".\"datasets\".\"extension\", \"galaxy\".\"datasets\".\"data_lines\", \"galaxy\".\"datasets\".\"misc_blurb\", \"galaxy\".\"datasets\".\"dataset_name\", \"galaxy\".\"datasets\".\"galaxy_id\", \"galaxy\".\"datasets\".\"annotation\", \"storage\".\"objects\".\"id\", \"storage\".\"objects\".\"name\", \"storage\".\"objects\".\"metadata\", \"storage\".\"objects\".\"bucket_id\", \"storage\".\"objects\".\"owner\" from \"galaxy\".\"datasets\" inner join \"storage\".\"objects\" on \"galaxy\".\"datasets\".\"storage_object_id\" = \"storage\".\"objects\".\"id\"",
+      "with": {
+        "checkOption": null,
+        "securityBarrier": null,
+        "securityInvoker": true,
+        "autovacuumEnabled": null,
+        "autovacuumFreezeMaxAge": null,
+        "autovacuumFreezeMinAge": null,
+        "autovacuumFreezeTableAge": null,
+        "autovacuumMultixactFreezeMaxAge": null,
+        "autovacuumMultixactFreezeMinAge": null,
+        "autovacuumMultixactFreezeTableAge": null,
+        "autovacuumVacuumCostDelay": null,
+        "autovacuumVacuumCostLimit": null,
+        "autovacuumVacuumScaleFactor": null,
+        "autovacuumVacuumThreshold": null,
+        "fillfactor": null,
+        "logAutovacuumMinDuration": null,
+        "parallelWorkers": null,
+        "toastTupleTarget": null,
+        "userCatalogTable": null,
+        "vacuumIndexCleanup": null,
+        "vacuumTruncate": null
+      },
+      "withNoData": null,
+      "using": null,
+      "tablespace": null,
+      "materialized": false,
+      "name": "datasets_with_storage_path",
+      "entityType": "views",
+      "schema": "galaxy"
+    },
+    {
+      "definition": "select \"galaxy\".\"uploaded_datasets\".\"id\", \"galaxy\".\"uploaded_datasets\".\"owner_id\", \"galaxy\".\"uploaded_datasets\".\"dataset_name\", \"galaxy\".\"uploaded_datasets\".\"storage_object_id\", \"storage\".\"objects\".\"metadata\" from \"galaxy\".\"uploaded_datasets\" inner join \"storage\".\"objects\" on \"galaxy\".\"uploaded_datasets\".\"storage_object_id\" = \"storage\".\"objects\".\"id\"",
+      "with": {
+        "checkOption": null,
+        "securityBarrier": null,
+        "securityInvoker": true,
+        "autovacuumEnabled": null,
+        "autovacuumFreezeMaxAge": null,
+        "autovacuumFreezeMinAge": null,
+        "autovacuumFreezeTableAge": null,
+        "autovacuumMultixactFreezeMaxAge": null,
+        "autovacuumMultixactFreezeMinAge": null,
+        "autovacuumMultixactFreezeTableAge": null,
+        "autovacuumVacuumCostDelay": null,
+        "autovacuumVacuumCostLimit": null,
+        "autovacuumVacuumScaleFactor": null,
+        "autovacuumVacuumThreshold": null,
+        "fillfactor": null,
+        "logAutovacuumMinDuration": null,
+        "parallelWorkers": null,
+        "toastTupleTarget": null,
+        "userCatalogTable": null,
+        "vacuumIndexCleanup": null,
+        "vacuumTruncate": null
+      },
+      "withNoData": null,
+      "using": null,
+      "tablespace": null,
+      "materialized": false,
+      "name": "uploaded_datasets_with_storage_path",
+      "entityType": "views",
+      "schema": "galaxy"
+    },
+    {
+      "definition": "select \"galaxy\".\"datasets\".\"id\", \"galaxy\".\"analysis_inputs\".\"state\", \"galaxy\".\"analysis_inputs\".\"dataset_id\", \"galaxy\".\"analysis_inputs\".\"analysis_id\", \"galaxy\".\"datasets\".\"owner_id\", \"galaxy\".\"datasets\".\"history_id\", \"galaxy\".\"datasets\".\"storage_object_id\", \"galaxy\".\"datasets\".\"created_at\", \"galaxy\".\"datasets\".\"uuid\", \"galaxy\".\"datasets\".\"extension\", \"galaxy\".\"datasets\".\"data_lines\", \"galaxy\".\"datasets\".\"misc_blurb\", \"galaxy\".\"datasets\".\"dataset_name\", \"galaxy\".\"datasets\".\"galaxy_id\", \"galaxy\".\"datasets\".\"annotation\", \"storage\".\"objects\".\"name\", \"storage\".\"objects\".\"metadata\" from \"galaxy\".\"analysis_inputs\" inner join \"galaxy\".\"datasets\" on \"galaxy\".\"analysis_inputs\".\"dataset_id\" = \"galaxy\".\"datasets\".\"id\" inner join \"storage\".\"objects\" on \"galaxy\".\"datasets\".\"storage_object_id\" = \"storage\".\"objects\".\"id\"",
+      "with": {
+        "checkOption": null,
+        "securityBarrier": null,
+        "securityInvoker": true,
+        "autovacuumEnabled": null,
+        "autovacuumFreezeMaxAge": null,
+        "autovacuumFreezeMinAge": null,
+        "autovacuumFreezeTableAge": null,
+        "autovacuumMultixactFreezeMaxAge": null,
+        "autovacuumMultixactFreezeMinAge": null,
+        "autovacuumMultixactFreezeTableAge": null,
+        "autovacuumVacuumCostDelay": null,
+        "autovacuumVacuumCostLimit": null,
+        "autovacuumVacuumScaleFactor": null,
+        "autovacuumVacuumThreshold": null,
+        "fillfactor": null,
+        "logAutovacuumMinDuration": null,
+        "parallelWorkers": null,
+        "toastTupleTarget": null,
+        "userCatalogTable": null,
+        "vacuumIndexCleanup": null,
+        "vacuumTruncate": null
+      },
+      "withNoData": null,
+      "using": null,
+      "tablespace": null,
+      "materialized": false,
+      "name": "analysis_inputs_with_storage_path",
+      "entityType": "views",
+      "schema": "galaxy"
+    },
+    {
+      "definition": "select \"galaxy\".\"datasets\".\"id\", \"galaxy\".\"analysis_outputs\".\"state\", \"galaxy\".\"analysis_outputs\".\"dataset_id\", \"galaxy\".\"analysis_outputs\".\"analysis_id\", \"galaxy\".\"analysis_outputs\".\"job_id\", \"galaxy\".\"datasets\".\"owner_id\", \"galaxy\".\"datasets\".\"history_id\", \"galaxy\".\"datasets\".\"storage_object_id\", \"galaxy\".\"datasets\".\"created_at\", \"galaxy\".\"datasets\".\"uuid\", \"galaxy\".\"datasets\".\"extension\", \"galaxy\".\"datasets\".\"data_lines\", \"galaxy\".\"datasets\".\"misc_blurb\", \"galaxy\".\"datasets\".\"dataset_name\", \"galaxy\".\"datasets\".\"galaxy_id\", \"galaxy\".\"datasets\".\"annotation\", \"storage\".\"objects\".\"name\", \"storage\".\"objects\".\"metadata\" from \"galaxy\".\"analysis_outputs\" inner join \"galaxy\".\"datasets\" on \"galaxy\".\"analysis_outputs\".\"dataset_id\" = \"galaxy\".\"datasets\".\"id\" inner join \"storage\".\"objects\" on \"galaxy\".\"datasets\".\"storage_object_id\" = \"storage\".\"objects\".\"id\"",
+      "with": {
+        "checkOption": null,
+        "securityBarrier": null,
+        "securityInvoker": true,
+        "autovacuumEnabled": null,
+        "autovacuumFreezeMaxAge": null,
+        "autovacuumFreezeMinAge": null,
+        "autovacuumFreezeTableAge": null,
+        "autovacuumMultixactFreezeMaxAge": null,
+        "autovacuumMultixactFreezeMinAge": null,
+        "autovacuumMultixactFreezeTableAge": null,
+        "autovacuumVacuumCostDelay": null,
+        "autovacuumVacuumCostLimit": null,
+        "autovacuumVacuumScaleFactor": null,
+        "autovacuumVacuumThreshold": null,
+        "fillfactor": null,
+        "logAutovacuumMinDuration": null,
+        "parallelWorkers": null,
+        "toastTupleTarget": null,
+        "userCatalogTable": null,
+        "vacuumIndexCleanup": null,
+        "vacuumTruncate": null
+      },
+      "withNoData": null,
+      "using": null,
+      "tablespace": null,
+      "materialized": false,
+      "name": "analysis_outputs_with_storage_path",
+      "entityType": "views",
+      "schema": "galaxy"
+    }
+  ],
+  "renames": []
+}

@@ -18,17 +18,48 @@ const { uploadFileToStorage, pending } = useUploadFileToStorage({ bucket: 'analy
 
 async function uploadFile() {
   const file = fileUploadState.file
-  // const file = event.target.files?.[0] as File | null
-  // selectedFile.value = file
   if (!file) {
     return
   }
-  return uploadFileToStorage(file).then(() => {
+
+  try {
+    await uploadFileToStorage(file)
+
+    toast.add({
+      title: `File ${file.name} uploaded successfully`,
+      color: 'success',
+    })
     emit('uploaded')
-  }).finally(() => {
-    // Clear the file input after upload
+    // Only clear the file on success
     fileUploadState.file = undefined
-  })
+  }
+  catch (error: any) {
+    let errorMessage = 'Failed to upload file'
+
+    // Handle specific error types
+    if (error.statusCode === 413) {
+      errorMessage = 'File is too large. Please upload a smaller file.'
+    }
+    else if (error.statusCode === 401 || error.statusCode === 403) {
+      errorMessage = 'You do not have permission to upload this file.'
+    }
+    else if (error.statusCode >= 500) {
+      errorMessage = 'Server error. Please try again later.'
+    }
+    else if (error.message) {
+      errorMessage = `Upload failed: ${error.message}`
+    }
+
+    toast.add({
+      title: 'Upload Failed',
+      description: errorMessage,
+      color: 'error',
+    })
+  }
+  finally {
+    // Clear the file input regardless of success or failure to allow retrying with the same file
+    fileUploadState.file = undefined
+  }
 }
 
 watch(fileUploadState, () => {

@@ -60,14 +60,14 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'analyses_history_id_histories_id_fk'
+            foreignKeyName: 'analyses_history_id_histories_id_fkey'
             columns: ['history_id']
             isOneToOne: true
             referencedRelation: 'histories'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analyses_workflow_id_workflows_id_fk'
+            foreignKeyName: 'analyses_workflow_id_workflows_id_fkey'
             columns: ['workflow_id']
             isOneToOne: false
             referencedRelation: 'workflows'
@@ -96,28 +96,28 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'analysis_inputs_analysis_id_analyses_id_fk'
+            foreignKeyName: 'analysis_inputs_analysis_id_analyses_id_fkey'
             columns: ['analysis_id']
             isOneToOne: false
             referencedRelation: 'analyses'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fk'
+            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: true
             referencedRelation: 'analysis_inputs_with_storage_path'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fk'
+            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: true
             referencedRelation: 'analysis_outputs_with_storage_path'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fk'
+            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: true
             referencedRelation: 'datasets'
@@ -149,35 +149,35 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'analysis_outputs_analysis_id_analyses_id_fk'
+            foreignKeyName: 'analysis_outputs_analysis_id_analyses_id_fkey'
             columns: ['analysis_id']
             isOneToOne: false
             referencedRelation: 'analyses'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fk'
+            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: false
             referencedRelation: 'analysis_inputs_with_storage_path'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fk'
+            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: false
             referencedRelation: 'analysis_outputs_with_storage_path'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fk'
+            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: false
             referencedRelation: 'datasets'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_outputs_job_id_jobs_id_fk'
+            foreignKeyName: 'analysis_outputs_job_id_jobs_id_fkey'
             columns: ['job_id']
             isOneToOne: false
             referencedRelation: 'jobs'
@@ -200,14 +200,14 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'analysis_outputs_to_tags_analysis_output_id_analysis_outputs_id'
+            foreignKeyName: 'analysis_outputs_to_tags_fYukbuGjHKjM_fkey'
             columns: ['analysis_output_id']
             isOneToOne: false
             referencedRelation: 'analysis_outputs'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_outputs_to_tags_tag_id_tags_id_fk'
+            foreignKeyName: 'analysis_outputs_to_tags_tag_id_tags_id_fkey'
             columns: ['tag_id']
             isOneToOne: false
             referencedRelation: 'tags'
@@ -260,14 +260,14 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'datasets_history_id_histories_id_fk'
+            foreignKeyName: 'datasets_history_id_histories_id_fkey'
             columns: ['history_id']
             isOneToOne: false
             referencedRelation: 'histories'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'datasets_storage_object_id_objects_id_fk'
+            foreignKeyName: 'datasets_storage_object_id_objects_id_fkey'
             columns: ['storage_object_id']
             isOneToOne: false
             referencedRelation: 'datasets_with_storage_path'
@@ -290,28 +290,28 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'datasets_to_tags_dataset_id_datasets_id_fk'
+            foreignKeyName: 'datasets_to_tags_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: false
             referencedRelation: 'analysis_inputs_with_storage_path'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'datasets_to_tags_dataset_id_datasets_id_fk'
+            foreignKeyName: 'datasets_to_tags_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: false
             referencedRelation: 'analysis_outputs_with_storage_path'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'datasets_to_tags_dataset_id_datasets_id_fk'
+            foreignKeyName: 'datasets_to_tags_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: false
             referencedRelation: 'datasets'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'datasets_to_tags_tag_id_tags_id_fk'
+            foreignKeyName: 'datasets_to_tags_tag_id_tags_id_fkey'
             columns: ['tag_id']
             isOneToOne: false
             referencedRelation: 'tags'
@@ -358,7 +358,7 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'histories_user_id_user_id_fk'
+            foreignKeyName: 'histories_user_id_user_id_fkey'
             columns: ['user_id']
             isOneToOne: false
             referencedRelation: 'user'
@@ -429,54 +429,13 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'jobs_analysis_id_analyses_id_fk'
+            foreignKeyName: 'jobs_analysis_id_analyses_id_fkey'
             columns: ['analysis_id']
             isOneToOne: false
             referencedRelation: 'analyses'
             referencedColumns: ['id']
           },
         ]
-      }
-      role_permissions: {
-        Row: {
-          id: number
-          permission: Database['galaxy']['Enums']['role_permissions_type']
-          role_id: number
-        }
-        Insert: {
-          id?: number
-          permission: Database['galaxy']['Enums']['role_permissions_type']
-          role_id: number
-        }
-        Update: {
-          id?: number
-          permission?: Database['galaxy']['Enums']['role_permissions_type']
-          role_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'role_permissions_role_id_roles_id_fk'
-            columns: ['role_id']
-            isOneToOne: false
-            referencedRelation: 'roles'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-      roles: {
-        Row: {
-          id: number
-          name: Database['galaxy']['Enums']['role_type']
-        }
-        Insert: {
-          id?: number
-          name: Database['galaxy']['Enums']['role_type']
-        }
-        Update: {
-          id?: number
-          name?: Database['galaxy']['Enums']['role_type']
-        }
-        Relationships: []
       }
       tags: {
         Row: {
@@ -514,7 +473,7 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'uploaded_datasets_storage_object_id_objects_id_fk'
+            foreignKeyName: 'uploaded_datasets_storage_object_id_objects_id_fkey'
             columns: ['storage_object_id']
             isOneToOne: true
             referencedRelation: 'datasets_with_storage_path'
@@ -540,36 +499,10 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'user_instance_id_instances_id_fk'
+            foreignKeyName: 'user_instance_id_instances_id_fkey'
             columns: ['instance_id']
             isOneToOne: false
             referencedRelation: 'instances'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-      user_roles: {
-        Row: {
-          id: number
-          role_id: number
-          user_id: string
-        }
-        Insert: {
-          id?: number
-          role_id: number
-          user_id: string
-        }
-        Update: {
-          id?: number
-          role_id?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'user_roles_role_id_roles_id_fk'
-            columns: ['role_id']
-            isOneToOne: false
-            referencedRelation: 'roles'
             referencedColumns: ['id']
           },
         ]
@@ -610,7 +543,7 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'workflows_user_id_user_id_fk'
+            foreignKeyName: 'workflows_user_id_user_id_fkey'
             columns: ['user_id']
             isOneToOne: false
             referencedRelation: 'user'
@@ -633,14 +566,14 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'workflows_to_tags_tag_id_tags_id_fk'
+            foreignKeyName: 'workflows_to_tags_tag_id_tags_id_fkey'
             columns: ['tag_id']
             isOneToOne: false
             referencedRelation: 'tags'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'workflows_to_tags_workflow_id_workflows_id_fk'
+            foreignKeyName: 'workflows_to_tags_workflow_id_workflows_id_fkey'
             columns: ['workflow_id']
             isOneToOne: false
             referencedRelation: 'workflows'
@@ -672,42 +605,42 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'analysis_inputs_analysis_id_analyses_id_fk'
+            foreignKeyName: 'analysis_inputs_analysis_id_analyses_id_fkey'
             columns: ['analysis_id']
             isOneToOne: false
             referencedRelation: 'analyses'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fk'
+            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: true
             referencedRelation: 'analysis_inputs_with_storage_path'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fk'
+            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: true
             referencedRelation: 'analysis_outputs_with_storage_path'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fk'
+            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: true
             referencedRelation: 'datasets'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'datasets_history_id_histories_id_fk'
+            foreignKeyName: 'datasets_history_id_histories_id_fkey'
             columns: ['history_id']
             isOneToOne: false
             referencedRelation: 'histories'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'datasets_storage_object_id_objects_id_fk'
+            foreignKeyName: 'datasets_storage_object_id_objects_id_fkey'
             columns: ['storage_object_id']
             isOneToOne: false
             referencedRelation: 'datasets_with_storage_path'
@@ -738,49 +671,49 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'analysis_outputs_analysis_id_analyses_id_fk'
+            foreignKeyName: 'analysis_outputs_analysis_id_analyses_id_fkey'
             columns: ['analysis_id']
             isOneToOne: false
             referencedRelation: 'analyses'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fk'
+            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: false
             referencedRelation: 'analysis_inputs_with_storage_path'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fk'
+            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: false
             referencedRelation: 'analysis_outputs_with_storage_path'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fk'
+            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fkey'
             columns: ['dataset_id']
             isOneToOne: false
             referencedRelation: 'datasets'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'analysis_outputs_job_id_jobs_id_fk'
+            foreignKeyName: 'analysis_outputs_job_id_jobs_id_fkey'
             columns: ['job_id']
             isOneToOne: false
             referencedRelation: 'jobs'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'datasets_history_id_histories_id_fk'
+            foreignKeyName: 'datasets_history_id_histories_id_fkey'
             columns: ['history_id']
             isOneToOne: false
             referencedRelation: 'histories'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'datasets_storage_object_id_objects_id_fk'
+            foreignKeyName: 'datasets_storage_object_id_objects_id_fkey'
             columns: ['storage_object_id']
             isOneToOne: false
             referencedRelation: 'datasets_with_storage_path'
@@ -791,6 +724,7 @@ export interface Database {
       datasets_with_storage_path: {
         Row: {
           annotation: string | null
+          bucket_id: string | null
           created_at: string | null
           data_lines: number | null
           dataset_name: string | null
@@ -801,20 +735,21 @@ export interface Database {
           metadata: Json | null
           misc_blurb: string | null
           name: string | null
+          owner: string | null
           owner_id: string | null
           storage_object_id: string | null
           uuid: string | null
         }
         Relationships: [
           {
-            foreignKeyName: 'datasets_history_id_histories_id_fk'
+            foreignKeyName: 'datasets_history_id_histories_id_fkey'
             columns: ['history_id']
             isOneToOne: false
             referencedRelation: 'histories'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'datasets_storage_object_id_objects_id_fk'
+            foreignKeyName: 'datasets_storage_object_id_objects_id_fkey'
             columns: ['storage_object_id']
             isOneToOne: false
             referencedRelation: 'datasets_with_storage_path'
@@ -832,7 +767,7 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'uploaded_datasets_storage_object_id_objects_id_fk'
+            foreignKeyName: 'uploaded_datasets_storage_object_id_objects_id_fkey'
             columns: ['storage_object_id']
             isOneToOne: true
             referencedRelation: 'datasets_with_storage_path'
@@ -842,13 +777,7 @@ export interface Database {
       }
     }
     Functions: {
-      authorize: {
-        Args: {
-          requested_permission: Database['galaxy']['Enums']['role_permissions_type']
-        }
-        Returns: boolean
-      }
-      custom_access_token_hook: { Args: { event: Json }, Returns: Json }
+      [_ in never]: never
     }
     Enums: {
       dataset_state:
@@ -900,6 +829,94 @@ export interface Database {
         | 'stop'
         | 'stopped'
         | 'skipped'
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+  galaxy_rbac: {
+    Tables: {
+      role_permissions: {
+        Row: {
+          id: number
+          permission: Database['galaxy_rbac']['Enums']['role_permissions_type']
+          role_id: number
+        }
+        Insert: {
+          id?: number
+          permission: Database['galaxy_rbac']['Enums']['role_permissions_type']
+          role_id: number
+        }
+        Update: {
+          id?: number
+          permission?: Database['galaxy_rbac']['Enums']['role_permissions_type']
+          role_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'role_permissions_role_id_roles_id_fkey'
+            columns: ['role_id']
+            isOneToOne: false
+            referencedRelation: 'roles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          id: number
+          name: Database['galaxy_rbac']['Enums']['role_type']
+        }
+        Insert: {
+          id?: number
+          name: Database['galaxy_rbac']['Enums']['role_type']
+        }
+        Update: {
+          id?: number
+          name?: Database['galaxy_rbac']['Enums']['role_type']
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: number
+          role_id: number
+          user_id: string
+        }
+        Insert: {
+          id?: number
+          role_id: number
+          user_id: string
+        }
+        Update: {
+          id?: number
+          role_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'user_roles_role_id_roles_id_fkey'
+            columns: ['role_id']
+            isOneToOne: false
+            referencedRelation: 'roles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      authorize: {
+        Args: {
+          requested_permission: Database['galaxy_rbac']['Enums']['role_permissions_type']
+        }
+        Returns: boolean
+      }
+      custom_access_token_hook: { Args: { event: Json }, Returns: Json }
+    }
+    Enums: {
       role_permissions_type:
         | 'workflows.insert'
         | 'workflows.update'
@@ -909,10 +926,10 @@ export interface Database {
         | 'instances.delete'
         | 'instances.update'
         | 'instances.select'
-        | 'user.select'
-        | 'user.insert'
-        | 'user.update'
-        | 'user.delete'
+        | 'users.select'
+        | 'users.insert'
+        | 'users.update'
+        | 'users.delete'
         | 'roles.select'
         | 'roles.insert'
         | 'roles.update'
@@ -930,624 +947,6 @@ export interface Database {
         | 'user_roles.update'
         | 'user_roles.delete'
       role_type: 'admin' | 'user'
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-  public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-  storage: {
-    Tables: {
-      buckets: {
-        Row: {
-          allowed_mime_types: string[] | null
-          avif_autodetection: boolean | null
-          created_at: string | null
-          file_size_limit: number | null
-          id: string
-          name: string
-          owner: string | null
-          owner_id: string | null
-          public: boolean | null
-          type: Database['storage']['Enums']['buckettype']
-          updated_at: string | null
-        }
-        Insert: {
-          allowed_mime_types?: string[] | null
-          avif_autodetection?: boolean | null
-          created_at?: string | null
-          file_size_limit?: number | null
-          id: string
-          name: string
-          owner?: string | null
-          owner_id?: string | null
-          public?: boolean | null
-          type?: Database['storage']['Enums']['buckettype']
-          updated_at?: string | null
-        }
-        Update: {
-          allowed_mime_types?: string[] | null
-          avif_autodetection?: boolean | null
-          created_at?: string | null
-          file_size_limit?: number | null
-          id?: string
-          name?: string
-          owner?: string | null
-          owner_id?: string | null
-          public?: boolean | null
-          type?: Database['storage']['Enums']['buckettype']
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      buckets_analytics: {
-        Row: {
-          created_at: string
-          format: string
-          id: string
-          type: Database['storage']['Enums']['buckettype']
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          format?: string
-          id: string
-          type?: Database['storage']['Enums']['buckettype']
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          format?: string
-          id?: string
-          type?: Database['storage']['Enums']['buckettype']
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      buckets_vectors: {
-        Row: {
-          created_at: string
-          id: string
-          type: Database['storage']['Enums']['buckettype']
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id: string
-          type?: Database['storage']['Enums']['buckettype']
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          type?: Database['storage']['Enums']['buckettype']
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      iceberg_namespaces: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'iceberg_namespaces_bucket_id_fkey'
-            columns: ['bucket_id']
-            isOneToOne: false
-            referencedRelation: 'buckets_analytics'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-      iceberg_tables: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          id: string
-          location: string
-          name: string
-          namespace_id: string
-          updated_at: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          id?: string
-          location: string
-          name: string
-          namespace_id: string
-          updated_at?: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          id?: string
-          location?: string
-          name?: string
-          namespace_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'iceberg_tables_bucket_id_fkey'
-            columns: ['bucket_id']
-            isOneToOne: false
-            referencedRelation: 'buckets_analytics'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 'iceberg_tables_namespace_id_fkey'
-            columns: ['namespace_id']
-            isOneToOne: false
-            referencedRelation: 'iceberg_namespaces'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-      migrations: {
-        Row: {
-          executed_at: string | null
-          hash: string
-          id: number
-          name: string
-        }
-        Insert: {
-          executed_at?: string | null
-          hash: string
-          id: number
-          name: string
-        }
-        Update: {
-          executed_at?: string | null
-          hash?: string
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
-      objects: {
-        Row: {
-          bucket_id: string | null
-          created_at: string | null
-          id: string
-          last_accessed_at: string | null
-          level: number | null
-          metadata: Json | null
-          name: string | null
-          owner: string | null
-          owner_id: string | null
-          path_tokens: string[] | null
-          updated_at: string | null
-          user_metadata: Json | null
-          version: string | null
-        }
-        Insert: {
-          bucket_id?: string | null
-          created_at?: string | null
-          id?: string
-          last_accessed_at?: string | null
-          level?: number | null
-          metadata?: Json | null
-          name?: string | null
-          owner?: string | null
-          owner_id?: string | null
-          path_tokens?: string[] | null
-          updated_at?: string | null
-          user_metadata?: Json | null
-          version?: string | null
-        }
-        Update: {
-          bucket_id?: string | null
-          created_at?: string | null
-          id?: string
-          last_accessed_at?: string | null
-          level?: number | null
-          metadata?: Json | null
-          name?: string | null
-          owner?: string | null
-          owner_id?: string | null
-          path_tokens?: string[] | null
-          updated_at?: string | null
-          user_metadata?: Json | null
-          version?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'objects_bucketId_fkey'
-            columns: ['bucket_id']
-            isOneToOne: false
-            referencedRelation: 'buckets'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-      prefixes: {
-        Row: {
-          bucket_id: string
-          created_at: string | null
-          level: number
-          name: string
-          updated_at: string | null
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string | null
-          level?: number
-          name: string
-          updated_at?: string | null
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string | null
-          level?: number
-          name?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'prefixes_bucketId_fkey'
-            columns: ['bucket_id']
-            isOneToOne: false
-            referencedRelation: 'buckets'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-      s3_multipart_uploads: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          id: string
-          in_progress_size: number
-          key: string
-          owner_id: string | null
-          upload_signature: string
-          user_metadata: Json | null
-          version: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          id: string
-          in_progress_size?: number
-          key: string
-          owner_id?: string | null
-          upload_signature: string
-          user_metadata?: Json | null
-          version: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          id?: string
-          in_progress_size?: number
-          key?: string
-          owner_id?: string | null
-          upload_signature?: string
-          user_metadata?: Json | null
-          version?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: 's3_multipart_uploads_bucket_id_fkey'
-            columns: ['bucket_id']
-            isOneToOne: false
-            referencedRelation: 'buckets'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-      s3_multipart_uploads_parts: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          etag: string
-          id: string
-          key: string
-          owner_id: string | null
-          part_number: number
-          size: number
-          upload_id: string
-          version: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          etag: string
-          id?: string
-          key: string
-          owner_id?: string | null
-          part_number: number
-          size?: number
-          upload_id: string
-          version: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          etag?: string
-          id?: string
-          key?: string
-          owner_id?: string | null
-          part_number?: number
-          size?: number
-          upload_id?: string
-          version?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: 's3_multipart_uploads_parts_bucket_id_fkey'
-            columns: ['bucket_id']
-            isOneToOne: false
-            referencedRelation: 'buckets'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 's3_multipart_uploads_parts_upload_id_fkey'
-            columns: ['upload_id']
-            isOneToOne: false
-            referencedRelation: 's3_multipart_uploads'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-      vector_indexes: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          data_type: string
-          dimension: number
-          distance_metric: string
-          id: string
-          metadata_configuration: Json | null
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          data_type: string
-          dimension: number
-          distance_metric: string
-          id?: string
-          metadata_configuration?: Json | null
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          data_type?: string
-          dimension?: number
-          distance_metric?: string
-          id?: string
-          metadata_configuration?: Json | null
-          name?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'vector_indexes_bucket_id_fkey'
-            columns: ['bucket_id']
-            isOneToOne: false
-            referencedRelation: 'buckets_vectors'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      add_prefixes: {
-        Args: { _bucket_id: string, _name: string }
-        Returns: undefined
-      }
-      can_insert_object: {
-        Args: { bucketid: string, metadata: Json, name: string, owner: string }
-        Returns: undefined
-      }
-      delete_leaf_prefixes: {
-        Args: { bucket_ids: string[], names: string[] }
-        Returns: undefined
-      }
-      delete_prefix: {
-        Args: { _bucket_id: string, _name: string }
-        Returns: boolean
-      }
-      extension: { Args: { name: string }, Returns: string }
-      filename: { Args: { name: string }, Returns: string }
-      foldername: { Args: { name: string }, Returns: string[] }
-      get_level: { Args: { name: string }, Returns: number }
-      get_prefix: { Args: { name: string }, Returns: string }
-      get_prefixes: { Args: { name: string }, Returns: string[] }
-      get_size_by_bucket: {
-        Args: never
-        Returns: {
-          bucket_id: string
-          size: number
-        }[]
-      }
-      list_multipart_uploads_with_delimiter: {
-        Args: {
-          bucket_id: string
-          delimiter_param: string
-          max_keys?: number
-          next_key_token?: string
-          next_upload_token?: string
-          prefix_param: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key: string
-        }[]
-      }
-      list_objects_with_delimiter: {
-        Args: {
-          bucket_id: string
-          delimiter_param: string
-          max_keys?: number
-          next_token?: string
-          prefix_param: string
-          start_after?: string
-        }
-        Returns: {
-          id: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      lock_top_prefixes: {
-        Args: { bucket_ids: string[], names: string[] }
-        Returns: undefined
-      }
-      operation: { Args: never, Returns: string }
-      search: {
-        Args: {
-          bucketname: string
-          levels?: number
-          limits?: number
-          offsets?: number
-          prefix: string
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_legacy_v1: {
-        Args: {
-          bucketname: string
-          levels?: number
-          limits?: number
-          offsets?: number
-          prefix: string
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_v1_optimised: {
-        Args: {
-          bucketname: string
-          levels?: number
-          limits?: number
-          offsets?: number
-          prefix: string
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_v2: {
-        Args: {
-          bucket_name: string
-          levels?: number
-          limits?: number
-          prefix: string
-          sort_column?: string
-          sort_column_after?: string
-          sort_order?: string
-          start_after?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-    }
-    Enums: {
-      buckettype: 'STANDARD' | 'ANALYTICS' | 'VECTOR'
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1728,6 +1127,10 @@ export const Constants = {
         'stopped',
         'skipped',
       ],
+    },
+  },
+  galaxy_rbac: {
+    Enums: {
       role_permissions_type: [
         'workflows.insert',
         'workflows.update',
@@ -1737,10 +1140,10 @@ export const Constants = {
         'instances.delete',
         'instances.update',
         'instances.select',
-        'user.select',
-        'user.insert',
-        'user.update',
-        'user.delete',
+        'users.select',
+        'users.insert',
+        'users.update',
+        'users.delete',
         'roles.select',
         'roles.insert',
         'roles.update',
@@ -1759,17 +1162,6 @@ export const Constants = {
         'user_roles.delete',
       ],
       role_type: ['admin', 'user'],
-    },
-  },
-  graphql_public: {
-    Enums: {},
-  },
-  public: {
-    Enums: {},
-  },
-  storage: {
-    Enums: {
-      buckettype: ['STANDARD', 'ANALYTICS', 'VECTOR'],
     },
   },
 } as const
