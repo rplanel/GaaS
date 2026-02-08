@@ -59,10 +59,12 @@
     "db:seed:help": "tsx src/runtime/server/db/seed.ts --help"
   },
   "dependencies": {
+    "@dotenvx/dotenvx": "catalog:",
     "@nuxt/content": "catalog:nuxt",
     "@nuxt/kit": "catalog:nuxt",
     "@nuxtjs/supabase": "catalog:nuxt",
     "blendtype": "workspace:*",
+    "citty": "catalog:",
     "d3-dsv": "catalog:dataviz",
     "defu": "catalog:",
     "drizzle-orm": "catalog:",
@@ -81,7 +83,6 @@
     "@types/node": "catalog:",
     "@vue/test-utils": "catalog:",
     "changelogen": "catalog:",
-    "citty": "catalog:",
     "eslint": "catalog:",
     "happy-dom": "catalog:",
     "nuxt": "catalog:nuxt",

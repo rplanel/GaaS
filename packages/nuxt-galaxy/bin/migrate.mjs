@@ -10,74 +10,75 @@
  *
  * Environment variables:
  *   GALAXY_DRIZZLE_DATABASE_URL - PostgreSQL connection string
+ *
+ * The CLI automatically loads variables from a .env file in the current directory.
+ * Use --env-file to specify a custom path.
  */
 
+import { resolve } from 'node:path'
 import process from 'node:process'
+import dotenvx from '@dotenvx/dotenvx'
+import { defineCommand, runMain } from 'citty'
 import { getMigrationsFolder, runMigrations } from '../dist/runtime/server/lib/migrate.js'
 
-const args = process.argv.slice(2)
+const main = defineCommand({
+  meta: {
+    name: 'nuxt-galaxy-migrate',
+    description: 'Run nuxt-galaxy database migrations',
+  },
+  args: {
+    databaseUrl: {
+      type: 'positional',
+      description: 'PostgreSQL connection string (optional if GALAXY_DRIZZLE_DATABASE_URL is set)',
+      required: false,
+    },
+    envFile: {
+      type: 'string',
+      description: 'Path to .env file (default: .env in current directory)',
+    },
+    table: {
+      type: 'string',
+      description: 'Custom migrations tracking table name (default: __drizzle_migrations)',
+    },
+    schema: {
+      type: 'string',
+      description: 'Custom migrations tracking schema name (default: drizzle)',
+    },
+  },
+  run({ args }) {
+    // Load environment variables from .env file using dotenvx
+    const envFilePath = args.envFile
+      ? resolve(args.envFile)
+      : resolve(process.cwd(), '.env')
 
-// Handle --help
-if (args.includes('--help') || args.includes('-h')) {
-  console.log(`
-nuxt-galaxy-migrate - Run nuxt-galaxy database migrations
+    try {
+      dotenvx.config({ path: envFilePath, quiet: true })
+      console.log(`📄 Loaded env from ${envFilePath}`)
+    }
+    catch (err) {
+      if (args.envFile) {
+        console.warn(`⚠️  Failed to load ${envFilePath}: ${err.message}`)
+      }
+    }
 
-Usage:
-  npx nuxt-galaxy-migrate [database-url]
+    const databaseUrl = args.databaseUrl || process.env.GALAXY_DRIZZLE_DATABASE_URL
 
-Arguments:
-  database-url    PostgreSQL connection string (optional if GALAXY_DRIZZLE_DATABASE_URL is set)
+    if (!databaseUrl) {
+      console.error('❌ Error: Database URL is required.\n')
+      console.error('Set GALAXY_DRIZZLE_DATABASE_URL environment variable or pass it as an argument:')
+      console.error('  npx nuxt-galaxy-migrate postgres://user:pass@host:port/db\n')
+      console.error('Run with --help for more options.')
+      process.exit(1)
+    }
 
-Options:
-  --help, -h      Show this help message
-  --table <name>  Custom migrations tracking table name (default: __drizzle_migrations)
-  --schema <name> Custom migrations tracking schema name (default: drizzle)
+    console.log(`📂 Migrations folder: ${getMigrationsFolder()}`)
+    console.log(`🔄 Running nuxt-galaxy database migrations...\n`)
 
-Environment variables:
-  GALAXY_DRIZZLE_DATABASE_URL   PostgreSQL connection string
-
-Examples:
-  GALAXY_DRIZZLE_DATABASE_URL=postgres://localhost:5432/mydb npx nuxt-galaxy-migrate
-  npx nuxt-galaxy-migrate postgres://user:pass@localhost:5432/mydb
-  npx nuxt-galaxy-migrate postgres://localhost/mydb --table my_migrations --schema public
-`)
-  process.exit(0)
-}
-
-// Parse options
-const tableIdx = args.indexOf('--table')
-const schemaIdx = args.indexOf('--schema')
-
-const migrationsTable = tableIdx !== -1 ? args[tableIdx + 1] : undefined
-const migrationsSchema = schemaIdx !== -1 ? args[schemaIdx + 1] : undefined
-
-// Remove option flags and their values from args to find the database URL
-const positionalArgs = args.filter((_, i) => {
-  if (i === tableIdx || i === tableIdx + 1)
-    return false
-  if (i === schemaIdx || i === schemaIdx + 1)
-    return false
-  return true
+    return runMigrations(databaseUrl, {
+      migrationsTable: args.table,
+      migrationsSchema: args.schema,
+    })
+  },
 })
 
-const databaseUrl = positionalArgs[0] || process.env.GALAXY_DRIZZLE_DATABASE_URL
-
-if (!databaseUrl) {
-  console.error('❌ Error: Database URL is required.\n')
-  console.error('Set GALAXY_DRIZZLE_DATABASE_URL environment variable or pass it as an argument:')
-  console.error('  npx nuxt-galaxy-migrate postgres://user:pass@host:port/db\n')
-  console.error('Run with --help for more options.')
-  process.exit(1)
-}
-
-console.log(`📂 Migrations folder: ${getMigrationsFolder()}`)
-console.log(`🔄 Running nuxt-galaxy database migrations...\n`)
-
-runMigrations(databaseUrl, { migrationsTable, migrationsSchema })
-  .then(() => {
-    process.exit(0)
-  })
-  .catch((err) => {
-    console.error('❌ Migration failed:', err.message || err)
-    process.exit(1)
-  })
+runMain(main)
