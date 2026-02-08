@@ -53,6 +53,19 @@ export interface ModuleOptions {
    */
   databaseUrl: string
 
+  /**
+   * Automatically run database migrations on server startup.
+   * When enabled, the module will apply all pending migrations
+   * before the server starts handling requests.
+   *
+   * For production, you may prefer running migrations manually via the CLI:
+   *   npx nuxt-galaxy-migrate
+   *
+   * @default false
+   * @type boolean
+   */
+  runMigrations: boolean
+
 }
 
 export default defineNuxtModule<ModuleOptions>({
@@ -95,6 +108,7 @@ export default defineNuxtModule<ModuleOptions>({
     apiKey: process.env.GALAXY_API_KEY || 'fakekey',
     email: process.env.GALAXY_EMAIL || 'admin@example.org',
     databaseUrl: process.env.GALAXY_DRIZZLE_DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+    runMigrations: false,
 
   },
 
@@ -107,6 +121,7 @@ export default defineNuxtModule<ModuleOptions>({
         types: resolver.resolve('./runtime/types/database.ts'),
       })
     },
+
   },
   // The function holding your module logic, it can be asynchronous
   async setup(moduleOptions, nuxt) {
@@ -257,6 +272,12 @@ export default defineNuxtModule<ModuleOptions>({
     // Add server plugin
     /*********************/
     addServerPlugin(resolver.resolve('./runtime/server/plugins/galaxy.server'))
+
+    // Optionally run database migrations on server startup
+    if (moduleOptions.runMigrations) {
+      addServerPlugin(resolver.resolve('./runtime/server/plugins/migrations.server'))
+      log.info('Database migrations will run on server startup')
+    }
   },
 })
 
