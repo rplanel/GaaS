@@ -2,7 +2,7 @@
   "name": "blendtype",
   "type": "module",
   "version": "0.0.3-alpha.5",
-  "packageManager": "pnpm@10.23.0",
+  "packageManager": "pnpm@10.29.1",
   "description": "",
   "author": "Rémi Planel <rplanel@pasteur.fr>",
   "license": "MIT",
