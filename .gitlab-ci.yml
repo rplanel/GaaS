@@ -25,31 +25,17 @@ publish:gaas-cli:
           - uv.lock
       paths:
         - $UV_CACHE_DIR
+  before_script:
+    # git is required by uv-dynamic-versioning (dunamai) to derive the version from the tag
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null
   script:
-    # Set the version in pyproject.toml to the current git tag
-    # - VERSION=$(git describe --exact-match --tags)
-    # - uv version --dry-run $VERSION
-    # Build and publish the package
-    # Before publishing, check if release already exists
-    - |
-      PACKAGE_NAME="gaas-cli"
-      PACKAGE_VERSION=$(uv version --short --project $UV_PROJECT)
-      echo "Checking if ${PACKAGE_NAME} version ${PACKAGE_VERSION} exists..."
-      # Use the Python script to check if the package version exists
-      python scripts/check_package_exists.py \
-        --api-url "${CI_API_V4_URL}" \
-        --project-id "${CI_PROJECT_ID}" \
-        --package-name "${PACKAGE_NAME}" \
-        --package-version "${PACKAGE_VERSION}" \
-        --job-token "${CI_JOB_TOKEN}" \
-        || { [ $? -eq 100 ] && exit 0; }
     - uv build
     - uv publish packages/gaas-cli/dist/*.whl
     - uv cache prune --ci
-  # rules:
-  #   - if: '$CI_COMMIT_TAG =~ /^gaas-cli-v\d+\.\d+\.\d+.*$/'
-  #     when: always
-  #   - when: never
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^gaas-cli-v\d+\.\d+\.\d+.*$/'
+      when: always
+    - when: never
 
 deploy:docs:
   stage: deploy
