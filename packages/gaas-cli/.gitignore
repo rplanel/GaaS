@@ -6,5 +6,8 @@ dist/
 wheels/
 *.egg-info
 
+# Auto-generated version file (created by uv-dynamic-versioning at build time)
+src/gaas_cli/_version.py
+
 # Virtual environments
 .venv
