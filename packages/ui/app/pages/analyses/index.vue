@@ -21,10 +21,6 @@ export interface SanitizedAnalysis extends ListAnalysis {
     version: string
   }
 }
-
-// definePageMeta({
-//   middleware: 'auth',
-// })
 </script>
 
 <template>

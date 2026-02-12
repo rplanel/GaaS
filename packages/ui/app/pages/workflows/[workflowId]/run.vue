@@ -6,9 +6,6 @@ interface Props {
 }
 withDefaults(defineProps<Props>(), { workflowId: undefined })
 
-// definePageMeta({
-//   middleware: 'auth',
-// })
 const breakpoints = useBreakpoints(breakpointsTailwind)
 const isMobile = breakpoints.smaller('lg')
 const isWorkflowRunPanelOpen = ref(true)

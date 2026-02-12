@@ -82,7 +82,7 @@ export default defineNuxtModule<ModuleOptions>({
   },
   moduleDependencies: {
     '@nuxtjs/supabase': {
-      version: '^2.0.2',
+      version: '^2.0.3',
       defaults: {
         redirectOptions: {
           login: '/login',
@@ -90,6 +90,7 @@ export default defineNuxtModule<ModuleOptions>({
           include: [],
           exclude: ['/', '/login', '/signup', '/confirm'],
           saveRedirectToCookie: true,
+
         },
         clientOptions: {
           db: {
@@ -99,7 +100,7 @@ export default defineNuxtModule<ModuleOptions>({
       },
     },
     '@nuxt/content': {
-      version: '^3.8.2',
+      version: '^3.11.2',
     },
   },
   // Default configuration options for your module, can also be a function returning those

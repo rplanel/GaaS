@@ -17,12 +17,12 @@ const error = ref<AuthError | null>(null)
 
 const toast = useToast()
 const supabase = useSupabaseClient<Database>()
-
+const redirectInfo = useSupabaseCookieRedirect()
 async function signInWithGithub() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'github',
     options: {
-      redirectTo: '/confirm',
+      redirectTo: `${window.location.origin}/confirm`,
     },
   })
   if (error) {
@@ -73,21 +73,22 @@ async function handleSignUp(e: FormSubmitEvent<Schema>) {
   // const queryParams
   //   = query.redirectTo !== undefined ? `?redirectTo=${query.redirectTo}` : ''
   const { data: { email, password } } = e
-  const redirectTo = '/datasets'
   if (email && password) {
     const { error: err, data } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        emailRedirectTo: redirectTo,
-      },
+      // options: {
+      //   emailRedirectTo: '/',
+      // },
     })
 
     if (err) {
       error.value = err
     }
     if (data?.user) {
-      await navigateTo(redirectTo, { replace: true })
+      const path = redirectInfo.pluck()
+
+      await navigateTo(path, { replace: true })
     }
   }
 }
