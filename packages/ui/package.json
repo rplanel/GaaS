@@ -35,6 +35,7 @@
     "@nuxt/ui": "catalog:nuxt",
     "@nuxtjs/supabase": "catalog:nuxt",
     "@observablehq/plot": "catalog:dataviz",
+    "@types/d3": "catalog:dataviz",
     "@uwdata/mosaic-core": "catalog:dataviz",
     "@uwdata/mosaic-sql": "catalog:dataviz",
     "@uwdata/vgplot": "catalog:dataviz",
