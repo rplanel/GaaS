@@ -8,11 +8,9 @@ import type { Database } from 'nuxt-galaxy'
 import {
   createError,
   navigateTo,
-  useRoute,
   useSupabaseClient,
-  useSupabaseUser,
 } from '#imports'
-import { ref, watchEffect } from 'vue'
+import { ref } from 'vue'
 
 import * as z from 'zod'
 
@@ -28,26 +26,27 @@ useSeoMeta({
 const loginError = ref<AuthError | null>(null)
 const toast = useToast()
 const supabase = useSupabaseClient<Database>()
-const user = useSupabaseUser()
-const { query } = useRoute()
+const redirectInfo = useSupabaseCookieRedirect()
 const schema = z.object({
-  email: z.string().email('Invalid email'),
+  email: z.email('Invalid email'),
   password: z.string().min(8, 'Must be at least 8 characters'),
 })
 type Schema = z.output<typeof schema>
 
-watchEffect(async () => {
-  if (user.value) {
-    await navigateTo(query.redirectTo as string, {
-      replace: true,
-    })
-  }
-})
+// watchEffect(async () => {
+//   if (user.value) {
+//     // Get the saved path and clear it from the cookie
+//     const path = redirectInfo.pluck()
+//     await navigateTo(path || (query.redirectTo as string), {
+//       replace: true,
+//     })
+//   }
+// })
 async function handleSignIn(e: FormSubmitEvent<Schema>) {
   const { data: { email, password } } = e
-  const queryParams
-    = query.redirectTo !== undefined ? `?redirectTo=${query.redirectTo}` : ''
-  const redirectTo = `/confirm${queryParams}`
+  // const queryParams
+  //   = query.redirectTo !== undefined ? `?redirectTo=${query.redirectTo}` : ''
+  // const redirectTo = `/confirm${queryParams}`
   // const { email, password } = state
   if (email && password) {
     const { error, data } = await supabase.auth.signInWithPassword({
@@ -56,7 +55,9 @@ async function handleSignIn(e: FormSubmitEvent<Schema>) {
     })
 
     if (data?.user) {
-      await navigateTo(redirectTo as string, { replace: true })
+      // Get the saved path and clear it from the cookie
+      const path = redirectInfo.pluck()
+      navigateTo(path || '/', { replace: true })
     }
 
     if (error) {
@@ -67,15 +68,16 @@ async function handleSignIn(e: FormSubmitEvent<Schema>) {
   }
 }
 async function signInWithGithub() {
+  // Don't pluck the cookie here - let the confirm page handle the redirect
+  // The redirectTo option is just the callback URL after OAuth, not the final destination
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'github',
     options: {
-      redirectTo: '/confirm',
+      redirectTo: `${window.location.origin}/confirm`,
     },
   })
   if (error) {
     loginError.value = error
-
     throw createError('Unable to sign in with GitHub')
   }
 }

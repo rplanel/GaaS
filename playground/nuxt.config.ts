@@ -1,3 +1,4 @@
+import type { ModuleOptions } from 'nuxt-galaxy'
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -52,5 +53,9 @@ export default defineNuxtConfig({
       stylistic: true, // <---
     },
   },
-
+  supabase: {
+    redirectOptions: {
+      exclude: ['/wiki', '/wiki/**'],
+    },
+  } as Partial<ModuleOptions>,
 })

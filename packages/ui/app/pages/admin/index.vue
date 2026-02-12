@@ -8,10 +8,6 @@ import type { Database } from 'nuxt-galaxy'
 
 const props = withDefaults(defineProps<Props>(), { breadcrumbsItems: undefined })
 
-// definePageMeta({
-//   middleware: 'auth',
-// })
-
 interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined
 }
