@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AccordionItem } from '@nuxt/ui'
 import type { GalaxyTool } from 'blendtype'
-import type { AnalysisDetail, RowAnalysisJob } from 'nuxt-galaxy'
+import type { AnalysisDetail, JobRow } from 'nuxt-galaxy'
 import type { GalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 import * as bt from 'blendtype'
 import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDecodeParameters'
@@ -73,7 +73,7 @@ const { getToolParameters, getParametersInputComponent } = useAnalysisTools(tool
 const { jobs, jobsAccordionItems, jobsMap, jobDetailsAccordionItems } = useAnalysisJob(detailedAnalysis, toolsObj)
 
 function useAnalysisJob(analysis: Ref<AnalysisDetail | null>, tools: Ref<Record<string, GalaxyTool>>) {
-  const jobs = computed<RowAnalysisJob[] | undefined>(() => {
+  const jobs = computed<JobRow[] | undefined>(() => {
     const analysisVal = toValue(analysis)
     if (analysisVal && analysisVal?.jobs) {
       return analysisVal.jobs
@@ -100,9 +100,9 @@ function useAnalysisJob(analysis: Ref<AnalysisDetail | null>, tools: Ref<Record<
   })
 
   const jobsMap = computed(() => {
-    const jobsVal = toValue(jobs) as RowAnalysisJob[]
+    const jobsVal = toValue(jobs) as JobRow[]
     if (jobsVal) {
-      const jobM: Record<string, RowAnalysisJob> = {}
+      const jobM: Record<string, JobRow> = {}
       for (const job of jobsVal) {
         jobM[String(job.step_id)] = job
       }

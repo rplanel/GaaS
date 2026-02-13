@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Database, RowWorkflow } from 'nuxt-galaxy'
+import type { Database, WorkflowRow } from 'nuxt-galaxy'
 
 import type { GalaxyWorkflowExportSchema, SanitizedWorkflowDbItem } from '../types'
 import * as bt from 'blendtype'
@@ -25,7 +25,7 @@ const { data: dbWorkflows } = await useAsyncData('all-workflows', async () => {
     .schema('galaxy')
     .from('workflows')
     .select()
-    .overrideTypes<RowWorkflow[]>()
+    .overrideTypes<WorkflowRow[]>()
 
   if (data === null) {
     throw createError({ statusMessage: 'No uploaded dataset found', statusCode: 404 })

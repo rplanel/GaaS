@@ -1,12 +1,12 @@
 import type { AsyncDataExecuteOptions } from '#app/composables/asyncData'
 import type { Ref } from '#imports'
 import type { Database } from '../../types/database'
-import type { AnalysisDetail, AnalysisInputsWithStoratePath, AnalysisOutputsWithStoratePath } from '../../types/nuxt-galaxy'
+import type { AnalysisDetail, AnalysisInputWithStoragePathRow, AnalysisOutputWithStoragePath } from '../../types/nuxt-galaxy'
 import { ref, toValue, useSupabaseClient, useSupabaseUser, watch } from '#imports'
 
 export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
-  inputs: Ref<AnalysisInputsWithStoratePath[] | null>
-  outputs: Ref<AnalysisOutputsWithStoratePath[] | null>
+  inputs: Ref<AnalysisInputWithStoragePathRow[] | null>
+  outputs: Ref<AnalysisOutputWithStoragePath[] | null>
   analysis: Ref<AnalysisDetail | null>
   pendingAnalysis: Ref<boolean>
   refresh: (opts?: AsyncDataExecuteOptions) => void
@@ -14,8 +14,8 @@ export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
 } {
   const supabase = useSupabaseClient<Database>()
   const user = useSupabaseUser()
-  const inputs = ref<AnalysisInputsWithStoratePath[] | null>(null)
-  const outputs = ref<AnalysisOutputsWithStoratePath[] | null>(null)
+  const inputs = ref<AnalysisInputWithStoragePathRow[] | null>(null)
+  const outputs = ref<AnalysisOutputWithStoragePath[] | null>(null)
   const analysis = ref<AnalysisDetail | null>(null)
   const pendingAnalysis = ref<boolean>(false)
   const error = ref<Error | undefined>(undefined)
@@ -42,7 +42,7 @@ export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
       .from('analysis_inputs_with_storage_path')
       .select('*')
       .eq('analysis_id', analysisVal)
-      .overrideTypes<AnalysisInputsWithStoratePath[]>()
+      .overrideTypes<AnalysisInputWithStoragePathRow[]>()
 
     if (supabaseError) {
       error.value = supabaseError
@@ -77,7 +77,7 @@ export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
       .from('analysis_outputs_with_storage_path')
       .select('*')
       .eq('analysis_id', analysisVal)
-      .overrideTypes<AnalysisOutputsWithStoratePath[]>()
+      .overrideTypes<AnalysisOutputWithStoragePath[]>()
 
     if (supabaseError) {
       error.value = supabaseError

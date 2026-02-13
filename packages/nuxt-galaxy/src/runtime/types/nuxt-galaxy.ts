@@ -7,20 +7,27 @@ import type { tags } from '../server/db/schema/galaxy/tags'
 import type { workflows } from '../server/db/schema/galaxy/workflows'
 import type { Database } from './database'
 
-export type RowAnalysis = Database['galaxy']['Tables']['analyses']['Row']
-export type RowAnalysisInput = Database['galaxy']['Tables']['analysis_inputs']['Row']
-export type RowAnalysisOutputs = Database['galaxy']['Tables']['analysis_outputs']['Row']
-export type RowAnalysisJob = Database['galaxy']['Tables']['jobs']['Row']
-export type RowAnalaysisDataset = Database['galaxy']['Tables']['datasets']['Row']
-export type RowUploadedDataset = Database['galaxy']['Tables']['uploaded_datasets']['Row']
-export type RowWorkflow = Database['galaxy']['Tables']['workflows']['Row']
-export type RowHistory = Database['galaxy']['Tables']['histories']['Row']
-export type AnalysisInputsWithStoratePath = Database['galaxy']['Views']['analysis_inputs_with_storage_path']['Row']
-export type AnalysisOutputsWithStoratePath = Database['galaxy']['Views']['analysis_outputs_with_storage_path']['Row']
+export type AnalysisRow = Database['galaxy']['Tables']['analyses']['Row']
+export type AnalysisInputRow = Database['galaxy']['Tables']['analysis_inputs']['Row']
+export type AnalysisOutputRow = Database['galaxy']['Tables']['analysis_outputs']['Row']
+export type JobRow = Database['galaxy']['Tables']['jobs']['Row']
+export type DatasetRow = Database['galaxy']['Tables']['datasets']['Row']
+export type UploadedDatasetRow = Database['galaxy']['Tables']['uploaded_datasets']['Row']
+export type WorkflowRow = Database['galaxy']['Tables']['workflows']['Row']
+export type HistoryRow = Database['galaxy']['Tables']['histories']['Row']
+export type AnalysisInputWithStoragePathRow = Database['galaxy']['Views']['analysis_inputs_with_storage_path']['Row']
+export type AnalysisOutputWithStoragePathRow = Database['galaxy']['Views']['analysis_outputs_with_storage_path']['Row']
+export type TagRow = Database['galaxy']['Tables']['tags']['Row']
 
-export interface AnalysisInputsWithDatasets extends RowAnalysisInput {
-  datasets: RowAnalaysisDataset
-}
+// export interface AnalysisInputsWithDatasets extends AnalysisInputRow {
+//   datasets: DatasetRow
+// }
+
+// export interface AnalysisOutputsWithDatasets extends AnalysisOutputRow {
+//   datasets: DatasetRow
+//   tags: TagRow[]
+//   stringifyTags?: TagsType
+// }
 
 export type NewDataset = typeof datasets.$inferInsert
 export type GetTag = typeof tags.$inferSelect
@@ -28,11 +35,8 @@ export type NewJob = typeof jobs.$inferInsert
 export type NewHistory = typeof histories.$inferInsert
 export type NewAnalysis = typeof analyses.$inferInsert
 export type NewWorkflow = typeof workflows.$inferInsert
-export interface AnalysisOutputsWithDatasets extends RowAnalysisOutputs {
-  datasets: RowAnalaysisDataset
-}
 
-export type AnalysisIOWithDatasets = AnalysisInputsWithDatasets | AnalysisOutputsWithDatasets
+// export type AnalysisIOWithDatasets = AnalysisInputsWithDatasets | AnalysisOutputsWithDatasets
 
 export interface WorkflowToolsParameters {
   step: WorkflowStep
@@ -40,13 +44,13 @@ export interface WorkflowToolsParameters {
   id: string
 }
 
-export interface AnalysisDetail extends RowAnalysis {
-  workflows: RowWorkflow
-  histories: RowHistory
-  jobs?: RowAnalysisJob[]
+export interface AnalysisDetail extends AnalysisRow {
+  workflows: WorkflowRow
+  histories: HistoryRow
+  jobs?: JobRow[]
 }
-export interface AnalysisJobs extends RowAnalysisJob {
-  analysis: RowAnalysis
+export interface AnalysisJobs extends JobRow {
+  analysis: AnalysisRow
 }
 
 // export type AnalysisDetail = Database['galaxy']['Views']['analyses_details']['Row']
@@ -145,7 +149,7 @@ export type HistoryDb = Database['galaxy']['Tables']['histories']['Row']
 
 export interface HistoryWithAnalysisDB {
   histories: HistoryDb
-  analyses: RowAnalysis
+  analyses: AnalysisRow
 }
 
 export interface GalaxyInstanceDetails {
