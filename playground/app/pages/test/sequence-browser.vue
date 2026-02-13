@@ -8,6 +8,7 @@ const sequences: Sequence[] = [
     length: 124,
     start: 10,
     end: 134,
+    strand: 1,
 
   },
   {
@@ -15,7 +16,15 @@ const sequences: Sequence[] = [
     name: 'Sequence 2',
     length: 200,
     start: 223,
-    end: 425,
+    end: 423,
+    strand: -1,
+  },
+  {
+    id: 'seq3',
+    name: 'Sequence 3',
+    length: 150,
+    start: 430,
+    end: 580,
   },
 ]
 </script>

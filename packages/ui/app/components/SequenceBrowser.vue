@@ -73,6 +73,68 @@ watch([() => props.sequences, () => props.width, () => props.height], () => {
   }
 }, { deep: true })
 
+function drawSequenceElement(selection: d3.Selection<SVGGElement, Sequence, null, undefined>): void {
+  const data = selection.datum()
+  const start = data.start ?? 0
+  const end = data.end ?? start + data.length
+  const x = xScale.value(start)
+  const width = xScale.value(end) - xScale.value(start)
+  const y = innerHeight.value / 2 - 10
+  const height = 20
+  const strand = data.strand
+
+  // Handle enter/update/exit for the drawing element inside this group
+  selection.selectAll<SVGPathElement, Sequence>('.sequence-draw')
+    .data([data])
+    .join(
+      enter => enter.append('path')
+        .attr('class', 'sequence-draw')
+        .attr('fill', 'steelblue'),
+      exit => exit.remove(),
+    )
+    .attr('d', () => {
+      if (strand === undefined) {
+        // Draw rectangle as path
+        return `M${x},${y} `
+          + `L${x + width},${y} `
+          + `L${x + width},${y + height} `
+          + `L${x},${y + height} `
+          + 'Z'
+      }
+
+      // Has strand - draw arrow
+      const arrowHeadWidth = Math.min(width * 0.4, 15)
+      const bodyWidth = Math.max(0, width - arrowHeadWidth)
+
+      if (strand === 1) {
+        // Right arrow
+        const bodyEnd = x + bodyWidth
+        const arrowTip = x + width
+        const midY = y + height / 2
+
+        return `M${x},${y} `
+          + `L${bodyEnd},${y} `
+          + `L${arrowTip},${midY} `
+          + `L${bodyEnd},${y + height} `
+          + `L${x},${y + height} `
+          + 'Z'
+      }
+      else {
+        // Left arrow
+        const bodyStart = x + arrowHeadWidth
+        const arrowTip = x
+        const midY = y + height / 2
+
+        return `M${bodyStart},${y} `
+          + `L${x + width},${y} `
+          + `L${x + width},${y + height} `
+          + `L${bodyStart},${y + height} `
+          + `L${arrowTip},${midY} `
+          + 'Z'
+      }
+    })
+}
+
 function renderChart() {
   if (!svgRef.value)
     return
@@ -83,30 +145,20 @@ function renderChart() {
   const sequenceGrp = svg.select('g.sequences')
     .attr('transform', `translate(${margin.left}, ${margin.top})`)
 
-  sequenceGrp
-    .selectAll('g.sequence')
-    .data<Sequence>(props.sequences)
+  // Join for sequence groups
+  const seqGroups = sequenceGrp
+    .selectAll<SVGGElement, Sequence>('g.sequence')
+    .data<Sequence>(props.sequences, d => d.id)
     .join(
-      (enter) => {
-        const seqGrp = enter.append('g')
-          .attr('class', 'sequence')
-        seqGrp.append('rect')
-          .attr('class', 'sequence-draw')
-          .attr('x', d => xScale.value(d.start ?? 0))
-          .attr('y', innerHeight.value / 2 - 10) // Center vertically on the track
-          .attr('width', (d) => {
-            const start = d.start ?? 0
-            const end = d.end ?? start + d.length
-            return xScale.value(end) - xScale.value(start)
-          })
-          .attr('height', 20)
-          .attr('fill', 'steelblue')
-
-        return seqGrp
-      },
+      enter => enter.append('g').attr('class', 'sequence'),
       update => update,
       exit => exit.remove(),
     )
+
+  // Call drawSequenceElement on all groups (enter + update)
+  seqGroups.each(function () {
+    d3.select<SVGGElement, Sequence>(this).call(drawSequenceElement)
+  })
 }
 </script>
 
