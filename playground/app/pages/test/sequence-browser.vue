@@ -1,32 +1,7 @@
 <script lang="ts" setup>
-import type { Sequence } from '#layers/@gaas-ui/app/types/sequenceBrowser'
+import { generateSequences } from '#layers/@gaas-ui/app/data/sequences-sample'
 
-const sequences: Sequence[] = [
-  {
-    id: 'seq1',
-    name: 'Sequence 1',
-    length: 124,
-    start: 10,
-    end: 134,
-    strand: 1,
-
-  },
-  {
-    id: 'seq2',
-    name: 'Sequence 2',
-    length: 200,
-    start: 223,
-    end: 423,
-    strand: -1,
-  },
-  {
-    id: 'seq3',
-    name: 'Sequence 3',
-    length: 150,
-    start: 430,
-    end: 580,
-  },
-]
+const sequences = generateSequences(5000)
 </script>
 
 <template>
