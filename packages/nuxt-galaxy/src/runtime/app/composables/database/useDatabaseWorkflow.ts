@@ -2,11 +2,11 @@ import type { Ref } from 'vue'
 import type { WorkflowRow } from '~/src/runtime/types/nuxt-galaxy'
 import { computed, toValue } from 'vue'
 
-export interface UseWorkflowOptions {
+export interface UseDatabaseWorkflowOptions {
   workflow: Ref<WorkflowRow>
 }
 
-export function useWorkflow(options: UseWorkflowOptions) {
+export function useDatabaseWorkflow(options: UseDatabaseWorkflowOptions) {
   const { workflow } = options
 
   const workflowTagName = computed(() => {

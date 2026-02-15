@@ -5,6 +5,16 @@ import type { Database } from 'nuxt-galaxy'
 import type { AnalysesListProvide } from '../../layouts/default.vue'
 import type { ListAnalysisWithWorkflow, SanitizedAnalysis } from '../../pages/analyses/index.vue'
 
+// interface Props {
+//   collapsed?: boolean
+// }
+
+// const props = withDefaults(defineProps<Props>(), {
+//   collapsed: false,
+// })
+
+// const collapsed = toRef(() => props.collapsed)
+const collapsedModel = defineModel('collapsed', { default: false })
 const supabase = useSupabaseClient<Database>()
 const supabaseUser = useSupabaseUser()
 const router = useRouter()
@@ -110,6 +120,22 @@ const sanitizedAnalyses = computed<SanitizedAnalysis[]>(() => {
   }
   return []
 })
+
+const navigationAnalysis = computed(() => {
+  const sanitizedAnalysesVal = toValue(sanitizedAnalyses)
+  return sanitizedAnalysesVal?.map((analysis) => {
+    return {
+      ...analysis,
+      to: `/analyses/${analysis.id}`,
+      slot: 'analysis',
+      description: `${analysis.workflows.name} - v${analysis.workflows.version}`,
+      tooltip: {
+        text: analysis.name,
+      },
+    }
+  })
+})
+
 const analysisRefs = ref<Element[]>([])
 watch(analysisId, () => {
   const analysisIdVal = toValue(analysisId)
@@ -125,27 +151,27 @@ watch(analysisId, () => {
 
 defineShortcuts({
   arrowdown: () => {
-    const index = sanitizedAnalyses.value.findIndex(analysis => analysis.id === analysisId.value)
-    if (index === -1 || index === sanitizedAnalyses.value.length - 1) {
-      const curr = sanitizedAnalyses.value[0]
+    const index = navigationAnalysis.value.findIndex(analysis => analysis.id === analysisId.value)
+    if (index === -1 || index === navigationAnalysis.value.length - 1) {
+      const curr = navigationAnalysis.value[0]
       if (curr)
         router.push(`/analyses/${curr.id}`)
     }
-    else if (index < sanitizedAnalyses.value.length - 1) {
-      const curr = sanitizedAnalyses.value[index + 1]
+    else if (index < navigationAnalysis.value.length - 1) {
+      const curr = navigationAnalysis.value[index + 1]
       if (curr)
         router.push(`/analyses/${curr.id}`)
     }
   },
   arrowup: () => {
-    const index = sanitizedAnalyses.value.findIndex(analysis => analysis.id === analysisId.value)
+    const index = navigationAnalysis.value.findIndex(analysis => analysis.id === analysisId.value)
     if (index === -1 || index === 0) {
-      const curr = sanitizedAnalyses.value[sanitizedAnalyses.value.length - 1]
+      const curr = navigationAnalysis.value[navigationAnalysis.value.length - 1]
       if (curr)
         router.push(`/analyses/${curr.id}`)
     }
-    else if (index <= sanitizedAnalyses.value.length - 1) {
-      const curr = sanitizedAnalyses.value[index - 1]
+    else if (index <= navigationAnalysis.value.length - 1) {
+      const curr = navigationAnalysis.value[index - 1]
       if (curr)
         router.push(`/analyses/${curr.id}`)
     }
@@ -203,7 +229,85 @@ async function editAnalysisName(id: number) {
 
 <template>
   <div class="overflow-y-auto divide-y divide-default">
-    <div
+    <UNavigationMenu
+      :collapsed="collapsedModel"
+      :items="navigationAnalysis"
+      orientation="vertical"
+      label-key="name"
+
+      :ui="{
+
+      }"
+    >
+      <template #analysis-leading="{ item }">
+        <GalaxyStatus :state="item.state" />
+      </template>
+      <template #analysis-label="{ item }">
+        <div class="flex flex-col gap-1">
+          <div
+            v-if="isEditingAnalyses?.[item.id]"
+            class="grid grid-flow-col-dense auto-cols-max gap-0.5 justify-start w-full"
+          >
+            <div class="self-center w-full flex-1">
+              <UInput
+                v-if="isEditingAnalyses?.[item.id]" v-model="isEditingAnalyses[item.id]"
+                label="Analysis Name" class=""
+              />
+            </div>
+            <div class="self-center flex-none">
+              <UButton
+                color="success" variant="ghost" size="sm" icon="i-lucide:check"
+                @click="editAnalysisName(item.id)"
+              />
+            </div>
+            <div class="self-center flex-none">
+              <UButton
+                color="warning" variant="ghost" size="sm" icon="i-mdi:cancel"
+                @click="resetEditAnalysis(item.id)"
+              />
+            </div>
+          </div>
+          <div v-else class="font-medium text-highlighted text-base">
+            {{ item.name }}
+          </div>
+          <div class="text-muted text-sm">
+            {{ item.workflows.name }} <UBadge :label="item.workflows.version" size="sm" variant="subtle" color="neutral" />
+          </div>
+        </div>
+      </template>
+
+      <template #analysis-trailing="{ item }">
+        <div>
+          <UButton
+            v-bind="actionButtonProps"
+            icon="lucide:pen"
+            @click.prevent="setEditState(item.id, item.name)"
+          />
+
+          <UButton
+            v-bind="actionButtonProps"
+            icon="lucide:refresh-ccw"
+            @click.prevent="router.push(`/analyses/${item.id}/rerun`)"
+          />
+          <UButton
+            v-bind="actionButtonProps"
+            color="error"
+          />
+          <UDropdownMenu :items="items">
+            <UButton v-bind="actionButtonProps" icon="tabler:dots-vertical" />
+
+            <template #delete>
+              <div @click="deleteItem(item)">
+                <UIcon name="i-lucide-trash" />
+                Delete
+              </div>
+            </template>
+          </UDropdownMenu>
+        </div>
+      </template>
+    </UNavigationMenu>
+
+    <!-- <div
       v-for="(analysis, index) in sanitizedAnalyses" :key="index"
       :ref="el => { analysisRefs[analysis.id] = el as Element }"
     >
@@ -282,6 +386,6 @@ async function editAnalysisName(id: number) {
           </div>
         </div>
       </NuxtLink>
-    </div>
+    </div> -->
   </div>
 </template>

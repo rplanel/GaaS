@@ -1,10 +1,11 @@
 import type { AsyncDataExecuteOptions } from '#app/composables/asyncData'
 import type { Ref } from '#imports'
-import type { Database } from '../../types/database'
-import type { AnalysisDetail, AnalysisInputWithStoragePathRow, AnalysisOutputWithStoragePath } from '../../types/nuxt-galaxy'
+import type { QueryData } from '@supabase/supabase-js'
+import type { Database } from '../../../types/database'
+import type { AnalysisDetail, AnalysisInputWithStoragePathRow, AnalysisOutputWithStoragePath } from '../../../types/nuxt-galaxy'
 import { ref, toValue, useSupabaseClient, useSupabaseUser, watch } from '#imports'
 
-export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
+export function useDatabaseAnalysisDetails(analysisId: Ref<number | undefined>): {
   inputs: Ref<AnalysisInputWithStoragePathRow[] | null>
   outputs: Ref<AnalysisOutputWithStoragePath[] | null>
   analysis: Ref<AnalysisDetail | null>
@@ -37,22 +38,29 @@ export function useAnalysisDetails(analysisId: Ref<number | undefined>): {
       error.value = new Error('Analysis ID is not defined')
       return
     }
-    const { data, error: supabaseError } = await supabase
+    // const { data, error: supabaseError }
+
+    const analysisInputsWithStoragePathQuery = supabase
       .schema('galaxy')
       .from('analysis_inputs_with_storage_path')
       .select('*')
       .eq('analysis_id', analysisVal)
-      .overrideTypes<AnalysisInputWithStoragePathRow[]>()
+
+    type AnalysisInputsWithStoragePath = QueryData<typeof analysisInputsWithStoragePathQuery>
+
+    const { data, error: supabaseError } = await analysisInputsWithStoragePathQuery
 
     if (supabaseError) {
       error.value = supabaseError
       return
     }
-    if (data === null) {
+
+    const analysisInputsWithStoragePath: AnalysisInputsWithStoragePath = data
+    if (analysisInputsWithStoragePath === null) {
       error.value = new Error('No output datasets found')
       return
     }
-    return inputs.value = data
+    return inputs.value = analysisInputsWithStoragePath
   }
 
   /**
