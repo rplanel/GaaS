@@ -3,6 +3,7 @@ import type { galaxyWorkflowExportSchema } from 'blendtype'
 import type { WorkflowRow } from 'nuxt-galaxy'
 import type * as z from 'zod'
 
+export type { AnalysesWithOutputsAndWorkflow, WorkflowFromAnalysis } from '../pages/analyses/[analysisId].vue'
 // export type Database = SupabaseTypes.Database
 
 export type GalaxyWorkflowExportSchema = z.infer<typeof galaxyWorkflowExportSchema>
