@@ -35,11 +35,11 @@ describe('nuxt-galaxy types export', () => {
     const content = types.default || ''
 
     // Check that nuxt-galaxy types are defined
-    expect(content).toContain('RowAnalysis')
-    expect(content).toContain('RowWorkflow')
-    expect(content).toContain('RowHistory')
-    expect(content).toContain('RowAnalysisJob')
-    expect(content).toContain('RowUploadedDataset')
+    expect(content).toContain('AnalysisRow')
+    expect(content).toContain('WorkflowRow')
+    expect(content).toContain('HistoryRow')
+    expect(content).toContain('JobRow')
+    expect(content).toContain('UploadedDatasetRow')
     expect(content).toContain('AnalysisDetail')
     expect(content).toContain('AnalysisBody')
     expect(content).toContain('RoleType')

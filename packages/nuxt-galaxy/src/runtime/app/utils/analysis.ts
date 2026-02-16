@@ -1,10 +1,10 @@
-import type { RowAnalysis, RowWorkflow } from '../../types/nuxt-galaxy'
+import type { AnalysisRow, WorkflowRow } from '../../types/nuxt-galaxy'
 import { Data, Effect } from 'effect'
 import { toValue } from 'vue'
 import { NoSupabaseUserError, SupabaseClaimsLayer, SupabaseClientLayer } from './supabase'
 
-export interface WorkflowAnalysis extends RowAnalysis {
-  workflows: RowWorkflow
+export interface WorkflowAnalysis extends AnalysisRow {
+  workflows: WorkflowRow
 }
 
 export class GetWorkflowAnalysesError extends Data.TaggedError('GetWorkflowAnalysesError')<{

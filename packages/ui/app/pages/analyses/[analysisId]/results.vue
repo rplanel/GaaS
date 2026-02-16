@@ -1,33 +1,41 @@
-<script setup lang="ts">
-import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
+<script lang="ts" setup>
+// import type { Database } from 'nuxt-galaxy'
+// import type { QueryData } from '@supabase/supabase-js'
+import type { AnalysesWithOutputsAndWorkflow, WorkflowFromAnalysis } from '#layers/@gaas-ui/app/types'
+// import type { AnalysesWithOutputsAndWorkflow, WorkflowFromAnalysis } from '#layers/@gaas-ui'
 
 interface Props {
-  analysisId?: number | undefined
+  analysisId: number
+  analysis: AnalysesWithOutputsAndWorkflow
+  workflow: WorkflowFromAnalysis
 }
-withDefaults(defineProps<Props>(), { analysisId: undefined })
-const router = useRouter()
 
-const breakpoints = useBreakpoints(breakpointsTailwind)
-const isMobile = breakpoints.smaller('lg')
-const isOpen = ref(true)
+const props = withDefaults(defineProps<Props>(), {})
+const tagTypes = ['results', 'rejected', 'other'] as const
+type TagsType = typeof tagTypes[number]
+
+const { analysis, workflow } = toRefs(props)
+const { workflowTagName, workflowTagVersion } = useDatabaseWorkflow({
+  workflow,
+})
+
+const outputs = computed(() => {
+  const analysisVal = toValue(analysis)
+  return analysisVal?.analysis_outputs ?? []
+})
+
+const { resultOutputs } = useDatabaseResultDatasets<TagsType>({
+  datasets: outputs,
+  tagTypes,
+})
 </script>
 
 <template>
-  <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')">
-    <UContainer>
-      <UAlert icon="mdi:message-alert" color="warning" variant="subtle" title="Not implemented" description="The result page is not implemented. This is not the function of this layer" class="my-3" />
-    </UContainer>
-  </AnalysisHistoryPanel>
-
-  <ClientOnly>
-    <USlideover v-if="isMobile" v-model:open="isOpen">
-      <template #content>
-        <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')">
-          <UContainer>
-            <UAlert icon="mdi:message-alert" color="warning" variant="subtle" title="Not implemented" description="The result page is not implemented. This is not the function of this layer" class="my-3" />
-          </UContainer>
-        </AnalysisHistoryPanel>
-      </template>
-    </USlideover>
-  </ClientOnly>
+  <NuxtPage
+    :datasets="resultOutputs"
+    :workflow="{ version: workflowTagVersion, name: workflowTagName }"
+  />
 </template>
+
+<style>
+</style>
