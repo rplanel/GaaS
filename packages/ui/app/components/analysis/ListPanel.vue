@@ -68,10 +68,22 @@ useSupabaseRealtime('galaxy:analyses', 'analyses', refreshAnalyses)
 const items = [
   [
     {
+      label: 'Rename',
+      icon: 'i-lucide-pen',
+      slot: 'rename',
+    },
+    {
+      label: 'Run again',
+      icon: 'i-lucide:refresh-ccw',
+      slot: 'rerun',
+    },
+  ],
+  [
+    {
       label: 'Delete',
-      color: 'error' as const,
-      icon: 'i-lucide-trash',
+      color: 'error',
       slot: 'delete',
+      icon: 'i-lucide-trash',
     },
   ],
 ]
@@ -243,67 +255,57 @@ async function editAnalysisName(id: number) {
         <GalaxyStatus :state="item.state" />
       </template>
       <template #analysis-label="{ item }">
-        <div class="flex flex-col gap-1">
+        <div class="flex flex-col gap-1 truncate">
           <div
             v-if="isEditingAnalyses?.[item.id]"
-            class="grid grid-flow-col-dense auto-cols-max gap-0.5 justify-start w-full"
+            class="flex flex-row justify-start"
           >
-            <div class="self-center w-full flex-1">
+            <div class="self-center">
               <UInput
                 v-if="isEditingAnalyses?.[item.id]" v-model="isEditingAnalyses[item.id]"
-                label="Analysis Name" class=""
+                label="Analysis Name"
               />
             </div>
-            <div class="self-center flex-none">
+            <div class="self-center">
               <UButton
                 color="success" variant="ghost" size="sm" icon="i-lucide:check"
                 @click="editAnalysisName(item.id)"
               />
             </div>
-            <div class="self-center flex-none">
+            <div class="self-center">
               <UButton
                 color="warning" variant="ghost" size="sm" icon="i-mdi:cancel"
                 @click="resetEditAnalysis(item.id)"
               />
             </div>
           </div>
-          <div v-else class="font-medium text-highlighted text-base">
+          <div v-else class="font-medium text-highlighted text-base truncate">
             {{ item.name }}
           </div>
-          <div class="text-muted text-sm">
+          <div class="text-muted text-sm truncate">
             {{ item.workflows.name }} <UBadge :label="item.workflows.version" size="sm" variant="subtle" color="neutral" />
           </div>
         </div>
       </template>
-
       <template #analysis-trailing="{ item }">
-        <div>
-          <UButton
-            v-bind="actionButtonProps"
-            icon="lucide:pen"
-            @click.prevent="setEditState(item.id, item.name)"
-          />
-
-          <UButton
-            v-bind="actionButtonProps"
-            icon="lucide:refresh-ccw"
-            @click.prevent="router.push(`/analyses/${item.id}/rerun`)"
-          />
-          <UButton
-            v-bind="actionButtonProps"
-            color="error"
-          />
-          <UDropdownMenu :items="items">
-            <UButton v-bind="actionButtonProps" icon="tabler:dots-vertical" />
-
-            <template #delete>
-              <div @click="deleteItem(item)">
-                <UIcon name="i-lucide-trash" />
-                Delete
-              </div>
-            </template>
-          </UDropdownMenu>
-        </div>
+        <UDropdownMenu :items="items">
+          <UButton v-bind="actionButtonProps" icon="tabler:dots-vertical" />
+          <template #delete-label>
+            <div @click.prevent="deleteItem(item)">
+              Delete
+            </div>
+          </template>
+          <template #rename-label>
+            <div @click.prevent="setEditState(item.id, item.name)">
+              Rename
+            </div>
+          </template>
+          <template #rerun-label>
+            <div @click.prevent="router.push(`/analyses/${item.id}/rerun`)">
+              Run again
+            </div>
+          </template>
+        </UDropdownMenu>
       </template>
     </UNavigationMenu>
 

@@ -17,15 +17,10 @@ $fetch('/sync')
     resizable
     tooltip
     :ui="{
+      header: 'border-b border-default px-4 sm:px-6 gap-1.5',
     }"
   >
     <template #header>
-      <!-- <UButton
-        :icon="collapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
-        color="neutral"
-        variant="ghost"
-        @click="collapsed = !collapsed"
-      /> -->
       <div class="flex flex-row justify-between items-center gap-1 w-full h-(--ui-header-height)">
         <div v-if="!collapsed" class="flex items-center gap-2">
           <span class="text-lg font-medium truncate">Analyses</span>

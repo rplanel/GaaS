@@ -1,11 +1,41 @@
-<script setup lang="ts">
+<script lang="ts" setup>
+// import type { Database } from 'nuxt-galaxy'
+// import type { QueryData } from '@supabase/supabase-js'
+import type { AnalysesWithOutputsAndWorkflow, WorkflowFromAnalysis } from '#layers/@gaas-ui/app/types'
+// import type { AnalysesWithOutputsAndWorkflow, WorkflowFromAnalysis } from '#layers/@gaas-ui'
 
+interface Props {
+  analysisId: number
+  analysis: AnalysesWithOutputsAndWorkflow
+  workflow: WorkflowFromAnalysis
+}
+
+const props = withDefaults(defineProps<Props>(), {})
+const tagTypes = ['results', 'rejected', 'other'] as const
+type TagsType = typeof tagTypes[number]
+
+const { analysis, workflow } = toRefs(props)
+const { workflowTagName, workflowTagVersion } = useDatabaseWorkflow({
+  workflow,
+})
+
+const outputs = computed(() => {
+  const analysisVal = toValue(analysis)
+  return analysisVal?.analysis_outputs
+})
+
+const { resultOutputs } = useDatabaseResultDatasets<TagsType>({
+  datasets: outputs,
+  tagTypes,
+})
 </script>
 
 <template>
-  <div>
-    <UContainer>
-      <UAlert icon="mdi:message-alert" color="warning" variant="subtle" title="Not implemented" description="The result page is not implemented. This is not the function of this layer" class="my-3" />
-    </UContainer>
-  </div>
+  <NuxtPage
+    :datasets="resultOutputs"
+    :workflow="{ version: workflowTagVersion, name: workflowTagName }"
+  />
 </template>
+
+<style>
+</style>

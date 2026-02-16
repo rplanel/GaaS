@@ -175,10 +175,18 @@ const computedResultsMenuItems = computed(() => {
         :workflow-id="workflow?.id"
         :analysis-id="analysisId"
       />
-      <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')" />
+      <AnalysisHistoryPanel
+        v-if="analysisId"
+        :analysis-id="analysisId"
+        @close="router.push('/analyses')"
+      />
       <USlideover v-if="isMobile" v-model:open="isOpen">
         <template #content>
-          <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')" />
+          <AnalysisHistoryPanel
+            v-if="analysisId"
+            :analysis-id="analysisId"
+            @close="router.push('/analyses')"
+          />
         </template>
       </USlideover>
     </template>

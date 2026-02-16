@@ -190,10 +190,10 @@ export default defineNuxtModule<ModuleOptions>({
       { name: 'useParse', path: './runtime/app/composables/parser/useParse' },
       { name: 'useParseCsv', path: './runtime/app/composables/parser/useParseCsv' },
       { name: 'useParseTsv', path: './runtime/app/composables/parser/useParseTsv' },
+      // database composables
       { name: 'useDatabaseAnalysisOutput', path: './runtime/app/composables/database/useDatabaseAnalysisOutput' },
-      { name: 'useDatabaseDatasetTags', path: './runtime/app/composables/database/useDatabaseDatasetTags' },
+      { name: 'useDatabaseResultDatasets', path: './runtime/app/composables/database/useDatabaseResultDatasets' },
       { name: 'useDatabaseWorkflow', path: './runtime/app/composables/database/useDatabaseWorkflow' },
-      { name: 'useDatabaseTags', path: './runtime/app/composables/database/useDatabaseTags' },
       { name: 'useDatabaseAnalysisDetails', path: './runtime/app/composables/database/useDatabaseAnalysisDetails' },
 
     ]
