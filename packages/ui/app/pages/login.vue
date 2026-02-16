@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
-// import type { SupabaseTypes } from '#build/types/database'
-
 import type { AuthError } from '@supabase/supabase-js'
 import type { Database } from 'nuxt-galaxy'
-
 import {
   createError,
   navigateTo,
   useSupabaseClient,
 } from '#imports'
-import { ref } from 'vue'
 
+import { ref } from 'vue'
+// import type { SupabaseTypes } from '#build/types/database'
 import * as z from 'zod'
+
+// import * as z from 'zod'
 
 // type Database = SupabaseTypes.Database
 
@@ -28,7 +28,7 @@ const toast = useToast()
 const supabase = useSupabaseClient<Database>()
 const redirectInfo = useSupabaseCookieRedirect()
 const schema = z.object({
-  email: z.email('Invalid email'),
+  email: z.string().email('Invalid email'),
   password: z.string().min(8, 'Must be at least 8 characters'),
 })
 type Schema = z.output<typeof schema>
