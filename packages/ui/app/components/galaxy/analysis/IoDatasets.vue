@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import type { GalaxyTypes } from '#build/types/nuxt-galaxy'
+import type { AnalysisInputWithStoragePathRow, AnalysisOutputWithStoragePathRow, Database } from 'nuxt-galaxy'
 // import type { SupabaseTypes } from '#build/types/database'
-import type { Database } from 'nuxt-galaxy'
 import { UBadge } from '#components'
 import { getHumanSize } from '#layers/@gaas-ui/app/utils'
 import * as z from 'zod'
 
-type AnalysisIOsWithStoratePath = GalaxyTypes.AnalysisInputsWithStoratePath | GalaxyTypes.AnalysisOutputsWithStoratePath
+type AnalysisIOsWithStoratePath = AnalysisInputWithStoragePathRow | AnalysisOutputWithStoragePathRow
 
 export interface Props {
   items?: AnalysisIOsWithStoratePath[] | undefined

@@ -19,11 +19,9 @@ const router = useRouter()
 
 <template>
   <WorkflowRunPanel v-if="workflowId" :workflow-id="workflowId" :analysis-id="analysisId" @close="router.push('/analyses')" />
-  <ClientOnly>
-    <USlideover v-if="isMobile" v-model:open="isWorkflowRunPanelOpen">
-      <template #content>
-        <WorkflowRunPanel v-if="workflowId" :workflow-id="workflowId" :analysis-id="analysisId" @close="router.push('/analyses')" />
-      </template>
-    </USlideover>
-  </ClientOnly>
+  <USlideover v-if="isMobile" v-model:open="isWorkflowRunPanelOpen">
+    <template #content>
+      <WorkflowRunPanel v-if="workflowId" :workflow-id="workflowId" :analysis-id="analysisId" @close="router.push('/analyses')" />
+    </template>
+  </USlideover>
 </template>

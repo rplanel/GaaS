@@ -115,57 +115,6 @@ The module also exports domain-specific types for working with Galaxy analyses, 
 
 ### Available Galaxy Types
 
-```typescript
-import type {
-  // Request/Response types
-  AnalysisBody,
-  // Composite types
-  AnalysisDetail,
-  AnalysisInputsWithDatasets,
-  // View types
-  AnalysisInputsWithStoratePath,
-  AnalysisIOWithDatasets,
-  AnalysisJobs,
-  AnalysisOutputsWithDatasets,
-  AnalysisOutputsWithStoratePath,
-
-  GalaxyInstanceDetails,
-  HistoryWithAnalysisDB,
-
-  NewAnalysis,
-  // Insert types (for creating new records)
-  NewDataset,
-  NewHistory,
-  NewJob,
-  NewWorkflow,
-  RolePermission,
-
-  RolePermissions,
-  // Role-based access control
-  RoleType,
-  RoleTypes,
-  RowAnalaysisDataset,
-  // Row types (what you get from queries)
-  RowAnalysis,
-
-  RowAnalysisInput,
-  RowAnalysisJob,
-  RowAnalysisOutputs,
-  RowHistory,
-  RowUploadedDataset,
-
-  RowWorkflow,
-  // Sync types (for synchronization operations)
-  Sync,
-  SyncDatasets,
-
-  SyncHistory,
-  SyncJob,
-  UpdatedAnalysisLog,
-  WorkflowToolsParameters,
-} from 'nuxt-galaxy'
-```
-
 ### Example: Working with Analyses
 
 ```typescript

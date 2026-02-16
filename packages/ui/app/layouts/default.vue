@@ -15,6 +15,7 @@ const footerItemsRef: Ref<NavigationMenuItem[]> = toRef(footerItems)
 const supabase = useSupabaseClient<Database>()
 const { userRole } = useUserRole(supabase)
 const { navigationMenuItems } = useNavigationMenuItems({ navigationMenuItems: navigationMenuItemsFromConfig, userRole })
+const collapsed = ref(false)
 
 const links: OrderedNavigationMenuItem[] = [{
   label: 'Home',
@@ -155,18 +156,34 @@ provide('analysesList', {
   <UDashboardGroup>
     <!-- <UDashboardSearch v-if="searchGroups" :groups="searchGroups" /> -->
     <UDashboardSidebar
-      collapsible resizable class="bg-(--ui-bg-elevated)/25"
+      v-model:collapsed="collapsed"
+      collapsible
+      resizable
+      class="bg-(--ui-bg-elevated)/25"
       :ui="{ footer: 'lg:border-t lg:border-(--ui-border)' }"
     >
-      <template #header="{ collapsed }">
-        <NuxtLink v-if="!collapsed" to="/" class="truncate">
-          <h1 class="text-2xl antialiased font-bold font-mono truncate">
-            {{ name }}
-          </h1>
-        </NuxtLink>
+      <template #header>
+        <div class="flex flex-row justify-between items-center gap-1 w-full h-(--ui-header-height)">
+          <div class="truncate">
+            <NuxtLink v-if="!collapsed" to="/" class="truncate">
+              <h1 class="text-2xl antialiased font-bold font-mono truncate">
+                {{ name }}
+              </h1>
+            </NuxtLink>
+          </div>
+          <div>
+            <UButton
+              :icon="collapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
+              color="neutral"
+              variant="ghost"
+              @click="collapsed = !collapsed"
+            />
+          </div>
+        </div>
+        <!-- <UDashboardSidebarCollapse v-model="collapsed" variant="subtle" /> -->
       </template>
 
-      <template #default="{ collapsed }">
+      <template #default>
         <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-(--ui-border)" />
         <!-- <UContentSearchButton :collapsed="false" /> -->
         <UNavigationMenu
@@ -175,12 +192,16 @@ provide('analysesList', {
         />
 
         <UNavigationMenu
-          v-if="computedLinks?.[1]" :collapsed="collapsed" :items="computedLinks[1]"
-          orientation="vertical" class="mt-auto"
+          v-if="computedLinks?.[1]"
+          :collapsed="collapsed"
+          :items="computedLinks[1]"
+          tooltip
+          orientation="vertical"
+          class="mt-auto"
         />
       </template>
 
-      <template #footer="{ collapsed }">
+      <template #footer>
         <UserMenu :collapsed="collapsed" :is-admin="isAdmin" />
       </template>
     </UDashboardSidebar>

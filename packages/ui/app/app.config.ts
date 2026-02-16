@@ -76,6 +76,15 @@ export default defineAppConfig({
       primary: 'indigo',
       neutral: 'zinc',
     },
+    // navigationMenu:{
+    //   variants: {
+    //     active : {
+    //       true : {
+
+    //       }
+    //     }
+    //   }
+    // }
   },
   meilisearch: {
     hostUrl: 'http://my-meilisearch-server.domain.com', // reqired
