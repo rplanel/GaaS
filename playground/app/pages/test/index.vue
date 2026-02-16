@@ -16,6 +16,11 @@ const cards = [
     description: 'the data table is powered by Meili with Mosaic',
     to: '/test/meili-with-mosaic',
   },
+  {
+    title: 'Sequence browser',
+    description: 'a sequence browser powered by D3',
+    to: '/test/sequence-browser',
+  },
 ]
 </script>
 

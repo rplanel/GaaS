@@ -5,6 +5,16 @@ import type { Database } from 'nuxt-galaxy'
 import type { AnalysesListProvide } from '../../layouts/default.vue'
 import type { ListAnalysisWithWorkflow, SanitizedAnalysis } from '../../pages/analyses/index.vue'
 
+// interface Props {
+//   collapsed?: boolean
+// }
+
+// const props = withDefaults(defineProps<Props>(), {
+//   collapsed: false,
+// })
+
+// const collapsed = toRef(() => props.collapsed)
+const collapsedModel = defineModel('collapsed', { default: false })
 const supabase = useSupabaseClient<Database>()
 const supabaseUser = useSupabaseUser()
 const router = useRouter()
@@ -58,10 +68,22 @@ useSupabaseRealtime('galaxy:analyses', 'analyses', refreshAnalyses)
 const items = [
   [
     {
+      label: 'Rename',
+      icon: 'i-lucide-pen',
+      slot: 'rename',
+    },
+    {
+      label: 'Run again',
+      icon: 'i-lucide:refresh-ccw',
+      slot: 'rerun',
+    },
+  ],
+  [
+    {
       label: 'Delete',
-      color: 'error' as const,
-      icon: 'i-lucide-trash',
+      color: 'error',
       slot: 'delete',
+      icon: 'i-lucide-trash',
     },
   ],
 ]
@@ -110,6 +132,22 @@ const sanitizedAnalyses = computed<SanitizedAnalysis[]>(() => {
   }
   return []
 })
+
+const navigationAnalysis = computed(() => {
+  const sanitizedAnalysesVal = toValue(sanitizedAnalyses)
+  return sanitizedAnalysesVal?.map((analysis) => {
+    return {
+      ...analysis,
+      to: `/analyses/${analysis.id}`,
+      slot: 'analysis',
+      description: `${analysis.workflows.name} - v${analysis.workflows.version}`,
+      tooltip: {
+        text: analysis.name,
+      },
+    }
+  })
+})
+
 const analysisRefs = ref<Element[]>([])
 watch(analysisId, () => {
   const analysisIdVal = toValue(analysisId)
@@ -125,27 +163,27 @@ watch(analysisId, () => {
 
 defineShortcuts({
   arrowdown: () => {
-    const index = sanitizedAnalyses.value.findIndex(analysis => analysis.id === analysisId.value)
-    if (index === -1 || index === sanitizedAnalyses.value.length - 1) {
-      const curr = sanitizedAnalyses.value[0]
+    const index = navigationAnalysis.value.findIndex(analysis => analysis.id === analysisId.value)
+    if (index === -1 || index === navigationAnalysis.value.length - 1) {
+      const curr = navigationAnalysis.value[0]
       if (curr)
         router.push(`/analyses/${curr.id}`)
     }
-    else if (index < sanitizedAnalyses.value.length - 1) {
-      const curr = sanitizedAnalyses.value[index + 1]
+    else if (index < navigationAnalysis.value.length - 1) {
+      const curr = navigationAnalysis.value[index + 1]
       if (curr)
         router.push(`/analyses/${curr.id}`)
     }
   },
   arrowup: () => {
-    const index = sanitizedAnalyses.value.findIndex(analysis => analysis.id === analysisId.value)
+    const index = navigationAnalysis.value.findIndex(analysis => analysis.id === analysisId.value)
     if (index === -1 || index === 0) {
-      const curr = sanitizedAnalyses.value[sanitizedAnalyses.value.length - 1]
+      const curr = navigationAnalysis.value[navigationAnalysis.value.length - 1]
       if (curr)
         router.push(`/analyses/${curr.id}`)
     }
-    else if (index <= sanitizedAnalyses.value.length - 1) {
-      const curr = sanitizedAnalyses.value[index - 1]
+    else if (index <= navigationAnalysis.value.length - 1) {
+      const curr = navigationAnalysis.value[index - 1]
       if (curr)
         router.push(`/analyses/${curr.id}`)
     }
@@ -203,7 +241,75 @@ async function editAnalysisName(id: number) {
 
 <template>
   <div class="overflow-y-auto divide-y divide-default">
-    <div
+    <UNavigationMenu
+      :collapsed="collapsedModel"
+      :items="navigationAnalysis"
+      orientation="vertical"
+      label-key="name"
+
+      :ui="{
+
+      }"
+    >
+      <template #analysis-leading="{ item }">
+        <GalaxyStatus :state="item.state" />
+      </template>
+      <template #analysis-label="{ item }">
+        <div class="flex flex-col gap-1 truncate">
+          <div
+            v-if="isEditingAnalyses?.[item.id]"
+            class="flex flex-row justify-start"
+          >
+            <div class="self-center">
+              <UInput
+                v-if="isEditingAnalyses?.[item.id]" v-model="isEditingAnalyses[item.id]"
+                label="Analysis Name"
+              />
+            </div>
+            <div class="self-center">
+              <UButton
+                color="success" variant="ghost" size="sm" icon="i-lucide:check"
+                @click="editAnalysisName(item.id)"
+              />
+            </div>
+            <div class="self-center">
+              <UButton
+                color="warning" variant="ghost" size="sm" icon="i-mdi:cancel"
+                @click="resetEditAnalysis(item.id)"
+              />
+            </div>
+          </div>
+          <div v-else class="font-medium text-highlighted text-base truncate">
+            {{ item.name }}
+          </div>
+          <div class="text-muted text-sm truncate">
+            {{ item.workflows.name }} <UBadge :label="item.workflows.version" size="sm" variant="subtle" color="neutral" />
+          </div>
+        </div>
+      </template>
+      <template #analysis-trailing="{ item }">
+        <UDropdownMenu :items="items">
+          <UButton v-bind="actionButtonProps" icon="tabler:dots-vertical" />
+          <template #delete-label>
+            <div @click.prevent="deleteItem(item)">
+              Delete
+            </div>
+          </template>
+          <template #rename-label>
+            <div @click.prevent="setEditState(item.id, item.name)">
+              Rename
+            </div>
+          </template>
+          <template #rerun-label>
+            <div @click.prevent="router.push(`/analyses/${item.id}/rerun`)">
+              Run again
+            </div>
+          </template>
+        </UDropdownMenu>
+      </template>
+    </UNavigationMenu>
+
+    <!-- <div
       v-for="(analysis, index) in sanitizedAnalyses" :key="index"
       :ref="el => { analysisRefs[analysis.id] = el as Element }"
     >
@@ -282,6 +388,6 @@ async function editAnalysisName(id: number) {
           </div>
         </div>
       </NuxtLink>
-    </div>
+    </div> -->
   </div>
 </template>

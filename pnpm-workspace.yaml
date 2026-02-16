@@ -10,6 +10,7 @@ trustPolicyExclude:
   - '@nuxtjs/supabase@2.0.3'
   - nuxt-component-meta@0.17.1
   - rxjs@7.8.2
+  - nuxt-component-meta@0.17.2
 packages:
   - packages/blendtype
   - packages/nuxt-galaxy
@@ -80,12 +81,13 @@ catalog:
   vue: latest
   vue-router: latest
   vue-tsc: ^3.1.5
-  zod: ^4.1.13
-  zod-validation-error: ^4.0.2
+  zod: ^4.3.6
+  zod-validation-error: ^5.0.0
 
 catalogs:
   dataviz:
     '@observablehq/plot': ^0.6.17
+    '@types/d3': ^7.4.3
     '@uwdata/mosaic-core': ^0.21.1
     '@uwdata/mosaic-sql': ^0.21.1
     '@uwdata/vgplot': ^0.21.1
