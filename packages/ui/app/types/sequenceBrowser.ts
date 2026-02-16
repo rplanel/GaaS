@@ -8,3 +8,13 @@ export interface Sequence {
   start?: number
   end?: number
 }
+
+export interface SequenceCluster {
+  id: string
+  name: string
+  type: 'cluster'
+  start: number
+  end: number
+  count: number
+  sequences: Sequence[]
+}
