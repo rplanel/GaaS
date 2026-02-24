@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { QueryData } from '@supabase/supabase-js'
-import type { Database } from 'nuxt-galaxy'
+import type { Database, WorkflowRow } from 'nuxt-galaxy'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
 
 const router = useRouter()
@@ -79,7 +79,7 @@ const { data: analysis, refresh: refreshAnalysis } = await useAsyncData(
 
 export type AnalysesWithOutputsAndWorkflow = typeof analysis.value
 
-const workflow = computed(() => {
+const workflow = computed<WorkflowRow | undefined>(() => {
   const analysisVal = toValue(analysis)
   return analysisVal?.workflows
 })
@@ -152,13 +152,12 @@ const computedResultsMenuItems = computed(() => {
 <template>
   <UDashboardPanel :id="`history-panel-${analysisIdFromRoute}`" class="overflow-auto">
     <template #header>
-      <UDashboardNavbar
-        v-if="analysis"
-        :title="analysis.name"
-        :toggle="true"
-      >
+      <UDashboardNavbar v-if="analysis" :title="analysis.name" :toggle="true">
         <template #leading>
-          <UButton icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5" @click="router.push('/analyses')" />
+          <UButton
+            icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5"
+            @click="router.push('/analyses')"
+          />
         </template>
       </UDashboardNavbar>
       <UDashboardToolbar>
@@ -169,24 +168,11 @@ const computedResultsMenuItems = computed(() => {
     </template>
 
     <template #body>
-      <NuxtPage
-        :analysis="analysis"
-        :workflow
-        :workflow-id="workflow?.id"
-        :analysis-id="analysisId"
-      />
-      <AnalysisHistoryPanel
-        v-if="analysisId"
-        :analysis-id="analysisId"
-        @close="router.push('/analyses')"
-      />
+      <NuxtPage :analysis="analysis" :workflow :workflow-id="workflow?.id" :analysis-id="analysisId" />
+      <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')" />
       <USlideover v-if="isMobile" v-model:open="isOpen">
         <template #content>
-          <AnalysisHistoryPanel
-            v-if="analysisId"
-            :analysis-id="analysisId"
-            @close="router.push('/analyses')"
-          />
+          <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')" />
         </template>
       </USlideover>
     </template>
