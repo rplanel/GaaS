@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { Sequence, Strand } from '../types/sequenceBrowser'
+import type { Sequence, SequenceCluster, Strand } from '../types/sequenceBrowser'
 import * as d3 from 'd3'
 
 export interface SequenceBrowserProps {
@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<SequenceBrowserProps>(), {
   title: undefined,
   width: 800,
   height: 400,
-  initialVisibleCount: 50,
+  initialVisibleCount: 60,
 })
 
 const margin = { top: 10, right: 20, bottom: 30, left: 20 }
@@ -97,7 +97,57 @@ function getVisibleSequences(scale: d3.ScaleLinear<number, number>): Sequence[] 
 }
 // Plain variable for the zoom-adjusted scale (NOT reactive - avoids Vue overhead during zoom)
 let currentXScale: d3.ScaleLinear<number, number> = d3.scaleLinear()
-const geneHeight = 20
+const geneHeight = 30
+
+// Clustering configuration
+const CLUSTER_THRESHOLD = 300 // Switch from sequences to clusters when exceeding this count
+const BIN_COUNT = 50 // Number of bins to create across the viewport
+
+// Helper interface for binning operations
+interface Bin {
+  start: number
+  end: number
+  sequences: Sequence[]
+}
+
+// Create spatial bins of sequences for clustering when zoomed out
+function createBins(
+  sequences: Sequence[],
+  viewStart: number,
+  viewEnd: number,
+): SequenceCluster[] {
+  const binWidth = (viewEnd - viewStart) / BIN_COUNT
+  const bins: Bin[] = Array.from({ length: BIN_COUNT }, (_, i) => ({
+    start: viewStart + i * binWidth,
+    end: viewStart + (i + 1) * binWidth,
+    sequences: [],
+  }))
+
+  // Assign sequences to bins they overlap with
+  sequences.forEach((seq) => {
+    const seqStart = seq.start ?? 0
+    const seqEnd = seq.end ?? seqStart + seq.length
+    const startBin = Math.floor((seqStart - viewStart) / binWidth)
+    const endBin = Math.floor((seqEnd - viewStart) / binWidth)
+
+    for (let i = Math.max(0, startBin); i <= Math.min(bins.length - 1, endBin); i++) {
+      bins[i].sequences.push(seq)
+    }
+  })
+
+  // Convert non-empty bins to cluster objects
+  return bins
+    .filter(b => b.sequences.length > 0)
+    .map((b, i) => ({
+      id: `cluster-${i}`,
+      name: `Cluster ${i + 1} (${b.sequences.length} sequences)`,
+      type: 'cluster' as const,
+      start: b.start,
+      end: b.end,
+      count: b.sequences.length,
+      sequences: b.sequences,
+    }))
+}
 
 // Build a gene arrow path relative to (0,0) using d3.path() — cleaner than string concatenation
 function drawGene(width: number, height: number, strand?: Strand): string {
@@ -136,7 +186,8 @@ function drawGene(width: number, height: number, strand?: Strand): string {
 }
 
 // Imperative position update — called on every zoom frame, no Vue reactivity involved
-// Uses viewport culling: only join + render the genes visible in the current view
+// Uses viewport culling: only render visible items
+// When viewing many sequences (>CLUSTER_THRESHOLD), uses spatial clustering
 function updatePositions() {
   if (!svgRef.value)
     return
@@ -144,36 +195,110 @@ function updatePositions() {
   const svg = d3.select(svgRef.value)
   const y = (innerHeight.value - geneHeight) / 2
 
-  // Get only the genes visible in the current viewport (O(log n) binary search)
-  const visible = getVisibleSequences(currentXScale)
+  // Get visible sequences in current viewport
+  const visibleSequences = getVisibleSequences(currentXScale)
+  const [viewStart, viewEnd] = currentXScale.domain()
 
-  // Data join on the visible subset — D3 removes off-screen nodes, adds newly visible ones
+  // Determine if we need clustering (too many visible items)
+  const useClusters = visibleSequences.length > CLUSTER_THRESHOLD
+
+  // Get display data: either clusters or sequences
+  const displayData = useClusters
+    ? createBins(visibleSequences, viewStart, viewEnd)
+    : visibleSequences
+
+  // Determine maximum count for cluster height scaling
+  const maxCount = useClusters
+    ? Math.max(...(displayData as SequenceCluster[]).map(d => d.count))
+    : 1
+
+  // Data join on the display items using d3.join syntax
   svg.select('g.sequences')
-    .selectAll<SVGGElement, Sequence>('g.sequence')
-    .data(visible, d => d.id)
+    .selectAll<SVGGElement, Sequence | SequenceCluster>('g.item')
+    .data(displayData, d => d.id)
     .join(
+      // Enter: create new group structure
       (enter) => {
-        const g = enter.append('g').attr('class', 'sequence')
-        g.append('path')
-          .attr('class', 'sequence-draw')
-          .attr('fill', 'steelblue')
-        g.append('title')
-          .text(d => d.name)
-        return g
+        return enter.append('g')
+          .attr('class', 'item')
+          .style('cursor', 'pointer')
+          .on('click', (event, d) => {
+            event.stopPropagation()
+            if ('type' in d && d.type === 'cluster') {
+              zoomToRegion(d.start, d.end)
+            }
+          })
+          .call((g) => {
+            g.append('path')
+              .attr('class', 'item-shape')
+              .attr('fill', 'steelblue')
+            g.append('text')
+              .attr('class', 'item-label')
+              .attr('dy', '0.35em')
+              .attr('text-anchor', 'middle')
+              .attr('font-size', '10px')
+              .attr('fill', 'white')
+              .style('pointer-events', 'none')
+            g.append('title')
+          })
       },
+      // Update: existing elements
       update => update,
+      // Exit: remove elements
       exit => exit.remove(),
     )
+    // Apply position and style to merged enter + update selection
     .attr('transform', (d) => {
       const start = d.start ?? 0
       return `translate(${currentXScale(start)}, ${y})`
     })
-    .select<SVGPathElement>('path.sequence-draw')
-    .attr('d', (d) => {
+    .each(function (d) {
+      const g = d3.select(this)
       const start = d.start ?? 0
-      const end = d.end ?? start + d.length
-      const w = Math.max(0, currentXScale(end) - currentXScale(start))
-      return drawGene(w, geneHeight, d.strand)
+      const end = d.end ?? start + (d as Sequence).length
+      const width = Math.max(1, currentXScale(end) - currentXScale(start))
+
+      if ('type' in d && d.type === 'cluster') {
+        // Render cluster: height proportional to count
+        const density = d.count / maxCount
+        const clusterHeight = Math.max(4, geneHeight * (0.3 + 0.7 * density))
+        const offsetY = (geneHeight - clusterHeight) / 2
+
+        g.select('path.item-shape')
+          .transition()
+          .duration(100)
+          .attr('d', `M0,${offsetY} h${width} v${clusterHeight} h-${width} z`)
+          .attr('fill', '#4a90a4')
+          .attr('opacity', 0.7 + 0.3 * density)
+
+        // Show count label if bin is wide enough
+        g.select('text.item-label')
+          .text(width > 20 ? d.count : '')
+          .attr('x', width / 2)
+          .attr('y', geneHeight / 2)
+
+        g.select('title')
+          .text(`Cluster: ${d.count} sequences\nRange: ${Math.round(start)} - ${Math.round(end)}`)
+      }
+      else {
+        // Render individual sequence
+        const itemShape = g.select('path.item-shape')
+        // .transition()
+        // .duration(100)
+        itemShape.attr('d', drawGene(width, geneHeight, d.strand))
+
+        itemShape
+          .transition()
+          .duration(100)
+          .attr('fill', 'steelblue')
+          .attr('opacity', 1)
+
+        g.select('text.item-label')
+          .text('')
+
+        g.select('title')
+          .text(d.name)
+      }
     })
 
   // Update x-axis with current scale
@@ -183,13 +308,43 @@ function updatePositions() {
 
 // Zoom behavior — semantic zoom on x-axis, purely imperative
 const zoomBehavior = d3.zoom<SVGSVGElement, unknown>()
-  .scaleExtent([0.5, 4])
+  .scaleExtent([1, Infinity])
   .filter(event => !event.type.startsWith('dblclick'))
   .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
     // Rescale x only (semantic zoom)
     currentXScale = event.transform.rescaleX(baseXScale.value)
     updatePositions()
   })
+
+// Function to zoom into a specific region
+function zoomToRegion(start: number, end: number) {
+  if (!svgRef.value)
+    return
+
+  const span = end - start
+  const padding = span * 0.1 // 10% padding
+  const targetStart = Math.max(0, start - padding)
+  const targetEnd = end + padding
+  const fullExtent = baseXScale.value.domain()[1] - baseXScale.value.domain()[0]
+
+  // Calculate scale factor needed
+  const k = fullExtent / (targetEnd - targetStart)
+
+  // Limit max zoom
+  const maxK = 50
+  const finalK = Math.min(k, maxK)
+
+  // Calculate translation
+  const baseS = baseXScale.value
+  const tx = -finalK * baseS(targetStart)
+
+  const transform = d3.zoomIdentity.translate(tx, 0).scale(finalK)
+
+  d3.select(svgRef.value)
+    .transition()
+    .duration(500)
+    .call(zoomBehavior.transform, transform)
+}
 
 // Update zoom constraints to match current dimensions (called before each svg.call(zoomBehavior))
 function updateZoomConstraints() {
@@ -240,7 +395,8 @@ function renderChart() {
   updateZoomConstraints()
   const initialTransform = getInitialTransform()
   currentXScale = initialTransform.rescaleX(baseXScale.value)
-  svg.call(zoomBehavior)
+  svg
+    .call(zoomBehavior)
     .call(zoomBehavior.transform, initialTransform)
 
   // Chart group with margin
@@ -289,7 +445,6 @@ watch([() => props.sequences, () => props.width, () => props.height], () => {
           <div class="flex flex-col gap-3 flex-1">
             <!-- Track 1: genes/features -->
             <div class="flex items-center gap-2">
-              <USkeleton class="h-4 w-20 shrink-0" />
               <div class="flex items-center gap-1 flex-1">
                 <USkeleton class="h-6 w-24" />
                 <USkeleton class="h-6 w-16" />

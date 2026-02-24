@@ -1,11 +1,7 @@
-import type { DatasetRow, TagRow } from 'nuxt-galaxy'
+import type { TagRow } from 'nuxt-galaxy'
 import type { Ref } from 'vue'
+import type { DatasetWithTags } from '~/src/runtime/types/nuxt-galaxy'
 import { computed, toValue } from 'vue'
-
-interface DatasetWithTags {
-  tags: TagRow[] | undefined
-  datasets: DatasetRow
-}
 
 export interface UseDatabaseResultDatasetsOptions<TagsType extends string> {
   // datasets: Ref<Array<{ tags: TagRow[] | undefined, datasets: { dataset_name: string } }>> | undefined

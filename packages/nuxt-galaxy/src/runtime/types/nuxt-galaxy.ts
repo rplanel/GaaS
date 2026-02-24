@@ -19,16 +19,6 @@ export type AnalysisInputWithStoragePathRow = Database['galaxy']['Views']['analy
 export type AnalysisOutputWithStoragePathRow = Database['galaxy']['Views']['analysis_outputs_with_storage_path']['Row']
 export type TagRow = Database['galaxy']['Tables']['tags']['Row']
 
-// export interface AnalysisInputsWithDatasets extends AnalysisInputRow {
-//   datasets: DatasetRow
-// }
-
-// export interface AnalysisOutputsWithDatasets extends AnalysisOutputRow {
-//   datasets: DatasetRow
-//   tags: TagRow[]
-//   stringifyTags?: TagsType
-// }
-
 export type NewDataset = typeof datasets.$inferInsert
 export type GetTag = typeof tags.$inferSelect
 export type NewJob = typeof jobs.$inferInsert
@@ -37,6 +27,11 @@ export type NewAnalysis = typeof analyses.$inferInsert
 export type NewWorkflow = typeof workflows.$inferInsert
 
 // export type AnalysisIOWithDatasets = AnalysisInputsWithDatasets | AnalysisOutputsWithDatasets
+
+export interface DatasetWithTags {
+  tags: TagRow[] | undefined
+  datasets: DatasetRow
+}
 
 export interface WorkflowToolsParameters {
   step: WorkflowStep

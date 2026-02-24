@@ -1,41 +1,37 @@
 <script lang="ts" setup>
-// import type { Database } from 'nuxt-galaxy'
-// import type { QueryData } from '@supabase/supabase-js'
-import type { AnalysesWithOutputsAndWorkflow, WorkflowFromAnalysis } from '#layers/@gaas-ui/app/types'
-// import type { AnalysesWithOutputsAndWorkflow, WorkflowFromAnalysis } from '#layers/@gaas-ui'
+import type { AnalysesWithOutputsAndWorkflow } from '#layers/@gaas-ui/app/types'
+import type { WorkflowRow } from 'nuxt-galaxy'
 
 interface Props {
   analysisId: number
   analysis: AnalysesWithOutputsAndWorkflow
-  workflow: WorkflowFromAnalysis
+  workflow: WorkflowRow
 }
 
 const props = withDefaults(defineProps<Props>(), {})
-const tagTypes = ['results', 'rejected', 'other'] as const
-type TagsType = typeof tagTypes[number]
+// const tagTypes = ['results', 'rejected', 'other'] as const
+// type TagsType = typeof tagTypes[number]
 
 const { analysis, workflow } = toRefs(props)
-const { workflowTagName, workflowTagVersion } = useDatabaseWorkflow({
-  workflow,
-})
 
 const outputs = computed(() => {
   const analysisVal = toValue(analysis)
   return analysisVal?.analysis_outputs ?? []
 })
 
-const { resultOutputs } = useDatabaseResultDatasets<TagsType>({
-  datasets: outputs,
-  tagTypes,
-})
+export type OutputsWithDatasets = typeof outputs.value
+// const { resultOutputs } = useDatabaseResultDatasets<TagsType>({
+//   datasets: outputs,
+//   tagTypes,
+// })
+
+// const { componentName } = useWorkflowComponent({ workflow })
 </script>
 
 <template>
-  <NuxtPage
-    :datasets="resultOutputs"
-    :workflow="{ version: workflowTagVersion, name: workflowTagName }"
-  />
+  <div>
+    <NuxtPage :datasets="outputs" :workflow="workflow" />
+  </div>
 </template>
 
-<style>
-</style>
+<style></style>
