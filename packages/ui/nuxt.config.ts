@@ -23,6 +23,8 @@ export default defineNuxtConfig({
     '@nuxt/test-utils/module',
     '@nuxt/eslint',
     'nuxt-galaxy',
+    '@pinia/colada-nuxt',
+    '@pinia/nuxt',
   ],
 
   runtimeConfig: {

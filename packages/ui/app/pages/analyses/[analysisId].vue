@@ -1,18 +1,16 @@
 <script setup lang="ts">
-import type { QueryData } from '@supabase/supabase-js'
 import type { Database, WorkflowRow } from 'nuxt-galaxy'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
+import { analysisByIdWithOutputsAndWorkflowsQuery } from '../../utils/queries/supabase'
 
 const router = useRouter()
 const route = useRoute()
 const { gaasUi: { resultsMenuItems, analyisParametersMenuItems } } = useAppConfig()
-
+const supabase = useSupabaseClient<Database>()
 const analysisId = ref<number | undefined>(undefined)
 const breakpoints = useBreakpoints(breakpointsTailwind)
 const isMobile = breakpoints.smaller('lg')
 const isOpen = ref(true)
-const user = useSupabaseUser()
-const supabase = useSupabaseClient<Database>()
 
 const analysisIdFromRoute = computed(() => {
   if ('analysisId' in route.params) {
@@ -22,66 +20,16 @@ const analysisIdFromRoute = computed(() => {
   return undefined
 })
 
-const { data: analysis, refresh: refreshAnalysis } = await useAsyncData(
-  `analysis-${toValue(analysisIdFromRoute)}`,
-  async () => {
-    const userVal = toValue(user)
-    const analysisIdVal = toValue(analysisIdFromRoute)
-    if (!userVal) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'Permission denied',
-      })
-    }
-    if (!analysisIdVal) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Analysis not found',
-      })
-    }
-    const analysesWithOutputsAndWorkflowQuery = supabase
-      .schema('galaxy')
-      .from('analyses')
-      .select(
-        `
-          *,
-          analysis_outputs(
-            *,
-            datasets(*),
-            tags(*)
-          ),
-          workflows(
-            *
-          )
-          `,
-      )
-      .eq('id', analysisIdVal)
-
-    type AnalysesWithOutputsAndWorkflow = QueryData<typeof analysesWithOutputsAndWorkflowQuery>
-    const { data, error } = await analysesWithOutputsAndWorkflowQuery.limit(1)
-    if (error) {
-      throw createError({
-        statusMessage: error.message,
-        statusCode: Number.parseInt(error.code),
-      })
-    }
-    const analysesWithOutputsAndWorkflow: AnalysesWithOutputsAndWorkflow = data
-
-    if (!analysesWithOutputsAndWorkflow || !analysesWithOutputsAndWorkflow[0]) {
-      throw createError({
-        statusMessage: 'Analysis not found',
-        statusCode: 404,
-      })
-    }
-    return analysesWithOutputsAndWorkflow[0]
-  },
+const { data: analysis, refresh: refreshAnalysis } = useQuery(
+  () => analysisByIdWithOutputsAndWorkflowsQuery({ id: toValue(analysisIdFromRoute), supabase }),
 )
-
-export type AnalysesWithOutputsAndWorkflow = typeof analysis.value
 
 const workflow = computed<WorkflowRow | undefined>(() => {
   const analysisVal = toValue(analysis)
-  return analysisVal?.workflows
+  if (!analysisVal) {
+    return undefined
+  }
+  return analysisVal.workflows
 })
 
 export type WorkflowFromAnalysis = typeof workflow.value

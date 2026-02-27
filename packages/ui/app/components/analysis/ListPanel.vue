@@ -3,20 +3,12 @@ import type { ButtonProps } from '@nuxt/ui'
 // import type { Database } from '../../types'
 import type { Database } from 'nuxt-galaxy'
 import type { AnalysesListProvide } from '../../layouts/default.vue'
-import type { ListAnalysisWithWorkflow, SanitizedAnalysis } from '../../pages/analyses/index.vue'
+import type { SanitizedAnalysis } from '../../pages/analyses/index.vue'
+import { useRoute } from 'vue-router'
+import { analysesListWithWorkflowAndHistoryQuery } from '../../utils/queries/supabase'
 
-// interface Props {
-//   collapsed?: boolean
-// }
-
-// const props = withDefaults(defineProps<Props>(), {
-//   collapsed: false,
-// })
-
-// const collapsed = toRef(() => props.collapsed)
 const collapsedModel = defineModel('collapsed', { default: false })
 const supabase = useSupabaseClient<Database>()
-const supabaseUser = useSupabaseUser()
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
@@ -27,40 +19,8 @@ const analysesListInjected = inject<AnalysesListProvide>('analysesList')
 const { refreshAnalysesList } = analysesListInjected || {}
 // let realtimeChannel: RealtimeChannel
 
-const { data: analyses, refresh: refreshAnalyses } = await useAsyncData(
-  'analyses',
-  async () => {
-    const supabaseUserVal = toValue(supabaseUser)
-
-    if (supabaseUserVal === null) {
-      throw createError({
-        statusMessage: 'User not found',
-        statusCode: 404,
-      })
-    }
-
-    const { data, error } = await supabase
-      .schema('galaxy')
-      .from('analyses')
-      .select(
-        `
-        id,
-        name,
-        state,
-        workflows(*),
-        histories(state, is_sync)
-        `,
-      )
-      .order('id', { ascending: true })
-      .overrideTypes<ListAnalysisWithWorkflow[]>()
-    if (error) {
-      throw createError({
-        statusMessage: error.message,
-        statusCode: Number.parseInt(error.code),
-      })
-    }
-    return data || []
-  },
+const { data: analyses, refresh: refreshAnalyses } = useQuery(
+  () => analysesListWithWorkflowAndHistoryQuery({ supabase }),
 )
 
 useSupabaseRealtime('galaxy:analyses', 'analyses', refreshAnalyses)
@@ -242,11 +202,7 @@ async function editAnalysisName(id: number) {
 <template>
   <div class="overflow-y-auto divide-y divide-default">
     <UNavigationMenu
-      :collapsed="collapsedModel"
-      :items="navigationAnalysis"
-      orientation="vertical"
-      label-key="name"
-
+      :collapsed="collapsedModel" :items="navigationAnalysis" orientation="vertical" label-key="name"
       :ui="{
 
       }"
@@ -256,15 +212,9 @@ async function editAnalysisName(id: number) {
       </template>
       <template #analysis-label="{ item }">
         <div class="flex flex-col gap-1 truncate">
-          <div
-            v-if="isEditingAnalyses?.[item.id]"
-            class="flex flex-row justify-start"
-          >
+          <div v-if="isEditingAnalyses?.[item.id]" class="flex flex-row justify-start">
             <div class="self-center">
-              <UInput
-                v-if="isEditingAnalyses?.[item.id]" v-model="isEditingAnalyses[item.id]"
-                label="Analysis Name"
-              />
+              <UInput v-if="isEditingAnalyses?.[item.id]" v-model="isEditingAnalyses[item.id]" label="Analysis Name" />
             </div>
             <div class="self-center">
               <UButton
@@ -283,7 +233,8 @@ async function editAnalysisName(id: number) {
             {{ item.name }}
           </div>
           <div class="text-muted text-sm truncate">
-            {{ item.workflows.name }} <UBadge :label="item.workflows.version" size="sm" variant="subtle" color="neutral" />
+            {{ item.workflows.name }}
+            <UBadge :label="item.workflows.version" size="sm" variant="subtle" color="neutral" />
           </div>
         </div>
       </template>

@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@nuxt/devtools": "catalog:nuxt",
+    "@pinia/colada-devtools": "catalog:vue",
     "embla-carousel": "catalog:"
   }
 }

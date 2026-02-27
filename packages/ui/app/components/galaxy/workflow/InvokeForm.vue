@@ -23,6 +23,8 @@ import {
   useGalaxyToolInputComponent,
 } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 
+import { analysesOutputsViewQuery, analysisByIdWithJobsQuery, workflowByIdQuery } from '../../../utils/queries/supabase'
+
 // type Database = SupabaseTypes.Database
 export type UploadedDatasetDb = Database['galaxy']['Views']['uploaded_datasets_with_storage_path']['Row']
 
@@ -30,8 +32,6 @@ export interface Props {
   workflowId: number
   analysisId?: number
 }
-const props = withDefaults(defineProps<Props>(), {})
-const router = useRouter()
 
 export type WorkflowParameterValue
   = | string
@@ -42,12 +42,16 @@ interface WorkflowParameterConditionalValue {
   [key: string]: WorkflowParameterValue
 }
 
+const props = withDefaults(defineProps<Props>(), {})
+const router = useRouter()
+
+const workflowId = toRef(() => props.workflowId)
+const analysisId = toRef(() => props.analysisId)
 const startingAnalysis = ref<boolean>(false)
 const workflowInputDatasetsModel = ref<
   Record<string, UploadedDatasetDb> | undefined
 >({})
 const invokeWorkflowParameterModel = ref<Record<string, WorkflowToolParameters>>({})
-const user = useSupabaseUser()
 const supabase = useSupabaseClient<Database>()
 
 const analysesListInjected = inject<AnalysesListProvide>('analysesList')
@@ -203,99 +207,22 @@ async function runAnalysis() {
   }
 }
 
-const { data: dbWorkflow } = await useAsyncData('workflow-db', async () => {
-  const userVal = toValue(user)
-  const workflowIdVal = toValue(props.workflowId)
-  if (!userVal) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Unauthorized: User not found',
-    })
+const { data: dbWorkflow } = useQuery(() => workflowByIdQuery({ id: toValue(workflowId), supabase }))
+
+const { data: dbAnalysis } = useQuery(() => {
+  const analysisIdVal = toValue(analysisId)
+  return {
+    ...analysisByIdWithJobsQuery({ id: analysisIdVal!, supabase }),
+    enabled: !!analysisIdVal,
   }
-  if (!workflowIdVal) {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'Not Found: Workflow not found',
-    })
-  }
-  const { data, error } = await supabase
-    .schema('galaxy')
-    .from('workflows')
-    .select('id, name, galaxy_id, definition')
-    .eq('id', workflowIdVal)
-    .limit(1)
-    .single()
-  if (data === null) {
-    throw createError({ statusMessage: 'No workflow found', statusCode: 404 })
-  }
-  if (error) {
-    throw createError({ statusCode: bt.getStatusCode(error), statusMessage: bt.getErrorMessage(error) })
-  }
-  return data
 })
 
-const { data: dbAnalysis } = await useAsyncData('analysis-db', async () => {
-  const userVal = toValue(user)
-  const analysisId = toValue(props.analysisId)
-
-  if (!userVal) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Unauthorized: User not found',
-    })
-  }
-  if (!analysisId) {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'Not Found: Analysis not found',
-    })
-  }
-  // const workflowIdVal = toValue(props.workflowId);
-  const { data, error } = await supabase
-    .schema('galaxy')
-    .from('analyses')
-    .select(`*,jobs(*)`)
-    .eq('id', analysisId)
-    .limit(1)
-    .single()
-
-  if (data === null) {
-    throw createError({ statusMessage: 'No analysis found', statusCode: 404 })
-  }
-  if (error) {
-    throw createError({ statusCode: bt.getStatusCode(error), statusMessage: bt.getErrorMessage(error) })
-  }
-
-  return data
-})
+const { data: datasets } = useQuery(() => analysesOutputsViewQuery({ supabase }))
 
 const workflowGalaxyId = computed(() => {
   const dbWorkflowVal = toValue(dbWorkflow)
   return dbWorkflowVal?.galaxy_id
 })
-
-const { data: datasets } = await useAsyncData(
-  'invoke-analysis-input-datasets',
-  async (): Promise<UploadedDatasetDb[]> => {
-    const userVal = toValue(user)
-    if (!userVal) {
-      throw createError({ statusMessage: 'No uploaded datasets', statusCode: 500 })
-    }
-    const { data, error } = await supabase
-      .schema('galaxy')
-      .from('uploaded_datasets_with_storage_path')
-      .select()
-      .overrideTypes<UploadedDatasetDb[]>()
-
-    if (error) {
-      throw createError({ statusCode: bt.getStatusCode(error), statusMessage: bt.getErrorMessage(error) })
-    }
-    if (data === null) {
-      throw createError({ statusMessage: 'No uploaded datasets', statusCode: 500 })
-    }
-    return data
-  },
-)
 
 const {
   workflowSteps,
@@ -328,16 +255,9 @@ watchEffect(() => {
 <template>
   <NuxtErrorBoundary>
     <UForm :schema="schema" :state="state" @submit.prevent="runAnalysis">
-      <UFormField
-        label="Name of the analysis"
-        name="analysisName"
-        required
-      >
+      <UFormField label="Name of the analysis" name="analysisName" required>
         <UInput
-          v-model="state.analysisName"
-          type="text"
-          name="name"
-          placeholder="Enter the name of the analysis"
+          v-model="state.analysisName" type="text" name="name" placeholder="Enter the name of the analysis"
           class="w-full"
         />
       </UFormField>
@@ -356,39 +276,26 @@ watchEffect(() => {
         </h3>
 
         <UFormField
-          v-for="(input, stepId) in workflowInputs"
-          :key="stepId"
-          :label="input.label"
-          required
+          v-for="(input, stepId) in workflowInputs" :key="stepId" :label="input.label" required
           :name="input.uuid"
         >
           <USelectMenu
-            v-model="workflowInputDatasetsModel[stepId]"
-            :search-input="{
+            v-model="workflowInputDatasetsModel[stepId]" :search-input="{
               placeholder: 'Filter...',
               icon: 'i-lucide-search',
-            }"
-            :create-item="{ position: 'top', when: 'always' }"
-            icon="i-material-symbols:dataset"
-            :items="datasets"
-            label-key="dataset_name"
-            class="w-full"
-            :name="input.uuid"
+            }" :create-item="{ position: 'top', when: 'always' }" icon="i-material-symbols:dataset" :items="datasets"
+            label-key="dataset_name" class="w-full" :name="input.uuid"
           />
         </UFormField>
       </div>
 
-      <USeparator
-        icon="i-lucide:workflow"
-        class="mt-5 mb-3"
-      />
+      <USeparator icon="i-lucide:workflow" class="mt-5 mb-3" />
       <h3 class="font-bold text-lg">
         Select workflow parameters
       </h3>
       <div v-if="workflowStepsToolInfo">
         <UAccordion
-          :items="workflowStepsItems"
-          :ui="{
+          :items="workflowStepsItems" :ui="{
             header:
               'hover:bg-elevated px-2 rounded-[calc(var(--ui-radius))]',
 
@@ -408,21 +315,16 @@ watchEffect(() => {
                 </div>
               </div>
               <div>
-                <VersionBadge
-                  :version="workflowStepsToolInfo[stepId]?.version"
-                />
+                <VersionBadge :version="workflowStepsToolInfo[stepId]?.version" />
               </div>
             </div>
           </template>
           <template #body="{ item: { value: stepId } }">
             <div class="p-2">
-              <div
-                class="ring ring-default rounded-[calc(var(--ui-radius)*2)]"
-              >
+              <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)]">
                 <GalaxyWorkflowStep
                   v-if="stepId !== undefined && galaxyWorkflowStepProps?.[stepId]"
-                  v-bind="galaxyWorkflowStepProps[stepId]"
-                  variant="form"
+                  v-bind="galaxyWorkflowStepProps[stepId]" variant="form"
                 />
               </div>
             </div>
@@ -431,10 +333,7 @@ watchEffect(() => {
         <USeparator class="mt-5 mb-3" />
       </div>
 
-      <UButton
-        type="submit"
-        :loading="startingAnalysis"
-      >
+      <UButton type="submit" :loading="startingAnalysis">
         Run
       </UButton>
     </UForm>

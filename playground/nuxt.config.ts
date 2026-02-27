@@ -24,7 +24,13 @@ export default defineNuxtConfig({
   css: [
     join(currentDir, './app/assets/css/main.css'),
   ],
-  devtools: { enabled: true },
+  devtools: {
+    enabled: true,
+
+    timeline: {
+      enabled: true,
+    },
+  },
   vite: {
     server: {
       watch: {
