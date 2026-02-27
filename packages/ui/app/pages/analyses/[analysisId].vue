@@ -116,7 +116,7 @@ const computedResultsMenuItems = computed(() => {
     </template>
 
     <template #body>
-      <NuxtPage :analysis="analysis" :workflow :workflow-id="workflow?.id" :analysis-id="analysisId" />
+      <NuxtPage />
       <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')" />
       <USlideover v-if="isMobile" v-model:open="isOpen">
         <template #content>

@@ -1,8 +1,9 @@
 import type { WorkflowRow } from 'nuxt-galaxy'
+// import { useDatabaseWorkflow } from 'nuxt-galaxy'
 import { pascalCase } from 'scule'
 
 export interface UseWorkflowComponentOptions {
-  workflow: Ref<WorkflowRow>
+  workflow: Ref<WorkflowRow | undefined>
 }
 
 export function useWorkflowComponent(options: UseWorkflowComponentOptions) {
@@ -13,7 +14,7 @@ export function useWorkflowComponent(options: UseWorkflowComponentOptions) {
   const sanitizedWorkflowTagName = computed(() => {
     const workflowTagNameVal = toValue(workflowTagName)
     if (!workflowTagNameVal) {
-      return null
+      return undefined
     }
     return workflowTagNameVal.replace(/\W/g, '')
   })
@@ -21,7 +22,7 @@ export function useWorkflowComponent(options: UseWorkflowComponentOptions) {
   const sanitizedWorkflowTagVersion = computed(() => {
     const workflowTagVersionVal = toValue(workflowTagVersion)
     if (!workflowTagVersionVal) {
-      return null
+      return undefined
     }
     return workflowTagVersionVal.replace(/\W/g, '')
   })
