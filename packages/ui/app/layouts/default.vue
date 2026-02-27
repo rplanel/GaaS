@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { CommandPaletteGroup, CommandPaletteItem, NavigationMenuItem } from '@nuxt/ui'
-
+// import type { PostgresFilterBuilder} from 'postgrest-js'
 // import type { SupabaseTypes } from '#build/types/database'
 import type { Database } from 'nuxt-galaxy'
+import type { ShallowRef } from 'vue'
 import type { OrderedNavigationMenuItem } from '../app.config'
-import { useAsyncData } from 'nuxt/app'
 import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
+// import { SUPABASE_QUERY_KEYS, useSupabaseQuery } from '../composables/useSupabaseQuery'
+import { analysesListQuery, datasetsCountQuery, workflowsListQuery } from '../utils/queries/supabase'
 
 // type Database = SupabaseTypes.Database
 
@@ -32,41 +34,19 @@ const isAdmin = computed(() => {
   return userRoleVal === 'admin'
 })
 
-const { data: analyses, refresh: refreshAnalyses } = await useAsyncData('search-analyses', async () => {
-  const { data } = await supabase
-    .schema('galaxy')
-    .from('analyses')
-    .select('id, name')
-  if (data === null) {
-    throw createError({ statusMessage: 'No analysis found', statusCode: 404 })
-  }
-  return data
-})
+const { data: analyses, refresh: refreshAnalyses } = useQuery(
+  () => analysesListQuery({ supabase }),
+)
 
-const { data: datasetsCount, refresh: refreshDatasetsCount } = await useAsyncData('datasets-count', async () => {
-  const { count } = await supabase
-    .schema('galaxy')
-    .from('uploaded_datasets')
-    .select('*', { count: 'exact', head: true })
-  if (count === null) {
-    throw createError({ statusMessage: 'No datasets found', statusCode: 404 })
-  }
-  return count
-})
+const { data: datasetsCount, refresh: refreshDatasetsCount } = useQuery(
+  () => datasetsCountQuery({ supabase }),
+)
 
-const { data: workfows } = await useAsyncData('search-workflows', async () => {
-  const { data } = await supabase
-    .schema('galaxy')
-    .from('workflows')
-    .select('id, name_key, version_key')
-  if (data === null) {
-    throw createError({ statusMessage: 'No workflows found', statusCode: 404 })
-  }
-  return data
-})
+const { data: workflows } = useQuery(() => workflowsListQuery({ supabase }))
 
-const sanitizedNavigationMenuItems = computed<OrderedNavigationMenuItem[]>(() => {
+const sanitizedNavigationMenuItems = computed(() => {
   const analysesVal = toValue(analyses)
+  const workflowsVal = toValue(workflows)
   const navigationMenuItemsVal = toValue(navigationMenuItems)
   if (!analysesVal)
     return navigationMenuItemsVal
@@ -85,6 +65,12 @@ const sanitizedNavigationMenuItems = computed<OrderedNavigationMenuItem[]>(() =>
         return {
           ...item,
           badge: datasetsCount.value,
+        }
+      }
+      if (item.label === 'Workflows') {
+        return {
+          ...item,
+          badge: workflowsVal?.length ?? 0,
         }
       }
       return item
@@ -107,18 +93,24 @@ const computedLinks = computed<OrderedNavigationMenuItem[][]>(() => {
 
 const analysesSearchGroups = computed<CommandPaletteGroup<CommandPaletteItem>>(() => {
   const analysesVal = toValue(analyses)
-  return {
+  const searchGroups: CommandPaletteGroup = {
     id: 'analyses',
     label: 'Analyses',
-    items: analysesVal
-      ? analysesVal?.map(({ name, id }) => {
-          return { label: name, to: `/analyses/${id}/results` }
-        })
-      : [],
+    items: [],
+  }
+
+  if (!analysesVal)
+    return searchGroups
+
+  return {
+    ...searchGroups,
+    items: analysesVal?.map(({ name, id }) => {
+      return { label: name, to: `/analyses/${id}/results` }
+    }) ?? [],
   }
 })
 const workflowsSearchGroups = computed<CommandPaletteGroup<CommandPaletteItem>>(() => {
-  const workflowsVal = toValue(workfows)
+  const workflowsVal = toValue(workflows)
   return {
     id: 'workflows',
     label: 'Workflows',
@@ -134,12 +126,12 @@ const searchGroups = computed(() => {
 })
 
 export interface DatasetsCountProvide {
-  datasetsCount: Ref<number | null | undefined>
-  refreshDatasetsCount: () => Promise<void>
+  datasetsCount: ShallowRef<number | undefined>
+  refreshDatasetsCount: () => Promise<any>
 }
 export interface AnalysesListProvide {
   analysesList: Ref<typeof analyses.value>
-  refreshAnalysesList: () => Promise<void>
+  refreshAnalysesList: () => Promise<any>
 }
 
 provide<DatasetsCountProvide>('datasetsCount', {
@@ -156,10 +148,7 @@ provide('analysesList', {
   <UDashboardGroup>
     <!-- <UDashboardSearch v-if="searchGroups" :groups="searchGroups" /> -->
     <UDashboardSidebar
-      v-model:collapsed="collapsed"
-      collapsible
-      resizable
-      class="bg-(--ui-bg-elevated)/25"
+      v-model:collapsed="collapsed" collapsible resizable class="bg-(--ui-bg-elevated)/25"
       :ui="{ footer: 'lg:border-t lg:border-(--ui-border)' }"
     >
       <template #header>
@@ -173,10 +162,8 @@ provide('analysesList', {
           </div>
           <div>
             <UButton
-              :icon="collapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
-              color="neutral"
-              variant="ghost"
-              @click="collapsed = !collapsed"
+              :icon="collapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'" color="neutral"
+              variant="ghost" @click="collapsed = !collapsed"
             />
           </div>
         </div>
@@ -192,12 +179,8 @@ provide('analysesList', {
         />
 
         <UNavigationMenu
-          v-if="computedLinks?.[1]"
-          :collapsed="collapsed"
-          :items="computedLinks[1]"
-          tooltip
-          orientation="vertical"
-          class="mt-auto"
+          v-if="computedLinks?.[1]" :collapsed="collapsed" :items="computedLinks[1]" tooltip
+          orientation="vertical" class="mt-auto"
         />
       </template>
 

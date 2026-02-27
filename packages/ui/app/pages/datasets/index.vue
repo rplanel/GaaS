@@ -4,10 +4,10 @@ import type { BreadcrumbItem, TableColumn } from '@nuxt/ui'
 
 import type { Database } from 'nuxt-galaxy'
 import type { DatasetsCountProvide } from '../../layouts/default.vue'
-import * as bt from 'blendtype'
 import { h, resolveComponent } from 'vue'
 import * as z from 'zod'
 import { getHumanSize } from '../../utils'
+import { uploadedDatasetsViewQuery } from '../../utils/queries/supabase'
 
 const props = withDefaults(defineProps<Props>(), {
   breadcrumbsItems: undefined,
@@ -36,36 +36,10 @@ const datasetCountInjected = inject<DatasetsCountProvide>('datasetsCount')
 
 const { refreshDatasetsCount } = datasetCountInjected || {}
 const supabase = useSupabaseClient<Database>()
-const user = useSupabaseUser()
+// const user = useSupabaseUser()
 
-const { data, refresh: refreshDatasets } = await useAsyncData<DatasetColumn[] | null | undefined>(
-  'analysis-input-datasets',
-  async () => {
-    const userVal = toValue(user)
+const { data, refresh: refreshDatasets } = useQuery(() => uploadedDatasetsViewQuery({ supabase }))
 
-    if (!userVal) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized: User not found',
-      })
-    }
-
-    const { data, error } = await supabase
-      .schema('galaxy')
-      .from(`uploaded_datasets_with_storage_path`)
-      .select()
-      .overrideTypes<DatasetColumn[]>()
-
-    if (data === null) {
-      throw createError({ statusMessage: 'No uploaded dataset found', statusCode: 404 })
-    }
-    if (error) {
-      throw createError({ statusCode: bt.getStatusCode(error), statusMessage: bt.getErrorMessage(error) })
-    }
-
-    return data
-  },
-)
 const sanitizedDatasets = computed<Dataset[] | undefined>(() => {
   const dataVal = toValue(data)
   if (dataVal) {

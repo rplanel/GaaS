@@ -44,6 +44,11 @@ export interface AnalysisDetail extends AnalysisRow {
   histories: HistoryRow
   jobs?: JobRow[]
 }
+
+export interface AnalysisWithJobs extends AnalysisRow {
+  jobs: JobRow[]
+}
+
 export interface AnalysisJobs extends JobRow {
   analysis: AnalysisRow
 }

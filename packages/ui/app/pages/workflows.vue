@@ -1,47 +1,25 @@
 <script setup lang="ts">
-import type { Database, WorkflowRow } from 'nuxt-galaxy'
+import type { Database } from 'nuxt-galaxy'
 
 import type { GalaxyWorkflowExportSchema, SanitizedWorkflowDbItem } from '../types'
 import * as bt from 'blendtype'
 import { galaxyWorkflowExportSchema } from 'blendtype'
 import * as z from 'zod'
 import { fromError } from 'zod-validation-error'
+import { workflowsListQuery } from '../utils/queries/supabase'
 
 const supabase = useSupabaseClient<Database>()
-const user = useSupabaseUser()
 
 const { userRole } = useUserRole(supabase)
 
-const { data: dbWorkflows } = await useAsyncData('all-workflows', async () => {
-  const userVal = toValue(user)
-  if (!userVal) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Unauthorized: User not found',
-    })
-  }
-
-  const { data, error } = await supabase
-    .schema('galaxy')
-    .from('workflows')
-    .select()
-    .overrideTypes<WorkflowRow[]>()
-
-  if (data === null) {
-    throw createError({ statusMessage: 'No uploaded dataset found', statusCode: 404 })
-  }
-  if (error) {
-    throw createError({ statusCode: bt.getStatusCode(error), statusMessage: bt.getErrorMessage(error) })
-  }
-  return data
-})
+const { data: dbWorkflows } = useQuery(() => workflowsListQuery({ supabase }))
 
 const sanitizedDbWorkflows = computed<SanitizedWorkflowDbItem[] | null>(() => {
   const dbWorkflowsVal = toValue(dbWorkflows)
   if (dbWorkflowsVal) {
     return dbWorkflowsVal.map<SanitizedWorkflowDbItem>((wf) => {
       try {
-        const definition: GalaxyWorkflowExportSchema = galaxyWorkflowExportSchema.passthrough().parse(wf.definition)
+        const definition: GalaxyWorkflowExportSchema = galaxyWorkflowExportSchema.loose().parse(wf.definition)
         return { ...wf, definition }
       }
       catch (err) {
@@ -61,7 +39,10 @@ const sanitizedDbWorkflows = computed<SanitizedWorkflowDbItem[] | null>(() => {
 </script>
 
 <template>
-  <UDashboardPanel id="workflows-list-panel" title="Workflows" :default-size="25" :min-size="20" :max-size="35" resizable>
+  <UDashboardPanel
+    id="workflows-list-panel" title="Workflows" :default-size="25" :min-size="20" :max-size="35"
+    resizable
+  >
     <UDashboardNavbar title="Workflows">
       <template #leading>
         <UDashboardSidebarCollapse />

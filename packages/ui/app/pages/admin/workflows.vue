@@ -6,7 +6,11 @@ import type { GalaxyWorkflowsItem } from 'blendtype'
 import type { Database } from 'nuxt-galaxy'
 import { USwitch } from '#components'
 import * as bt from 'blendtype'
-
+import { workflowsListQuery as galaxyWorkflowListQuery } from '../../utils/queries/galaxy'
+import {
+  instanceByUrlQuery,
+  workflowsListQuery,
+} from '../../utils/queries/supabase'
 // type Database = SupabaseTypes.Database
 
 interface ComputedGalaxyWorklowItem extends GalaxyWorkflowsItem {
@@ -16,7 +20,9 @@ interface ComputedGalaxyWorklowItem extends GalaxyWorkflowsItem {
 interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined
 }
-const props = withDefaults(defineProps<Props>(), { breadcrumbsItems: undefined })
+const props = withDefaults(defineProps<Props>(), {
+  breadcrumbsItems: undefined,
+})
 const breadcrumbsItems = toRef(() => props.breadcrumbsItems)
 
 const toast = useToast()
@@ -37,7 +43,10 @@ const computedBreadcrumbsItems = computed(() => {
   const breadcrumbsItemsVal = toValue(breadcrumbsItems)
   if (breadcrumbsItemsVal) {
     return [
-      ...breadcrumbsItemsVal.map(breadcrumb => ({ ...breadcrumb, disabled: false })),
+      ...breadcrumbsItemsVal.map(breadcrumb => ({
+        ...breadcrumb,
+        disabled: false,
+      })),
       {
         label: 'Workflows',
         disabled: true,
@@ -48,7 +57,9 @@ const computedBreadcrumbsItems = computed(() => {
   return breadcrumbsItemsVal
 })
 
-const galaxyWorkflowGalaxyColumns = ref<TableColumn<ComputedGalaxyWorklowItem>[]>([
+const galaxyWorkflowGalaxyColumns = ref<
+  TableColumn<ComputedGalaxyWorklowItem>[]
+>([
   { accessorKey: 'name', header: 'Name' },
   { accessorKey: 'version', header: 'Version' },
   {
@@ -76,23 +87,20 @@ const galaxyWorkflowGalaxyColumns = ref<TableColumn<ComputedGalaxyWorklowItem>[]
   {
     header: 'Activated',
     cell: ({ row }) => {
-      return h(
-        USwitch,
-        {
-          class: 'text-right',
-          modelValue: row.original.activated,
-          disabled: row.original.activated,
-          onChange() {
-            addToDb({ id: row.original.id })
+      return h(USwitch, {
+        class: 'text-right',
+        modelValue: row.original.activated,
+        disabled: row.original.activated,
+        onChange() {
+          addToDb({ id: row.original.id })
 
-            toast.add({
-              title: 'Workflow added to the webservice',
-              color: 'success',
-              icon: 'i-lucide-circle-check',
-            })
-          },
+          toast.add({
+            title: 'Workflow added to the webservice',
+            color: 'success',
+            icon: 'i-lucide-circle-check',
+          })
         },
-      )
+      })
     },
   },
 ])
@@ -116,37 +124,45 @@ async function addToDb(workflow: { id: string }) {
   }
 }
 
-const { data: allWorkflows, error: errorWorklows } = await useFetch<GalaxyWorkflowsItem[]>('/api/galaxy/workflows')
-if (toValue(errorWorklows)) {
-  const { errorStatus } = useErrorStatus(errorWorklows)
-  const { errorMessage } = useErrorMessage(errorWorklows)
+const { data: allWorkflows, error: errorWorkflows } = useQuery(() => galaxyWorkflowListQuery())
+
+if (toValue(errorWorkflows)) {
+  const { errorStatus } = useErrorStatus(errorWorkflows)
+  const { errorMessage } = useErrorMessage(errorWorkflows)
   throw createError({
     statusCode: toValue(errorStatus),
     statusMessage: toValue(errorMessage),
   })
 }
 
-const { data: dbWorkflows } = useAsyncData('all-db-workflows', async () => {
-  const { data, error } = await supabase
-    .schema('galaxy')
-    .from('workflows')
-    .select()
+// const { data: allWorkflows, error: errorWorklows } = await useFetch<
+//   GalaxyWorkflowsItem[]
+// >('/api/galaxy/workflows')
+// if (toValue(errorWorklows)) {
+//   const { errorStatus } = useErrorStatus(errorWorklows)
+//   const { errorMessage } = useErrorMessage(errorWorklows)
+//   throw createError({
+//     statusCode: toValue(errorStatus),
+//     statusMessage: toValue(errorMessage),
+//   })
+// }
 
-  if (error) {
-    throw createError({
-      statusMessage: error.message,
-      statusCode: Number.parseInt(error.code),
-    })
-  }
-  return data
+const { data: galaxyInstance } = useQuery(() =>
+  instanceByUrlQuery({
+    supabase,
+    instanceUrl: galaxyInstanceUrl,
+  }),
+)
+
+const { data: dbWorkflows } = useQuery(() => {
+  return workflowsListQuery({ supabase })
 })
 
 const dbWorkflowsMap = computed(() => {
   const dbWorkflowsVal = toValue(dbWorkflows)
   if (dbWorkflowsVal) {
     return new Map(
-      dbWorkflowsVal
-        .map(workflow => [workflow.galaxy_id, workflow]),
+      dbWorkflowsVal.map(workflow => [workflow.galaxy_id, workflow]),
     )
   }
   return new Map()
@@ -172,41 +188,11 @@ const computedWorkflows = computed(() => {
   return []
 })
 
-const { data: galaxyInstance } = await useAsyncData(
-  'current-galaxy-instance',
-  async () => {
-    if (galaxyInstanceUrl) {
-      const { data, error } = await supabase
-        .schema('galaxy')
-        .from('instances')
-        .select()
-        .eq('url', galaxyInstanceUrl)
-        .limit(1)
-
-      if (error) {
-        throw createError({
-          statusMessage: error.message,
-          statusCode: Number.parseInt(error.code),
-        })
-      }
-      if (data.length >= 1) {
-        return data[0]
-      }
-      else {
-        throw createError({
-          statusMessage: 'No Galaxy instance found',
-          statusCode: 404,
-        })
-      }
-    }
-  },
-)
-
 const pageHeaderProps = computed(() => {
   return {
     title: 'Workflows',
-    description: 'Manage the workflows that are available for this web application',
-
+    description:
+      'Manage the workflows that are available for this web application',
   }
 })
 </script>
@@ -214,16 +200,10 @@ const pageHeaderProps = computed(() => {
 <template>
   <div v-if="userRole === 'admin'">
     <div v-if="galaxyInstance">
-      <PageHeader
-        :page-header-props
-        icon="i-lucide:workflow"
-        :breadcrumbs-items="computedBreadcrumbsItems"
-      >
+      <PageHeader :page-header-props icon="i-lucide:workflow" :breadcrumbs-items="computedBreadcrumbsItems">
         <template #trailing-content>
           <UBadge variant="subtle" color="info">
-            {{
-              galaxyInstance.name
-            }}
+            {{ galaxyInstance.name }}
           </UBadge>
         </template>
       </PageHeader>
