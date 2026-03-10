@@ -99,7 +99,7 @@ port = 54324
 [storage]
 enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
-file_size_limit = "5MB"
+file_size_limit = "50MB"
 # Image transformation API is available to Supabase Pro plan.
 # [storage.image_transformation]
 # enabled = true

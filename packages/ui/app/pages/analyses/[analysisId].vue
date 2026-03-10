@@ -78,16 +78,16 @@ const computedResultsMenuItems = computed(() => {
   if (!workflowVal || workflowTagVersion === null || workflowTagName === null) {
     return items
   }
-  // const workflowTagVersion = bt.getWorkflowTagVersion(workflowVal.tags)
-  // const workflowTagName = bt.getWorkflowTagName(workflowVal.tags)
   const workflowTagVersionVal = toValue(workflowTagVersion)
   const workflowTagNameVal = toValue(workflowTagName)
+  if (!workflowTagVersionVal || !workflowTagNameVal) {
+    return items
+  }
   const resultItems = resultsMenuItems?.[workflowTagNameVal]?.[workflowTagVersionVal]
-  if (!Array.isArray(resultItems)) {
+  if (!resultItems || !Array.isArray(resultItems)) {
     return items
   }
   return [
-
     ...items,
     ...resultItems.map(item => ({
       ...item,
