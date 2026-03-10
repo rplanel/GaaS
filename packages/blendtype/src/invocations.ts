@@ -1,8 +1,8 @@
 import type { GalaxyInvocation } from './types'
-
 import { Effect } from 'effect'
 import { runWithConfig } from './config'
-import { GalaxyFetch, HttpError } from './galaxy'
+import { extractStatusCode, formatErrorMessage, InvocationError } from './errors'
+import { GalaxyFetch } from './galaxy'
 
 export function getInvocationEffect(invocationId: string) {
   return Effect.gen(function* () {
@@ -11,7 +11,12 @@ export function getInvocationEffect(invocationId: string) {
       try: () => fetchApi<GalaxyInvocation>(`api/invocations/${invocationId}`, {
         method: 'GET',
       }),
-      catch: _caughtError => new HttpError({ message: `Error getting invocation ${invocationId}: ${_caughtError}` }),
+      catch: caughtError => new InvocationError({
+        message: formatErrorMessage('invocation', invocationId, 'Error getting', caughtError),
+        invocationId,
+        statusCode: extractStatusCode(caughtError),
+        cause: caughtError,
+      }),
     })
     return yield* invocation
   })

@@ -1,8 +1,9 @@
 import type { GalaxyHistoryDetailed, GalaxyUploadedDataset } from './types'
-import { Console, Data, Effect } from 'effect'
+import { Console, Effect } from 'effect'
 import { runWithConfig } from './config'
 import { getDatasetEffect } from './datasets'
-import { GalaxyFetch, HttpError } from './galaxy'
+import { extractStatusCode, formatErrorMessage, HistoryError } from './errors'
+import { GalaxyFetch } from './galaxy'
 
 export function createHistoryEffect(name: string) {
   return Effect.gen(function* () {
@@ -13,7 +14,11 @@ export function createHistoryEffect(name: string) {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `name=${name}`,
       }),
-      catch: _caughtError => new HttpError({ message: `Error creating history: ${_caughtError}` }),
+      catch: caughtError => new HistoryError({
+        message: formatErrorMessage('history', name, 'Error creating', caughtError),
+        statusCode: extractStatusCode(caughtError),
+        cause: caughtError,
+      }),
     })
     return yield* history
   })
@@ -33,7 +38,12 @@ export function getHistoryEffect(historyId: string) {
       try: () => fetchApi<GalaxyHistoryDetailed>(`api/histories/${historyId}`, {
         method: 'GET',
       }),
-      catch: _caughtError => new HttpError({ message: `Error getting history ${historyId}: ${_caughtError}` }),
+      catch: caughtError => new HistoryError({
+        message: formatErrorMessage('history', historyId, 'Error getting', caughtError),
+        historyId,
+        statusCode: extractStatusCode(caughtError),
+        cause: caughtError,
+      }),
     })
     return yield* histories
   })
@@ -52,7 +62,11 @@ export function getHistoriesEffect() {
       try: () => fetchApi<GalaxyHistoryDetailed[]>('api/histories', {
         method: 'GET',
       }),
-      catch: _caughtError => new HttpError({ message: `Error getting histories: ${_caughtError}` }),
+      catch: caughtError => new HistoryError({
+        message: formatErrorMessage('histories', undefined, 'Error getting', caughtError),
+        statusCode: extractStatusCode(caughtError),
+        cause: caughtError,
+      }),
     })
     return yield* histories
   })
@@ -65,10 +79,9 @@ export function getHistories() {
   )
 }
 
-export class DeleteGalaxyHistoryHttpError extends Data.TaggedError('DeleteGalaxyHistoryHttpError')<{
-  readonly message: string
-}> {}
-
+/**
+ * @deprecated Use deleteHistoryEffect with HistoryError instead
+ */
 export function deleteHistoryEffect(historyId: string) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
@@ -77,7 +90,12 @@ export function deleteHistoryEffect(historyId: string) {
         method: 'DELETE',
         body: { purge: true },
       }),
-      catch: _caughtError => new DeleteGalaxyHistoryHttpError({ message: `Error deleting history ${historyId}: ${_caughtError}` }),
+      catch: caughtError => new HistoryError({
+        message: formatErrorMessage('history', historyId, 'Error deleting', caughtError),
+        historyId,
+        statusCode: extractStatusCode(caughtError),
+        cause: caughtError,
+      }),
     })
     return yield* history.pipe(Effect.tap(() => Console.log(`Deleted history ${historyId}`)))
   })
@@ -105,19 +123,11 @@ interface uploadFileFromFile extends UploadFileBaseParams {
 export function uploadFileToHistoryEffect(params: uploadFileFromUrl | uploadFileFromFile) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
-    // let payload: Record<string, any> = {}
     if ('blob' in params) {
       const { historyId, blob, name } = params
       const file = new File([blob], name)
-      // console.log('Uploading file name', name)
-      // console.log('Uploading file from blob', blob)
-      // console.log('Blob size:', blob.size)
-      // console.log('Blob type:', blob.type)
-      // console.log(typeof blob)
-      // console.log('File to upload:', file)
       const formData = new FormData()
-      // formData.append('history_id', historyId)
-      formData.append('history_id', 'e4d3a344ef26d9ea')
+      formData.append('history_id', historyId)
       formData.append('targets', JSON.stringify([{
         destination: { type: 'hdas' },
         elements: [{
@@ -129,41 +139,20 @@ export function uploadFileToHistoryEffect(params: uploadFileFromUrl | uploadFile
           to_posix_lines: true,
         }],
       }]))
-
-      // [{"destination":{"type":"hdas"},"elements":[{"src":"files","name":"","dbkey":"?","ext":"auto","space_to_tab":false,"to_posix_lines":true}]}]
       formData.append('auto_decompress', 'true')
       formData.append('files', file)
 
-      // payload = {
-      //   history_id: historyId,
-      //   targets: [{
-      //     destination: {
-      //       type: 'hdas',
-      //     },
-      //     elements: [{
-      //       src: 'files',
-      //       name,
-      //       dbkey: '?',
-      //       ext: 'auto',
-      //       space_to_tab: false,
-      //       to_posix_lines: true,
-      //       deferred: false,
-
-      //     }],
-      //   }],
-      //   auto_decompress: true,
-      //   files: [blob],
-      // }
-      //
       const uploadedDataset = Effect.tryPromise({
         try: () => fetchApi<GalaxyUploadedDataset>('api/tools/fetch', {
           method: 'POST',
           headers: { 'Content-Type': 'multipart/form-data' },
-          // body: payload,
           body: formData,
         }),
-        catch: _caughtError => new HttpError({
-          message: `Error uploading file ${name}: ${_caughtError}`,
+        catch: caughtError => new HistoryError({
+          message: formatErrorMessage('file', name, 'Error uploading', caughtError),
+          historyId,
+          statusCode: extractStatusCode(caughtError),
+          cause: caughtError,
         }),
       }).pipe(
         Effect.tap(input => Console.log(`Uploaded file ${name} to history ${historyId}\n input: ${input}`)),
@@ -179,13 +168,6 @@ export function uploadFileToHistoryEffect(params: uploadFileFromUrl | uploadFile
       const uploadedDataset = uploadFileToHistoryFromUrlEffect(params)
       return yield* uploadedDataset
     }
-
-    // return yield* uploadedDataset.pipe(Effect.catchAll((error) => {
-    //   return deleteHistoryEffect(historyId)
-    //   // return Effect.succeed(`Recovering from ${error._tag}`)
-    // },
-    //   // deleteHistoryEffect(historyId)
-    // ))
   })
 }
 
@@ -200,7 +182,7 @@ export function uploadFileToHistoryFromUrlEffect(params: uploadFileFromUrl) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
     const { historyId, srcUrl, name } = params
-    const payload: Record<string, any> = {
+    const payload: Record<string, unknown> = {
       history_id: historyId,
       targets: [{
         destination: { type: 'hdas' },
@@ -223,8 +205,11 @@ export function uploadFileToHistoryFromUrlEffect(params: uploadFileFromUrl) {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
-      catch: _caughtError => new HttpError({
-        message: `Error uploading file ${name} from url ${srcUrl}: ${_caughtError}`,
+      catch: caughtError => new HistoryError({
+        message: formatErrorMessage('file from URL', name, 'Error uploading', caughtError),
+        historyId,
+        statusCode: extractStatusCode(caughtError),
+        cause: caughtError,
       }),
     }).pipe(
       Effect.tap(input => Console.log(`Uploaded file ${name} to history ${historyId}\n input: ${input}`)),
@@ -237,7 +222,6 @@ export function uploadFileToHistoryFromUrlEffect(params: uploadFileFromUrl) {
   })
 }
 
-// downloadDataset
 export function downloadDatasetEffect(historyId: string, datasetId: string) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
@@ -250,7 +234,12 @@ export function downloadDatasetEffect(historyId: string, datasetId: string) {
         try: () => fetchApi<Blob>(`api/histories/${historyId}/contents/${datasetId}/display`, {
           method: 'GET',
         }),
-        catch: _caughtError => new HttpError({ message: `Error downloading dataset: ${_caughtError}` }),
+        catch: caughtError => new HistoryError({
+          message: formatErrorMessage('dataset', datasetId, 'Error downloading', caughtError),
+          historyId,
+          statusCode: extractStatusCode(caughtError),
+          cause: caughtError,
+        }),
       })
       return yield* dataset
     }

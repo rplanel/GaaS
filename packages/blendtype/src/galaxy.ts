@@ -2,6 +2,7 @@ import type { GalaxyVersion } from './types'
 import { Context, Data, Effect, Layer } from 'effect'
 import { $fetch } from 'ofetch'
 import { BlendTypeConfig, NoConfigError, runWithConfig } from './config'
+import { extractStatusCode, formatErrorMessage, GalaxyApiError } from './errors'
 // import 'dotenv/config'
 
 /**
@@ -94,11 +95,29 @@ export function toGalaxyServiceUnavailable<A, E, C>(effect: Effect.Effect<A, E, 
   )
 }
 
+/**
+ * Creates an HTTP error with proper status code and cause tracking.
+ */
+export function createHttpError(
+  error: unknown,
+  resourceType: string,
+  resourceId?: string,
+): GalaxyApiError {
+  const statusCode = extractStatusCode(error)
+  const message = formatErrorMessage(resourceType, resourceId, 'Error', error)
+
+  return new GalaxyApiError({
+    message,
+    statusCode,
+    cause: error,
+  })
+}
+
 export const getVersionEffect = Effect.gen(function* () {
   const fetchApi = yield* GalaxyFetch
   return yield* Effect.tryPromise({
     try: () => fetchApi<GalaxyVersion>('/api/version'),
-    catch: _caughtError => new HttpError({ message: `Error getting version: ${_caughtError}` }),
+    catch: caughtError => createHttpError(caughtError, 'version'),
   })
 })
 
