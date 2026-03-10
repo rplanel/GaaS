@@ -1,7 +1,8 @@
 import type { GalaxyInvoke, GalaxyWorkflow, GalaxyWorkflowExport, GalaxyWorkflowInput, GalaxyWorkflowParameters, GalaxyWorkflowsItem, rawGalaxyWorkflowExport, TagCollection } from './types'
 import { Effect, Exit } from 'effect'
 import { runWithConfig } from './config'
-import { GalaxyFetch, HttpError } from './galaxy'
+import { extractStatusCode, formatErrorMessage, WorkflowError } from './errors'
+import { GalaxyFetch } from './galaxy'
 import { galaxyWorkflowExportSchema } from './types'
 
 export function getWorkflowEffect(workflowId: string) {
@@ -14,7 +15,12 @@ export function getWorkflowEffect(workflowId: string) {
           method: 'GET',
         },
       ),
-      catch: _caughtError => new HttpError({ message: `Error getting workflow ${workflowId}: ${_caughtError}` }),
+      catch: caughtError => new WorkflowError({
+        message: formatErrorMessage('workflow', workflowId, 'Error getting', caughtError),
+        workflowId,
+        statusCode: extractStatusCode(caughtError),
+        cause: caughtError,
+      }),
     })
     return yield* workflow
   })
@@ -41,7 +47,12 @@ export function exportWorkflowEffect(workflowId: string, style: 'export' | 'run'
           method: 'GET',
         },
       ),
-      catch: _caughtError => new HttpError({ message: `Error exporting workflow ${workflowId}: ${_caughtError}` }),
+      catch: caughtError => new WorkflowError({
+        message: formatErrorMessage('workflow', workflowId, 'Error exporting', caughtError),
+        workflowId,
+        statusCode: extractStatusCode(caughtError),
+        cause: caughtError,
+      }),
     })
     const workflow = yield* workflowEffect
     return galaxyWorkflowExportSchema.passthrough().parse(workflow) as GalaxyWorkflowExport
@@ -65,7 +76,11 @@ export function getWorkflowsEffect() {
           method: 'GET',
         },
       ),
-      catch: _caughtError => new HttpError({ message: `Error getting workflows.\nError: ${_caughtError}` }),
+      catch: caughtError => new WorkflowError({
+        message: formatErrorMessage('workflows', undefined, 'Error getting', caughtError),
+        statusCode: extractStatusCode(caughtError),
+        cause: caughtError,
+      }),
     })
     return yield* workflow
   })
@@ -89,7 +104,12 @@ export function invokeWorkflowEffect(historyGalaxyId: string, workflowId: string
           body: { history_id: historyGalaxyId, inputs, parameters },
         },
       ),
-      catch: _caughtError => new HttpError({ message: `Error invoking workflow ${workflowId}: ${_caughtError}` }),
+      catch: caughtError => new WorkflowError({
+        message: formatErrorMessage('workflow', workflowId, 'Error invoking', caughtError),
+        workflowId,
+        statusCode: extractStatusCode(caughtError),
+        cause: caughtError,
+      }),
     })
     return yield* workflow
   })
