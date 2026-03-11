@@ -28,7 +28,7 @@ export interface Database {
         }
         Insert: {
           created_at?: string
-          datamap: Json
+          datamap?: Json
           galaxy_id: string
           history_id: number
           id?: number
@@ -36,7 +36,7 @@ export interface Database {
           is_sync?: boolean
           name: string
           owner_id: string
-          parameters: Json
+          parameters?: Json
           state: Database['galaxy']['Enums']['invocation_state']
           stderr?: string | null
           stdout?: string | null

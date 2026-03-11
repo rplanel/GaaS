@@ -23,7 +23,19 @@ export type NewDataset = typeof datasets.$inferInsert
 export type GetTag = typeof tags.$inferSelect
 export type NewJob = typeof jobs.$inferInsert
 export type NewHistory = typeof histories.$inferInsert
-export type NewAnalysis = typeof analyses.$inferInsert
+
+/**
+ * @deprecated This is a workaround for Drizzle bug.
+ *
+ * Use `typeof analyses.$inferInsert` directly once fixed.
+ */
+export type NewAnalysis = Omit<typeof analyses.$inferInsert, 'id' | 'createdAt' | 'parameters' | 'invocation'> & {
+  id?: number
+  createdAt?: Date
+  parameters: NonNullable<typeof analyses.$inferInsert['parameters']>
+  invocation: NonNullable<typeof analyses.$inferInsert['invocation']>
+}
+
 export type NewWorkflow = typeof workflows.$inferInsert
 
 // export type AnalysisIOWithDatasets = AnalysisInputsWithDatasets | AnalysisOutputsWithDatasets

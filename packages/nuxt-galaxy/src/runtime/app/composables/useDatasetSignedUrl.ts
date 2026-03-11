@@ -5,30 +5,30 @@ import type { Database } from '../../types/database'
 import { useSupabaseClient } from '#imports'
 import { ref, toValue, watchEffect } from 'vue'
 
-export function useDatasetSignedUrl(storageObjectId: MaybeRef<string | undefined>) {
+export function useDatasetSignedUrl(datasetId: MaybeRef<number | undefined>) {
   const supabase = useSupabaseClient<Database>()
   const signedUrl = ref<string | undefined>(undefined)
   const error = ref<PostgrestError | StorageError | undefined>(undefined)
-  async function query(storageObjectId: MaybeRef<string | undefined>) {
-    const storageObjectIdVal = toValue(storageObjectId)
-    if (storageObjectIdVal) {
-      const { data: storageObject, error: postgresError } = await supabase
-        .schema('storage')
-        .from('objects')
-        .select()
-        .eq('id', storageObjectIdVal)
+  async function query(datasetId: MaybeRef<number | undefined>) {
+    const datasetIdVal = toValue(datasetId)
+    if (datasetIdVal) {
+      const { data: dataset, error: postgresError } = await supabase
+        .schema('galaxy')
+        .from('datasets')
+        .select('storage_path')
+        .eq('id', datasetIdVal)
         .limit(1)
         .single()
 
-      // const storageObjectVal = toValue(storageObject)
       if (postgresError) {
         error.value = postgresError
         return
       }
-      if (storageObject && storageObject?.name) {
+      const storagePath = (dataset as { storage_path?: string })?.storage_path
+      if (storagePath) {
         const { data, error: storageError } = await supabase.storage
           .from('analysis_files')
-          .createSignedUrl(storageObject.name, 60)
+          .createSignedUrl(storagePath, 60)
         if (storageError) {
           error.value = storageError
           return
@@ -40,7 +40,7 @@ export function useDatasetSignedUrl(storageObjectId: MaybeRef<string | undefined
     }
   }
   watchEffect(() => {
-    query(storageObjectId)
+    query(datasetId)
   })
   return { signedUrl, error }
 }

@@ -70,11 +70,15 @@ export function getOrCreateInputDatasetEffect(galaxyDatasetId: string, analysisI
       if (datasetBlob) {
         const data = yield* uploadFileToStorage(event, galaxyDataset.name, datasetBlob)
         if (data) {
+          if (!data?.id || !data?.path) {
+            return yield* Effect.fail(new InsertAnalysisInputError({ message: 'Storage upload failed: missing file metadata' }))
+          }
           const insertedDataset = yield* insertDatasetEffect({
             galaxyId: galaxyDatasetId,
             datasetName: galaxyDataset.name,
             ownerId,
             storageObjectId: data.id,
+            storagePath: data.path,
             historyId,
             uuid: galaxyDataset.uuid,
             dataLines: galaxyDataset.metadata_data_lines || 0,

@@ -84,7 +84,11 @@ export function uploadFileToStorage(event: H3Event<EventHandlerRequest>, dataset
       console.error('Error uploading file to storage:', error)
       yield* Effect.fail(new UploadFileToStorageError({ message: error.message }))
     }
-    return data
+    // Return both id and path for storage operations
+    return {
+      id: data?.id,
+      path: data?.path,
+    }
   })
 }
 

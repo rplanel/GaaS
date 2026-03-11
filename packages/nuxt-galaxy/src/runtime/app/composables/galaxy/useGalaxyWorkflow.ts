@@ -67,6 +67,9 @@ export function useGalaxyWorkflow(workflowId: Ref<string | undefined>) {
 
     for (const stepId in workflowToolStepsVal) {
       const step = workflowToolStepsVal[stepId]
+      if (!step) {
+        continue
+      }
       const { tool_id: toolId } = step
       stepToToolMap[stepId] = toolId
     }
