@@ -95,11 +95,12 @@ export function uploadDatasetsEffect(params: UploadDatasetParams) {
                   file_ext: extension,
                   create_time: createdAt,
                 } = uploadedDatasets[0]
-                if (storageObjectId) {
+                if (storageObjectId && storageObject?.name) {
                   const insertedDataset = yield* insertDatasetEffect({
                     datasetName: name,
                     ownerId,
                     storageObjectId,
+                    storagePath: storageObject.name,
                     historyId,
                     uuid,
                     extension,

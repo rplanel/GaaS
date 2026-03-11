@@ -25,7 +25,7 @@ export const analyses = galaxy.table(
     name: varchar('name', { length: 256 }).notNull(),
     state: invocationStateEnum('state').$type<InvocationState>().notNull(),
     parameters: json('parameters').notNull(),
-    datamap: json('datamap').notNull(),
+    datamap: json('datamap').default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     ownerId: uuid('owner_id').notNull().references(() => owners.id, { onDelete: 'cascade' }),
     historyId: integer('history_id').notNull().unique().references(() => histories.id, { onDelete: 'cascade' }),
@@ -34,7 +34,7 @@ export const analyses = galaxy.table(
     stderr: text('stderr'),
     stdout: text('stdout'),
     invocation: json('invocation').notNull(),
-    isSync: boolean('is_sync').notNull().default(false),
+    isSync: boolean('is_sync').default(false),
   },
   table => [
     index().on(table.ownerId),

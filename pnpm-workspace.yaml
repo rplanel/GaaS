@@ -51,8 +51,8 @@ catalog:
   citty: ^0.2.0
   defu: ^6.1.4
   dotenv: ^17.2.3
-  drizzle-kit: ^1.0.0-beta.13
-  drizzle-orm: ^1.0.0-beta.13
+  drizzle-kit: ^1.0.0-beta.16
+  drizzle-orm: ^1.0.0-beta.16
   effect: ^3.19.6
   embla-carousel: ^8.6.0
   esbuild: ^0.27.0

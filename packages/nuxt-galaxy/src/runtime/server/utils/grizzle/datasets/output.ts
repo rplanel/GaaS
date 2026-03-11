@@ -83,12 +83,13 @@ export function getOrCreateOutputDatasetEffect(
       const datasetBlob = yield* bt.downloadDatasetEffect(historyDb.galaxyId, galaxyDatasetId)
       if (datasetBlob) {
         const data = yield* uploadFileToStorage(event, galaxyDataset.name, datasetBlob)
-        if (data) {
+        if (data?.id && data?.path) {
           const insertedDataset = yield* insertDatasetEffect({
             galaxyId: galaxyDatasetId,
             datasetName: galaxyDataset.name,
             ownerId,
             storageObjectId: data.id,
+            storagePath: data.path,
             historyId,
             uuid: galaxyDataset.uuid,
             dataLines: galaxyDataset.metadata_data_lines || 0,
@@ -99,8 +100,8 @@ export function getOrCreateOutputDatasetEffect(
             const instertedOutputs = yield* insertAnalysisOutputEffect(analysisId, insertedDataset.id, jobId, galaxyDataset.state)
             if (instertedOutputs) {
               const insertedTags = yield* insertTags(galaxyDataset.tags)
-              const insertedAnalysisOutputTags = yield* insertAnalysisOutputTags(insertedTags, instertedOutputs.id)
-              return insertedAnalysisOutputTags
+              yield* insertAnalysisOutputTags(insertedTags, instertedOutputs.id)
+              return instertedOutputs
             }
           }
         }

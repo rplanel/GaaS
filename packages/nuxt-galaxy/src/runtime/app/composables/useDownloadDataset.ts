@@ -6,30 +6,30 @@ import { useSupabaseClient } from '#imports'
 import { useAsyncState } from '@vueuse/core'
 import { ref, toValue, watch } from 'vue'
 
-export function useDownloadDataset(storageObjectId: Ref<string | undefined>) {
+export function useDownloadDataset(datasetId: Ref<number | undefined>) {
   const supabase = useSupabaseClient<Database>()
   const error = ref<StorageError | PostgrestError | undefined>(undefined)
 
   async function query() {
-    const storageObjectIdVal = toValue(storageObjectId)
-    if (storageObjectIdVal) {
-      const { data: storageObject, error: postgresError } = await supabase
-        .schema('storage')
-        .from('objects')
-        .select()
-        .eq('id', storageObjectIdVal)
+    const datasetIdVal = toValue(datasetId)
+    if (datasetIdVal) {
+      const { data: dataset, error: postgresError } = await supabase
+        .schema('galaxy')
+        .from('datasets')
+        .select('storage_path')
+        .eq('id', datasetIdVal)
         .limit(1)
         .single()
       if (postgresError) {
         error.value = postgresError
         return
       }
-      if (storageObject && storageObject?.name) {
-        const { name } = storageObject
+      const storagePath = (dataset as { storage_path?: string })?.storage_path
+      if (storagePath) {
         const { data: analysisFile, error: storageError } = await supabase
           .storage
           .from('analysis_files')
-          .download(name)
+          .download(storagePath)
 
         if (storageError) {
           error.value = storageError
@@ -54,7 +54,7 @@ export function useDownloadDataset(storageObjectId: Ref<string | undefined>) {
   })
 
   execute()
-  watch(storageObjectId, () => {
+  watch(datasetId, () => {
     execute()
   })
 

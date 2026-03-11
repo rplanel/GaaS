@@ -33,6 +33,7 @@ export const datasets = galaxy.table(
       () => objects.id,
       { onDelete: 'cascade' },
     ),
+    storagePath: varchar('storage_path', { length: 512 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     uuid: uuid('uuid').notNull().unique(),
     extension: varchar('extension', { length: 100 }).notNull(),
