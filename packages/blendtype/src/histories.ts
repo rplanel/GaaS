@@ -1,9 +1,74 @@
 import type { GalaxyHistoryDetailed, GalaxyUploadedDataset } from './types'
-import { Console, Effect } from 'effect'
-import { runWithConfig } from './config'
+import { Buffer } from 'node:buffer'
+import { Console, Data, Effect } from 'effect'
+import * as tus from 'tus-js-client'
+import { BlendTypeConfig, runWithConfig } from './config'
 import { getDatasetEffect } from './datasets'
 import { extractStatusCode, formatErrorMessage, HistoryError } from './errors'
 import { GalaxyFetch } from './galaxy'
+
+export class TusUploadError extends Data.TaggedError('TusUploadError')<{
+  readonly message: string
+  readonly cause?: unknown
+}> {}
+
+/**
+ * Performs a resumable TUS upload to Galaxy server.
+ *
+ * Uploads a file to the Galaxy server using the TUS (Tus.io) resumable upload protocol.
+ * This allows for chunked uploads that can be resumed if interrupted.
+ *
+ * @param source - The file content to upload (File or Buffer from node:buffer)
+ * @param tusEndpoint - The Galaxy TUS endpoint URL (e.g., https://galaxy.example.com/api/upload/resumable_upload/)
+ * @param metadata - File metadata for Galaxy including history_id, file_type, dbkey, and name
+ * @param apiKey - Galaxy API key for authentication via x-api-key header
+ * @param chunkSize - Upload chunk size in bytes, defaults to 10MB (10485760)
+ * @returns Effect.Effect<string, TusUploadError> - Effect that resolves to the session ID on success,
+ *          or fails with TusUploadError if upload fails
+ * @example
+ * ```typescript
+ * const effect = uploadWithTus(
+ *   buffer,
+ *   'https://galaxy.example.com/api/upload/resumable_upload/',
+ *   { history_id: 'abc123', name: 'data.txt', file_type: 'auto', dbkey: '?' },
+ *   'my-api-key'
+ * )
+ * const sessionId = await Effect.runPromise(effect)
+ * ```
+ * @throws {TusUploadError} When TUS upload fails or error callback is triggered
+ * @see https://tus.io/ - TUS upload protocol documentation
+ */
+export function uploadWithTus(
+  source: File | Buffer,
+  tusEndpoint: string,
+  metadata: Record<string, string>,
+  apiKey: string,
+  chunkSize: number = 10485760,
+): Effect.Effect<string, TusUploadError> {
+  return Effect.async((resume) => {
+    const upload = new tus.Upload(source, {
+      endpoint: tusEndpoint,
+      retryDelays: [0, 3000, 10000],
+      chunkSize,
+      metadata,
+      headers: {
+        'x-api-key': apiKey,
+      },
+      onError: (error) => {
+        resume(Effect.fail(new TusUploadError({
+          message: `TUS upload failed: ${error.message}`,
+          cause: error,
+        })))
+      },
+      onSuccess: () => {
+        const sessionId = upload.url?.split('/').at(-1) || ''
+        resume(Effect.succeed(sessionId))
+      },
+    })
+
+    upload.start()
+  })
+}
 
 export function createHistoryEffect(name: string) {
   return Effect.gen(function* () {
@@ -79,9 +144,6 @@ export function getHistories() {
   )
 }
 
-/**
- * @deprecated Use deleteHistoryEffect with HistoryError instead
- */
 export function deleteHistoryEffect(historyId: string) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
@@ -117,36 +179,79 @@ interface uploadFileFromUrl extends UploadFileBaseParams {
 }
 
 interface uploadFileFromFile extends UploadFileBaseParams {
-  blob: Blob
+  blob: Blob | Buffer
 }
 
 export function uploadFileToHistoryEffect(params: uploadFileFromUrl | uploadFileFromFile) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
+    const config = yield* BlendTypeConfig
+
     if ('blob' in params) {
       const { historyId, blob, name } = params
-      const file = new File([blob], name)
-      const formData = new FormData()
-      formData.append('history_id', historyId)
-      formData.append('targets', JSON.stringify([{
-        destination: { type: 'hdas' },
-        elements: [{
-          src: 'files',
-          name,
-          dbkey: '?',
-          ext: 'auto',
-          space_to_tab: false,
-          to_posix_lines: true,
-        }],
-      }]))
-      formData.append('auto_decompress', 'true')
-      formData.append('files', file)
 
-      const uploadedDataset = Effect.tryPromise({
+      // Convert Blob to Buffer for Node.js compatibility
+      let uploadSource: File | Buffer
+      if (blob instanceof Buffer) {
+        uploadSource = blob
+      }
+      else {
+        // Convert Blob to Buffer for TUS
+        const blobObj = blob as Blob
+        const arrayBuffer = yield* Effect.tryPromise({
+          try: () => blobObj.arrayBuffer(),
+          catch: error => new TusUploadError({
+            message: `Failed to convert blob: ${error}`,
+            cause: error,
+          }),
+        })
+        uploadSource = Buffer.from(arrayBuffer)
+      }
+
+      // TUS resumable upload endpoint
+      const tusEndpoint = `${config.url}/api/upload/resumable_upload/`
+
+      // Build metadata for TUS upload
+      const metadata: Record<string, string> = {
+        history_id: historyId,
+        file_type: 'auto',
+        dbkey: '?',
+        name,
+      }
+
+      yield* Console.log(`Starting TUS upload for ${name} to history ${historyId}`)
+
+      // Perform TUS chunked upload
+      const sessionId = yield* uploadWithTus(uploadSource, tusEndpoint, metadata, config.apiKey)
+
+      yield* Console.log(`TUS upload complete, session_id: ${sessionId}`)
+
+      // Submit the uploaded file reference to Galaxy
+      // Using files_0|file_data format as expected by Galaxy API
+      const payload: Record<string, unknown> = {
+        history_id: historyId,
+        targets: [{
+          destination: { type: 'hdas' },
+          elements: [{
+            src: 'files',
+            name,
+            dbkey: '?',
+            ext: 'auto',
+            space_to_tab: false,
+            to_posix_lines: true,
+          }],
+        }],
+        auto_decompress: true,
+        [`files_0|file_data`]: {
+          session_id: sessionId,
+          name,
+        },
+      }
+
+      const uploadedDataset = yield* Effect.tryPromise({
         try: () => fetchApi<GalaxyUploadedDataset>('api/tools/fetch', {
           method: 'POST',
-          headers: { 'Content-Type': 'multipart/form-data' },
-          body: formData,
+          body: JSON.stringify(payload),
         }),
         catch: caughtError => new HistoryError({
           message: formatErrorMessage('file', name, 'Error uploading', caughtError),
@@ -155,14 +260,15 @@ export function uploadFileToHistoryEffect(params: uploadFileFromUrl | uploadFile
           cause: caughtError,
         }),
       }).pipe(
-        Effect.tap(input => Console.log(`Uploaded file ${name} to history ${historyId}\n input: ${input}`)),
+        Effect.tap(() => Console.log(`Uploaded file ${name} to history ${historyId}`)),
         Effect.catchAllCause((cause) => {
           return deleteHistoryEffect(historyId).pipe(
             Effect.flatMap(() => Effect.fail(cause)),
           )
         }),
       )
-      return yield* uploadedDataset
+
+      return uploadedDataset
     }
     else {
       const uploadedDataset = uploadFileToHistoryFromUrlEffect(params)

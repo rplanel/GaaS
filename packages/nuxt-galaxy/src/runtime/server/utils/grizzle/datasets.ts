@@ -2,9 +2,10 @@ import type { Datamap, DatasetState, DatasetTerminalState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
 
 import type { NewDataset } from '~/src/runtime/types/nuxt-galaxy'
+import { useRuntimeConfig } from '#imports'
 import * as bt from 'blendtype'
 import { Console, Data, Effect } from 'effect'
-import { parseFilename } from 'ufo'
+import * as ufo from 'ufo'
 import { datasets } from '../../db/schema/galaxy/datasets.js'
 import { objects } from '../../db/schema/storage/objects.js'
 import { Drizzle, eq, useDrizzle } from '../drizzle.js'
@@ -27,6 +28,15 @@ export interface UploadDatasetParams {
 
 export function uploadDatasetsEffect(params: UploadDatasetParams) {
   const { datamap, galaxyHistoryId, historyId, ownerId, event, file = true } = params
+
+  // Detect if we're in local development (localhost/127.0.0.1 Supabase)
+  // In dev mode, signed URLs are not accessible to remote Galaxy instances,
+  // so we always use blob upload instead of URL-based upload
+  const config = useRuntimeConfig()
+  const supabaseUrl = (config.public as { supabaseUrl?: string }).supabaseUrl || ''
+  const isLocalDev = supabaseUrl.includes('127.0.0.1') || supabaseUrl.includes('localhost')
+  const shouldUseFileUpload = file || isLocalDev
+  // console.log(`Supabase URL: ${supabaseUrl}, isLocalDev: ${isLocalDev}, shouldUseFileUpload: ${shouldUseFileUpload}`)
   const datasetEntries = Object.entries(datamap)
   return Effect.all(
     datasetEntries.map(([step, { storage_object_id: storageObjectId }]) => {
@@ -34,31 +44,17 @@ export function uploadDatasetsEffect(params: UploadDatasetParams) {
         if (storageObjectId) {
           const storageObject = yield* getStorageObject(storageObjectId)
           if (storageObject && storageObject?.name) {
-            // ------------
             const signedUrl = yield* createSignedUrl(event, storageObject.name)
-            // ------------
-            // const signedUrl = 'https://raw.githubusercontent.com/mdmparis/defense-finder/refs/heads/master/tests/data/prot/df_test_prot.faa'
-            // const signedUrl = 'https://supabase-satellite-finder.dev.pasteur.cloud/storage/v1/object/public/public-data/NZ_CP018928.1.faa'
-            // const signedUrl = 'https://supabase-satellite-finder.dev.pasteur.cloud/storage/v1/object/public/genome//GCF_000006945.2-prot.faa'
-            // signedUrl = 'https://supabase-satellite-finder.dev.pasteur.cloud/storage/v1/object/public/genome//GCF_000008865.2-prot.faa'
-            // signedUrl = 'https://supabase-satellite-finder.dev.pasteur.cloud/storage/v1/object/public/genome//NZ_CP018928.1.faa'
-            // ------------
             if (signedUrl) {
-              const filename = parseFilename(signedUrl, { strict: false }) || 'gaas_input_file'
+              const filename = ufo.parseFilename(ufo.decode(signedUrl), { strict: true }) || `gaas-input-dataset-${storageObject.name}`
               let historyDatasetEffect: ReturnType<typeof bt.uploadFileToHistoryEffect>
-              if (file) {
+              if (shouldUseFileUpload) {
                 const response = yield* bt.fetchDatasetEffect(signedUrl)
-                // const contentType = response.headers.get('content-type') || 'application/octet-stream'
-                // const body = response.body
                 const blob = yield* Effect.tryPromise({
                   try: () => response.blob(),
                   catch: _caughtError => new bt.HttpError({ message: `Error fetching dataset from ${signedUrl}: ${_caughtError}` }),
                 })
-                // const form = new FormData()
-                // form.append('files', body, { filename, contentType })
-                // Galaxy-specific fields
-                // form.append('file_type', 'auto')
-                // form.append('dbkey', '?')
+
                 if (blob.size === 0) {
                   yield* Effect.fail(new bt.HttpError({ message: `Dataset at ${signedUrl} is empty` }))
                 }

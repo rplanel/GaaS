@@ -7,6 +7,7 @@ export default defineBuildConfig({
   declaration: true,
   clean: true,
   failOnWarn: false,
+  externals: ['tus-js-client'],
   rollup: {
     emitCJS: true,
     commonjs: false,
