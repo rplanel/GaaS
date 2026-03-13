@@ -23,12 +23,9 @@
     "supabase:start": "pnpm supabase --workdir packages/nuxt-galaxy start",
     "supabase:stop": "pnpm supabase --workdir packages/nuxt-galaxy stop"
   },
-  "dependencies": {
-    "tus-js-client": "catalog:"
-  },
+
   "devDependencies": {
     "@antfu/eslint-config": "catalog:",
-    "@types/tus-js-client": "catalog:",
     "@unocss/eslint-plugin": "catalog:",
     "bumpp": "catalog:",
     "changelogen": "catalog:",

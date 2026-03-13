@@ -44,12 +44,13 @@
     "effect": "catalog:",
     "h3": "catalog:",
     "ofetch": "catalog:",
+    "tus-js-client": "catalog:",
     "ufo": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
+    "@types/tus-js-client": "catalog:",
     "@vue/compiler-core": "catalog:",
     "automd": "catalog:",
     "changelogen": "catalog:",
