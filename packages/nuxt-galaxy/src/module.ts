@@ -142,6 +142,9 @@ export default defineNuxtModule<ModuleOptions>({
       { url: moduleOptions.url },
     )
 
+    // Add supabase URL to public runtime config for server-side detection
+    nuxt.options.runtimeConfig.public.supabaseUrl = runtimeConfig.public.supabaseUrl || process.env.SUPABASE_URL || ''
+
     // Private runtime
 
     // Leftmost arguments have more priority when assigning defaults.
