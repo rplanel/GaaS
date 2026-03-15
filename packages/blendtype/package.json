@@ -2,7 +2,7 @@
   "name": "blendtype",
   "type": "module",
   "version": "0.0.3-alpha.5",
-  "packageManager": "pnpm@10.23.0",
+  "packageManager": "pnpm@10.32.1",
   "description": "A TypeScript wrapper for the Galaxy REST API built on Effect-TS. Provides type-safe, composable operations for workflows, histories, datasets, and TUS resumable uploads.",
   "author": "Rémi Planel <rplanel@pasteur.fr>",
   "license": "MIT",
