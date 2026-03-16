@@ -1,15 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from 'nuxt-galaxy'
+import type { Database } from '../../../types/database'
 
-import { supabaseResponseToData } from '.'
+import { defineQueryOptions } from '@pinia/colada'
+import { supabaseResponseToData } from '../utils'
 
-export const WORKFLOWS_QUERY_KEYS = {
+export const SUPABASE_WORKFLOWS_QUERY_KEYS = {
   root: ['supabase', 'workflows'] as const,
-  list: () => [...WORKFLOWS_QUERY_KEYS.root, 'list'] as const,
-  byId: (id: number) => [...WORKFLOWS_QUERY_KEYS.root, id] as const,
+  list: () => [...SUPABASE_WORKFLOWS_QUERY_KEYS.root, 'list'] as const,
+  byId: (id: number) => [...SUPABASE_WORKFLOWS_QUERY_KEYS.root, id] as const,
 }
 
-// simple workflows list query without any relationships
 async function supabaseWorkflowsQuery(supabase: SupabaseClient<Database>) {
   return supabase
     .schema('galaxy')
@@ -17,14 +17,14 @@ async function supabaseWorkflowsQuery(supabase: SupabaseClient<Database>) {
     .select()
     .then(supabaseResponseToData)
 }
+
 export const workflowsListQuery = defineQueryOptions(
   ({ supabase }: { supabase: SupabaseClient<Database> }) => ({
-    key: WORKFLOWS_QUERY_KEYS.list(),
+    key: SUPABASE_WORKFLOWS_QUERY_KEYS.list(),
     query: () => supabaseWorkflowsQuery(supabase),
   }),
 )
 
-// workflow by id
 async function supabaseWorkflowByIdQuery({ id, supabase }: { id: number, supabase: SupabaseClient<Database> }) {
   return supabase
     .schema('galaxy')
@@ -37,6 +37,6 @@ async function supabaseWorkflowByIdQuery({ id, supabase }: { id: number, supabas
 }
 
 export const workflowByIdQuery = defineQueryOptions(({ id, supabase }: { id: number, supabase: SupabaseClient<Database> }) => ({
-  key: WORKFLOWS_QUERY_KEYS.byId(id),
+  key: SUPABASE_WORKFLOWS_QUERY_KEYS.byId(id),
   query: () => supabaseWorkflowByIdQuery({ id, supabase }),
 }))

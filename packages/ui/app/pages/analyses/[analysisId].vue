@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { Database, WorkflowRow } from 'nuxt-galaxy'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
-import { analysisByIdWithOutputsAndWorkflowsQuery } from '../../utils/queries/supabase'
 
 const router = useRouter()
 const route = useRoute()

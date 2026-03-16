@@ -23,8 +23,6 @@ import {
   useGalaxyToolInputComponent,
 } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 
-import { analysesOutputsViewQuery, analysisByIdWithJobsQuery, workflowByIdQuery } from '../../../utils/queries/supabase'
-
 // type Database = SupabaseTypes.Database
 export type UploadedDatasetDb = Database['galaxy']['Views']['uploaded_datasets_with_storage_path']['Row']
 

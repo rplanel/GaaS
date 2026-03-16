@@ -6,11 +6,6 @@ import type { GalaxyWorkflowsItem } from 'blendtype'
 import type { Database } from 'nuxt-galaxy'
 import { USwitch } from '#components'
 import * as bt from 'blendtype'
-import { workflowsListQuery as galaxyWorkflowListQuery } from '../../utils/queries/galaxy'
-import {
-  instanceByUrlQuery,
-  workflowsListQuery,
-} from '../../utils/queries/supabase'
 // type Database = SupabaseTypes.Database
 
 interface ComputedGalaxyWorklowItem extends GalaxyWorkflowsItem {
@@ -124,7 +119,7 @@ async function addToDb(workflow: { id: string }) {
   }
 }
 
-const { data: allWorkflows, error: errorWorkflows } = useQuery(() => galaxyWorkflowListQuery())
+const { data: allWorkflows, error: errorWorkflows } = useQuery(() => galaxyWorkflowsListQuery())
 
 if (toValue(errorWorkflows)) {
   const { errorStatus } = useErrorStatus(errorWorkflows)
