@@ -5,7 +5,6 @@ import type { Database } from 'nuxt-galaxy'
 import type { AnalysesListProvide } from '../../layouts/default.vue'
 import type { SanitizedAnalysis } from '../../pages/analyses/index.vue'
 import { useRoute } from 'vue-router'
-import { analysesListWithWorkflowAndHistoryQuery } from '../../utils/queries/supabase'
 
 const collapsedModel = defineModel('collapsed', { default: false })
 const supabase = useSupabaseClient<Database>()

@@ -7,7 +7,6 @@ import type { DatasetsCountProvide } from '../../layouts/default.vue'
 import { h, resolveComponent } from 'vue'
 import * as z from 'zod'
 import { getHumanSize } from '../../utils'
-import { uploadedDatasetsViewQuery } from '../../utils/queries/supabase'
 
 const props = withDefaults(defineProps<Props>(), {
   breadcrumbsItems: undefined,

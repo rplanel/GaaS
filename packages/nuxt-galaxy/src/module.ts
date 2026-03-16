@@ -189,7 +189,6 @@ export default defineNuxtModule<ModuleOptions>({
       { name: 'useDiskUsage', path: './runtime/app/composables/useDiskUsage' },
       { name: 'useSupabaseRealtime', path: './runtime/app/composables/useSupabaseRealtime' },
       { name: 'useDatasetSignedUrl', path: './runtime/app/composables/useDatasetSignedUrl' },
-      { name: 'useDownloadDataset', path: './runtime/app/composables/useDownloadDataset' },
       { name: 'useParse', path: './runtime/app/composables/parser/useParse' },
       { name: 'useParseCsv', path: './runtime/app/composables/parser/useParseCsv' },
       { name: 'useParseTsv', path: './runtime/app/composables/parser/useParseTsv' },
@@ -208,6 +207,9 @@ export default defineNuxtModule<ModuleOptions>({
         from: resolver.resolve(composable.path), // path of composable
       })
     }
+
+    // Query imports from pinia-colada
+    addImportsDir(resolver.resolve('./runtime/app/queries'))
 
     // addImportsDir(resolver.resolve('./runtime/app/composables'))
     // addImportsDir(resolver.resolve('./runtime/app/composables/galaxy'))

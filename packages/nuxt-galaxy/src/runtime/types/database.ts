@@ -12,12 +12,12 @@ export interface Database {
       analyses: {
         Row: {
           created_at: string
-          datamap: Json
+          datamap: Json | null
           galaxy_id: string
           history_id: number
           id: number
           invocation: Json
-          is_sync: boolean
+          is_sync: boolean | null
           name: string
           owner_id: string
           parameters: Json
@@ -28,15 +28,15 @@ export interface Database {
         }
         Insert: {
           created_at?: string
-          datamap?: Json
+          datamap?: Json | null
           galaxy_id: string
           history_id: number
           id?: number
           invocation: Json
-          is_sync?: boolean
+          is_sync?: boolean | null
           name: string
           owner_id: string
-          parameters?: Json
+          parameters: Json
           state: Database['galaxy']['Enums']['invocation_state']
           stderr?: string | null
           stdout?: string | null
@@ -44,12 +44,12 @@ export interface Database {
         }
         Update: {
           created_at?: string
-          datamap?: Json
+          datamap?: Json | null
           galaxy_id?: string
           history_id?: number
           id?: number
           invocation?: Json
-          is_sync?: boolean
+          is_sync?: boolean | null
           name?: string
           owner_id?: string
           parameters?: Json
@@ -228,6 +228,7 @@ export interface Database {
           misc_blurb: string | null
           owner_id: string
           storage_object_id: string
+          storage_path: string
           uuid: string
         }
         Insert: {
@@ -242,6 +243,7 @@ export interface Database {
           misc_blurb?: string | null
           owner_id: string
           storage_object_id: string
+          storage_path: string
           uuid: string
         }
         Update: {
@@ -256,6 +258,7 @@ export interface Database {
           misc_blurb?: string | null
           owner_id?: string
           storage_object_id?: string
+          storage_path?: string
           uuid?: string
         }
         Relationships: [
@@ -601,6 +604,7 @@ export interface Database {
           owner_id: string | null
           state: Database['galaxy']['Enums']['dataset_state'] | null
           storage_object_id: string | null
+          storage_path: string | null
           uuid: string | null
         }
         Relationships: [
@@ -667,6 +671,7 @@ export interface Database {
           owner_id: string | null
           state: Database['galaxy']['Enums']['dataset_state'] | null
           storage_object_id: string | null
+          storage_path: string | null
           uuid: string | null
         }
         Relationships: [
@@ -738,6 +743,7 @@ export interface Database {
           owner: string | null
           owner_id: string | null
           storage_object_id: string | null
+          storage_path: string | null
           uuid: string | null
         }
         Relationships: [

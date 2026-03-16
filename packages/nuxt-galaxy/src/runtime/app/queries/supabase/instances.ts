@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from 'nuxt-galaxy'
-import { supabaseResponseToData } from '.'
+import type { Database } from '../../../types/database'
+
+import { defineQueryOptions } from '@pinia/colada'
+import { supabaseResponseToData } from '../utils'
 
 export const SUPABASE_INSTANCES_QUERY_KEYS = {
   root: ['supabase', 'instances'] as const,

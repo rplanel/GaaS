@@ -6,7 +6,6 @@ import * as bt from 'blendtype'
 import { galaxyWorkflowExportSchema } from 'blendtype'
 import * as z from 'zod'
 import { fromError } from 'zod-validation-error'
-import { workflowsListQuery } from '../utils/queries/supabase'
 
 const supabase = useSupabaseClient<Database>()
 

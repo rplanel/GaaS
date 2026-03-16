@@ -64,6 +64,7 @@
     "@nuxt/content": "catalog:nuxt",
     "@nuxt/kit": "catalog:nuxt",
     "@nuxtjs/supabase": "catalog:nuxt",
+    "@pinia/colada": "catalog:vue",
     "blendtype": "workspace:*",
     "citty": "catalog:",
     "d3-dsv": "catalog:dataviz",

@@ -208,7 +208,7 @@ const { decodedParameters: workflowParametersModel } = useGalaxyDecodeParameters
 
     <UPageList v-else divide>
       <UPageCard title="Inputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-        <GalaxyAnalysisIoDatasets :items="inputs" />
+        <GalaxyAnalysisIoDatasetsList :items="inputs" />
       </UPageCard>
       <UPageCard v-if="jobs && toolsObj" title="Jobs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
         <UAccordion :default-value="[jobsAccordionItems?.[0]?.value ?? '0']" :items="jobsAccordionItems">
@@ -256,7 +256,7 @@ const { decodedParameters: workflowParametersModel } = useGalaxyDecodeParameters
         </UAccordion>
       </UPageCard>
       <UPageCard title="Outputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-        <GalaxyAnalysisIoDatasets :items="sortedOutputs" />
+        <GalaxyAnalysisIoDatasetsList :items="sortedOutputs" />
       </UPageCard>
     </UPageList>
   </slot>

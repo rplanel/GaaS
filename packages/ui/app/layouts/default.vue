@@ -7,7 +7,6 @@ import type { ShallowRef } from 'vue'
 import type { OrderedNavigationMenuItem } from '../app.config'
 import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
 // import { SUPABASE_QUERY_KEYS, useSupabaseQuery } from '../composables/useSupabaseQuery'
-import { analysesListQuery, datasetsCountQuery, workflowsListQuery } from '../utils/queries/supabase'
 
 // type Database = SupabaseTypes.Database
 
