@@ -81,9 +81,13 @@ export function getOrCreateInputDatasetEffect(galaxyDatasetId: string, analysisI
             storagePath: data.path,
             historyId,
             uuid: galaxyDataset.uuid,
-            dataLines: galaxyDataset.metadata_data_lines || 0,
-            miscBlurb: galaxyDataset?.misc_blurb ?? null,
-            extension: galaxyDataset.extension,
+            // Phase 2: Write to galaxyMetadata JSONB only
+            galaxyMetadata: {
+              extension: galaxyDataset.extension,
+              data_lines: galaxyDataset.metadata_data_lines || 0,
+              misc_blurb: galaxyDataset?.misc_blurb || undefined,
+              peek: galaxyDataset?.peek || undefined,
+            },
           })
           if (insertedDataset) {
             return yield* insertAnalysisInputEffect(analysisId, insertedDataset.id, galaxyDataset.state)
@@ -182,15 +186,39 @@ export function getAnalysisInputState(galaxyDatasetId: string, ownerId: string) 
 export function updateDatasetBlurbEffect(datasetDbId: number, miscBlurb: string) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
+    const db = useDrizzle
+
+    // Phase 2: Update galaxyMetadata JSONB
     return yield* Effect.tryPromise({
-      try: () => useDrizzle
-        .update(datasets)
-        .set({ miscBlurb })
-        .where(
-          eq(datasets.id, datasetDbId),
-        )
-        .returning({ updatedId: datasets.id, miscBlurb: datasets.miscBlurb })
-        .then(takeUniqueOrThrow),
+      try: async () => {
+        // Get existing metadata
+        const existing = await db
+          .select({ galaxyMetadata: datasets.galaxyMetadata })
+          .from(datasets)
+          .where(eq(datasets.id, datasetDbId))
+          .limit(1)
+
+        const existingMetadata = existing[0]?.galaxyMetadata
+
+        if (!existingMetadata) {
+          throw new Error('Dataset metadata not found')
+        }
+
+        return await db
+          .update(datasets)
+          .set({
+            galaxyMetadata: {
+              ...existingMetadata,
+              misc_blurb: miscBlurb || undefined,
+            },
+          })
+          .where(eq(datasets.id, datasetDbId))
+          .returning({
+            updatedId: datasets.id,
+            galaxyMetadata: datasets.galaxyMetadata,
+          })
+          .then(takeUniqueOrThrow)
+      },
       catch: (error) => {
         return new UpdateDatasetError({ message: `Error updating dataset misc_blurb: ${error}` })
       },

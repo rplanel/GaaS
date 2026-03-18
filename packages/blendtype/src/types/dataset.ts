@@ -1206,6 +1206,7 @@ export interface GalaxyDataset {
   metadata_comment_lines: number
   metadata_data_lines: number
   misc_blurb: string | null
+  peek: string | null
 
 }
 

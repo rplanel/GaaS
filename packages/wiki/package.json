@@ -27,13 +27,13 @@
     "zod-validation-error": "catalog:"
   },
   "devDependencies": {
-    "@nuxt/test-utils": "catalog:nuxt",
-    "@vue/test-utils": "catalog:",
+    "@nuxt/test-utils": "catalog:testing",
+    "@vue/test-utils": "catalog:testing",
     "embla-carousel": "catalog:",
     "eslint": "catalog:",
-    "happy-dom": "catalog:",
+    "happy-dom": "catalog:testing",
     "nuxt": "catalog:nuxt",
-    "playwright-core": "catalog:",
+    "playwright-core": "catalog:testing",
     "typescript": "catalog:",
     "vue": "catalog:",
     "vue-tsc": "catalog:"

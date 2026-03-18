@@ -61,7 +61,7 @@
     "simple-git-hooks": "catalog:",
     "typescript": "catalog:",
     "unbuild": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:testing"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"

@@ -13,6 +13,7 @@ export const SUPABASE_ANALYSES_QUERY_KEYS = {
   byId: (id: number) => [...SUPABASE_ANALYSES_QUERY_KEYS.root, id] as const,
   byIdWithJobs: (id: number, withJobs?: boolean) => [...SUPABASE_ANALYSES_QUERY_KEYS.byId(id), { withJobs }] as const,
   byIdWithOutputsAndWorkflows: (id: number, withOutputs?: boolean, withWorkflows?: boolean) => [...SUPABASE_ANALYSES_QUERY_KEYS.byId(id), { withOutputs, withWorkflows }] as const,
+  byIdWithDetails: (id: number) => [...SUPABASE_ANALYSES_QUERY_KEYS.byId(id), 'details'] as const,
 }
 
 async function supabaseAnalysesQuery(supabase: SupabaseClient<Database>) {
@@ -102,6 +103,37 @@ export const analysisByIdWithOutputsAndWorkflowsQuery = defineQueryOptions(
     return {
       key: SUPABASE_ANALYSES_QUERY_KEYS.byIdWithOutputsAndWorkflows(id, true, true),
       query: () => supabaseAnalysisByIdWithOutputsAndWorkflowsQuery(id, supabase),
+    }
+  },
+)
+
+async function supabaseAnalysisByIdWithDetailsQuery(supabase: SupabaseClient<Database>, id: number) {
+  return supabase
+    .schema('galaxy')
+    .from('analyses')
+    .select(`
+      *,
+      histories(*),
+      jobs(*),
+      workflows(*)
+    `)
+    .eq('id', id)
+    .limit(1)
+    .single()
+    .then(supabaseResponseToData)
+}
+
+export const analysisByIdWithDetailsQuery = defineQueryOptions(
+  ({ id, supabase }: { id: number | undefined, supabase: SupabaseClient<Database> }) => {
+    if (id === undefined) {
+      throw createError({
+        statusCode: 400,
+        message: 'Analysis ID is required',
+      })
+    }
+    return {
+      key: SUPABASE_ANALYSES_QUERY_KEYS.byIdWithDetails(id),
+      query: () => supabaseAnalysisByIdWithDetailsQuery(supabase, id),
     }
   },
 )

@@ -2,6 +2,7 @@ import { eq, getColumns } from 'drizzle-orm'
 import {
   index,
   integer,
+  jsonb,
   pgPolicy,
   primaryKey,
   serial,
@@ -21,6 +22,17 @@ import { tags } from './tags'
  * Datasets
  */
 
+/**
+ * Galaxy dataset metadata interface
+ * Stores Galaxy-specific metadata in JSONB format (snake_case to match Galaxy API)
+ */
+export interface GalaxyDatasetMetadata {
+  extension: string
+  data_lines?: number
+  misc_blurb?: string
+  peek?: string
+}
+
 const { name, ...galaxyItemNoName } = galaxyItem
 
 export const datasets = galaxy.table(
@@ -36,10 +48,7 @@ export const datasets = galaxy.table(
     storagePath: varchar('storage_path', { length: 512 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     uuid: uuid('uuid').notNull().unique(),
-    extension: varchar('extension', { length: 100 }).notNull(),
-    // fileSize: integer('file_size').notNull(),
-    dataLines: integer('data_lines'),
-    miscBlurb: varchar('misc_blurb', { length: 512 }),
+    galaxyMetadata: jsonb('galaxy_metadata').notNull().$type<GalaxyDatasetMetadata>(),
     datasetName: varchar('dataset_name', { length: 256 }).notNull(),
     ...galaxyItemNoName,
   },

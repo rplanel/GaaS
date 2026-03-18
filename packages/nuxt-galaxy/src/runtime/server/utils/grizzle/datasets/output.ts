@@ -92,9 +92,13 @@ export function getOrCreateOutputDatasetEffect(
             storagePath: data.path,
             historyId,
             uuid: galaxyDataset.uuid,
-            dataLines: galaxyDataset.metadata_data_lines || 0,
-            miscBlurb: galaxyDataset.misc_blurb,
-            extension: galaxyDataset.extension,
+            // Phase 2: Write to galaxyMetadata JSONB only
+            galaxyMetadata: {
+              extension: galaxyDataset.extension,
+              data_lines: galaxyDataset.metadata_data_lines || 0,
+              misc_blurb: galaxyDataset.misc_blurb || undefined,
+              peek: galaxyDataset.peek || undefined,
+            },
           })
           if (insertedDataset) {
             const instertedOutputs = yield* insertAnalysisOutputEffect(analysisId, insertedDataset.id, jobId, galaxyDataset.state)
