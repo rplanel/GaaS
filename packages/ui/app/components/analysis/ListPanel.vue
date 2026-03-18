@@ -97,7 +97,7 @@ const navigationAnalysis = computed(() => {
   return sanitizedAnalysesVal?.map((analysis) => {
     return {
       ...analysis,
-      to: `/analyses/${analysis.id}`,
+      to: `/analyses/${analysis.id}/results`,
       slot: 'analysis',
       description: `${analysis.workflows.name} - v${analysis.workflows.version}`,
       tooltip: {
