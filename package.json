@@ -23,7 +23,6 @@
     "supabase:start": "pnpm supabase --workdir packages/nuxt-galaxy start",
     "supabase:stop": "pnpm supabase --workdir packages/nuxt-galaxy stop"
   },
-
   "devDependencies": {
     "@antfu/eslint-config": "catalog:",
     "@unocss/eslint-plugin": "catalog:",
@@ -34,6 +33,7 @@
     "fs-extra": "catalog:",
     "jiti": "catalog:",
     "lint-staged": "catalog:",
+    "msw": "catalog:testing",
     "simple-git-hooks": "catalog:"
   },
   "simple-git-hooks": {

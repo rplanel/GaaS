@@ -3,17 +3,22 @@ export { SUPABASE_ANALYSES_QUERY_KEYS } from './analyses'
 export {
   analysesListQuery,
   analysesListWithWorkflowAndHistoryQuery,
+  analysisByIdWithDetailsQuery,
   analysisByIdWithJobsQuery,
   analysisByIdWithOutputsAndWorkflowsQuery,
 } from './analyses'
 
+// Analyses inputs view
+export { SUPABASE_ANALYSES_INPUTS_VIEW_QUERY_KEYS } from './analysisInputsView'
+export { analysesInputsViewQuery, analysisInputsViewByIdQuery } from './analysisInputsView'
+
 // Analyses outputs view
 export { SUPABASE_ANALYSES_OUTPUTS_VIEW_QUERY_KEYS } from './analysisOutputsView'
-export { analysesOutputsViewQuery } from './analysisOutputsView'
+export { analysesOutputsViewQuery, analysisOutputsViewByIdQuery } from './analysisOutputsView'
 
 // Datasets (datasets.ts - download functionality and preview)
 export { SUPABASE_DATASETS_QUERY_KEYS } from './datasets'
-export { previewDatasetQuery, useDownloadDataset } from './datasets'
+export { datasetsByIdQuery, previewDatasetQuery, useDownloadDataset } from './datasets'
 export type { PreviewResult } from './datasets'
 
 // Instances

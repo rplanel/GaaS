@@ -219,13 +219,11 @@ export interface Database {
         Row: {
           annotation: string | null
           created_at: string
-          data_lines: number | null
           dataset_name: string
-          extension: string
           galaxy_id: string
+          galaxy_metadata: Json
           history_id: number
           id: number
-          misc_blurb: string | null
           owner_id: string
           storage_object_id: string
           storage_path: string
@@ -234,13 +232,11 @@ export interface Database {
         Insert: {
           annotation?: string | null
           created_at?: string
-          data_lines?: number | null
           dataset_name: string
-          extension: string
           galaxy_id: string
+          galaxy_metadata: Json
           history_id: number
           id?: number
-          misc_blurb?: string | null
           owner_id: string
           storage_object_id: string
           storage_path: string
@@ -249,13 +245,11 @@ export interface Database {
         Update: {
           annotation?: string | null
           created_at?: string
-          data_lines?: number | null
           dataset_name?: string
-          extension?: string
           galaxy_id?: string
+          galaxy_metadata?: Json
           history_id?: number
           id?: number
-          misc_blurb?: string | null
           owner_id?: string
           storage_object_id?: string
           storage_path?: string
@@ -591,15 +585,13 @@ export interface Database {
           analysis_id: number | null
           annotation: string | null
           created_at: string | null
-          data_lines: number | null
           dataset_id: number | null
           dataset_name: string | null
-          extension: string | null
           galaxy_id: string | null
+          galaxy_metadata: Json | null
           history_id: number | null
           id: number | null
           metadata: Json | null
-          misc_blurb: string | null
           name: string | null
           owner_id: string | null
           state: Database['galaxy']['Enums']['dataset_state'] | null
@@ -657,16 +649,14 @@ export interface Database {
           analysis_id: number | null
           annotation: string | null
           created_at: string | null
-          data_lines: number | null
           dataset_id: number | null
           dataset_name: string | null
-          extension: string | null
           galaxy_id: string | null
+          galaxy_metadata: Json | null
           history_id: number | null
           id: number | null
           job_id: number | null
           metadata: Json | null
-          misc_blurb: string | null
           name: string | null
           owner_id: string | null
           state: Database['galaxy']['Enums']['dataset_state'] | null
@@ -731,14 +721,12 @@ export interface Database {
           annotation: string | null
           bucket_id: string | null
           created_at: string | null
-          data_lines: number | null
           dataset_name: string | null
-          extension: string | null
           galaxy_id: string | null
+          galaxy_metadata: Json | null
           history_id: number | null
           id: string | null
           metadata: Json | null
-          misc_blurb: string | null
           name: string | null
           owner: string | null
           owner_id: string | null

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { AccordionItem } from '@nuxt/ui'
 import type { GalaxyTool } from 'blendtype'
-import type { AnalysisDetail, JobRow } from 'nuxt-galaxy'
+import type { AnalysisDetail, Database, JobRow } from 'nuxt-galaxy'
 import type { GalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
+import { useSupabaseClient } from '#imports'
+// import { analysisByIdWithDetailsQuery, analysisInputsViewByIdQuery, analysisOutputsViewByIdQuery } from ''
 import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDecodeParameters'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
@@ -19,14 +21,49 @@ watch(
   { immediate: true, deep: true },
 )
 
-const {
-  outputs,
-  analysis: detailedAnalysis,
-  inputs,
-  refresh,
-  pendingAnalysis,
-  error,
-} = useDatabaseAnalysisDetails(analysisId)
+const supabase = useSupabaseClient<Database>()
+
+const { data: inputs, refresh: _refreshInputs } = useQuery(() => {
+  const id = analysisId.value
+  if (!id) {
+    return undefined
+  }
+  return analysisInputsViewByIdQuery({ analysisId: id, supabase })
+})
+
+const { data: outputs, refresh: _refreshOutputs } = useQuery(() => {
+  const id = analysisId.value
+  if (!id) {
+    return undefined
+  }
+  return analysisOutputsViewByIdQuery({ analysisId: id, supabase })
+})
+
+const { data: analysis, refresh: _refreshAnalysis, isPending: pendingAnalysis, error } = useQuery(() => {
+  const id = analysisId.value
+  if (!id) {
+    return undefined
+  }
+  return analysisByIdWithDetailsQuery({ id, supabase })
+})
+
+if (error.value) {
+  throw createError({
+    statusCode: 500,
+    statusMessage: error.value?.message || 'Error fetching analysis details',
+  })
+}
+
+function refresh() {
+  _refreshAnalysis()
+  _refreshInputs()
+  _refreshOutputs()
+}
+
+const detailedAnalysis = computed<AnalysisDetail | undefined>(() => {
+  const analysisVal = analysis.value
+  return analysisVal as AnalysisDetail | undefined
+})
 
 const sortedOutputs = computed(() => {
   const outputsVal = toValue(outputs)
@@ -43,13 +80,6 @@ const sortedOutputs = computed(() => {
   }
   return []
 })
-
-if (error.value) {
-  throw createError({
-    statusCode: 500,
-    statusMessage: error.value?.message || 'Error fetching analysis details',
-  })
-}
 
 const workflowGalaxyId = computed(() => {
   const detailedAnalysisVal = toValue(detailedAnalysis)

@@ -99,10 +99,14 @@ export function uploadDatasetsEffect(params: UploadDatasetParams) {
                     storagePath: storageObject.name,
                     historyId,
                     uuid,
-                    extension,
                     createdAt: new Date(createdAt),
-                    dataLines: 0,
                     galaxyId: uploadedGalaxyId,
+                    // Phase 2: Write to galaxyMetadata JSONB only
+                    galaxyMetadata: {
+                      extension,
+                      data_lines: 0,
+                      peek: undefined,
+                    },
                   })
                   if (insertedDataset) {
                     return {
