@@ -114,7 +114,7 @@ catalogs:
     happy-dom: ^20.4.0
     msw: ^2.12.12
     playwright-core: ^1.56.1
-    vitest: ^3.2.4
+    vitest: ^4.1.0
   vue:
     '@pinia/colada': ^0.21.5
     '@pinia/colada-devtools': ^0.4.4
