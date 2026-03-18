@@ -50,11 +50,12 @@ export default defineAppConfig({
       },
 
     ],
-    analyisParametersMenuItems: {
-      label: 'Analysis parameters',
-      icon: 'mdi:tools',
-      exact: true,
-    },
+    analyisParametersMenuItems: undefined,
+    // {
+    // label: 'Analysis parameters',
+    // icon: 'mdi:tools',
+    // exact: true,
+    // },
     resultsMenuItems: { } as Record<string, Record<string, unknown>>,
     footerItems: [
       {

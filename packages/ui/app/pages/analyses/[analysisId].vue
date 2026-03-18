@@ -68,12 +68,15 @@ function handleUpdates() {
 const computedResultsMenuItems = computed(() => {
   const analysisIdVal = toValue(analysisIdFromRoute)
   const workflowVal = toValue(workflow)
-  const items = [{ ...analyisParametersMenuItems, to: {
-    name: 'analyses-analysisId',
-    params: {
-      analysisId: analysisIdVal,
-    },
-  } }]
+
+  const items = analyisParametersMenuItems
+    ? [{ ...analyisParametersMenuItems, to: {
+        name: 'analyses-analysisId',
+        params: {
+          analysisId: analysisIdVal,
+        },
+      } }]
+    : []
   if (!workflowVal || workflowTagVersion === null || workflowTagName === null) {
     return items
   }
@@ -107,7 +110,7 @@ const computedResultsMenuItems = computed(() => {
           />
         </template>
       </UDashboardNavbar>
-      <UDashboardToolbar>
+      <UDashboardToolbar v-if="computedResultsMenuItems?.length > 0">
         <template #left>
           <UNavigationMenu :items="computedResultsMenuItems" highlight class="-mx-1 flex-1" />
         </template>
