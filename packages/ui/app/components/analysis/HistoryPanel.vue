@@ -31,14 +31,6 @@ const { data: inputs, refresh: _refreshInputs } = useQuery(() => {
   return analysisInputsViewByIdQuery({ analysisId: id, supabase })
 })
 
-const { data: outputs, refresh: _refreshOutputs } = useQuery(() => {
-  const id = analysisId.value
-  if (!id) {
-    return undefined
-  }
-  return analysisOutputsViewByIdQuery({ analysisId: id, supabase })
-})
-
 const { data: analysis, refresh: _refreshAnalysis, isPending: pendingAnalysis, error } = useQuery(() => {
   const id = analysisId.value
   if (!id) {
@@ -57,28 +49,11 @@ if (error.value) {
 function refresh() {
   _refreshAnalysis()
   _refreshInputs()
-  _refreshOutputs()
 }
 
 const detailedAnalysis = computed<AnalysisDetail | undefined>(() => {
   const analysisVal = analysis.value
   return analysisVal as AnalysisDetail | undefined
-})
-
-const sortedOutputs = computed(() => {
-  const outputsVal = toValue(outputs)
-  if (outputsVal) {
-    return [...outputsVal].sort((a, b) => {
-      if (a.dataset_name === null && b.dataset_name === null)
-        return 0
-      if (a.dataset_name === null)
-        return 1
-      if (b.dataset_name === null)
-        return -1
-      return a.dataset_name.localeCompare(b.dataset_name)
-    })
-  }
-  return []
 })
 
 const workflowGalaxyId = computed(() => {
@@ -104,7 +79,7 @@ const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
 const { getToolParameters, getParametersInputComponent } = useAnalysisTools(toolsObj)
 const { jobs, jobsAccordionItems, jobsMap, jobDetailsAccordionItems } = useAnalysisJob(detailedAnalysis, toolsObj)
 
-function useAnalysisJob(analysis: Ref<AnalysisDetail | null>, tools: Ref<Record<string, GalaxyTool>>) {
+function useAnalysisJob(analysis: Ref<AnalysisDetail | undefined>, tools: Ref<Record<string, GalaxyTool>>) {
   const jobs = computed<JobRow[] | undefined>(() => {
     const analysisVal = toValue(analysis)
     if (analysisVal && analysisVal?.jobs) {
@@ -284,9 +259,6 @@ const { decodedParameters: workflowParametersModel } = useGalaxyDecodeParameters
             </div>
           </template>
         </UAccordion>
-      </UPageCard>
-      <UPageCard title="Outputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-        <GalaxyAnalysisIoDatasetsList :items="sortedOutputs" />
       </UPageCard>
     </UPageList>
   </slot>
