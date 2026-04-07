@@ -99,7 +99,7 @@ catalogs:
     '@nuxt/kit': ^4.3.0
     '@nuxt/module-builder': ^1.0.2
     '@nuxt/schema': ^4.3.0
-    '@nuxt/ui': https://pkg.pr.new/@nuxt/ui@fcdb231
+    '@nuxt/ui': ^4.6.1
     '@nuxtjs/supabase': ^2.0.4
     '@pinia/colada-nuxt': ^0.3.1
     '@pinia/nuxt': ^0.11.3
