@@ -1,12 +1,16 @@
 import type * as TusTypes from 'tus-js-client'
 import type { TusUploadError } from '../src/histories'
-import { Buffer } from 'node:buffer'
 import { Effect, pipe } from 'effect'
 import * as tus from 'tus-js-client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { uploadWithTus } from '../src/histories'
 
 import { expectFailure } from './fixtures'
+
+// Helper to create a File from string for testing
+function createTestFile(content: string, filename: string): File {
+  return new File([content], filename, { type: 'application/octet-stream' })
+}
 
 // Store test control variables
 let mockUploadInstance: MockUploadInstance | undefined
@@ -77,7 +81,7 @@ describe('uploadWithTus', () => {
     it('should successfully upload and extract session ID from URL', () => {
       return pipe(
         Effect.gen(function* () {
-          const buffer = Buffer.from('test content')
+          const file = createTestFile('test content', 'test.txt')
           const metadata = {
             history_id: 'test-history-id',
             name: 'test.txt',
@@ -89,7 +93,7 @@ describe('uploadWithTus', () => {
           mockUrl = 'https://galaxy.example.com/api/upload/resumable_upload/session-abc123'
 
           const effect = uploadWithTus(
-            buffer,
+            file,
             'https://galaxy.example.com/api/upload/resumable_upload/',
             metadata,
             'test-api-key',
@@ -109,7 +113,7 @@ describe('uploadWithTus', () => {
     it('should handle URL with multiple path segments', () => {
       return pipe(
         Effect.gen(function* () {
-          const buffer = Buffer.from('test content')
+          const file = createTestFile('test content', 'data.csv')
           const metadata = {
             history_id: 'history-456',
             name: 'data.csv',
@@ -120,7 +124,7 @@ describe('uploadWithTus', () => {
           mockUrl = 'https://galaxy.example.com/upload/api/v1/resumable_upload/uploads/session-xyz789'
 
           const effect = uploadWithTus(
-            buffer,
+            file,
             'https://galaxy.example.com/upload/api/v1/resumable_upload/',
             metadata,
             'api-key-123',
@@ -139,7 +143,7 @@ describe('uploadWithTus', () => {
     it('should use custom chunk size when provided', () => {
       return pipe(
         Effect.gen(function* () {
-          const buffer = Buffer.from('a'.repeat(100))
+          const file = createTestFile('a'.repeat(100), 'small.txt')
           const customChunkSize = 5242880 // 5MB
           const metadata = {
             history_id: 'history-123',
@@ -151,7 +155,7 @@ describe('uploadWithTus', () => {
           mockUrl = 'https://galaxy.example.com/api/upload/resumable_upload/session-chunk'
 
           const effect = uploadWithTus(
-            buffer,
+            file,
             'https://galaxy.example.com/api/upload/resumable_upload/',
             metadata,
             'api-key',
@@ -164,7 +168,7 @@ describe('uploadWithTus', () => {
 
           // Verify Upload was called with custom chunk size
           expect(vi.mocked(tus.Upload)).toHaveBeenCalledWith(
-            buffer,
+            file,
             expect.objectContaining({
               chunkSize: customChunkSize,
             }),
@@ -177,7 +181,7 @@ describe('uploadWithTus', () => {
     it('should pass correct configuration to TUS Upload', () => {
       return pipe(
         Effect.gen(function* () {
-          const buffer = Buffer.from('test')
+          const file = createTestFile('test', 'myfile.txt')
           const endpoint = 'https://galaxy.example.com/api/upload/resumable_upload/'
           const apiKey = 'my-api-key'
           const metadata = {
@@ -189,14 +193,14 @@ describe('uploadWithTus', () => {
 
           mockUrl = 'https://galaxy.example.com/api/upload/resumable_upload/session-123'
 
-          const effect = uploadWithTus(buffer, endpoint, metadata, apiKey)
+          const effect = uploadWithTus(file, endpoint, metadata, apiKey)
 
           setTimeout(() => mockUploadInstance?.triggerSuccess(), 10)
 
           yield* effect
 
           expect(vi.mocked(tus.Upload)).toHaveBeenCalledWith(
-            buffer,
+            file,
             expect.objectContaining({
               endpoint,
               retryDelays: [0, 3000, 10000],
@@ -216,7 +220,7 @@ describe('uploadWithTus', () => {
     it('should fail with TusUploadError on upload failure', () => {
       return pipe(
         Effect.gen(function* () {
-          const buffer = Buffer.from('test')
+          const file = createTestFile('test', 'test.txt')
           const metadata = {
             history_id: '123',
             name: 'test.txt',
@@ -225,7 +229,7 @@ describe('uploadWithTus', () => {
           }
 
           const effect = uploadWithTus(
-            buffer,
+            file,
             'https://galaxy.example.com/api/upload/resumable_upload/',
             metadata,
             'api-key',
@@ -250,7 +254,7 @@ describe('uploadWithTus', () => {
     it('should handle error with empty message', () => {
       return pipe(
         Effect.gen(function* () {
-          const buffer = Buffer.from('test')
+          const file = createTestFile('test', 'test.txt')
           const metadata = {
             history_id: '123',
             name: 'test.txt',
@@ -259,7 +263,7 @@ describe('uploadWithTus', () => {
           }
 
           const effect = uploadWithTus(
-            buffer,
+            file,
             'https://galaxy.example.com/api/upload/resumable_upload/',
             metadata,
             'api-key',
@@ -283,7 +287,7 @@ describe('uploadWithTus', () => {
     it('should return empty string when URL is undefined', () => {
       return pipe(
         Effect.gen(function* () {
-          const buffer = Buffer.from('test')
+          const file = createTestFile('test', 'test.txt')
           const metadata = {
             history_id: '123',
             name: 'test.txt',
@@ -294,7 +298,7 @@ describe('uploadWithTus', () => {
           mockUrl = undefined
 
           const effect = uploadWithTus(
-            buffer,
+            file,
             'https://galaxy.example.com/api/upload/resumable_upload/',
             metadata,
             'api-key',
@@ -312,7 +316,7 @@ describe('uploadWithTus', () => {
     it('should handle URL ending with trailing slash', () => {
       return pipe(
         Effect.gen(function* () {
-          const buffer = Buffer.from('test')
+          const file = createTestFile('test', 'test.txt')
           const metadata = {
             history_id: '123',
             name: 'test.txt',
@@ -323,7 +327,7 @@ describe('uploadWithTus', () => {
           mockUrl = 'https://galaxy.example.com/api/upload/resumable_upload/session-trailing/'
 
           const effect = uploadWithTus(
-            buffer,
+            file,
             'https://galaxy.example.com/api/upload/resumable_upload/',
             metadata,
             'api-key',
@@ -338,10 +342,10 @@ describe('uploadWithTus', () => {
       )
     })
 
-    it('should handle empty buffer', () => {
+    it('should handle empty file', () => {
       return pipe(
         Effect.gen(function* () {
-          const buffer = Buffer.alloc(0)
+          const file = createTestFile('', 'empty.txt')
           const metadata = {
             history_id: '123',
             name: 'empty.txt',
@@ -352,7 +356,7 @@ describe('uploadWithTus', () => {
           mockUrl = 'https://galaxy.example.com/api/upload/resumable_upload/session-empty'
 
           const effect = uploadWithTus(
-            buffer,
+            file,
             'https://galaxy.example.com/api/upload/resumable_upload/',
             metadata,
             'api-key',
@@ -363,9 +367,9 @@ describe('uploadWithTus', () => {
           const result = yield* effect
           expect(result).toBe('session-empty')
 
-          // Verify buffer was passed correctly
+          // Verify file was passed correctly
           expect(vi.mocked(tus.Upload)).toHaveBeenCalledWith(
-            buffer,
+            file,
             expect.any(Object),
           )
         }),
@@ -376,7 +380,7 @@ describe('uploadWithTus', () => {
     it('should default chunk size to 10485760 when not specified', () => {
       return pipe(
         Effect.gen(function* () {
-          const buffer = Buffer.from('test')
+          const file = createTestFile('test', 'test.txt')
           const metadata = {
             history_id: '123',
             name: 'test.txt',
@@ -387,7 +391,7 @@ describe('uploadWithTus', () => {
           mockUrl = 'https://galaxy.example.com/api/upload/resumable_upload/session-default'
 
           const effect = uploadWithTus(
-            buffer,
+            file,
             'https://galaxy.example.com/api/upload/resumable_upload/',
             metadata,
             'api-key',
@@ -399,7 +403,7 @@ describe('uploadWithTus', () => {
           yield* effect
 
           expect(vi.mocked(tus.Upload)).toHaveBeenCalledWith(
-            expect.any(Buffer),
+            expect.any(File),
             expect.objectContaining({
               chunkSize: 10485760,
             }),
@@ -412,7 +416,7 @@ describe('uploadWithTus', () => {
     it('should handle URL with only domain (no path)', () => {
       return pipe(
         Effect.gen(function* () {
-          const buffer = Buffer.from('test')
+          const file = createTestFile('test', 'test.txt')
           const metadata = {
             history_id: '123',
             name: 'test.txt',
@@ -423,7 +427,7 @@ describe('uploadWithTus', () => {
           mockUrl = 'https://galaxy.example.com'
 
           const effect = uploadWithTus(
-            buffer,
+            file,
             'https://galaxy.example.com/api/upload/resumable_upload/',
             metadata,
             'api-key',
