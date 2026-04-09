@@ -45,6 +45,7 @@ export const mockGalaxyDataset: GalaxyDataset = {
   metadata_comment_lines: 0,
   metadata_data_lines: 100,
   misc_blurb: null,
+  peek: null,
 }
 
 export const mockComplexTool: GalaxyTool = {

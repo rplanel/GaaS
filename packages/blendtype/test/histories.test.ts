@@ -33,9 +33,45 @@ interface MockUploadInstance {
 // This ensures the mock stays in sync with actual API changes
 vi.mock('tus-js-client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('tus-js-client')>()
+
+  // Create a mock constructor function that behaves like a class constructor
+  // and wrap it in vi.fn() to make it spyable
+  // eslint-disable-next-line prefer-arrow-callback
+  const MockUploadConstructor = vi.fn().mockImplementation(function (_source: any, options: TusTypes.UploadOptions) {
+    // Create mock upload instance with captured options
+    mockUploadInstance = {
+      url: mockUrl ?? null,
+      options,
+      file: _source,
+      start: vi.fn(),
+      abort: vi.fn(),
+      findPreviousUploads: vi.fn().mockResolvedValue([]),
+      resumeFromPreviousUpload: vi.fn().mockResolvedValue(false),
+      triggerSuccess: () => {
+        // Update the URL before calling success callback
+        mockUploadInstance!.url = mockUrl ?? null
+        // Call the success callback with a proper OnSuccessPayload
+        const payload: tus.OnSuccessPayload = {
+          lastResponse: undefined as any,
+        }
+        options?.onSuccess?.(payload)
+      },
+      triggerError: (error: Error) => {
+        // Create a DetailedError-like object
+        const detailedError = new Error(error.message) as tus.DetailedError
+        options?.onError?.(detailedError)
+      },
+    } as unknown as MockUploadInstance
+
+    return mockUploadInstance as unknown as tus.Upload
+  })
+
+  // Add static methods from original Upload class
+  Object.assign(MockUploadConstructor, actual.Upload)
+
   return {
     ...actual,
-    Upload: vi.fn(),
+    Upload: MockUploadConstructor,
   }
 })
 
@@ -44,37 +80,6 @@ describe('uploadWithTus', () => {
     vi.clearAllMocks()
     mockUploadInstance = undefined
     mockUrl = undefined
-
-    // Configure the mock implementation for each test
-    vi.mocked(tus.Upload).mockImplementation((_source, options) => {
-      // Create mock upload instance with captured options
-      mockUploadInstance = {
-        url: mockUrl ?? null,
-        options,
-        file: _source,
-        start: vi.fn(),
-        abort: vi.fn(),
-        findPreviousUploads: vi.fn().mockResolvedValue([]),
-        resumeFromPreviousUpload: vi.fn().mockResolvedValue(false),
-        triggerSuccess: () => {
-          // Update the URL before calling success callback
-          mockUploadInstance!.url = mockUrl ?? null
-          // Call the success callback with a proper OnSuccessPayload
-          const payload: tus.OnSuccessPayload = {
-            lastResponse: undefined as any,
-          }
-          options?.onSuccess?.(payload)
-        },
-        triggerError: (error: Error) => {
-          // Create a DetailedError-like object
-          const detailedError = new Error(error.message) as tus.DetailedError
-          options?.onError?.(detailedError)
-        },
-      } as unknown as MockUploadInstance
-
-      return mockUploadInstance as unknown as tus.Upload
-    },
-    )
   })
 
   describe('success cases', () => {

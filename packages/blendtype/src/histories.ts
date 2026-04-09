@@ -1,3 +1,4 @@
+import type { Buffer } from 'node:buffer'
 import type { GalaxyHistoryDetailed, GalaxyUploadedDataset } from './types'
 import { Console, Data, Effect } from 'effect'
 import * as tus from 'tus-js-client'
@@ -11,13 +12,15 @@ export class TusUploadError extends Data.TaggedError('TusUploadError')<{
   readonly cause?: unknown
 }> {}
 
+export type TusUploadSource = File | Blob | Buffer | Pick<ReadableStreamDefaultReader, 'read'>
+
 /**
  * Performs a resumable TUS upload to Galaxy server.
  *
  * Uploads a file to the Galaxy server using the TUS (Tus.io) resumable upload protocol.
  * This allows for chunked uploads that can be resumed if interrupted.
  *
- * @param source - The file content to upload (File or Buffer from node:buffer)
+ * @param source - The file content to upload (File, Blob, Buffer, or ReadableStreamDefaultReader)
  * @param tusEndpoint - The Galaxy TUS endpoint URL (e.g., https://galaxy.example.com/api/upload/resumable_upload/)
  * @param metadata - File metadata for Galaxy including history_id, file_type, dbkey, and name
  * @param apiKey - Galaxy API key for authentication via x-api-key header
@@ -38,7 +41,7 @@ export class TusUploadError extends Data.TaggedError('TusUploadError')<{
  * @see https://tus.io/ - TUS upload protocol documentation
  */
 export function uploadWithTus(
-  source: File | Blob,
+  source: TusUploadSource,
   tusEndpoint: string,
   metadata: Record<string, string>,
   apiKey: string,
@@ -212,7 +215,7 @@ interface uploadFileFromUrl extends UploadFileBaseParams {
 }
 
 interface uploadFileFromFile extends UploadFileBaseParams {
-  blob: Blob
+  buffer: Buffer
 }
 
 export function uploadFileToHistoryEffect(
@@ -222,12 +225,11 @@ export function uploadFileToHistoryEffect(
     const fetchApi = yield* GalaxyFetch
     const config = yield* BlendTypeConfig
 
-    if ('blob' in params) {
-      const { historyId, blob, name } = params
+    if ('buffer' in params) {
+      const { historyId, buffer, name } = params
 
-      // TUS works natively with File, Blob, and Uint8Array
-      // No conversion needed - TUS handles all types directly
-      const uploadSource = blob
+      // TUS in Node.js requires Buffer or Readable stream
+      const uploadSource = buffer
 
       // TUS resumable upload endpoint
       const tusEndpoint = `${config.url}/api/upload/resumable_upload/`

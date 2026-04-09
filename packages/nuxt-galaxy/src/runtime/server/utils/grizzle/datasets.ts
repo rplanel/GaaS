@@ -2,6 +2,7 @@ import type { Datamap, DatasetState, DatasetTerminalState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
 
 import type { NewDataset } from '~/src/runtime/types/nuxt-galaxy'
+import { Buffer } from 'node:buffer'
 import { useRuntimeConfig } from '#imports'
 import * as bt from 'blendtype'
 import { Console, Data, Effect } from 'effect'
@@ -50,17 +51,17 @@ export function uploadDatasetsEffect(params: UploadDatasetParams) {
               let historyDatasetEffect: ReturnType<typeof bt.uploadFileToHistoryEffect>
               if (shouldUseFileUpload) {
                 const response = yield* bt.fetchDatasetEffect(signedUrl)
-                const blob = yield* Effect.tryPromise({
-                  try: () => response.blob(),
+                const buffer = yield* Effect.tryPromise({
+                  try: async () => Buffer.from(await response.arrayBuffer()),
                   catch: _caughtError => new bt.HttpError({ message: `Error fetching dataset from ${signedUrl}: ${_caughtError}` }),
                 })
 
-                if (blob.size === 0) {
+                if (buffer.length === 0) {
                   yield* Effect.fail(new bt.HttpError({ message: `Dataset at ${signedUrl} is empty` }))
                 }
                 historyDatasetEffect = bt.uploadFileToHistoryEffect({
                   historyId: galaxyHistoryId,
-                  blob,
+                  buffer,
                   name: filename,
                 })
               }

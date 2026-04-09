@@ -1,122 +1,101 @@
 # AGENTS.md - Blendtype Package Guide
 
-## Package Overview
+## Section 1: Stack Definition With Exact Versions
 
-**Blendtype** is a TypeScript library that provides a type-safe wrapper around the Galaxy Project API using Effect-TS for functional, composable, and error-handled operations.
+| Component | Version | Purpose |
+|-----------|---------|---------|
+| **TypeScript** | ^5.9.3 (catalog:) | Type safety |
+| **Effect-TS** | ^3.19.6 (catalog:) | Functional programming |
+| **unbuild** | ^3.6.1 (catalog:) | Bundling (ESM/CJS) |
+| **Vitest** | ^4.1.0 (catalog:testing) | Testing |
+| **ofetch** | ^1.5.1 (catalog:) | HTTP client |
+| **zod** | ^4.3.6 (catalog:) | Schema validation |
+| **tus-js-client** | ^4.3.1 (catalog:) | Resumable uploads |
 
-- **Package path**: `packages/blendtype/`
-- **Language**: TypeScript (ESNext, strict mode)
-- **Output**: Dual ESM/CJS modules via unbuild
-- **Testing**: Vitest
+### Build Output
+```
+dist/
+├── index.mjs       # ESM entry
+├── index.cjs       # CJS entry
+└── index.d.ts      # TypeScript declarations
+```
 
----
+## Section 2: Executable Commands With Full Flags
 
-## Architecture: Effect-TS Patterns
+### Development & Build
+```bash
+# Build
+pnpm build                    # unbuild (ESM/CJS output)
+pnpm prepack                 # Build before publish
 
-This package is built entirely on Effect-TS. All operations return `Effect.Effect<A, E, R>` types that must be run with `Effect.runPromise()` or similar runners.
+# Testing
+pnpm test                    # Lint + typecheck + coverage
+pnpm vitest                  # Run tests
+pnpm vitest watch            # Watch mode
+cd ../.. && pnpm test -w packages/blendtype
 
-### Core Effect-TS Imports
+# Quality
+pnpm lint                    # ESLint
+pnpmtsc --noEmit            # Type check only
+```
 
+## Section 3: Coding Conventions and Patterns
+
+### Effect-TS Architecture
+All operations return `Effect.Effect<A, E, R>` and must use `Effect.runPromise()`.
+
+### Key Imports
 ```typescript
+import type { $Fetch } from 'ofetch'
 import { Console, Context, Data, Effect, Layer } from 'effect'
 ```
 
-### Key Patterns
-
-#### 1. Service Pattern with Context.Tag
-
-All external dependencies are modeled as services:
-
+### Service Pattern (Context.Tag)
 ```typescript
-// From galaxy.ts
+// Galaxy HTTP client as service
 export class GalaxyFetch extends Context.Tag('@blendtype/GalaxyFetch')<
   GalaxyFetch,
   ReturnType<typeof $fetch.create>
 >() {
-  static readonly Live = Layer.effect(
-    GalaxyFetch,
-    Effect.gen(function* () {
-      const { apiKey, url } = yield* BlendTypeConfig
-      const fetchInstance = $fetch.create({
-        baseURL: url,
-        headers: {
-          'x-api-key': apiKey,
-        },
-      })
-      return fetchInstance
-    }),
-  )
+  static readonly Live = Layer.effect(GalaxyFetch, Effect.gen(function* () {
+    const { apiKey, url } = yield* BlendTypeConfig
+    return $fetch.create({
+      baseURL: url,
+      headers: { 'x-api-key': apiKey },
+    })
+  }))
 }
 ```
 
-**When adding new services**:
-
-- Extend `Context.Tag` with a unique symbol (e.g., `"@blendtype/ServiceName"`)
-- Provide a static `Live` Layer for production use
-- Place service definitions in appropriate modules
-
-#### 2. Error Handling with Data.TaggedError
-
-All custom errors use tagged errors for discriminated unions:
-
+### Error Handling (Data.TaggedError)
 ```typescript
-// Pattern from galaxy.ts
 export class HttpError extends Data.TaggedError('HttpError')<{
   readonly message: string
 }>() {}
 
 export class GalaxyServiceUnavailable extends Data.TaggedError(
-  'GalaxyServiceUnavailable',
-)<{
-  readonly message: string
-}>() {}
+  'GalaxyServiceUnavailable'
+)<{ readonly message: string }>() {}
 ```
 
-**When adding new errors**:
-
-- Use `Data.TaggedError("ErrorName")` with a unique tag
-- Include a `readonly message: string` property
-- Add JSDoc comments explaining when the error occurs
-
-#### 3. Effect.gen for Composable Operations
-
-All API operations use `Effect.gen()` for sequential composition:
+### Dual API Pattern
+Every operation has TWO versions:
+1. **Effect version** (for composition): `getWorkflowEffect(id): Effect<Workflow, HttpError, GalaxyFetch>`
+2. **Promise version** (for convenience): `getWorkflow(id): Promise<Workflow>`
 
 ```typescript
-// Standard pattern used across all modules
+// Effect version
 export function getWorkflowEffect(workflowId: string) {
   return Effect.gen(function* () {
-    const fetchApi = yield* GalaxyFetch // Get service from context
-
-    const workflow = yield* Effect.tryPromise({
-      try: () => fetchApi<GalaxyWorkflow>(`api/workflows/${workflowId}`),
-      catch: _caughtError =>
-        new HttpError({ message: `Error: ${_caughtError}` }),
+    const fetchApi = yield* GalaxyFetch
+    return yield* Effect.tryPromise({
+      try: () => fetchApi<Workflow>(`api/workflows/${workflowId}`),
+      catch: e => new HttpError({ message: String(e) }),
     })
-
-    return workflow
   })
 }
-```
 
-**Key rules**:
-
-- Always `yield*` services from context first
-- Wrap Promise-based APIs in `Effect.tryPromise()`
-- Type the success return type explicitly
-- All errors must be typed in the Effect signature
-
-#### 4. Dual API Design
-
-Every operation has TWO implementations:
-
-1. **Effect version** (for composition): `getWorkflowEffect(id: string): Effect.Effect<GalaxyWorkflow, HttpError, GalaxyFetch>`
-2. **Promise version** (for convenience): `getWorkflow(id: string): Promise<GalaxyWorkflow>`
-
-Promise versions are wrappers around Effect versions:
-
-```typescript
-// From workflows.ts
+// Promise wrapper
 export async function getWorkflow(id: string) {
   return initializeConfig().pipe(
     Effect.flatMap(config =>
@@ -130,144 +109,71 @@ export async function getWorkflow(id: string) {
 }
 ```
 
-**When adding new operations**:
-
-1. Create the `*Effect()` function first
-2. Create the Promise wrapper that uses `initializeConfig()` and `Effect.runPromise`
-3. Export both from the module
-
-#### 5. Layer-based Dependency Injection
-
-Services are provided via Layers:
-
+### File Organization
 ```typescript
-// For production
-const program = getWorkflowEffect('id').pipe(
-  Effect.provide(GalaxyFetch.Live),
-  Effect.provide(configLayer),
-)
-
-// For testing
-const mockLayer = Layer.succeed(GalaxyFetch, mockFetch)
-const testProgram = getWorkflowEffect('id').pipe(Effect.provide(mockLayer))
-```
-
-**Global config pattern**:
-
-- `initializeGalaxyClient(config)` - Sets up a global Layer
-- `runWithConfig(effect)` - Runs an effect with the global config
-- Used by Promise-based APIs automatically
-
----
-
-## Module Organization
-
-| Module           | Purpose              | Key Exports                                                                |
-| ---------------- | -------------------- | -------------------------------------------------------------------------- |
-| `galaxy.ts`      | Core HTTP service    | `GalaxyFetch` (Context.Tag), `HttpError`, `getVersion`, error transformers |
-| `config.ts`      | Configuration        | `BlendTypeConfig`, `initializeGalaxyClient()`, `runWithConfig()`           |
-| `tools.ts`       | Tool API             | `getTool()`, `getToolEffect()`                                             |
-| `workflows.ts`   | Workflow operations  | `getWorkflow()`, `invokeWorkflow()`, `exportWorkflow()`                    |
-| `histories.ts`   | History management   | `createHistory()`, `deleteHistory()`, `uploadFileToHistory()`              |
-| `datasets.ts`    | Dataset operations   | `getDataset()`, `fetchDatasetEffect()`                                     |
-| `jobs.ts`        | Job monitoring       | `getJob()`                                                                 |
-| `invocations.ts` | Workflow invocations | `getInvocation()`                                                          |
-| `errors.ts`      | Error utilities      | `isErrorWithMessage()`, `getStatusCode()`                                  |
-| `helpers.ts`     | Utilities            | `delay()` for async delays                                                 |
-| `types/`         | TypeScript types     | All Galaxy API type definitions                                            |
-
----
-
-## Code Conventions
-
-### TypeScript Configuration
-
-From `tsconfig.json`:
-
-- `"target": "ESNext"`
-- `"moduleResolution": "bundler"`
-- `"strict": true` - All strict checks enabled
-- `"verbatimModuleSyntax": true` - Enforces proper ESM imports
-
-### File Structure
-
-```typescript
-import type { SomeType } from './types'
+// Standard module structure:
 // 1. Imports
 import { Context, Data, Effect, Layer } from 'effect'
+import { BlendTypeConfig } from './config'
+import { GalaxyFetch } from './galaxy'
 
-// 2. Error definitions (if any)
+// 2. Error definitions
 export class SpecificError extends Data.TaggedError('SpecificError')<{
   readonly message: string
 }>() {}
 
-// 3. Type definitions and interfaces
-export interface OperationParams {
-  id: string
-}
+// 3. Type definitions
+export interface OperationParams { id: string }
 
 // 4. Effect version
 export function operationEffect(params: OperationParams) {
   return Effect.gen(function* () {
-    // Implementation
+    const fetchApi = yield* GalaxyFetch
+    return yield* Effect.tryPromise({})
   })
 }
 
 // 5. Promise wrapper
 export async function operation(params: OperationParams) {
   return initializeConfig().pipe(
-    Effect.flatMap(config =>
-      operationEffect(params).pipe(
-        Effect.provide(GalaxyFetch.Live),
-        Effect.provide(Layer.succeed(BlendTypeConfig, config)),
-      ),
-    ),
+    Effect.flatMap(),
+    Effect.provide(),
     Effect.runPromise,
   )
 }
 ```
 
-### Naming Conventions
+### Module Organization
+| Module | Purpose | Key Exports |
+|--------|---------|-------------|
+| `galaxy.ts` | HTTP service | GalaxyFetch, HttpError, error transformers |
+| `config.ts` | Configuration | BlendTypeConfig, initializeGalaxyClient() |
+| `tools.ts` | Tool API | getTool(), getToolEffect() |
+| `workflows.ts` | Workflows | getWorkflow(), invokeWorkflow() |
+| `histories.ts` | Histories | createHistory(), uploadFileToHistory() |
+| `datasets.ts` | Datasets | getDataset() |
+| `jobs.ts` | Job monitoring | getJob() |
+| `invocations.ts` | Invocations | getInvocation() |
 
-- **Effect functions**: `verbNounEffect()` (e.g., `getWorkflowEffect`, `createHistoryEffect`)
-- **Promise functions**: `verbNoun()` (e.g., `getWorkflow`, `createHistory`)
-- **Services**: PascalCase with descriptive names (e.g., `GalaxyFetch`, `BlendTypeConfig`)
-- **Error classes**: PascalCase ending with Error (e.g., `HttpError`, `GalaxyServiceUnavailable`)
-- **Tags**: Symbol strings with `@blendtype/` prefix (e.g., `"@blendtype/GalaxyFetch"`)
+## Section 4: Testing Rules
 
-### JSDoc Comments
+### Test Commands
+```bash
+pnpm test                              # All tests + coverage
+pnpm vitest                             # Quick run
+pnpm vitest watch                       # Watch mode
+cd ../.. && pnpm test -w packages/blendtype
 
-Always document:
-
-- Function parameters
-- Return types
-- Error conditions
-- Example usage
-
-```typescript
-/**
- * Retrieve a workflow by ID
- * @param workflowId - The UUID of the workflow
- * @returns Effect that resolves to GalaxyWorkflow
- * @throws HttpError if the request fails
- * @throws GalaxyServiceUnavailable if Galaxy is down
- */
-export function getWorkflowEffect(workflowId: string) {
-  // Implementation
-}
+# Specific file
+pnpm vitest run test/tools.test.ts
 ```
 
----
-
-## Testing Patterns
-
-Use Vitest for testing. All tests should mock the `GalaxyFetch` service:
-
+### Testing Pattern
 ```typescript
 import type { $Fetch } from 'ofetch'
 import { Effect, Layer } from 'effect'
-import { describe, expect, it } from 'vitest'
-import { GalaxyFetch, getToolEffect } from '../src'
+import { describe, expect, it, vi } from 'vitest'
+import { GalaxyFetch, getWorkflowEffect } from '../src'
 
 function createMockGalaxyFetch<T>(response: T): Layer.Layer<GalaxyFetch> {
   return Layer.succeed(
@@ -276,139 +182,58 @@ function createMockGalaxyFetch<T>(response: T): Layer.Layer<GalaxyFetch> {
   )
 }
 
-describe('tools', () => {
-  it('should fetch a tool by ID', async () => {
-    const mockTool = { id: 'tool-id', name: 'test-tool' }
-    const effect = getToolEffect('tool-id', '1.0.0').pipe(
-      Effect.provide(createMockGalaxyFetch(mockTool)),
+describe('workflows', () => {
+  it('should fetch workflow by ID', async () => {
+    const mockWorkflow = { id: 'workflow-id', name: 'Test Workflow' }
+    const effect = getWorkflowEffect('workflow-id').pipe(
+      Effect.provide(createMockGalaxyFetch(mockWorkflow)),
     )
 
     const result = await Effect.runPromise(effect)
-    expect(result).toEqual(mockTool)
+    expect(result).toEqual(mockWorkflow)
   })
 })
 ```
 
-**Testing best practices**:
-
+### Testing Standards
 - Always mock `GalaxyFetch` - never make real HTTP calls
+- Test Effect version, not Promise wrapper
+- Use `Layer.succeed()` for dependency injection
 - Test both success and error cases
-- Use Effect's mock Layers for dependency injection
-- Test the Effect version, not the Promise wrapper
 
----
+## Section 5: "Don't Touch" Zones and Permission Boundaries
 
-## Build System
+### Protected Files
+1. **tsconfig.json** - Build configuration
+2. **build.config.ts** - unbuild configuration
+3. **dist/** - Auto-generated, never commit
+4. **coverage/** - Auto-generated
 
-- **Bundler**: unbuild (based on rollup)
-- **Configuration**: `build.config.ts`
-- **Output**: `dist/` with `.mjs`, `.cjs`, and `.d.ts` files
+### Package Boundaries
+- **DO**: Write Effect-TS functional code
+- **DO**: Provide dual Effect/Promise APIs
+- **DO**: Use Context.Tag for dependency injection
+- **DO**: Export types from types/ directory
+- **DON'T**: Import Nuxt or Node-specific modules
+- **DON'T**: Use console.log (use Effect.Console)
+- **DON'T**: Mix sync and async without Effect
+- **DON'T**: Export untyped JavaScript
 
-### Development Commands
+### TypeScript Config
+- `"strict": true` - All strict checks enabled
+- `"moduleResolution": "bundler"`
+- `"verbatimModuleSyntax": true` - ESM imports enforced
 
-```bash
-cd packages/blendtype
+### Environment Variables
+These are configured at the Nuxt module level, not here:
+- `GALAXY_URL` - API base URL
+- `GALAXY_API_KEY` - Authentication
+- `GALAXY_EMAIL` - User email
 
-# Build
-cd ../.. && npm run build -w packages/blendtype
-# or: npx unbuild
-
-# Test
-cd ../.. && npm test -w packages/blendtype
-# or: npx vitest
-
-# Type check
-npx tsc --noEmit
-```
-
-### Release
-
-Package publishes automatically via changesets when merged to main branch.
-
----
-
-## Dependencies
-
-**Runtime (dependencies)**:
-
-- `effect` - Effect-TS core (primary framework)
-- `ofetch` - HTTP client (wrapped in Effect)
-- `zod` - Schema validation (for workflow types)
-- `h3` - H3 framework utilities
-- `ufo` - URL utilities
-- `dotenv` - Environment variables
-
-**Development**:
-
-- `unbuild` - Build system
-- `vitest` - Testing framework
-- `typescript` - Type checking
-
-**Important**: Always check if a dependency is already used in the package before adding new ones. Prefer existing utility libraries over new dependencies.
-
----
-
-## Resources
-
-- **Effect-TS Documentation**: https://effect.website/
-- **Galaxy API Documentation**: https://galaxyproject.org/develop/api/
-- **Package README**: `./README.md`
-- **Test Examples**: `./test/` directory
-
----
-
-## Quick Reference
-
-### Adding a New API Endpoint
-
-1. Define the response type in `types/`
-2. Create `operationEffect()` function in appropriate module
-3. Create Promise wrapper `operation()` that uses `initializeConfig()` and `Effect.runPromise`
-4. Add error types if needed (using `Data.TaggedError`)
-5. Export from `index.ts`
-6. Write tests using `createMockGalaxyFetch()` helper
-
-### Common Imports
-
-```typescript
-// Type imports
-import type { $Fetch } from 'ofetch'
-
-// Essential Effect-TS imports
-import { Console, Context, Data, Effect, Layer } from 'effect'
-import { BlendTypeConfig, initializeConfig } from './config'
-
-// Service imports
-import { GalaxyFetch, HttpError, toGalaxyServiceUnavailable } from './galaxy'
-```
-
-### Error Handling Template
-
-```typescript
-export class MyOperationError extends Data.TaggedError('MyOperationError')<{
-  readonly message: string
-}>() {}
-
-export function myOperationEffect(id: string) {
-  return Effect.gen(function* () {
-    const fetchApi = yield* GalaxyFetch
-
-    return yield* Effect.tryPromise({
-      try: () => fetchApi(`/api/endpoint/${id}`),
-      catch: error => new MyOperationError({ message: String(error) }),
-    })
-  })
-}
-
-export async function myOperation(id: string) {
-  return initializeConfig().pipe(
-    Effect.flatMap(config =>
-      myOperationEffect(id).pipe(
-        Effect.provide(GalaxyFetch.Live),
-        Effect.provide(Layer.succeed(BlendTypeConfig, config)),
-      ),
-    ),
-    Effect.runPromise,
-  )
-}
-```
+### Adding New APIs
+1. Define type in `src/types/`
+2. Create `*Effect()` in appropriate module
+3. Create Promise wrapper with initialization
+4. Add errors with `Data.TaggedError`
+5. Export both versions
+6. Write tests with `createMockGalaxyFetch()`
