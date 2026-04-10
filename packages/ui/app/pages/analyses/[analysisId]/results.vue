@@ -24,20 +24,20 @@ const { data: analysis } = useQuery(
   () => analysisByIdWithOutputsAndWorkflowsQuery({ id: toValue(analysisId), supabase }),
 )
 
-const resultRoutes = computed<Record<string, string>>(() => {
+const resultRoutes = computed<Record<string, { tag: string, to: string }>>(() => {
   const analysisVal = toValue(analysis)
   const analysisIdVal = toValue(analysisId)
   if (!analysisVal?.analysis_outputs || !analysisIdVal) {
     return {}
   }
-  const routes: Record<string, string> = {}
+  const routes: Record<string, { tag: string, to: string }> = {}
   for (const output of analysisVal.analysis_outputs) {
     if (!output.tags || output.tags.length === 0) {
       continue
     }
     const tag = output.tags.map(t => t.label).sort().join('-')
     if (tag) {
-      routes[output.datasets.dataset_name] = `/analyses/${analysisIdVal}/results/${tag}`
+      routes[output.datasets.id] = { tag, to: `/analyses/${analysisIdVal}/results/${tag}` }
     }
   }
   return routes

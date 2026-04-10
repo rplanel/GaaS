@@ -51,6 +51,7 @@
     "isomorphic-dompurify": "catalog:",
     "jwt-decode": "catalog:",
     "meilisearch": "catalog:",
+    "motion-v": "catalog:",
     "nuxt-galaxy": "workspace:*",
     "pinia": "catalog:vue",
     "uuid": "catalog:",

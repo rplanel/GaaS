@@ -2,13 +2,14 @@
 import type { AnalysisInputWithStoragePathRow, AnalysisOutputWithStoragePathRow } from 'nuxt-galaxy'
 import { getHumanSize } from '#layers/@gaas-ui/app/utils'
 import DOMPurify from 'isomorphic-dompurify'
+import { motion } from 'motion-v'
 import * as z from 'zod'
 
 type AnalysisIOsWithStoratePath = AnalysisInputWithStoragePathRow | AnalysisOutputWithStoragePathRow
 
 export interface Props {
   items?: AnalysisIOsWithStoratePath[] | undefined
-  resultRoutes?: Record<string, string>
+  resultRoutes?: Record<string, { tag: string, to: string }>
 }
 
 export type AnalysisIOsWithStoratePathAndSize = AnalysisIOsWithStoratePath & { humanFileSize: string }
@@ -36,22 +37,18 @@ const sanitizedItems = computed(() => {
   return []
 })
 
-const previewOpenIndex = ref<number | null>(null)
+const openPreviews = ref<Set<number>>(new Set())
 
 function togglePreview(index: number) {
-  if (previewOpenIndex.value === index) {
-    previewOpenIndex.value = null
+  const newSet = new Set(openPreviews.value)
+  if (newSet.has(index)) {
+    newSet.delete(index)
   }
   else {
-    previewOpenIndex.value = index
+    newSet.add(index)
   }
+  openPreviews.value = newSet
 }
-
-const previewDataset = computed(() => {
-  if (previewOpenIndex.value === null)
-    return null
-  return sanitizedItems.value[previewOpenIndex.value]
-})
 
 function getSanitizedPeek(dataset: AnalysisIOsWithStoratePathAndSize | null): string {
   if (!dataset)
@@ -96,13 +93,9 @@ function getSanitizedPeek(dataset: AnalysisIOsWithStoratePathAndSize | null): st
   })
 }
 
-const sanitizedPreviewContent = computed(() => {
-  return getSanitizedPeek(previewDataset.value)
-})
-
-const hasPreviewContent = computed(() => {
-  return !!sanitizedPreviewContent.value
-})
+function getHasPreviewContent(dataset: AnalysisIOsWithStoratePathAndSize): boolean {
+  return !!getSanitizedPeek(dataset)
+}
 
 const { storagePath, state: fileBlob } = useDownloadDataset()
 
@@ -136,29 +129,26 @@ async function handleDownload(payload: AnalysisIOsWithStoratePathAndSize | undef
         base: 'sm:grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3',
       }"
     >
-      <template v-for="(dataset, i) in sanitizedItems" :key="dataset?.dataset_name ?? i">
+      <motion.div
+        v-for="(dataset, i) in sanitizedItems"
+        :key="dataset?.id ?? i"
+        layout
+        :class="{
+          'col-span-1': !openPreviews.has(i) || !getHasPreviewContent(dataset),
+          'lg:col-span-2 2xl:col-span-3': openPreviews.has(i) && getHasPreviewContent(dataset),
+        }"
+        :transition="{ type: 'spring', stiffness: 300, damping: 30 }"
+        class="h-full"
+      >
         <GalaxyAnalysisIoDataset
           :dataset="dataset"
-          :result-route="resultRoutes?.[dataset?.dataset_name ?? '']"
-          :is-preview-open="previewOpenIndex === i"
+          :result-route="resultRoutes?.[dataset?.id]"
+          :is-preview-open="openPreviews.has(i)"
+          :preview-content="getHasPreviewContent(dataset) ? getSanitizedPeek(dataset) : ''"
           @toggle-preview="togglePreview(i)"
           @download="handleDownload"
         />
-
-        <UPageCard
-          v-if="previewOpenIndex === i && hasPreviewContent"
-          variant="outline"
-          :ui="{
-            container: 'grid-cols-1',
-          }"
-          class="col-span-1 sm:col-span-2 lg:col-span-3"
-        >
-          <div
-            class="file-preview text-xs font-mono p-4 overflow-x-auto max-h-80 overflow-y-auto"
-            v-html="sanitizedPreviewContent"
-          />
-        </UPageCard>
-      </template>
+      </motion.div>
     </UPageGrid>
 
     <div v-else class="text-sm text-muted py-4 text-center">

@@ -67,6 +67,7 @@ catalog:
   jwt-decode: ^4.0.0
   lint-staged: ^16.2.7
   meilisearch: ^0.53.0
+  motion-v: ^2.2.0
   ofetch: ^1.5.1
   postgres: ^3.4.7
   simple-git-hooks: ^2.13.1

@@ -166,6 +166,9 @@ catalogs:
     meilisearch:
       specifier: ^0.53.0
       version: 0.53.0
+    motion-v:
+      specifier: ^2.2.0
+      version: 2.2.0
     ofetch:
       specifier: ^1.5.1
       version: 1.5.1
@@ -645,6 +648,9 @@ importers:
       meilisearch:
         specifier: 'catalog:'
         version: 0.53.0
+      motion-v:
+        specifier: 'catalog:'
+        version: 2.2.0(@vueuse/core@14.2.1(vue@3.5.32(typescript@5.9.3)))(vue@3.5.32(typescript@5.9.3))
       nuxt-galaxy:
         specifier: workspace:*
         version: link:../nuxt-galaxy
