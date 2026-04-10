@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import type { Database, WorkflowRow } from 'nuxt-galaxy'
-import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
+import { useDefinedBreakpoints } from '../../composables/useDefinedBreakpoints'
 
 const router = useRouter()
 const route = useRoute()
 const { gaasUi: { resultsMenuItems, analyisParametersMenuItems } } = useAppConfig()
 const supabase = useSupabaseClient<Database>()
 const analysisId = ref<number | undefined>(undefined)
-const breakpoints = useBreakpoints(breakpointsTailwind)
-const isMobile = breakpoints.smaller('lg')
 const isOpen = ref(true)
-
+const { isSmallDesktopOrMobile } = useDefinedBreakpoints()
 const analysisIdFromRoute = computed(() => {
   if ('analysisId' in route.params) {
     const analysisIdParam = route.params.analysisId
@@ -118,15 +116,16 @@ const computedResultsMenuItems = computed(() => {
     </template>
 
     <template #body>
-      <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')" />
-      <NuxtPage />
-
-      <USlideover v-if="isMobile" v-model:open="isOpen">
+      <USlideover v-if="isSmallDesktopOrMobile" v-model:open="isOpen">
         <template #content>
           <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')" />
           <NuxtPage />
         </template>
       </USlideover>
+      <template v-else>
+        <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')" />
+        <NuxtPage />
+      </template>
     </template>
   </UDashboardPanel>
 </template>

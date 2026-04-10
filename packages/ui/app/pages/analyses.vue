@@ -1,45 +1,34 @@
 <script setup lang="ts">
 import type { AnalysesListProvide } from '../layouts/default.vue'
 
-const collapsed = ref(false)
-
+const defaultSize = ref(25)
+// const minMaxPanelSize = { min: 15, max: 50 }
 const analysesListInjected = inject<AnalysesListProvide>('analysesList')
 const { analysesList } = analysesListInjected || {}
 $fetch('/sync')
 </script>
 
 <template>
-  <UDashboardSidebar
-    id="analyses-list-panel"
-    v-model:collapsed="collapsed"
-    title="Analyses"
-    collapsible
-    resizable
-    tooltip
-    :ui="{
-      header: 'border-b border-default px-4 sm:px-6 gap-1.5',
-    }"
-  >
+  <UDashboardPanel id="analyses-list-panel" :default-size="defaultSize" :min-size="5" :max-size="30" resizable>
     <template #header>
-      <div class="flex flex-row justify-between items-center gap-1 w-full h-(--ui-header-height)">
-        <div v-if="!collapsed" class="flex items-center gap-2">
-          <span class="text-lg font-medium truncate">Analyses</span>
-          <UBadge :label="analysesList?.length ?? 0" variant="subtle" />
-        </div>
-        <div v-if="!collapsed">
-          <UButton icon="i-lucide-plus" size="md" class="rounded-full" to="/workflows" />
-        </div>
-        <UButton
-          :icon="collapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
-          color="neutral"
-          variant="ghost"
-          @click="collapsed = !collapsed"
-        />
-      </div>
+      <UDashboardNavbar title="Analyses">
+        <template #title>
+          <div class="flex items-center gap-2">
+            <span class="text-base font-semibold truncate">Analyses</span>
+            <UBadge :label="analysesList?.length ?? 0" variant="subtle" size="xs" />
+          </div>
+        </template>
+        <!-- <template #leading>
+        <UDashboardSidebarCollapse />
+      </template> -->
+        <template #right>
+          <UButton icon="i-lucide-plus" size="sm" color="neutral" variant="soft" to="/workflows" />
+        </template>
+      </UDashboardNavbar>
     </template>
-    <template #default>
-      <AnalysisListPanel v-model:collapsed="collapsed" />
+    <template #body>
+      <AnalysisListPanel />
     </template>
-  </UDashboardSidebar>
+  </UDashboardPanel>
   <NuxtPage />
 </template>

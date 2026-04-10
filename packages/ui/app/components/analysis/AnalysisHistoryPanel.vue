@@ -209,7 +209,10 @@ const { decodedParameters: workflowParametersModel } = useGalaxyDecodeParameters
   </template>
 
   <slot v-else>
-    <UAlert v-if="workflowError" :description="workflowError.message" color="error" variant="soft" icon="i-mdi:alert-circle-outline" />
+    <UAlert
+      v-if="workflowError" :description="workflowError.message" color="error" variant="soft"
+      icon="i-mdi:alert-circle-outline"
+    />
 
     <UPageList v-else divide>
       <UPageCard title="Inputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
