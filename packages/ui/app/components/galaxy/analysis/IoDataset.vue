@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AnalysisIOsWithStoratePathAndSize } from './IoDatasetsList.vue'
 import { getFileTypeInfo } from '#layers/@gaas-ui/app/utils/fileTypeIcon'
-import { motion } from 'motion-v'
+import { AnimatePresence, motion, Motion } from 'motion-v'
 
 interface Props {
   dataset: AnalysisIOsWithStoratePathAndSize
@@ -74,11 +74,21 @@ async function handleDownload() {
             {{ galaxyMeta.misc_blurb }}
           </span>
         </div>
-        <div
-          v-if="isPreviewOpen && previewContent"
-          class="file-preview text-xs font-mono p-4 overflow-x-auto max-h-80 overflow-y-auto overflow-hidden border-t border-default mt-4"
-          v-html="previewContent"
-        />
+        <AnimatePresence>
+          <Motion
+            v-if="isPreviewOpen && previewContent"
+            :initial="{ opacity: 0, height: 0 }"
+            :animate="{ opacity: 1, height: 'auto' }"
+            :exit="{ opacity: 0, height: 0 }"
+            :transition="{ type: 'spring', stiffness: 300, damping: 30 }"
+            style="overflow: hidden"
+          >
+            <div
+              class="file-preview text-xs font-mono p-4 overflow-x-auto max-h-80 overflow-y-auto border-t border-default mt-4"
+              v-html="previewContent"
+            />
+          </Motion>
+        </AnimatePresence>
       </template>
 
       <template #footer>
