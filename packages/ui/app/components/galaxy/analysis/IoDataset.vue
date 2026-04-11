@@ -23,6 +23,10 @@ interface GalaxyMetadata {
   data_lines?: number
   misc_blurb?: string
 }
+const { isSmallDesktopOrMobile } = useDefinedBreakpoints()
+
+const previewEl = useTemplateRef('previewEl')
+// const { style } = useScrollShadow(previewEl, { orientation: 'horizontal' })
 
 const galaxyMeta = computed(() => dataset.value?.galaxy_metadata as GalaxyMetadata | null | undefined)
 const fileExtension = computed(() => galaxyMeta.value?.extension)
@@ -43,19 +47,44 @@ async function handleDownload() {
 </script>
 
 <template>
-  <motion.div layout class="h-full">
+  <motion.div layout>
     <UPageCard
-      variant="outline" :icon="fileType.icon"
       :ui="{
-        wrapper: 'min-w-0 overflow-hidden w-full h-full',
+        root: 'min-w-0 overflow-hidden',
+        body: 'min-w-0 overflow-auto',
+        wrapper: 'overflow-auto',
+        description: 'overflow-auto',
+        header: 'w-full',
       }"
     >
+      <template #header>
+        <div class="flex justify-between">
+          <div v-if="!isSmallDesktopOrMobile" class="flex items-center">
+            <UIcon :name="fileType.icon" color="primary" size="20" class="text-primary" />
+          </div>
+          <div class="flex gap-2 justify-end w-full">
+            <UButton
+              v-if="resultRoute" icon="i-lucide-chart-no-axes-combined" color="primary" variant="ghost" size="xs"
+              :label="isSmallDesktopOrMobile ? undefined : 'Results'" :to="resultRoute?.to"
+            />
+            <UButton
+              v-if="hasPreview" :icon="isPreviewOpen ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              :color="isPreviewOpen ? 'primary' : 'neutral'" variant="soft" size="xs"
+              :label="isPreviewOpen ? 'Hide Preview' : 'Preview'" @click="emit('togglePreview')"
+            />
+            <UButton
+              icon="i-lucide-download" color="primary" variant="soft" size="xs" :label="isSmallDesktopOrMobile ? undefined : 'Download'"
+              @click="handleDownload"
+            />
+          </div>
+        </div>
+      </template>
+
       <template #title>
         <h3 class="text-base font-semibold text-highlighted truncate block min-w-0">
           {{ title }}
         </h3>
       </template>
-
       <template #description>
         <div v-if="fullName" class="text-sm text-muted mb-1">
           {{ fullName }}
@@ -81,32 +110,17 @@ async function handleDownload() {
             :animate="{ opacity: 1, height: 'auto' }"
             :exit="{ opacity: 0, height: 0 }"
             :transition="{ type: 'spring', stiffness: 300, damping: 30 }"
-            style="overflow: hidden"
           >
             <div
-              class="file-preview text-xs font-mono p-4 overflow-x-auto max-h-80 overflow-y-auto border-t border-default mt-4"
+              v-if="isPreviewOpen && previewContent"
+              ref="previewEl"
+              class="overflow-auto whitespace-pre text-sm"
               v-html="previewContent"
             />
+
+            <!--  -->
           </Motion>
         </AnimatePresence>
-      </template>
-
-      <template #footer>
-        <div class="flex items-center gap-2 justify-end">
-          <UButton
-            v-if="resultRoute" icon="i-lucide-chart-no-axes-combined" color="primary" variant="ghost" size="xs"
-            label="Results" :to="resultRoute?.to"
-          />
-          <UButton
-            v-if="hasPreview" :icon="isPreviewOpen ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-            :color="isPreviewOpen ? 'primary' : 'neutral'" variant="soft" size="xs"
-            :label="isPreviewOpen ? 'Hide Preview' : 'Preview'" @click="emit('togglePreview')"
-          />
-          <UButton
-            icon="i-lucide-download" color="primary" variant="soft" size="xs" label="Download"
-            @click="handleDownload"
-          />
-        </div>
       </template>
     </UPageCard>
   </motion.div>
