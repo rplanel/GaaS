@@ -45,6 +45,7 @@
     "@vueuse/core": "catalog:",
     "apache-arrow": "catalog:",
     "d3": "catalog:dataviz",
+    "date-fns": "catalog:",
     "drizzle-kit": "catalog:",
     "effect": "catalog:",
     "htl": "catalog:",

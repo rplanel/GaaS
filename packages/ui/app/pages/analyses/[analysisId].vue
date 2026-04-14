@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Database, WorkflowRow } from 'nuxt-galaxy'
+import { format } from 'date-fns'
 import { useDefinedBreakpoints } from '../../composables/useDefinedBreakpoints'
 
 const router = useRouter()
@@ -106,6 +107,20 @@ const computedResultsMenuItems = computed(() => {
             icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5"
             @click="router.push('/analyses')"
           />
+        </template>
+        <template #default>
+          {{ format(new Date(analysis.created_at), 'dd MMM HH:mm') }}
+        </template>
+        <template #right>
+          <UTooltip text="Rename Analysis">
+            <UButton color="neutral" variant="ghost" icon="i-lucide-pen" />
+          </UTooltip>
+          <UTooltip text="Run Again">
+            <UButton color="neutral" variant="ghost" icon="i-lucide:refresh-ccw" />
+          </UTooltip>
+          <UTooltip text="Delete Analysis">
+            <UButton color="error" variant="ghost" icon="i-lucide-trash" />
+          </UTooltip>
         </template>
       </UDashboardNavbar>
       <UDashboardToolbar v-if="computedResultsMenuItems?.length > 0">
