@@ -6,7 +6,7 @@ import type { AnalysesListProvide } from '../../layouts/default.vue'
 import type { SanitizedAnalysis } from '../../pages/analyses/index.vue'
 import { useRoute } from 'vue-router'
 
-const collapsedModel = defineModel('collapsed', { default: false })
+// const collapsedModel = defineModel('collapsed', { default: false })
 const supabase = useSupabaseClient<Database>()
 const router = useRouter()
 const route = useRoute()
@@ -184,95 +184,95 @@ async function editAnalysisName(id: number) {
 </script>
 
 <template>
-  <div class="overflow-y-auto divide-y divide-default">
+  <div class="overflow-y-auto divide-y divide-default overflow-x-auto">
     <div
       v-for="analysis in sanitizedAnalyses"
       :key="analysis.id"
       :ref="(el) => { analysisRefs[analysis.id] = el as Element | null }"
     >
-      <div
-        class="cursor-pointer border-l-2 transition-colors"
-        :class="[
-          collapsedModel ? 'p-2' : 'p-4 sm:px-6',
-          analysisId === analysis.id
-            ? 'border-primary bg-primary/10'
-            : 'border-transparent hover:border-primary hover:bg-primary/5',
-        ]"
+      <NuxtLink
+        :to="`/analyses/${analysis.id}/results`"
       >
-        <NuxtLink
-          :to="`/analyses/${analysis.id}/results`"
-          class="flex items-center justify-between"
-          :class="collapsedModel ? 'justify-center' : ''"
+        <div
+          class="flex flex-col cursor-pointer border-l-2 transition-colors p-4 sm:px-6"
+          :class="[
+            analysisId === analysis.id
+              ? 'border-primary bg-primary/10'
+              : 'border-bg hover:border-primary hover:bg-primary/5',
+          ]"
         >
-          <!-- Left side: Status icon + content -->
-          <div class="flex items-center gap-3" :class="collapsedModel ? '' : 'flex-1 min-w-0'">
-            <div :class="collapsedModel ? 'self-center' : ''">
-              <UTooltip :text="analysis.name">
-                <GalaxyStatus :state="analysis.state" />
-              </UTooltip>
-            </div>
-
-            <!-- Content (hidden when collapsed) -->
-            <div v-if="!collapsedModel" class="flex-1 min-w-0">
+          <!-- row 1 -->
+          <div class="flex items-start gap-2 justify-between">
+            <!-- Left side: Status icon + content -->
+            <div class="flex item-center gap-2 truncate">
+              <!-- status icon -->
+              <div>
+                <UTooltip :text="analysis.name">
+                  <GalaxyStatus :state="analysis.state" />
+                </UTooltip>
+              <!-- Content (hidden when collapsed) -->
               <!-- Editing mode -->
-              <div v-if="isEditingAnalyses?.[analysis.id]" class="flex items-center gap-2">
-                <UInput
-                  v-model="isEditingAnalyses[analysis.id]"
-                  size="sm"
-                  class="flex-1 min-w-0"
-                />
-                <UButton
-                  color="success"
-                  variant="ghost"
-                  size="sm"
-                  icon="i-lucide:check"
-                  @click.prevent="editAnalysisName(analysis.id)"
-                />
-                <UButton
-                  color="warning"
-                  variant="ghost"
-                  size="sm"
-                  icon="i-mdi:cancel"
-                  @click.prevent="resetEditAnalysis(analysis.id)"
-                />
               </div>
-
-              <!-- Normal mode -->
-              <template v-else>
-                <div class="font-medium text-highlighted text-base truncate">
-                  {{ analysis.name }}
-                </div>
-                <div class="text-muted text-sm truncate">
-                  {{ analysis.workflows.name }}
-                  <UBadge :label="analysis.workflows.version" size="sm" variant="subtle" color="neutral" />
-                </div>
-              </template>
+              <!-- item title -->
+              <div class="truncate">
+                <template v-if="isEditingAnalyses?.[analysis.id]">
+                  <UInput
+                    v-model="isEditingAnalyses[analysis.id]"
+                    size="sm"
+                    class="flex-1"
+                  />
+                  <UButton
+                    color="success"
+                    variant="ghost"
+                    size="sm"
+                    icon="i-lucide:check"
+                    @click.prevent="editAnalysisName(analysis.id)"
+                  />
+                  <UButton
+                    color="warning"
+                    variant="ghost"
+                    size="sm"
+                    icon="i-mdi:cancel"
+                    @click.prevent="resetEditAnalysis(analysis.id)"
+                  />
+                </template>
+                <!-- Normal mode -->
+                <template v-else>
+                  <div class="text-md font-medium text-highlighted truncate">
+                    {{ analysis.name }}
+                  </div>
+                </template>
+              </div>
+            </div>
+            <!-- Right side: Action dropdown -->
+            <div>
+              <UDropdownMenu :items="items">
+                <UButton v-bind="actionButtonProps" icon="tabler:dots-vertical" />
+                <template #delete-label>
+                  <div @click.prevent="deleteItem(analysis)">
+                    Delete
+                  </div>
+                </template>
+                <template #rename-label>
+                  <div @click.prevent="setEditState(analysis.id, analysis.name)">
+                    Rename
+                  </div>
+                </template>
+                <template #rerun-label>
+                  <div @click.prevent="router.push(`/analyses/${analysis.id}/rerun`)">
+                    Run again
+                  </div>
+                </template>
+              </UDropdownMenu>
             </div>
           </div>
-
-          <!-- Right side: Action dropdown (hidden when collapsed) -->
-          <div v-if="!collapsedModel" class="flex items-center shrink-0 gap-1">
-            <UDropdownMenu :items="items">
-              <UButton v-bind="actionButtonProps" icon="tabler:dots-vertical" />
-              <template #delete-label>
-                <div @click.prevent="deleteItem(analysis)">
-                  Delete
-                </div>
-              </template>
-              <template #rename-label>
-                <div @click.prevent="setEditState(analysis.id, analysis.name)">
-                  Rename
-                </div>
-              </template>
-              <template #rerun-label>
-                <div @click.prevent="router.push(`/analyses/${analysis.id}/rerun`)">
-                  Run again
-                </div>
-              </template>
-            </UDropdownMenu>
+          <!-- row 2  -->
+          <div class="text-muted text-sm truncate">
+            {{ analysis.workflows.name }}
+            <UBadge :label="analysis.workflows.version" size="sm" variant="subtle" color="neutral" />
           </div>
-        </NuxtLink>
-      </div>
+        </div>
+      </NuxtLink>
     </div>
   </div>
 </template>

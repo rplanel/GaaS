@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AnalysisIOsWithStoratePathAndSize } from './IoDatasetsList.vue'
-import { getFileTypeInfo } from '#layers/@gaas-ui/app/utils/fileTypeIcon'
+// import { getFileTypeInfo } from '#layers/@gaas-ui/app/utils/fileTypeIcon'
 import { AnimatePresence, motion, Motion } from 'motion-v'
 
 interface Props {
@@ -30,7 +30,7 @@ const previewEl = useTemplateRef('previewEl')
 
 const galaxyMeta = computed(() => dataset.value?.galaxy_metadata as GalaxyMetadata | null | undefined)
 const fileExtension = computed(() => galaxyMeta.value?.extension)
-const fileType = computed(() => getFileTypeInfo(fileExtension.value))
+// const fileType = computed(() => getFileTypeInfo(fileExtension.value))
 const dataLines = computed(() => galaxyMeta.value?.data_lines)
 const hasPreview = computed(() => !!galaxyMeta.value?.extension)
 const hasTag = computed(() => !!props.resultRoute?.tag)
@@ -59,9 +59,9 @@ async function handleDownload() {
     >
       <template #header>
         <div class="flex justify-between">
-          <div v-if="!isSmallDesktopOrMobile" class="flex items-center">
+          <!-- <div v-if="!isSmallDesktopOrMobile" class="flex items-center">
             <UIcon :name="fileType.icon" color="primary" size="20" class="text-primary" />
-          </div>
+          </div> -->
           <div class="flex gap-2 justify-end w-full">
             <UButton
               v-if="resultRoute" icon="i-lucide-chart-no-axes-combined" color="primary" variant="ghost" size="xs"

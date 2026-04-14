@@ -149,6 +149,7 @@ provide('analysesList', {
     <UDashboardSidebar
       v-model:collapsed="collapsed" collapsible resizable class="bg-(--ui-bg-elevated)/25"
       :ui="{ footer: 'lg:border-t lg:border-(--ui-border)' }"
+      :max-size="15"
     >
       <template #header>
         <div class="flex flex-row justify-between items-center gap-1 w-full h-(--ui-header-height)">

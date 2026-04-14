@@ -98,7 +98,7 @@ const computedResultsMenuItems = computed(() => {
 </script>
 
 <template>
-  <UDashboardPanel :id="`history-panel-${analysisIdFromRoute}`" class="overflow-auto">
+  <UDashboardPanel :id="`history-panel-${analysisIdFromRoute}`" class="overflow-auto" :min-size="60">
     <template #header>
       <UDashboardNavbar v-if="analysis" :title="analysis.name" :toggle="true">
         <template #leading>
