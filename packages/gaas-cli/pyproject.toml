@@ -3,18 +3,18 @@ name = "gaas-cli"
 dynamic = [ "version" ]
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13.0"
+requires-python = ">=3.14.4"
 dependencies = [
-  "meilisearch>=0.37.0",
+  "meilisearch>=0.41.0",
   "pandas>=2.3.3",
   "pyarrow>=22.0.0",
-  "pydantic>=2.12.5",
-  "python-dotenv>=1.2.1",
+  "pydantic>=2.13.3",
+  "python-dotenv>=1.2.2",
   "python-frontmatter>=1.1.0",
-  "pyzotero>=1.7.5",
-  "requests>=2.32.5",
-  "rich>=14.2.0",
-  "typer>=0.20.0",
+  "pyzotero>=1.11.1",
+  "requests>=2.33.1",
+  "rich>=14.3.4",
+  "typer>=0.25.0",
 ]
 
 [project.scripts]
@@ -28,8 +28,8 @@ package = true
 
 [dependency-groups]
 dev = [
-  "black>=25.11.0",
-  "ruff>=0.14.6",
+  "black>=25.12.0",
+  "ruff>=0.15.12",
 ]
 
 [build-system]
