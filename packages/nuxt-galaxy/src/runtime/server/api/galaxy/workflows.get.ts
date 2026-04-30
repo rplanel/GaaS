@@ -1,10 +1,7 @@
-import { useRuntimeConfig } from '#imports'
-import { getWorkflows, initializeGalaxyClient } from 'blendtype'
+import { getWorkflows } from 'blendtype'
 import { defineEventHandler } from 'h3'
+import { useGalaxyLayer } from '../../utils/galaxy'
 
 export default defineEventHandler(async () => {
-  const { public: { galaxy: { url } }, galaxy: { apiKey } } = useRuntimeConfig()
-  initializeGalaxyClient({ apiKey, url })
-
-  return getWorkflows()
+  return getWorkflows(useGalaxyLayer())
 })

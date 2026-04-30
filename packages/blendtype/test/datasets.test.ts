@@ -1,14 +1,16 @@
 import { Effect, pipe } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchDatasetEffect, getDatasetEffect } from '../src/datasets'
+import { fetchDatasetEffect, getDataset, getDatasetEffect } from '../src/datasets'
 import { DatasetError } from '../src/errors'
 import {
   createFailureLayer,
   createHttpErrorLayer,
+  createServiceUnavailableLayer,
   createSuccessLayer,
   createUrlTrackingLayer,
   ERROR_MESSAGES,
   expectFailure,
+  extractFiberFailure,
   HTTP_STATUS_CODES,
   mockGalaxyDataset,
 } from './fixtures'
@@ -153,6 +155,43 @@ describe('getDatasetEffect', () => {
         }),
         Effect.runPromise,
       ))
+  })
+})
+
+describe('getDataset (Promise wrapper)', () => {
+  it('should resolve with dataset data when given a success layer', async () => {
+    const result = await getDataset('test-dataset-id', 'test-history-id', createSuccessLayer(mockGalaxyDataset))
+    expect(result).toEqual(mockGalaxyDataset)
+    expect(result.dataset_id).toBe('test-dataset-id')
+  })
+
+  it('should reject when given a failure layer', async () => {
+    await expect(
+      getDataset('test-dataset-id', 'test-history-id', createFailureLayer(new Error(ERROR_MESSAGES.NETWORK_REFUSED))),
+    ).rejects.toThrow()
+  })
+
+  it('should map Service Unavailable to GalaxyServiceUnavailable', async () => {
+    try {
+      await getDataset('test-dataset-id', 'test-history-id', createServiceUnavailableLayer())
+      expect.unreachable('Should have thrown')
+    }
+    catch (error) {
+      const inner = extractFiberFailure(error)
+      expect((inner as any)._tag).toBe('GalaxyServiceUnavailable')
+    }
+  })
+
+  it('should propagate HTTP status codes through the wrapper', async () => {
+    try {
+      await getDataset('test-dataset-id', 'test-history-id', createHttpErrorLayer(HTTP_STATUS_CODES.NOT_FOUND, 'Not Found'))
+      expect.unreachable('Should have thrown')
+    }
+    catch (error) {
+      const inner = extractFiberFailure(error)
+      expect(inner).toBeInstanceOf(DatasetError)
+      expect((inner as DatasetError).statusCode).toBe(HTTP_STATUS_CODES.NOT_FOUND)
+    }
   })
 })
 

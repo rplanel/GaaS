@@ -1,7 +1,8 @@
-import { GalaxyFetch, runWithConfig } from 'blendtype'
+import { toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect, Layer } from 'effect'
 import { defineEventHandler, getRouterParam } from 'h3'
 import { Drizzle } from '../../../utils/drizzle'
+import { useGalaxyLayer } from '../../../utils/galaxy'
 import { deleteAnalysis } from '../../../utils/grizzle/analyses'
 import { getSupabaseUser, ServerSupabaseClaims, ServerSupabaseClient } from '../../../utils/grizzle/supabase'
 
@@ -24,12 +25,13 @@ export default defineEventHandler(
       const finalLayer = Layer.mergeAll(
         ServerSupabaseClient.Live,
         ServerSupabaseClaims.Live,
-        GalaxyFetch.Live,
         Drizzle.Live,
       )
       return program.pipe(
+        toGalaxyServiceUnavailable,
         Effect.provide(finalLayer),
-        runWithConfig,
+        Effect.provide(useGalaxyLayer()),
+        Effect.runPromise,
       )
     }
   },

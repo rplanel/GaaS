@@ -1,11 +1,12 @@
+import type { Layer } from 'effect'
 import type { Buffer } from 'node:buffer'
 import type { GalaxyHistoryDetailed, GalaxyUploadedDataset } from './types'
 import { Console, Data, Effect } from 'effect'
 import * as tus from 'tus-js-client'
-import { BlendTypeConfig, runWithConfig } from './config'
+import { BlendTypeConfig } from './config'
 import { getDatasetEffect } from './datasets'
 import { extractStatusCode, formatErrorMessage, HistoryError } from './errors'
-import { GalaxyFetch } from './galaxy'
+import { GalaxyFetch, toGalaxyServiceUnavailable } from './galaxy'
 
 export class TusUploadError extends Data.TaggedError('TusUploadError')<{
   readonly message: string
@@ -102,10 +103,11 @@ export function createHistoryEffect(name: string) {
   })
 }
 
-export function createHistory(name: string) {
+export function createHistory(name: string, layer: Layer.Layer<GalaxyFetch>) {
   return createHistoryEffect(name).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }
 
@@ -133,10 +135,12 @@ export function getHistoryEffect(historyId: string) {
     return yield* histories
   })
 }
-export function getHistory(historyId: string) {
+
+export function getHistory(historyId: string, layer: Layer.Layer<GalaxyFetch>) {
   return getHistoryEffect(historyId).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }
 
@@ -164,10 +168,11 @@ export function getHistoriesEffect() {
   })
 }
 
-export function getHistories() {
+export function getHistories(layer: Layer.Layer<GalaxyFetch>) {
   return getHistoriesEffect().pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }
 
@@ -199,10 +204,11 @@ export function deleteHistoryEffect(historyId: string) {
   })
 }
 
-export function deleteHistory(historyId: string) {
+export function deleteHistory(historyId: string, layer: Layer.Layer<GalaxyFetch>) {
   return deleteHistoryEffect(historyId).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }
 
@@ -322,10 +328,12 @@ export function uploadFileToHistoryEffect(
 
 export function uploadFileToHistory(
   params: uploadFileFromUrl | uploadFileFromFile,
+  layer: Layer.Layer<GalaxyFetch | BlendTypeConfig>,
 ) {
   return uploadFileToHistoryEffect(params).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }
 
@@ -422,9 +430,10 @@ export function downloadDatasetEffect(historyId: string, datasetId: string) {
   })
 }
 
-export function downloadDataset(historyId: string, datasetId: string) {
+export function downloadDataset(historyId: string, datasetId: string, layer: Layer.Layer<GalaxyFetch>) {
   return downloadDatasetEffect(historyId, datasetId).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }

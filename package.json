@@ -9,7 +9,7 @@
   "keywords": [],
   "scripts": {
     "test": "pnpm --filter './packages/**' test",
-    "dev": "pnpm --filter ./playground dev",
+    "dev": "pnpm run supabase:start && pnpm --filter ./playground dev",
     "lint": "pnpm --filter './packages/**' lint",
     "cleandep": "rm -rf node_modules pnpm-lock.yaml && pnpm --filter '**' run cleandep && pnpm install",
     "build": "pnpm --filter './packages/**' prepack",

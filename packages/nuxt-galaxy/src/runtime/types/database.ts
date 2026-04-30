@@ -509,6 +509,7 @@ export interface Database {
           annotation: string | null
           auto_version: number
           definition: Json
+          workflow_slug: string
           galaxy_id: string
           id: number
           name: string
@@ -520,6 +521,7 @@ export interface Database {
           annotation?: string | null
           auto_version?: number
           definition: Json
+          workflow_slug: string
           galaxy_id: string
           id?: number
           name: string
@@ -531,6 +533,7 @@ export interface Database {
           annotation?: string | null
           auto_version?: number
           definition?: Json
+          workflow_slug?: string
           galaxy_id?: string
           id?: number
           name?: string

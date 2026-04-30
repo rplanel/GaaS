@@ -1,9 +1,9 @@
+import type { BlendTypeConfigImpl } from './config'
 import type { GalaxyVersion } from './types'
 import { Context, Data, Effect, Layer } from 'effect'
 import { $fetch } from 'ofetch'
-import { BlendTypeConfig, NoConfigError, runWithConfig } from './config'
+import { BlendTypeConfig, makeConfigLayer, NoConfigError } from './config'
 import { extractStatusCode, formatErrorMessage, GalaxyApiError } from './errors'
-// import 'dotenv/config'
 
 /**
  * GalaxyFetch is a service that provides a fetch function that is configured with the Galaxy API key.
@@ -36,28 +36,6 @@ export class GalaxyFetch extends Context.Tag('@blendtype/GalaxyFetch')<
     Effect.gen(function* () {
       const { apiKey, url } = yield* BlendTypeConfig
       if (!url || !apiKey) {
-        // if (typeof window === 'undefined') {
-        // // try to get the config from env variables
-        //   if (!process.env.GALAXY_URL) {
-        //     return yield* Effect.fail(new NoConfigError({
-        //       message: `Galaxy URL is not configured.
-        //     Set GALAXY_URL environment variable or
-        //     pass it in the config.`,
-        //     }))
-        //   }
-        //   else {
-        //     url = process.env.GALAXY_URL
-        //   }
-
-        //   if (!process.env.GALAXY_API_KEY) {
-        //     return yield* Effect.fail(new NoConfigError({
-        //       message: 'Galaxy API key is not configured. Set GALAXY_API_KEY environment variable or pass it in the config.',
-        //     }))
-        //   }
-        //   else {
-        //     apiKey = process.env.GALAXY_API_KEY
-        //   }
-        // }
         return yield* Effect.fail(new NoConfigError({
           message: 'Galaxy URL and API key are not configured. Set GALAXY_URL and GALAXY_API_KEY environment variables or pass them in the config.',
         }))
@@ -72,6 +50,37 @@ export class GalaxyFetch extends Context.Tag('@blendtype/GalaxyFetch')<
       })
     }),
   )
+}
+
+/**
+ * Builds a complete layer that satisfies GalaxyFetch (and its BlendTypeConfig dependency).
+ *
+ * Use this to create a single layer you can provide to any Effect that requires GalaxyFetch.
+ *
+ * @param config - Galaxy API configuration (url + apiKey)
+ * @returns A Layer that provides GalaxyFetch (backed by a real $fetch client)
+ *
+ * @example
+ * ```typescript
+ * const layer = makeGalaxyLayer({ apiKey: 'key', url: 'https://galaxy.example.com' })
+ *
+ * // Use with an Effect
+ * getWorkflowEffect('workflow-id').pipe(
+ *   Effect.provide(layer),
+ *   Effect.runPromise,
+ * )
+ *
+ * // Use with a Promise wrapper
+ * await getWorkflow('workflow-id', layer)
+ * ```
+ */
+export function makeGalaxyLayer(config: BlendTypeConfigImpl) {
+  const configLayer = makeConfigLayer(config)
+  const galaxyFetchLayer = GalaxyFetch.Live.pipe(Layer.provide(configLayer))
+  // Expose both GalaxyFetch and BlendTypeConfig so downstream effects
+  // that directly read config (e.g., uploadFileToHistoryEffect for TUS endpoint)
+  // are also satisfied.
+  return Layer.merge(galaxyFetchLayer, configLayer)
 }
 
 export class GalaxyServiceUnavailable extends Data.TaggedError('GalaxyServiceUnavailable')<{
@@ -126,12 +135,14 @@ export const getVersionEffect = Effect.gen(function* () {
  * @description
  *
  * Get the Galaxy version.
+ * @param layer - A Layer providing GalaxyFetch (use makeGalaxyLayer() to create one)
  * @returns Promise<GalaxyVersion>
  */
-export function getVersion() {
+export function getVersion(layer: Layer.Layer<GalaxyFetch>) {
   return getVersionEffect
     .pipe(
-      Effect.provide(GalaxyFetch.Live),
-      runWithConfig,
+      toGalaxyServiceUnavailable,
+      Effect.provide(layer),
+      Effect.runPromise,
     )
 }

@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import type { Database, WorkflowRow } from 'nuxt-galaxy'
-import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
+import { format } from 'date-fns'
+import { useDefinedBreakpoints } from '../../composables/useDefinedBreakpoints'
 
 const router = useRouter()
 const route = useRoute()
 const { gaasUi: { resultsMenuItems, analyisParametersMenuItems } } = useAppConfig()
 const supabase = useSupabaseClient<Database>()
 const analysisId = ref<number | undefined>(undefined)
-const breakpoints = useBreakpoints(breakpointsTailwind)
-const isMobile = breakpoints.smaller('lg')
 const isOpen = ref(true)
-
+const { isSmallDesktopOrMobile } = useDefinedBreakpoints()
 const analysisIdFromRoute = computed(() => {
   if ('analysisId' in route.params) {
     const analysisIdParam = route.params.analysisId
@@ -97,17 +96,47 @@ const computedResultsMenuItems = computed(() => {
     })).reverse(),
   ]
 })
+function enterMotion(delay: number = 0) {
+  return {
+    initial: { opacity: 0, y: 16 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.6, delay },
+  }
+}
 </script>
 
 <template>
-  <UDashboardPanel :id="`history-panel-${analysisIdFromRoute}`" class="overflow-auto">
+  <UDashboardPanel
+    :id="`history-panel-${analysisIdFromRoute}`" class="overflow-auto" :min-size="60"
+    :ui="{
+      body: 'p-0 sm:p-0',
+    }"
+  >
     <template #header>
-      <UDashboardNavbar v-if="analysis" :title="analysis.name" :toggle="true">
+      <UDashboardNavbar
+        v-if="analysis" :toggle="true"
+      >
         <template #leading>
           <UButton
             icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5"
             @click="router.push('/analyses')"
           />
+        </template>
+        <template #default>
+          <UBadge color="neutral" variant="ghost">
+            {{ format(new Date(analysis.created_at), 'dd MMM HH:mm') }}
+          </UBadge>
+        </template>
+        <template #right>
+          <UTooltip text="Rename Analysis">
+            <UButton color="neutral" variant="ghost" icon="i-lucide-pen" />
+          </UTooltip>
+          <UTooltip text="Run Again">
+            <UButton color="neutral" variant="ghost" icon="i-lucide:refresh-ccw" />
+          </UTooltip>
+          <UTooltip text="Delete Analysis">
+            <UButton color="error" variant="ghost" icon="i-lucide-trash" />
+          </UTooltip>
         </template>
       </UDashboardNavbar>
       <UDashboardToolbar v-if="computedResultsMenuItems?.length > 0">
@@ -118,15 +147,58 @@ const computedResultsMenuItems = computed(() => {
     </template>
 
     <template #body>
-      <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')" />
-      <NuxtPage />
-
-      <USlideover v-if="isMobile" v-model:open="isOpen">
+      <USlideover v-if="isSmallDesktopOrMobile" v-model:open="isOpen">
         <template #content>
-          <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')" />
-          <NuxtPage />
+          <UPage>
+            <UPageHeader
+              :ui="{
+                title: 'px-6 ',
+                root: 'border-b-0',
+
+              }"
+            >
+              <template #title>
+                <Motion
+                  as="span"
+                  v-bind="enterMotion(0.2)"
+                >
+                  {{ analysis?.name || 'Unnamed' }}
+                </Motion>
+              </template>
+            </UPageHeader>
+            <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')" />
+            <NuxtPage />
+          </UPage>
         </template>
       </USlideover>
+      <template v-else>
+        <UPage>
+          <UPageHeader
+            :ui="{
+              title: 'px-6 ',
+              root: 'border-b-0',
+            }"
+          >
+            <template #title>
+              <Motion
+                as="span"
+                v-bind="enterMotion(0.2)"
+                class="inline-block"
+              >
+                {{ analysis?.name || 'Unnamed' }}
+              </Motion>
+            </template>
+          </UPageHeader>
+          <UPageBody>
+            <AnalysisHistoryPanel
+              v-if="analysisId"
+              :analysis-id="analysisId"
+              @close="router.push('/analyses')"
+            />
+            <NuxtPage />
+          </UPageBody>
+        </UPage>
+      </template>
     </template>
   </UDashboardPanel>
 </template>

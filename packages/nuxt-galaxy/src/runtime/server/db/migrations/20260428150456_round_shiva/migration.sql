@@ -1,0 +1,2 @@
+ALTER TABLE "galaxy"."workflows" ADD COLUMN "workflow_slug" varchar(255) NOT NULL;--> statement-breakpoint
+ALTER TABLE "galaxy"."workflows" ADD CONSTRAINT "workflows_workflow_slug_unique" UNIQUE("workflow_slug");
