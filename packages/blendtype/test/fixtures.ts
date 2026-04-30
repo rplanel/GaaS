@@ -1,5 +1,5 @@
 import type { Context } from 'effect'
-import type { GalaxyDataset, GalaxyTool } from '../src/types'
+import type { GalaxyDataset, GalaxyHistoryDetailed, GalaxyInvocation, GalaxyTool, GalaxyVersion, GalaxyWorkflow, GalaxyWorkflowsItem, HistoryStateDetails, HistoryStateIds, ShowFullJobResponse } from '../src/types'
 import { Effect, Exit, Layer } from 'effect'
 import { GalaxyFetch } from '../src/galaxy'
 
@@ -84,6 +84,131 @@ export const mockComplexTool: GalaxyTool = {
   ],
 }
 
+const emptyStateIds: HistoryStateIds = {
+  new: [],
+  upload: [],
+  queued: [],
+  running: [],
+  ok: [],
+  empty: [],
+  error: [],
+  paused: [],
+  setting_metadata: [],
+  failed_metadata: [],
+  deferred: [],
+  discarded: [],
+}
+
+const emptyStateDetails: HistoryStateDetails = {
+  new: 0,
+  upload: 0,
+  queued: 0,
+  running: 0,
+  ok: 0,
+  empty: 0,
+  error: 0,
+  paused: 0,
+  setting_metadata: 0,
+  failed_metadata: 0,
+  deferred: 0,
+  discarded: 0,
+}
+
+export const mockGalaxyHistory: GalaxyHistoryDetailed = {
+  model_class: 'History',
+  id: 'test-history-id',
+  name: 'Test History',
+  deleted: false,
+  purged: false,
+  published: false,
+  annotation: '',
+  tags: [],
+  contents_url: '/api/histories/test-history-id/contents',
+  size: 0,
+  user_id: 'user-1',
+  create_time: '2024-01-01T00:00:00.000Z',
+  update_time: '2024-01-01T00:00:00.000Z',
+  importable: false,
+  slug: null,
+  username_and_slug: null,
+  genome_build: null,
+  state: 'ok',
+  state_ids: { ...emptyStateIds },
+  state_details: { ...emptyStateDetails },
+  hid_counter: 1,
+  empty: true,
+}
+
+export const mockGalaxyWorkflow: GalaxyWorkflow = {
+  model_class: 'StoredWorkflow',
+  id: 'test-workflow-id',
+  name: 'Test Workflow',
+  create_time: new Date('2024-01-01'),
+  update_time: new Date('2024-01-01'),
+  published: false,
+  importable: false,
+  deleted: false,
+  hidden: false,
+  tags: [],
+  latest_workflow_uuid: 'uuid-123',
+  url: '/api/workflows/test-workflow-id',
+  owner: 'test-owner',
+  inputs: {},
+  annotation: null,
+  license: null,
+  creator: null,
+  source_metadata: null,
+  steps: {},
+  version: 1,
+}
+
+export const mockGalaxyWorkflowsItem: GalaxyWorkflowsItem = {
+  model_class: 'StoredWorkflow',
+  id: 'test-workflow-id',
+  name: 'Test Workflow',
+  create_time: new Date('2024-01-01'),
+  update_time: new Date('2024-01-01'),
+  published: false,
+  importable: false,
+  deleted: false,
+  hidden: false,
+  tags: [],
+  latest_workflow_uuid: 'uuid-123',
+  annotation: null,
+  url: '/api/workflows/test-workflow-id',
+  owner: 'test-owner',
+  source_metadata: null,
+  number_of_steps: 3,
+  show_in_tool_panel: false,
+}
+
+export const mockGalaxyInvocation: GalaxyInvocation = {
+  model_class: 'WorkflowInvocation',
+  id: 'test-invocation-id',
+  state: 'scheduled',
+  update_time: '2024-01-01T00:00:00.000Z',
+  create_time: '2024-01-01T00:00:00.000Z',
+  workflow_id: 'test-workflow-id',
+  history_id: 'test-history-id',
+  uuid: 'invocation-uuid-123',
+  steps: [],
+}
+
+export const mockGalaxyJob: ShowFullJobResponse = {
+  model_class: 'Job',
+  id: 'test-job-id',
+  state: 'ok',
+  create_time: '2024-01-01T00:00:00.000Z',
+  update_time: '2024-01-01T00:00:00.000Z',
+  tool_id: 'test-tool-id',
+  params: {} as Record<string, never>,
+}
+
+export const mockGalaxyVersion: GalaxyVersion = {
+  version_major: '23',
+  version_minor: '1',
+}
+
 // ============================================================================
 // Layer Factories - Reusable Test Dependencies
 // ============================================================================
@@ -115,6 +240,14 @@ export function createFailureLayer(error: Error): Layer.Layer<GalaxyFetch> {
       throw error
     }) as unknown as GalaxyFetchService,
   )
+}
+
+/**
+ * Creates a mock GalaxyFetch layer that fails with a "Service Unavailable" error.
+ * This triggers the toGalaxyServiceUnavailable mapping in Promise wrappers.
+ */
+export function createServiceUnavailableLayer(): Layer.Layer<GalaxyFetch> {
+  return createFailureLayer(new Error('503 Service Unavailable'))
 }
 
 /**
@@ -200,6 +333,23 @@ export function expectSuccess<E, A>(
   assertionFn(exit.value)
 }
 
+/**
+ * Extracts the inner error from a FiberFailure thrown by Effect.runPromise.
+ *
+ * Effect.runPromise wraps errors in FiberFailure, so `instanceof` checks
+ * and `_tag` access on the raw caught error won't match the original error type.
+ * Use this helper in Promise wrapper tests to unwrap the original error.
+ */
+export function extractFiberFailure(error: unknown): unknown {
+  if (error && typeof error === 'object') {
+    const cause = (error as any)[Symbol.for('effect/Runtime/FiberFailure/Cause')]
+    if (cause?._tag === 'Fail') {
+      return cause.error
+    }
+  }
+  return error
+}
+
 // ============================================================================
 // Constants for Common Error Messages
 // ============================================================================
@@ -210,6 +360,7 @@ export const ERROR_MESSAGES = {
   NOT_FOUND: '404 Not Found',
   FORBIDDEN: '403 Forbidden',
   SERVER_ERROR: '500 Internal Server Error',
+  SERVICE_UNAVAILABLE: '503 Service Unavailable',
 } as const
 
 export const HTTP_STATUS_CODES = {
@@ -217,4 +368,5 @@ export const HTTP_STATUS_CODES = {
   NOT_FOUND: 404,
   FORBIDDEN: 403,
   SERVER_ERROR: 500,
+  SERVICE_UNAVAILABLE: 503,
 } as const

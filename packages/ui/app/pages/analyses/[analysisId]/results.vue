@@ -1,73 +1,57 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Database } from 'nuxt-galaxy'
 
-const route = useRoute()
 const supabase = useSupabaseClient<Database>()
-
+const route = useRoute()
 const analysisId = computed(() => {
-  if ('analysisId' in route.params) {
-    const analysisIdParam = route.params.analysisId
-    return Number.parseInt(analysisIdParam as string)
+  const idParam = route.params.analysisId
+  if (Array.isArray(idParam)) {
+    return Number.parseInt(idParam[0])
   }
-  return undefined
+  return Number.parseInt(idParam as string)
 })
-
-const { data: outputs, refresh: _refreshOutputs } = useQuery(() => {
-  const id = analysisId.value
-  if (!id) {
-    return undefined
-  }
-  return analysisOutputsViewByIdQuery({ analysisId: id, supabase })
-})
-
-const { data: analysis } = useQuery(
-  () => analysisByIdWithOutputsAndWorkflowsQuery({ id: toValue(analysisId), supabase }),
+const { data: analysis, isPending: analysisPending } = useQuery(
+  () => analysisByIdWithOutputsAndWorkflowsQuery({ id: analysisId.value, supabase }),
 )
 
-const resultRoutes = computed<Record<string, string>>(() => {
-  const analysisVal = toValue(analysis)
-  const analysisIdVal = toValue(analysisId)
-  if (!analysisVal?.analysis_outputs || !analysisIdVal) {
-    return {}
-  }
-  const routes: Record<string, string> = {}
-  for (const output of analysisVal.analysis_outputs) {
-    if (!output.tags || output.tags.length === 0) {
-      continue
-    }
-    const tag = output.tags.map(t => t.label).sort().join('-')
-    if (tag) {
-      routes[output.datasets.dataset_name] = `/analyses/${analysisIdVal}/results/${tag}`
-    }
-  }
-  return routes
+const workflowSlug = computed(() => {
+  return analysis.value?.workflows?.workflow_slug ?? 'generic'
 })
 
-const sortedOutputs = computed(() => {
-  const outputsVal = toValue(outputs)
-  if (outputsVal) {
-    return [...outputsVal].sort((a, b) => {
-      if (a.dataset_name === null && b.dataset_name === null)
-        return 0
-      if (a.dataset_name === null)
-        return 1
-      if (b.dataset_name === null)
-        return -1
-      return a.dataset_name.localeCompare(b.dataset_name)
-    })
-  }
-  return []
+const { component, componentName, isCustom } = useWorkflowResultResolver({
+  workflowSlug,
+})
+
+const targetComponentName = computed(() => {
+  return isCustom.value ? undefined : componentName.value
 })
 </script>
 
 <template>
   <div>
-    <UPageCard title="Outputs" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-      <GalaxyAnalysisIoDatasetsList :items="sortedOutputs" :result-routes="resultRoutes" />
-    </UPageCard>
+    <USeparator label="Results" />
+    <UPageCard variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+      <template v-if="analysisPending">
+        <USkeleton class="h-20 w-full" />
+        <USkeleton class="h-20 w-full" />
+        <USkeleton class="h-20 w-full" />
+      </template>
 
-    <NuxtPage />
+      <template v-else-if="!analysis">
+        <UAlert
+          icon="i-lucide:alert-triangle" color="error" variant="subtle" title="Analysis not found"
+          description="The requested analysis could not be loaded."
+        />
+      </template>
+
+      <template v-else>
+        <component
+          :is="component" :analysis-id="analysisId" :workflow-slug="workflowSlug"
+          :target-component-name="targetComponentName"
+        />
+      </template>
+
+      <NuxtPage />
+    </UPageCard>
   </div>
 </template>
-
-<style></style>

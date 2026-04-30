@@ -4,6 +4,6 @@ export default antfu({
   unocss: false,
   vue: true,
   ignores: [
-    '.agents/**',
+    '**/.agents/**',
   ],
 })

@@ -1,8 +1,8 @@
+import type { Layer } from 'effect'
 import type { GalaxyInvocation } from './types'
 import { Effect } from 'effect'
-import { runWithConfig } from './config'
 import { extractStatusCode, formatErrorMessage, InvocationError } from './errors'
-import { GalaxyFetch } from './galaxy'
+import { GalaxyFetch, toGalaxyServiceUnavailable } from './galaxy'
 
 export function getInvocationEffect(invocationId: string) {
   return Effect.gen(function* () {
@@ -22,9 +22,10 @@ export function getInvocationEffect(invocationId: string) {
   })
 }
 
-export function getInvocation(invocationId: string) {
+export function getInvocation(invocationId: string, layer: Layer.Layer<GalaxyFetch>) {
   return getInvocationEffect(invocationId).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }

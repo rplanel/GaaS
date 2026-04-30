@@ -1,8 +1,8 @@
+import type { Layer } from 'effect'
 import type { GalaxyDataset } from './types'
 import { Effect } from 'effect'
-import { runWithConfig } from './config'
 import { DatasetError, extractStatusCode, formatErrorMessage } from './errors'
-import { GalaxyFetch } from './galaxy'
+import { GalaxyFetch, toGalaxyServiceUnavailable } from './galaxy'
 
 export function getDatasetEffect(datasetId: string, historyId: string) {
   return Effect.gen(function* () {
@@ -26,10 +26,11 @@ export function getDatasetEffect(datasetId: string, historyId: string) {
   })
 }
 
-export function getDataset(datasetId: string, historyId: string) {
+export function getDataset(datasetId: string, historyId: string, layer: Layer.Layer<GalaxyFetch>) {
   return getDatasetEffect(datasetId, historyId).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }
 

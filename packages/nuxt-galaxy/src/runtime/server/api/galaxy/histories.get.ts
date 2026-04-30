@@ -1,6 +1,7 @@
-import { GalaxyFetch, getHistoryEffect, runWithConfig } from 'blendtype'
+import { getHistoryEffect, toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect } from 'effect'
 import { defineEventHandler } from 'h3'
+import { useGalaxyLayer } from '../../utils/galaxy'
 import { ServerSupabaseClient } from '../../utils/grizzle/supabase'
 
 export default defineEventHandler(async (event) => {
@@ -25,8 +26,9 @@ export default defineEventHandler(async (event) => {
   })
 
   return program.pipe(
+    toGalaxyServiceUnavailable,
     Effect.provide(ServerSupabaseClient.Live),
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    Effect.provide(useGalaxyLayer()),
+    Effect.runPromise,
   )
 })

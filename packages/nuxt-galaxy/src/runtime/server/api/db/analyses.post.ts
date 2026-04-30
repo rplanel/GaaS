@@ -1,9 +1,10 @@
 import type { GalaxyWorkflowInput } from 'blendtype'
 import type { AnalysisBody } from '../../../types/nuxt-galaxy.js'
-import * as bt from 'blendtype'
+import { toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect, Layer } from 'effect'
 import { defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle.js'
+import { useGalaxyLayer } from '../../utils/galaxy.js'
 import { runAnalysis } from '../../utils/grizzle/analyses.js'
 import { uploadDatasetsEffect } from '../../utils/grizzle/datasets'
 import { addHistoryEffect } from '../../utils/grizzle/histories'
@@ -61,12 +62,13 @@ export default defineEventHandler<{ body: AnalysisBody }>(
     const finalLayer = Layer.mergeAll(
       ServerSupabaseClient.Live,
       ServerSupabaseClaims.Live,
-      bt.GalaxyFetch.Live,
       Drizzle.Live,
     )
     return program.pipe(
+      toGalaxyServiceUnavailable,
       Effect.provide(finalLayer),
-      bt.runWithConfig,
+      Effect.provide(useGalaxyLayer()),
+      Effect.runPromise,
     )
   },
 

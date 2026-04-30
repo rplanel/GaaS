@@ -1,8 +1,8 @@
+import type { Layer } from 'effect'
 import type { ShowFullJobResponse } from './types'
 import { Effect } from 'effect'
-import { runWithConfig } from './config'
 import { extractStatusCode, formatErrorMessage, JobError } from './errors'
-import { GalaxyFetch } from './galaxy'
+import { GalaxyFetch, toGalaxyServiceUnavailable } from './galaxy'
 
 export function getJobEffect(jobId: string) {
   return Effect.gen(function* () {
@@ -22,9 +22,10 @@ export function getJobEffect(jobId: string) {
   })
 }
 
-export function getJob(jobId: string) {
+export function getJob(jobId: string, layer: Layer.Layer<GalaxyFetch>) {
   return getJobEffect(jobId).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }

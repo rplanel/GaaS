@@ -1,5 +1,4 @@
 import { createError, useRuntimeConfig } from '#imports'
-import { initializeGalaxyClient } from 'blendtype'
 import { defineNitroPlugin } from 'nitropack/runtime'
 
 export default defineNitroPlugin((nitroApp) => {
@@ -11,7 +10,5 @@ export default defineNitroPlugin((nitroApp) => {
     if (!apiKey) {
       throw createError('Galaxy API key is not configured in the runtime config.')
     }
-    // console.warn(`Initializing Galaxy client with URL: ${url} and API Key: ${apiKey}`)
-    initializeGalaxyClient({ apiKey, url })
   })
 })

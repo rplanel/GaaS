@@ -1,7 +1,8 @@
-import { GalaxyFetch, getToolEffect, runWithConfig } from 'blendtype'
+import { getToolEffect, toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect } from 'effect'
 import { defineEventHandler, getRouterParam } from 'h3'
 import { decode } from 'ufo'
+import { useGalaxyLayer } from '../../../../utils/galaxy'
 
 /**
  * API handler to fetch a specific Galaxy tool by its ID and version.
@@ -15,8 +16,9 @@ export default defineEventHandler(async (event) => {
   const toolVersion = getRouterParam(event, 'toolVersion')
   if (toolId && toolVersion) {
     return getToolEffect(decode(toolId), toolVersion).pipe(
-      Effect.provide(GalaxyFetch.Live),
-      runWithConfig,
+      toGalaxyServiceUnavailable,
+      Effect.provide(useGalaxyLayer()),
+      Effect.runPromise,
     )
   }
 })

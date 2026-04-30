@@ -6,8 +6,14 @@ import DOMPurify from 'isomorphic-dompurify'
 interface Props {
   dataset: AnalysisIOsWithStoratePathAndSize
   resultRoute?: string
+  isPreviewOpen?: boolean
 }
-const props = withDefaults(defineProps<Props>(), { resultRoute: undefined })
+const props = withDefaults(defineProps<Props>(), { resultRoute: undefined, isPreviewOpen: false })
+const emit = defineEmits<{
+  (e: 'togglePreview'): void
+  (e: 'download', dataset: AnalysisIOsWithStoratePathAndSize): void
+}>()
+
 const dataset = toRef(() => props.dataset)
 
 interface GalaxyMetadata {
@@ -58,32 +64,7 @@ const sanitizedPeek = computed(() => {
   })
 })
 
-const datasetStoragePath = computed(() => {
-  const datasetVal = toValue(dataset)
-  return datasetVal?.storage_path ?? undefined
-})
-
-const isPreviewOpen = ref(false)
 const hasPreview = computed(() => !!sanitizedPeek.value)
-
-const { storagePath, data: fileBlob, refetch } = useDownloadDataset()
-
-async function handleDownload() {
-  const datasetStoragePathVal = toValue(datasetStoragePath)
-  if (datasetStoragePathVal) {
-    storagePath.value = datasetStoragePathVal
-    await refetch()
-    const fileBlobVal = toValue(fileBlob)
-    if (fileBlobVal) {
-      const url = URL.createObjectURL(fileBlobVal)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = storagePath.value.split('/').pop() || 'download'
-      a.click()
-      URL.revokeObjectURL(url)
-    }
-  }
-}
 </script>
 
 <template>
@@ -119,36 +100,23 @@ async function handleDownload() {
       <!-- Actions -->
       <div class="flex items-center gap-1 shrink-0">
         <UButton
-          v-if="resultRoute"
-          icon="i-lucide-chart-no-axes-combined"
-          color="primary"
-          variant="ghost"
-          size="xs"
-          label="Results"
-          :to="resultRoute"
+          v-if="resultRoute" icon="i-lucide-chart-no-axes-combined" color="primary" variant="ghost" size="xs"
+          label="Results" :to="resultRoute"
         />
         <UButton
-          v-if="hasPreview"
-          :icon="isPreviewOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          :label="isPreviewOpen ? 'Hide' : 'Preview'"
-          @click="isPreviewOpen = !isPreviewOpen"
+          v-if="hasPreview" :icon="isPreviewOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+          color="neutral" variant="ghost" size="xs" :label="isPreviewOpen ? 'Hide' : 'Preview'"
+          @click="emit('togglePreview')"
         />
         <UButton
-          icon="i-lucide-download"
-          color="primary"
-          variant="soft"
-          size="xs"
-          label="Download"
-          @click="handleDownload"
+          icon="i-lucide-download" color="primary" variant="soft" size="xs" label="Download"
+          @click="emit('download', dataset.value)"
         />
       </div>
     </div>
 
     <!-- Expandable preview panel -->
-    <UCollapsible v-model:open="isPreviewOpen" :unmount-on-hide="true">
+    <UCollapsible :open="isPreviewOpen" :unmount-on-hide="true">
       <template #content>
         <div class="border-t border-default">
           <div

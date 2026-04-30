@@ -1,14 +1,16 @@
 import { Effect, pipe } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { ToolError } from '../src/errors'
-import { getToolEffect } from '../src/tools'
+import { getTool, getToolEffect } from '../src/tools'
 import {
   createFailureLayer,
   createHttpErrorLayer,
+  createServiceUnavailableLayer,
   createSuccessLayer,
   createUrlTrackingLayer,
   ERROR_MESSAGES,
   expectFailure,
+  extractFiberFailure,
   HTTP_STATUS_CODES,
   mockComplexTool,
   mockGalaxyTool,
@@ -183,5 +185,42 @@ describe('getToolEffect', () => {
         ),
         Effect.runPromise,
       ))
+  })
+})
+
+describe('getTool (Promise wrapper)', () => {
+  it('should resolve with tool data when given a success layer', async () => {
+    const result = await getTool('test-tool-id', '1.0.0', createSuccessLayer(mockGalaxyTool))
+    expect(result).toEqual(mockGalaxyTool)
+    expect(result.id).toBe('test-tool-id')
+  })
+
+  it('should reject when given a failure layer', async () => {
+    await expect(
+      getTool('test-tool-id', '1.0.0', createFailureLayer(new Error(ERROR_MESSAGES.NETWORK_REFUSED))),
+    ).rejects.toThrow()
+  })
+
+  it('should map Service Unavailable to GalaxyServiceUnavailable', async () => {
+    try {
+      await getTool('test-tool-id', '1.0.0', createServiceUnavailableLayer())
+      expect.unreachable('Should have thrown')
+    }
+    catch (error) {
+      const inner = extractFiberFailure(error)
+      expect((inner as any)._tag).toBe('GalaxyServiceUnavailable')
+    }
+  })
+
+  it('should propagate HTTP status codes through the wrapper', async () => {
+    try {
+      await getTool('test-tool-id', '1.0.0', createHttpErrorLayer(HTTP_STATUS_CODES.NOT_FOUND, 'Not Found'))
+      expect.unreachable('Should have thrown')
+    }
+    catch (error) {
+      const inner = extractFiberFailure(error)
+      expect(inner).toBeInstanceOf(ToolError)
+      expect((inner as ToolError).statusCode).toBe(HTTP_STATUS_CODES.NOT_FOUND)
+    }
   })
 })

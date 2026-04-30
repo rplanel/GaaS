@@ -1,8 +1,8 @@
+import type { Layer } from 'effect'
 import type { GalaxyTool } from './types'
 import { Effect } from 'effect'
-import { runWithConfig } from './config'
 import { extractStatusCode, formatErrorMessage, ToolError } from './errors'
-import { GalaxyFetch } from './galaxy'
+import { GalaxyFetch, toGalaxyServiceUnavailable } from './galaxy'
 
 /**
  * Retrieves a tool by ID and version using Effect-based error handling.
@@ -45,11 +45,13 @@ export function getToolEffect(toolId: string, version: string) {
  *
  * @param toolId - The unique identifier of the tool
  * @param version - The version of the tool
+ * @param layer - A Layer providing GalaxyFetch (use makeGalaxyLayer() to create one)
  * @returns Promise that resolves to GalaxyTool
  */
-export function getTool(toolId: string, version: string) {
+export function getTool(toolId: string, version: string, layer: Layer.Layer<GalaxyFetch>) {
   return getToolEffect(toolId, version).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }

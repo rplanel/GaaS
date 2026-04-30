@@ -3,9 +3,34 @@ import type { TusUploadError } from '../src/histories'
 import { Effect, pipe } from 'effect'
 import * as tus from 'tus-js-client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { uploadWithTus } from '../src/histories'
+import { HistoryError } from '../src/errors'
+import {
+  createHistory,
+  createHistoryEffect,
+  deleteHistory,
+  deleteHistoryEffect,
+  downloadDataset,
+  downloadDatasetEffect,
+  getHistories,
+  getHistoriesEffect,
+  getHistory,
+  getHistoryEffect,
+  uploadWithTus,
+} from '../src/histories'
 
-import { expectFailure } from './fixtures'
+import {
+  createFailureLayer,
+  createHttpErrorLayer,
+  createServiceUnavailableLayer,
+  createSuccessLayer,
+  createUrlTrackingLayer,
+  ERROR_MESSAGES,
+  expectFailure,
+  extractFiberFailure,
+  HTTP_STATUS_CODES,
+  mockGalaxyDataset,
+  mockGalaxyHistory,
+} from './fixtures'
 
 // Helper to create a File from string for testing
 function createTestFile(content: string, filename: string): File {
@@ -74,6 +99,306 @@ vi.mock('tus-js-client', async (importOriginal) => {
     Upload: MockUploadConstructor,
   }
 })
+
+// ============================================================================
+// createHistoryEffect
+// ============================================================================
+
+describe('createHistoryEffect', () => {
+  it('should successfully create a history', () =>
+    pipe(
+      Effect.gen(function* () {
+        const history = yield* createHistoryEffect('New History')
+        expect(history).toEqual(mockGalaxyHistory)
+        expect(history.name).toBe('Test History')
+      }),
+      Effect.provide(createSuccessLayer(mockGalaxyHistory)),
+      Effect.runPromise,
+    ))
+
+  it('should construct correct API URL', () =>
+    pipe(
+      Effect.gen(function* () {
+        const trackingLayer = createUrlTrackingLayer(mockGalaxyHistory)
+        yield* createHistoryEffect('My History').pipe(
+          Effect.provide(trackingLayer),
+        )
+        expect(trackingLayer.getLastUrl()).toBe('api/histories')
+      }),
+      Effect.runPromise,
+    ))
+
+  it('should handle network failures', () =>
+    pipe(
+      Effect.gen(function* () {
+        const exit = yield* Effect.exit(createHistoryEffect('Fail History'))
+
+        expectFailure(exit, (error) => {
+          expect(error).toBeInstanceOf(HistoryError)
+          expect(error.message).toContain('Error creating history')
+        })
+      }),
+      Effect.provide(
+        createFailureLayer(new Error(ERROR_MESSAGES.NETWORK_REFUSED)),
+      ),
+      Effect.runPromise,
+    ))
+})
+
+describe('createHistory (Promise wrapper)', () => {
+  it('should resolve with history data', async () => {
+    const result = await createHistory('New History', createSuccessLayer(mockGalaxyHistory))
+    expect(result).toEqual(mockGalaxyHistory)
+  })
+
+  it('should map Service Unavailable to GalaxyServiceUnavailable', async () => {
+    try {
+      await createHistory('Fail History', createServiceUnavailableLayer())
+      expect.unreachable('Should have thrown')
+    }
+    catch (error) {
+      const inner = extractFiberFailure(error)
+      expect((inner as any)._tag).toBe('GalaxyServiceUnavailable')
+    }
+  })
+})
+
+// ============================================================================
+// getHistoryEffect
+// ============================================================================
+
+describe('getHistoryEffect', () => {
+  it('should successfully retrieve a history', () =>
+    pipe(
+      Effect.gen(function* () {
+        const history = yield* getHistoryEffect('test-history-id')
+        expect(history).toEqual(mockGalaxyHistory)
+        expect(history.id).toBe('test-history-id')
+      }),
+      Effect.provide(createSuccessLayer(mockGalaxyHistory)),
+      Effect.runPromise,
+    ))
+
+  it('should construct correct API URL', () =>
+    pipe(
+      Effect.gen(function* () {
+        const trackingLayer = createUrlTrackingLayer(mockGalaxyHistory)
+        yield* getHistoryEffect('hist-abc').pipe(
+          Effect.provide(trackingLayer),
+        )
+        expect(trackingLayer.getLastUrl()).toBe('api/histories/hist-abc')
+      }),
+      Effect.runPromise,
+    ))
+
+  it('should handle 404 not found', () =>
+    pipe(
+      Effect.gen(function* () {
+        const exit = yield* Effect.exit(getHistoryEffect('non-existent'))
+
+        expectFailure(exit, (error) => {
+          expect(error).toBeInstanceOf(HistoryError)
+          expect(error.statusCode).toBe(HTTP_STATUS_CODES.NOT_FOUND)
+          expect(error.historyId).toBe('non-existent')
+        })
+      }),
+      Effect.provide(
+        createHttpErrorLayer(HTTP_STATUS_CODES.NOT_FOUND, 'Not Found'),
+      ),
+      Effect.runPromise,
+    ))
+})
+
+describe('getHistory (Promise wrapper)', () => {
+  it('should resolve with history data', async () => {
+    const result = await getHistory('test-history-id', createSuccessLayer(mockGalaxyHistory))
+    expect(result).toEqual(mockGalaxyHistory)
+  })
+
+  it('should reject on failure', async () => {
+    await expect(
+      getHistory('test-history-id', createFailureLayer(new Error(ERROR_MESSAGES.NETWORK_REFUSED))),
+    ).rejects.toThrow()
+  })
+
+  it('should map Service Unavailable to GalaxyServiceUnavailable', async () => {
+    try {
+      await getHistory('test-history-id', createServiceUnavailableLayer())
+      expect.unreachable('Should have thrown')
+    }
+    catch (error) {
+      const inner = extractFiberFailure(error)
+      expect((inner as any)._tag).toBe('GalaxyServiceUnavailable')
+    }
+  })
+})
+
+// ============================================================================
+// getHistoriesEffect
+// ============================================================================
+
+describe('getHistoriesEffect', () => {
+  it('should successfully retrieve histories list', () =>
+    pipe(
+      Effect.gen(function* () {
+        const histories = yield* getHistoriesEffect()
+        expect(histories).toEqual([mockGalaxyHistory])
+        expect(histories).toHaveLength(1)
+      }),
+      Effect.provide(createSuccessLayer([mockGalaxyHistory])),
+      Effect.runPromise,
+    ))
+
+  it('should handle network failures', () =>
+    pipe(
+      Effect.gen(function* () {
+        const exit = yield* Effect.exit(getHistoriesEffect())
+
+        expectFailure(exit, (error) => {
+          expect(error).toBeInstanceOf(HistoryError)
+          expect(error.message).toContain('Error getting histories')
+        })
+      }),
+      Effect.provide(
+        createFailureLayer(new Error(ERROR_MESSAGES.NETWORK_REFUSED)),
+      ),
+      Effect.runPromise,
+    ))
+})
+
+describe('getHistories (Promise wrapper)', () => {
+  it('should resolve with histories list', async () => {
+    const result = await getHistories(createSuccessLayer([mockGalaxyHistory]))
+    expect(result).toEqual([mockGalaxyHistory])
+  })
+
+  it('should map Service Unavailable to GalaxyServiceUnavailable', async () => {
+    try {
+      await getHistories(createServiceUnavailableLayer())
+      expect.unreachable('Should have thrown')
+    }
+    catch (error) {
+      const inner = extractFiberFailure(error)
+      expect((inner as any)._tag).toBe('GalaxyServiceUnavailable')
+    }
+  })
+})
+
+// ============================================================================
+// deleteHistoryEffect
+// ============================================================================
+
+describe('deleteHistoryEffect', () => {
+  it('should successfully delete a history', () =>
+    pipe(
+      Effect.gen(function* () {
+        const result = yield* deleteHistoryEffect('hist-to-delete')
+        expect(result).toEqual(mockGalaxyHistory)
+      }),
+      Effect.provide(createSuccessLayer(mockGalaxyHistory)),
+      Effect.runPromise,
+    ))
+
+  it('should handle 404 not found', () =>
+    pipe(
+      Effect.gen(function* () {
+        const exit = yield* Effect.exit(deleteHistoryEffect('non-existent'))
+
+        expectFailure(exit, (error) => {
+          expect(error).toBeInstanceOf(HistoryError)
+          expect(error.statusCode).toBe(HTTP_STATUS_CODES.NOT_FOUND)
+          expect(error.historyId).toBe('non-existent')
+        })
+      }),
+      Effect.provide(
+        createHttpErrorLayer(HTTP_STATUS_CODES.NOT_FOUND, 'Not Found'),
+      ),
+      Effect.runPromise,
+    ))
+})
+
+describe('deleteHistory (Promise wrapper)', () => {
+  it('should resolve on successful deletion', async () => {
+    const result = await deleteHistory('hist-to-delete', createSuccessLayer(mockGalaxyHistory))
+    expect(result).toEqual(mockGalaxyHistory)
+  })
+
+  it('should map Service Unavailable to GalaxyServiceUnavailable', async () => {
+    try {
+      await deleteHistory('hist-to-delete', createServiceUnavailableLayer())
+      expect.unreachable('Should have thrown')
+    }
+    catch (error) {
+      const inner = extractFiberFailure(error)
+      expect((inner as any)._tag).toBe('GalaxyServiceUnavailable')
+    }
+  })
+})
+
+// ============================================================================
+// downloadDatasetEffect
+// ============================================================================
+
+describe('downloadDatasetEffect', () => {
+  it('should return empty blob when file_size is 0', () =>
+    pipe(
+      Effect.gen(function* () {
+        // The first call to fetchApi returns the dataset description (via getDatasetEffect),
+        // the second would return the blob. With file_size=0, only one call is made.
+        const result = yield* downloadDatasetEffect('hist-1', 'ds-1')
+        expect(result).toBeInstanceOf(Blob)
+        expect(result.size).toBe(0)
+      }),
+      Effect.provide(createSuccessLayer({ ...mockGalaxyDataset, file_size: 0 })),
+      Effect.runPromise,
+    ))
+
+  it('should handle network failures', () =>
+    pipe(
+      Effect.gen(function* () {
+        const exit = yield* Effect.exit(
+          downloadDatasetEffect('hist-1', 'ds-1'),
+        )
+
+        // downloadDatasetEffect first calls getDatasetEffect, which fails
+        // with DatasetError when the fetch layer fails
+        expectFailure(exit, (error) => {
+          expect((error as any)._tag).toBeDefined()
+        })
+      }),
+      Effect.provide(
+        createFailureLayer(new Error(ERROR_MESSAGES.NETWORK_REFUSED)),
+      ),
+      Effect.runPromise,
+    ))
+})
+
+describe('downloadDataset (Promise wrapper)', () => {
+  it('should resolve with empty blob for zero-size dataset', async () => {
+    const result = await downloadDataset(
+      'hist-1',
+      'ds-1',
+      createSuccessLayer({ ...mockGalaxyDataset, file_size: 0 }),
+    )
+    expect(result).toBeInstanceOf(Blob)
+    expect(result.size).toBe(0)
+  })
+
+  it('should map Service Unavailable to GalaxyServiceUnavailable', async () => {
+    try {
+      await downloadDataset('hist-1', 'ds-1', createServiceUnavailableLayer())
+      expect.unreachable('Should have thrown')
+    }
+    catch (error) {
+      const inner = extractFiberFailure(error)
+      expect((inner as any)._tag).toBe('GalaxyServiceUnavailable')
+    }
+  })
+})
+
+// ============================================================================
+// uploadWithTus
+// ============================================================================
 
 describe('uploadWithTus', () => {
   beforeEach(() => {

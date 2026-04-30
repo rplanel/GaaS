@@ -34,7 +34,9 @@ const workflowId = computed(() => {
         <div
           class="p-4 sm:px-6 cursor-pointer border-l-2 transition-colors"
           :class="[
-            workflowId && workflowId === workflow.id ? 'border-primary bg-primary/10' : 'border-(--ui-bg) hover:border-primary hover:bg-primary/5',
+            workflowId && workflowId === workflow.id
+              ? 'border-primary bg-primary/10'
+              : 'border-bg hover:border-primary hover:bg-primary/5',
           ]"
         >
           <div class="flex items-center justify-between">

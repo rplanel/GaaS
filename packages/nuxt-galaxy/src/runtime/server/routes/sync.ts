@@ -1,7 +1,8 @@
-import { GalaxyFetch, runWithConfig } from 'blendtype'
+import { toGalaxyServiceUnavailable } from 'blendtype'
 import { Console, Duration, Effect, Layer, Schedule } from 'effect'
 import { defineEventHandler } from 'h3'
 import { Drizzle } from '../utils/drizzle'
+import { useGalaxyLayer } from '../utils/galaxy'
 import { getAllAnalyses, synchronizeAnalysesEffect } from '../utils/grizzle/analyses'
 import { getSupabaseUser, ServerSupabaseClient } from '../utils/grizzle/supabase'
 
@@ -17,7 +18,7 @@ export default defineEventHandler(async (event) => {
   //   return
   const policy = Schedule.addDelay(Schedule.recurs(50), () => Duration.seconds(5))
 
-  const finalLayer = Layer.mergeAll(ServerSupabaseClient.Live, GalaxyFetch.Live, Drizzle.Live)
+  const finalLayer = Layer.mergeAll(ServerSupabaseClient.Live, Drizzle.Live)
   // Define an effect that logs a message to the console
   // synchronizeAnalyses(event, user.id)
   const action = Effect.gen(function* () {
@@ -39,7 +40,9 @@ export default defineEventHandler(async (event) => {
   })
   const runnable = Effect.scoped(program)
   runnable.pipe(
+    toGalaxyServiceUnavailable,
     Effect.provide(finalLayer),
-    runWithConfig,
+    Effect.provide(useGalaxyLayer()),
+    Effect.runPromise,
   )
 })

@@ -1,8 +1,8 @@
+import type { Layer } from 'effect'
 import type { GalaxyInvoke, GalaxyWorkflow, GalaxyWorkflowExport, GalaxyWorkflowInput, GalaxyWorkflowParameters, GalaxyWorkflowsItem, rawGalaxyWorkflowExport, TagCollection } from './types'
 import { Effect, Exit } from 'effect'
-import { runWithConfig } from './config'
 import { extractStatusCode, formatErrorMessage, WorkflowError } from './errors'
-import { GalaxyFetch } from './galaxy'
+import { GalaxyFetch, toGalaxyServiceUnavailable } from './galaxy'
 import { galaxyWorkflowExportSchema } from './types'
 
 export function getWorkflowEffect(workflowId: string) {
@@ -26,10 +26,11 @@ export function getWorkflowEffect(workflowId: string) {
   })
 }
 
-export function getWorkflow(workflowId: string) {
+export function getWorkflow(workflowId: string, layer: Layer.Layer<GalaxyFetch>) {
   return getWorkflowEffect(workflowId).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }
 
@@ -59,10 +60,11 @@ export function exportWorkflowEffect(workflowId: string, style: 'export' | 'run'
   })
 }
 
-export function exportWorkflow(workflowId: string, style: 'export' | 'run' | 'editor' | 'instance' = 'export') {
+export function exportWorkflow(workflowId: string, layer: Layer.Layer<GalaxyFetch>, style: 'export' | 'run' | 'editor' | 'instance' = 'export') {
   return exportWorkflowEffect(workflowId, style).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }
 
@@ -86,10 +88,11 @@ export function getWorkflowsEffect() {
   })
 }
 
-export function getWorkflows() {
+export function getWorkflows(layer: Layer.Layer<GalaxyFetch>) {
   return getWorkflowsEffect().pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }
 
@@ -115,10 +118,11 @@ export function invokeWorkflowEffect(historyGalaxyId: string, workflowId: string
   })
 }
 
-export function invokeWorkflow(historyGalaxyId: string, workflowId: string, inputs: GalaxyWorkflowInput, parameters: GalaxyWorkflowParameters) {
+export function invokeWorkflow(historyGalaxyId: string, workflowId: string, inputs: GalaxyWorkflowInput, parameters: GalaxyWorkflowParameters, layer: Layer.Layer<GalaxyFetch>) {
   return invokeWorkflowEffect(historyGalaxyId, workflowId, inputs, parameters).pipe(
-    Effect.provide(GalaxyFetch.Live),
-    runWithConfig,
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
   )
 }
 

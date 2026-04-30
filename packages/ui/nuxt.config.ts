@@ -25,6 +25,7 @@ export default defineNuxtConfig({
     'nuxt-galaxy',
     '@pinia/colada-nuxt',
     '@pinia/nuxt',
+    'motion-v/nuxt',
   ],
 
   runtimeConfig: {

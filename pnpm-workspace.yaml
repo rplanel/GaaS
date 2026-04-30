@@ -49,6 +49,7 @@ catalog:
   bumpp: ^10.3.1
   changelogen: ^0.6.2
   citty: ^0.2.0
+  date-fns: ^4.1.0
   defu: ^6.1.4
   dotenv: ^17.2.3
   drizzle-kit: ^1.0.0-beta.16
@@ -67,6 +68,7 @@ catalog:
   jwt-decode: ^4.0.0
   lint-staged: ^16.2.7
   meilisearch: ^0.53.0
+  motion-v: ^2.2.0
   ofetch: ^1.5.1
   postgres: ^3.4.7
   simple-git-hooks: ^2.13.1
@@ -108,7 +110,7 @@ catalogs:
     nuxt-og-image: ^5.1.12
     nuxt-studio: ^1.1.0
   testing:
-    '@nuxt/test-utils': ^3.20.1
+    '@nuxt/test-utils': ^4.0.0
     '@vitest/coverage-v8': ^4.1.0
     '@vue/test-utils': ^2.4.6
     happy-dom: ^20.4.0

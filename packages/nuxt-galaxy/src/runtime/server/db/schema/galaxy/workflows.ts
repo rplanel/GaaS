@@ -14,6 +14,7 @@ export const workflows = galaxy.table(
   {
     id: serial('id').primaryKey(),
     autoVersion: integer('auto_version').notNull().default(1),
+    workflowSlug: varchar('workflow_slug', { length: 255 }).notNull(),
     versionKey: varchar('version_key', { length: 255 }).notNull(),
     nameKey: varchar('name_key', { length: 255 }).notNull(),
     userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -21,6 +22,7 @@ export const workflows = galaxy.table(
     ...galaxyItem,
   },
   t => [
+    unique().on(t.workflowSlug),
     unique().on(t.versionKey, t.nameKey),
     unique().on(t.galaxyId),
     pgPolicy('Users can query workflows', {

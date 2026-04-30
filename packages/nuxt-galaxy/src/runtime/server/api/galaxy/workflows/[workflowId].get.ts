@@ -3,6 +3,7 @@ import * as bt from 'blendtype'
 import { Cause, Effect, Exit, Option } from 'effect'
 import { defineEventHandler, getRouterParam } from 'h3'
 import { Drizzle } from '../../../utils/drizzle'
+import { useGalaxyLayer } from '../../../utils/galaxy'
 import { ServerSupabaseClaims, ServerSupabaseClient } from '../../../utils/grizzle/supabase'
 
 export default defineEventHandler(async (event) => {
@@ -14,11 +15,12 @@ export default defineEventHandler(async (event) => {
       return yield* bt.getWorkflowEffect(workflowId)
     })
     const workflowExit = await program.pipe(
-      Effect.provide(bt.GalaxyFetch.Live),
+      bt.toGalaxyServiceUnavailable,
+      Effect.provide(useGalaxyLayer()),
       Effect.provide(Drizzle.Live),
       Effect.provide(ServerSupabaseClaims.Live),
       Effect.provide(ServerSupabaseClient.Live),
-      bt.runWithConfigExit,
+      Effect.runPromiseExit,
     )
 
     return Exit.match(workflowExit, {

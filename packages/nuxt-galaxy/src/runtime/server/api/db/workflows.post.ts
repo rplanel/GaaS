@@ -1,8 +1,9 @@
 import { useRuntimeConfig } from '#imports'
-import * as bt from 'blendtype'
+import { toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect, Layer } from 'effect'
 import { defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle'
+import { useGalaxyLayer } from '../../utils/galaxy'
 import { ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase'
 import { insertWorkflow } from '../../utils/grizzle/workflows'
 
@@ -22,13 +23,14 @@ export default defineEventHandler<
     const finalLayer = Layer.mergeAll(
       ServerSupabaseClient.Live,
       ServerSupabaseClaims.Live,
-      bt.GalaxyFetch.Live,
       Drizzle.Live,
     )
 
     return insertWorkflow(galaxyId, url, email, event).pipe(
+      toGalaxyServiceUnavailable,
       Effect.provide(finalLayer),
-      bt.runWithConfig,
+      Effect.provide(useGalaxyLayer()),
+      Effect.runPromise,
     )
   },
 )
