@@ -10,6 +10,7 @@ import { uploadDatasetsEffect } from '../../utils/grizzle/datasets'
 import { addHistoryEffect } from '../../utils/grizzle/histories'
 import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase.js'
 import { getWorkflowEffect } from '../../utils/grizzle/workflows'
+import { checkGalaxyHealthEffect, CheckGalaxyHealthError } from '../../utils/health.js'
 
 export default defineEventHandler<{ body: AnalysisBody }>(
   async (event) => {
@@ -17,6 +18,15 @@ export default defineEventHandler<{ body: AnalysisBody }>(
     const program = Effect.gen(function* () {
       const supabaseUser = yield* getSupabaseUser(event)
       if (supabaseUser?.id) {
+        // Check Galaxy health before proceeding
+        const health = yield* checkGalaxyHealthEffect()
+        if (health.status !== 'up') {
+          const message = health.status === 'maintenance'
+            ? `Galaxy is under maintenance: ${health.maintenance?.message}`
+            : 'Galaxy is currently unavailable'
+          yield* Effect.fail(new CheckGalaxyHealthError({ message }))
+        }
+
         const workflow = yield* getWorkflowEffect(workflowId)
         const historyDb = yield* addHistoryEffect(name, supabaseUser.id)
         if (historyDb && workflow) {

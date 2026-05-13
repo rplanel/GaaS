@@ -434,6 +434,33 @@ export interface Database {
           },
         ]
       }
+      maintenance_windows: {
+        Row: {
+          created_at: string
+          created_by: string
+          end_at: string
+          id: number
+          message: string
+          start_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          end_at: string
+          id?: number
+          message: string
+          start_at: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          end_at?: string
+          id?: number
+          message?: string
+          start_at?: string
+        }
+        Relationships: []
+      }
       tags: {
         Row: {
           id: number
@@ -509,37 +536,37 @@ export interface Database {
           annotation: string | null
           auto_version: number
           definition: Json
-          workflow_slug: string
           galaxy_id: string
           id: number
           name: string
           name_key: string
           user_id: number
           version_key: string
+          workflow_slug: string
         }
         Insert: {
           annotation?: string | null
           auto_version?: number
           definition: Json
-          workflow_slug: string
           galaxy_id: string
           id?: number
           name: string
           name_key: string
           user_id: number
           version_key: string
+          workflow_slug: string
         }
         Update: {
           annotation?: string | null
           auto_version?: number
           definition?: Json
-          workflow_slug?: string
           galaxy_id?: string
           id?: number
           name?: string
           name_key?: string
           user_id?: number
           version_key?: string
+          workflow_slug?: string
         }
         Relationships: [
           {

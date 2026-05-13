@@ -8,6 +8,7 @@ import { datasets, datasetsToTags } from './datasets'
 import { histories } from './histories'
 import { instances } from './instances'
 import { jobs } from './jobs'
+import { maintenanceWindows } from './maintenanceWindows'
 import { tags } from './tags'
 import { uploadedDatasets } from './uploadedDatasets'
 import { users } from './users'
@@ -242,6 +243,15 @@ export const instancesRelations = defineRelations({ instances, users }, r => ({
     users: r.many.users({
       from: r.instances.id,
       to: r.users.instanceId,
+    }),
+  },
+}))
+
+export const maintenanceWindowsRelations = defineRelations({ maintenanceWindows, owners }, r => ({
+  maintenanceWindows: {
+    createdByUser: r.one.owners({
+      from: r.maintenanceWindows.createdBy,
+      to: r.owners.id,
     }),
   },
 }))

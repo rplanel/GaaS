@@ -107,15 +107,12 @@ function enterMotion(delay: number = 0) {
 
 <template>
   <UDashboardPanel
-    :id="`history-panel-${analysisIdFromRoute}`" class="overflow-auto" :min-size="60"
-    :ui="{
+    :id="`history-panel-${analysisIdFromRoute}`" class="overflow-auto" :min-size="60" :ui="{
       body: 'p-0 sm:p-0',
     }"
   >
     <template #header>
-      <UDashboardNavbar
-        v-if="analysis" :toggle="true"
-      >
+      <UDashboardNavbar v-if="analysis" :toggle="true">
         <template #leading>
           <UButton
             icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5"
@@ -158,10 +155,7 @@ function enterMotion(delay: number = 0) {
               }"
             >
               <template #title>
-                <Motion
-                  as="span"
-                  v-bind="enterMotion(0.2)"
-                >
+                <Motion as="span" v-bind="enterMotion(0.2)">
                   {{ analysis?.name || 'Unnamed' }}
                 </Motion>
               </template>
@@ -180,21 +174,13 @@ function enterMotion(delay: number = 0) {
             }"
           >
             <template #title>
-              <Motion
-                as="span"
-                v-bind="enterMotion(0.2)"
-                class="inline-block"
-              >
+              <Motion as="span" v-bind="enterMotion(0.2)" class="inline-block">
                 {{ analysis?.name || 'Unnamed' }}
               </Motion>
             </template>
           </UPageHeader>
           <UPageBody>
-            <AnalysisHistoryPanel
-              v-if="analysisId"
-              :analysis-id="analysisId"
-              @close="router.push('/analyses')"
-            />
+            <AnalysisHistoryPanel v-if="analysisId" :analysis-id="analysisId" @close="router.push('/analyses')" />
             <NuxtPage />
           </UPageBody>
         </UPage>
