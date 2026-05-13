@@ -1,0 +1,1 @@
+ALTER TABLE "galaxy"."maintenance_windows" ADD CONSTRAINT "maintenance_windows_created_by_users_id_fkey" FOREIGN KEY ("created_by") REFERENCES "auth"."users"("id") ON DELETE CASCADE;

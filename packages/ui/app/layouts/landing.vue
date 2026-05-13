@@ -1,5 +1,7 @@
 <template>
   <div>
+    <GalaxyStatusBanner />
+
     <AppHeader />
     <UMain>
       <slot />

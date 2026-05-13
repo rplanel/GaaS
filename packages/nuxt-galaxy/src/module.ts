@@ -228,6 +228,11 @@ export default defineNuxtModule<ModuleOptions>({
 
     })
     addServerHandler({
+      route: '/api/galaxy/health',
+      handler: resolver.resolve('./runtime/server/api/galaxy/health.get'),
+      method: 'get',
+    })
+    addServerHandler({
       route: '/api/galaxy/histories',
       handler: resolver.resolve('./runtime/server/api/galaxy/histories.get'),
       method: 'get',

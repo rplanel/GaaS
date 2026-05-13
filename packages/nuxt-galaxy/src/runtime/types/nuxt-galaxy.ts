@@ -169,3 +169,13 @@ export interface GalaxyInstanceDetails {
   version_minor: string
   url: string
 }
+
+export interface GalaxyHealth {
+  status: 'up' | 'down' | 'maintenance'
+  url: string
+  maintenance: {
+    message: string
+    startAt: string
+    endAt: string
+  } | null
+}

@@ -51,12 +51,8 @@ provide('navigation', navigation)
     <NuxtLoadingIndicator />
     <ClientOnly>
       <LazyUContentSearch
-        v-model:search-term="searchTerm"
-        :files="files"
-        shortcut="meta_k"
-        :navigation="navigation"
-        :links="links"
-        :fuse="{ resultLimit: 42 }"
+        v-model:search-term="searchTerm" :files="files" shortcut="meta_k" :navigation="navigation"
+        :links="links" :fuse="{ resultLimit: 42 }"
       />
     </ClientOnly>
     <NuxtLayout>
