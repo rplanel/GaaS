@@ -2,7 +2,7 @@ import type { Layer } from 'effect'
 import type { GalaxyInvocation } from './types'
 import { Effect } from 'effect'
 import { extractStatusCode, formatErrorMessage, InvocationError } from './errors'
-import { GalaxyFetch, toGalaxyServiceUnavailable } from './galaxy'
+import { GalaxyFetch, toGalaxyServiceUnavailable, withRetry } from './galaxy'
 
 export function getInvocationEffect(invocationId: string) {
   return Effect.gen(function* () {
@@ -19,7 +19,7 @@ export function getInvocationEffect(invocationId: string) {
       }),
     })
     return yield* invocation
-  })
+  }).pipe(withRetry)
 }
 
 export function getInvocation(invocationId: string, layer: Layer.Layer<GalaxyFetch>) {

@@ -17,7 +17,9 @@ describe('makeConfigLayer', () => {
 
 describe('toGalaxyServiceUnavailable', () => {
   it('should map Service Unavailable errors to GalaxyServiceUnavailable', async () => {
-    const effect = Effect.fail(new Error('503 Service Unavailable')).pipe(
+    const effect = Effect.fail(
+      Object.assign(new Error('Service Unavailable'), { statusCode: 503 }),
+    ).pipe(
       toGalaxyServiceUnavailable,
     )
 

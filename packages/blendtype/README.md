@@ -291,7 +291,7 @@ const result = await Effect.runPromise(analysisPipeline)
 | `galaxy` | `GalaxyFetch`, `getVersion` | Core HTTP service and utility functions |
 | `workflows` | `getWorkflow`, `invokeWorkflow`, `exportWorkflow` | Workflow management |
 | `histories` | `createHistory`, `getHistory`, `deleteHistory`, `uploadFileToHistory` | History operations |
-| `datasets` | `getDataset`, `fetchDataset` | Dataset retrieval and downloading |
+| `datasets` | `getDataset` | Dataset retrieval and downloading |
 | `tools` | `getTool` | Tool discovery and metadata |
 | `jobs` | `getJob` | Job status monitoring |
 | `invocations` | `getInvocation` | Workflow invocation tracking |

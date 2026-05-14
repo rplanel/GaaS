@@ -1,8 +1,8 @@
 import type { Layer } from 'effect'
-import type { GalaxyInvoke, GalaxyWorkflow, GalaxyWorkflowExport, GalaxyWorkflowInput, GalaxyWorkflowParameters, GalaxyWorkflowsItem, rawGalaxyWorkflowExport, TagCollection } from './types'
-import { Effect, Exit } from 'effect'
+import type { GalaxyInvoke, GalaxyWorkflow, GalaxyWorkflowInput, GalaxyWorkflowParameters, GalaxyWorkflowsItem, rawGalaxyWorkflowExport, TagCollection } from './types'
+import { Effect } from 'effect'
 import { extractStatusCode, formatErrorMessage, WorkflowError } from './errors'
-import { GalaxyFetch, toGalaxyServiceUnavailable } from './galaxy'
+import { GalaxyFetch, toGalaxyServiceUnavailable, withRetry } from './galaxy'
 import { galaxyWorkflowExportSchema } from './types'
 
 export function getWorkflowEffect(workflowId: string) {
@@ -23,7 +23,7 @@ export function getWorkflowEffect(workflowId: string) {
       }),
     })
     return yield* workflow
-  })
+  }).pipe(withRetry)
 }
 
 export function getWorkflow(workflowId: string, layer: Layer.Layer<GalaxyFetch>) {
@@ -56,8 +56,15 @@ export function exportWorkflowEffect(workflowId: string, style: 'export' | 'run'
       }),
     })
     const workflow = yield* workflowEffect
-    return galaxyWorkflowExportSchema.passthrough().parse(workflow) as GalaxyWorkflowExport
-  })
+    return yield* Effect.try({
+      try: () => galaxyWorkflowExportSchema.passthrough().parse(workflow),
+      catch: cause => new WorkflowError({
+        message: `Invalid workflow export format for workflow ${workflowId}`,
+        workflowId,
+        cause,
+      }),
+    })
+  }).pipe(withRetry)
 }
 
 export function exportWorkflow(workflowId: string, layer: Layer.Layer<GalaxyFetch>, style: 'export' | 'run' | 'editor' | 'instance' = 'export') {
@@ -85,7 +92,7 @@ export function getWorkflowsEffect() {
       }),
     })
     return yield* workflow
-  })
+  }).pipe(withRetry)
 }
 
 export function getWorkflows(layer: Layer.Layer<GalaxyFetch>) {
@@ -126,32 +133,12 @@ export function invokeWorkflow(historyGalaxyId: string, workflowId: string, inpu
   )
 }
 
-export function getWorkflowTagVersion(tags: TagCollection) {
-  const workflowVersionTagExit = Effect.runSyncExit(Effect.gen(function* () {
-    const tag = tags?.find(tag => tag.startsWith('version:'))
-    if (tag) {
-      const tagVersion = tag.replace('version:', '')
-      return yield* Effect.succeed(tagVersion)
-    }
-    return yield* Effect.fail(new Error('No tag version found'))
-  }))
-  return Exit.match(workflowVersionTagExit, {
-    onFailure: _ => null,
-    onSuccess: value => value,
-  })
+export function getWorkflowTagVersion(tags: TagCollection): string | null {
+  const tag = tags?.find(tag => tag.startsWith('version:'))
+  return tag ? tag.replace('version:', '') : null
 }
 
-export function getWorkflowTagName(tags: TagCollection) {
-  const workflowTagNameExit = Effect.runSyncExit(Effect.gen(function* () {
-    const tag = tags?.find(tag => tag.startsWith('name:'))
-    if (tag) {
-      const tagName = tag.replace('name:', '')
-      return yield* Effect.succeed(tagName)
-    }
-    return yield* Effect.fail(new Error('No tag name found'))
-  }))
-  return Exit.match(workflowTagNameExit, {
-    onFailure: _ => null,
-    onSuccess: value => value,
-  })
+export function getWorkflowTagName(tags: TagCollection): string | null {
+  const tag = tags?.find(tag => tag.startsWith('name:'))
+  return tag ? tag.replace('name:', '') : null
 }

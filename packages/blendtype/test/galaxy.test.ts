@@ -1,7 +1,7 @@
-import { Effect, pipe } from 'effect'
+import { Effect, Exit, Layer, pipe } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { BlendTypeConfig } from '../src/config'
-import { GalaxyFetch, getVersion, getVersionEffect, makeGalaxyLayer } from '../src/galaxy'
+import { GalaxyFetch, getVersion, getVersionEffect, isRetryableError, makeGalaxyLayer } from '../src/galaxy'
 import {
   createFailureLayer,
   createServiceUnavailableLayer,
@@ -104,4 +104,91 @@ describe('getVersion (Promise wrapper)', () => {
       expect((inner as any)._tag).toBe('GalaxyServiceUnavailable')
     }
   })
+})
+
+describe('isRetryableError', () => {
+  it('should return true for 503 errors', () => {
+    expect(isRetryableError({ statusCode: 503 })).toBe(true)
+  })
+
+  it('should return true for 429 errors', () => {
+    expect(isRetryableError({ statusCode: 429 })).toBe(true)
+  })
+
+  it('should return false for 404 errors', () => {
+    expect(isRetryableError({ statusCode: 404 })).toBe(false)
+  })
+
+  it('should return false for 500 errors', () => {
+    expect(isRetryableError({ statusCode: 500 })).toBe(false)
+  })
+
+  it('should return false for non-object errors', () => {
+    expect(isRetryableError('string error')).toBe(false)
+  })
+})
+
+describe('withRetry', () => {
+  it('should succeed after transient 503 failures', () =>
+    pipe(
+      Effect.gen(function* () {
+        let attempts = 0
+        const layer = Layer.succeed(
+          GalaxyFetch,
+          (async () => {
+            attempts++
+            if (attempts < 3) {
+              throw Object.assign(new Error('Service Unavailable'), { statusCode: 503 })
+            }
+            return mockGalaxyVersion
+          }) as unknown as typeof GalaxyFetch.Service,
+        )
+
+        const result = yield* getVersionEffect.pipe(Effect.provide(layer))
+
+        expect(result.version_major).toBe('23')
+        expect(attempts).toBe(3)
+      }),
+      Effect.runPromise,
+    ))
+
+  it('should not retry on 404 errors', () =>
+    pipe(
+      Effect.gen(function* () {
+        let attempts = 0
+        const layer = Layer.succeed(
+          GalaxyFetch,
+          (async () => {
+            attempts++
+            throw Object.assign(new Error('Not Found'), { statusCode: 404 })
+          }) as unknown as typeof GalaxyFetch.Service,
+        )
+
+        const exit = yield* Effect.exit(getVersionEffect.pipe(Effect.provide(layer)))
+
+        expect(Exit.isFailure(exit)).toBe(true)
+        expect(attempts).toBe(1)
+      }),
+      Effect.runPromise,
+    ))
+
+  it('should fail after max retries exceeded', () =>
+    pipe(
+      Effect.gen(function* () {
+        let attempts = 0
+        const layer = Layer.succeed(
+          GalaxyFetch,
+          (async () => {
+            attempts++
+            throw Object.assign(new Error('Service Unavailable'), { statusCode: 503 })
+          }) as unknown as typeof GalaxyFetch.Service,
+        )
+
+        const exit = yield* Effect.exit(getVersionEffect.pipe(Effect.provide(layer)))
+
+        expect(Exit.isFailure(exit)).toBe(true)
+        expect(attempts).toBe(4) // initial + 3 retries
+      }),
+      Effect.runPromise,
+    ))
 })

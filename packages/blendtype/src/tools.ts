@@ -2,7 +2,7 @@ import type { Layer } from 'effect'
 import type { GalaxyTool } from './types'
 import { Effect } from 'effect'
 import { extractStatusCode, formatErrorMessage, ToolError } from './errors'
-import { GalaxyFetch, toGalaxyServiceUnavailable } from './galaxy'
+import { GalaxyFetch, toGalaxyServiceUnavailable, withRetry } from './galaxy'
 
 /**
  * Retrieves a tool by ID and version using Effect-based error handling.
@@ -37,7 +37,7 @@ export function getToolEffect(toolId: string, version: string) {
       }),
     })
     return yield* tool
-  })
+  }).pipe(withRetry)
 }
 
 /**

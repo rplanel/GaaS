@@ -1,6 +1,6 @@
 import type { BlendTypeConfigImpl } from './config'
 import type { GalaxyVersion } from './types'
-import { Context, Data, Effect, Layer } from 'effect'
+import { Context, Data, Effect, Layer, Schedule } from 'effect'
 import { $fetch } from 'ofetch'
 import { BlendTypeConfig, makeConfigLayer, NoConfigError } from './config'
 import { extractStatusCode, formatErrorMessage, GalaxyApiError } from './errors'
@@ -95,12 +95,40 @@ export function toGalaxyServiceUnavailable<A, E, C>(effect: Effect.Effect<A, E, 
   return Effect.mapError(
     effect,
     (error) => {
+      // Prefer status code check (more reliable) over message string matching
+      if (extractStatusCode(error) === 503) {
+        return new GalaxyServiceUnavailable({ message: 'Galaxy service is unavailable' })
+      }
+      // Fallback: check message string for client errors without statusCode (e.g., network-level)
       const errObj = error as { message?: string }
       if (errObj?.message && typeof errObj.message === 'string' && errObj.message.includes('Service Unavailable')) {
         return new GalaxyServiceUnavailable({ message: 'Galaxy service is unavailable' })
       }
       return error
     },
+  )
+}
+
+// Retry policy: exponential backoff starting at 100ms, max 3 retries
+export const defaultRetryPolicy = Schedule.exponential('100 millis').pipe(
+  Schedule.intersect(Schedule.recurs(3)),
+)
+
+// Check if error is retryable (statusCode 429 or 503)
+export function isRetryableError(error: unknown): boolean {
+  const statusCode = extractStatusCode(error)
+  return statusCode === 429 || statusCode === 503
+}
+
+// Reusable retry wrapper for idempotent GET operations
+export function withRetry<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+): Effect.Effect<A, E, R> {
+  return effect.pipe(
+    Effect.retry({
+      schedule: defaultRetryPolicy,
+      while: error => isRetryableError(error),
+    }),
   )
 }
 
@@ -128,7 +156,7 @@ export const getVersionEffect = Effect.gen(function* () {
     try: () => fetchApi<GalaxyVersion>('/api/version'),
     catch: caughtError => createHttpError(caughtError, 'version'),
   })
-})
+}).pipe(withRetry)
 
 /**
  * @name getVersion

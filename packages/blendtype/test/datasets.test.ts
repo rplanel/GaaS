@@ -1,6 +1,6 @@
 import { Effect, pipe } from 'effect'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchDatasetEffect, getDataset, getDatasetEffect } from '../src/datasets'
+import { describe, expect, it } from 'vitest'
+import { getDataset, getDatasetEffect } from '../src/datasets'
 import { DatasetError } from '../src/errors'
 import {
   createFailureLayer,
@@ -192,81 +192,5 @@ describe('getDataset (Promise wrapper)', () => {
       expect(inner).toBeInstanceOf(DatasetError)
       expect((inner as DatasetError).statusCode).toBe(HTTP_STATUS_CODES.NOT_FOUND)
     }
-  })
-})
-
-describe('fetchDatasetEffect', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn())
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
-  describe('success cases', () => {
-    it('should successfully fetch dataset from URL', () =>
-      pipe(
-        Effect.gen(function* () {
-          const mockResponse = new Response('dataset content', {
-            status: 200,
-            headers: { 'Content-Type': 'text/plain' },
-          })
-
-          vi.mocked(fetch).mockResolvedValue(mockResponse)
-
-          const result = yield* fetchDatasetEffect(
-            'https://example.com/dataset.txt',
-          )
-
-          expect(result).toBeInstanceOf(Response)
-          expect(result.status).toBe(200)
-          const text = yield* Effect.promise(() => result.text())
-          expect(text).toBe('dataset content')
-          expect(vi.mocked(fetch)).toHaveBeenCalledWith(
-            'https://example.com/dataset.txt',
-          )
-          expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1)
-        }),
-        Effect.runPromise,
-      ))
-  })
-
-  describe('error cases', () => {
-    it('should handle fetch failures', () =>
-      pipe(
-        Effect.gen(function* () {
-          vi.mocked(fetch).mockRejectedValue(
-            new Error(ERROR_MESSAGES.NETWORK_REFUSED),
-          )
-
-          const exit = yield* Effect.exit(
-            fetchDatasetEffect('https://example.com/dataset.txt'),
-          )
-
-          expectFailure(exit, (error) => {
-            expect(error).toBeInstanceOf(DatasetError)
-            expect(error.message).toContain('Error fetching dataset from URL')
-            expect(error.message).toContain(ERROR_MESSAGES.NETWORK_REFUSED)
-          })
-        }),
-        Effect.runPromise,
-      ))
-
-    it('should preserve URL in error message', () =>
-      pipe(
-        Effect.gen(function* () {
-          vi.mocked(fetch).mockRejectedValue(new Error('Connection timeout'))
-
-          const testUrl = 'https://galaxy.example.com/api/datasets/123'
-          const exit = yield* Effect.exit(fetchDatasetEffect(testUrl))
-
-          expectFailure(exit, (error) => {
-            expect(error).toBeInstanceOf(DatasetError)
-            expect(error.message).toContain(testUrl)
-          })
-        }),
-        Effect.runPromise,
-      ))
   })
 })
