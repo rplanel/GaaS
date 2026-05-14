@@ -45,6 +45,58 @@ class MockGetSupabaseUserError extends Error {
 vi.mock('blendtype', () => ({
   toGalaxyServiceUnavailable: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
   makeGalaxyLayer: vi.fn(() => Layer.empty),
+  DatasetStates: [
+    'ok',
+    'empty',
+    'error',
+    'discarded',
+    'failed_metadata',
+    'new',
+    'upload',
+    'queued',
+    'running',
+    'paused',
+    'setting_metadata',
+    'deferred',
+  ],
+  HistoryStates: [
+    'new',
+    'upload',
+    'queued',
+    'running',
+    'ok',
+    'empty',
+    'error',
+    'paused',
+    'setting_metadata',
+    'failed_metadata',
+    'deferred',
+    'discarded',
+  ],
+  JobStates: [
+    'ok',
+    'error',
+    'deleted',
+    'new',
+    'resubmitted',
+    'upload',
+    'waiting',
+    'queued',
+    'running',
+    'failed',
+    'paused',
+    'stop',
+    'stopped',
+    'skipped',
+  ],
+  InvocationStates: [
+    'scheduled',
+    'cancelling',
+    'cancelled',
+    'failed',
+    'new',
+    'ready',
+  ],
 }))
 
 // Mock galaxy utility
@@ -83,6 +135,15 @@ vi.mock('../../../../src/runtime/server/utils/grizzle/datasets', () => ({
 
 vi.mock('../../../../src/runtime/server/utils/grizzle/analyses.js', () => ({
   runAnalysis: vi.fn(() => Effect.succeed(mockAnalysisResult)),
+}))
+
+// Mock health check to bypass Drizzle dependency
+vi.mock('../../../../src/runtime/server/utils/health', () => ({
+  checkGalaxyHealthEffect: vi.fn(() => Effect.succeed({ status: 'up', maintenance: null })),
+  CheckGalaxyHealthError: class CheckGalaxyHealthError extends Error {
+    readonly _tag = 'CheckGalaxyHealthError'
+    constructor(opts: { message: string }) { super(opts.message) }
+  },
 }))
 
 // Mock h3

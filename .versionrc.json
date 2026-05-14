@@ -1,0 +1,14 @@
+{
+  "bumpFiles": [
+    "package.json",
+    "packages/blendtype/package.json",
+    "packages/nuxt-galaxy/package.json",
+    "packages/ui/package.json",
+    "packages/wiki/package.json"
+  ],
+  "scripts": {
+    "postbump": "pnpm --filter './packages/**' prepack"
+  },
+  "commitAll": true,
+  "header": "# Changelog\n\nAll notable changes to this project will be documented in this file.\n"
+}

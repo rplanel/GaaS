@@ -52,7 +52,6 @@
     "@types/tus-js-client": "catalog:",
     "@vue/compiler-core": "catalog:",
     "automd": "catalog:",
-    "changelogen": "catalog:",
     "esbuild": "catalog:",
     "eslint": "catalog:",
     "eslint-config-unjs": "catalog:",

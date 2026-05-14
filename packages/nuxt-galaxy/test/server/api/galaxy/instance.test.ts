@@ -2,10 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 
 // Mock blendtype
 vi.mock('blendtype', () => ({
-  getVersion: vi.fn(() => Promise.resolve({
+  getVersionEffect: { pipe: vi.fn(() => Promise.resolve({
     version_major: '23',
     version_minor: '1',
-  })),
+  })) },
+  toGalaxyServiceUnavailable: vi.fn(),
   makeGalaxyLayer: vi.fn(() => ({})),
 }))
 

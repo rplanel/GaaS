@@ -3,6 +3,10 @@
   "type": "module",
   "version": "0.0.1-alpha.0",
   "main": "./nuxt.config.ts",
+  "files": [
+    "app",
+    "nuxt.config.ts"
+  ],
   "scripts": {
     "dev": "nuxi dev .playground",
     "dev:prepare": "nuxt prepare .playground",
@@ -30,7 +34,6 @@
     "@iconify-json/svg-spinners": "catalog:",
     "@iconify-json/tabler": "catalog:",
     "@nuxt/eslint": "catalog:nuxt",
-    "@nuxt/test-utils": "catalog:testing",
     "@nuxt/ui": "catalog:nuxt",
     "@nuxtjs/supabase": "catalog:nuxt",
     "@observablehq/plot": "catalog:dataviz",
@@ -58,6 +61,7 @@
     "zod-validation-error": "catalog:"
   },
   "devDependencies": {
+    "@nuxt/test-utils": "catalog:testing",
     "@pinia/colada-devtools": "catalog:vue",
     "@vue/test-utils": "catalog:testing",
     "drizzle-kit": "catalog:",

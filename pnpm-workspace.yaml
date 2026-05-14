@@ -12,6 +12,7 @@ trustPolicyExclude:
   - '@nuxt/content@3.12.0'
   - rxjs@7.8.2
   - nuxt-component-meta@0.17.2
+  - semver@5.7.2
 packages:
   - packages/blendtype
   - packages/nuxt-galaxy
@@ -37,7 +38,6 @@ catalog:
   '@iconify-json/svg-spinners': ^1.2.4
   '@iconify-json/tabler': ^1.2.23
   '@iconify-json/vscode-icons': ^1.2.36
-  '@release-it/conventional-changelog': ^10.0.4
   '@types/node': ^24.1.0
   '@types/tus-js-client': ^2.1.0
   '@unocss/eslint-plugin': ^66.5.10
@@ -46,9 +46,8 @@ catalog:
   apache-arrow: ^21.1.0
   automd: ^0.4.2
   better-sqlite3: ^12.4.6
-  bumpp: ^10.3.1
-  changelogen: ^0.6.2
   citty: ^0.2.0
+  commit-and-tag-version: ^12.7.3
   date-fns: ^4.1.0
   defu: ^6.1.4
   dotenv: ^17.2.3
@@ -60,7 +59,6 @@ catalog:
   eslint: ^9.39.1
   eslint-config-unjs: ^0.5.0
   eslint-plugin-format: ^1.0.2
-  fs-extra: ^11.3.2
   h3: ^1.15.4
   htl: ^0.3.1
   isomorphic-dompurify: ^3.4.0

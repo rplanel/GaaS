@@ -15,7 +15,7 @@ export const SUPABASE_DATASETS_QUERY_KEYS = {
   preview: (storagePath: string) => [...SUPABASE_DATASETS_QUERY_KEYS.root, 'preview', storagePath] as const,
 }
 
-async function supabaseDatasetsById(supabase: SupabaseClient<Database>, id: number) {
+export async function supabaseDatasetsById(supabase: SupabaseClient<Database>, id: number) {
   return supabase
     .schema('galaxy')
     .from('analyses')
@@ -57,7 +57,7 @@ export interface PreviewResult {
   fileSize?: number
 }
 
-async function supabasePreviewDataset(supabase: SupabaseClient<Database>, storagePath: string): Promise<PreviewResult> {
+export async function supabasePreviewDataset(supabase: SupabaseClient<Database>, storagePath: string): Promise<PreviewResult> {
   const PREVIEW_SIZE = 50 * 1024 // 50KB
 
   // 1. Create signed URL (1 minute expiry)
