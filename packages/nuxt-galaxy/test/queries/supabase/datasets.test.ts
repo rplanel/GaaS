@@ -3,6 +3,7 @@ import {
   datasetsByIdQuery,
   previewDatasetQuery,
   SUPABASE_DATASETS_QUERY_KEYS,
+  supabaseDatasetsById,
 } from '../../../src/runtime/app/queries/supabase/datasets'
 import { createMockSupabase, createMockSupabaseWithData } from '../../utils/mockSupabase'
 
@@ -65,21 +66,20 @@ describe('datasets queries', () => {
       const mockData = [{ id: 123, name: 'Test Dataset' }]
       const mockSupabase = createMockSupabaseWithData(mockData)
 
-      const options = datasetsByIdQuery({ id: 123, supabase: mockSupabase })
-      await options.query()
+      await supabaseDatasetsById(mockSupabase, 123)
 
-      expect(mockSupabase.schema).toHaveBeenCalledWith('galaxy')
-      expect(mockSupabase.from).toHaveBeenCalledWith('analyses')
-      expect(mockSupabase.select).toHaveBeenCalledWith('*')
-      expect(mockSupabase.eq).toHaveBeenCalledWith('id', 123)
+      const mock = mockSupabase as unknown as Record<string, unknown>
+      expect(mock.schema).toHaveBeenCalledWith('galaxy')
+      expect(mock.from).toHaveBeenCalledWith('analyses')
+      expect(mock.select).toHaveBeenCalledWith('*')
+      expect(mock.eq).toHaveBeenCalledWith('id', 123)
     })
 
     it('should return query result', async () => {
       const mockData = [{ id: 123, name: 'Test Dataset' }]
       const mockSupabase = createMockSupabaseWithData(mockData)
 
-      const options = datasetsByIdQuery({ id: 123, supabase: mockSupabase })
-      const result = await options.query()
+      const result = await supabaseDatasetsById(mockSupabase, 123)
 
       expect(result.data).toEqual(mockData)
     })

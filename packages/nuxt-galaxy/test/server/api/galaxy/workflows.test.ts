@@ -7,7 +7,10 @@ const mockWorkflows = [
 
 // Mock blendtype
 vi.mock('blendtype', () => ({
-  getWorkflows: vi.fn(() => Promise.resolve(mockWorkflows)),
+  getWorkflowsEffect: vi.fn(() => ({
+    pipe: () => Promise.resolve(mockWorkflows),
+  })),
+  toGalaxyServiceUnavailable: vi.fn(),
   makeGalaxyLayer: vi.fn(() => ({})),
 }))
 

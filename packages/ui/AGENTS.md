@@ -151,7 +151,6 @@ pnpm test:watch             # Watch mode
 
 ### Testing Standards
 - **Framework**: Vitest + @vue/test-utils + happy-dom
-- **Component Testing**: Test component behavior without full Nuxt runtime
 - **Mocking**: Mock composables from nuxt-galaxy
 - **Visual Testing**: Playwright for visual regression (optional)
 - **E2E**: Use .playground/ for integration testing

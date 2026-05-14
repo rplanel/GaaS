@@ -91,15 +91,11 @@ export const mockGalaxyWorkflow: GalaxyWorkflow = {
 }
 
 export const mockGalaxyWorkflowExport: GalaxyWorkflowExport = {
-  'a_]galaxy_id': 'galaxy-workflow-1',
+  'a_galaxy_workflow': true,
   'name': 'Test Workflow',
   'annotation': '',
   'format-version': '0.1',
-  'creator': [],
-  'license': '',
-  'release': '',
   'tags': ['name:test-workflow', 'version:1.0'],
-  'uuid': 'uuid-123',
   'steps': {},
   'version': 1,
 }
@@ -281,7 +277,7 @@ type GalaxyFetchService = Context.Tag.Service<typeof GalaxyFetch>
  * Creates a mock GalaxyFetch layer that returns a configured response.
  * Supports providing different responses per URL pattern.
  */
-export function createMockGalaxyLayer<T>(response: T): Layer.Layer<typeof GalaxyFetch> {
+export function createMockGalaxyLayer<T>(response: T): Layer.Layer<GalaxyFetch> {
   return Layer.effect(
     GalaxyFetch,
     Effect.sync(() =>
@@ -295,7 +291,7 @@ export function createMockGalaxyLayer<T>(response: T): Layer.Layer<typeof Galaxy
  */
 export function createRoutedGalaxyLayer(
   routes: Record<string, unknown>,
-): Layer.Layer<typeof GalaxyFetch> {
+): Layer.Layer<GalaxyFetch> {
   return Layer.effect(
     GalaxyFetch,
     Effect.sync(() =>
@@ -313,7 +309,7 @@ export function createRoutedGalaxyLayer(
 /**
  * Creates a GalaxyFetch layer that always throws.
  */
-export function createFailingGalaxyLayer(error: Error): Layer.Layer<typeof GalaxyFetch> {
+export function createFailingGalaxyLayer(error: Error): Layer.Layer<GalaxyFetch> {
   return Layer.succeed(
     GalaxyFetch,
     (async () => { throw error }) as unknown as GalaxyFetchService,

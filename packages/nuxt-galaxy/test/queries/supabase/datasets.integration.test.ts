@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../../../src/runtime/types/database'
-import { describe, expect, it, vi } from 'vitest'
-import { previewDatasetQuery } from '../../../src/runtime/app/queries/supabase/datasets'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { supabasePreviewDataset } from '../../../src/runtime/app/queries/supabase/datasets'
 
 describe('datasets integration tests', () => {
   describe('previewDatasetQuery with mocked fetch', () => {
@@ -32,6 +32,10 @@ describe('datasets integration tests', () => {
       } as Response
     }
 
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
     it('should fetch and parse file preview successfully', async () => {
       const mockSupabase = {
         storage: {
@@ -44,14 +48,13 @@ describe('datasets integration tests', () => {
       } as unknown as SupabaseClient<Database>
 
       const content = 'line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11'
-      globalThis.fetch = createMockFetch(createMockResponse({
+      vi.stubGlobal('fetch', createMockFetch(createMockResponse({
         ok: true,
         contentLength: String(content.length),
         text: content,
-      }))
+      })))
 
-      const options = previewDatasetQuery({ storagePath: 'test.txt', supabase: mockSupabase })
-      const result = await options.query()
+      const result = await supabasePreviewDataset(mockSupabase, 'test.txt')
 
       expect(mockSupabase.storage.from).toHaveBeenCalledWith('analysis_files')
       expect(mockSupabase.storage.from('analysis_files').createSignedUrl).toHaveBeenCalledWith('test.txt', 60)
@@ -82,14 +85,13 @@ describe('datasets integration tests', () => {
       } as unknown as SupabaseClient<Database>
 
       const content = 'line1\nline2\nline3\nline4\nline5'
-      globalThis.fetch = createMockFetch(createMockResponse({
+      vi.stubGlobal('fetch', createMockFetch(createMockResponse({
         ok: true,
         contentLength: String(content.length),
         text: content,
-      }))
+      })))
 
-      const options = previewDatasetQuery({ storagePath: 'small.txt', supabase: mockSupabase })
-      const result = await options.query()
+      const result = await supabasePreviewDataset(mockSupabase, 'small.txt')
 
       expect(result.lines).toHaveLength(5)
       expect(result.totalLines).toBe(5)
@@ -107,9 +109,7 @@ describe('datasets integration tests', () => {
         },
       } as unknown as SupabaseClient<Database>
 
-      const options = previewDatasetQuery({ storagePath: 'protected.txt', supabase: mockSupabase })
-
-      await expect(options.query()).rejects.toThrow('Storage error: Access denied')
+      await expect(supabasePreviewDataset(mockSupabase, 'protected.txt')).rejects.toThrow('Storage error: Access denied')
     })
 
     it('should handle fetch error (404 Not Found)', async () => {
@@ -123,15 +123,13 @@ describe('datasets integration tests', () => {
         },
       } as unknown as SupabaseClient<Database>
 
-      globalThis.fetch = createMockFetch(createMockResponse({
+      vi.stubGlobal('fetch', createMockFetch(createMockResponse({
         ok: false,
         status: 404,
         statusText: 'Not Found',
-      }))
+      })))
 
-      const options = previewDatasetQuery({ storagePath: 'notfound.txt', supabase: mockSupabase })
-
-      await expect(options.query()).rejects.toThrow('Failed to fetch preview: Not Found')
+      await expect(supabasePreviewDataset(mockSupabase, 'notfound.txt')).rejects.toThrow('Failed to fetch preview: Not Found')
     })
 
     it('should handle fetch error (500 Server Error)', async () => {
@@ -145,15 +143,13 @@ describe('datasets integration tests', () => {
         },
       } as unknown as SupabaseClient<Database>
 
-      globalThis.fetch = createMockFetch(createMockResponse({
+      vi.stubGlobal('fetch', createMockFetch(createMockResponse({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-      }))
+      })))
 
-      const options = previewDatasetQuery({ storagePath: 'error.txt', supabase: mockSupabase })
-
-      await expect(options.query()).rejects.toThrow('Failed to fetch preview: Internal Server Error')
+      await expect(supabasePreviewDataset(mockSupabase, 'error.txt')).rejects.toThrow('Failed to fetch preview: Internal Server Error')
     })
 
     it('should handle file content with no trailing newline', async () => {
@@ -168,14 +164,13 @@ describe('datasets integration tests', () => {
       } as unknown as SupabaseClient<Database>
 
       const content = 'line1\nline2\nline3'
-      globalThis.fetch = createMockFetch(createMockResponse({
+      vi.stubGlobal('fetch', createMockFetch(createMockResponse({
         ok: true,
         contentLength: String(content.length),
         text: content,
-      }))
+      })))
 
-      const options = previewDatasetQuery({ storagePath: 'none.txt', supabase: mockSupabase })
-      const result = await options.query()
+      const result = await supabasePreviewDataset(mockSupabase, 'none.txt')
 
       expect(result.lines).toHaveLength(3)
       expect(result.totalLines).toBe(3)

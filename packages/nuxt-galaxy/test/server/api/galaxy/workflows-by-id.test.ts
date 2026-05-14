@@ -115,7 +115,7 @@ describe('get /api/galaxy/workflows/:workflowId', () => {
     const result = await handler({} as any)
 
     expect(result.error).toBeDefined()
-    expect(result.error.message).toBeDefined()
+    expect(result.error?.message).toBeDefined()
     expect(result.data).toBeUndefined()
   })
 })

@@ -3,6 +3,12 @@
   "type": "module",
   "version": "0.0.1-alpha.0",
   "main": "./nuxt.config.ts",
+  "files": [
+    "app",
+    "content.config.mjs",
+    "nuxt.config.ts",
+    "server"
+  ],
   "scripts": {
     "dev": "nuxi dev .playground",
     "dev:prepare": "nuxt prepare .playground",

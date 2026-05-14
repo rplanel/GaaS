@@ -30,8 +30,7 @@
   },
   "files": [
     "bin",
-    "dist",
-    "supabase"
+    "dist"
   ],
   "scripts": {
     "prepack": "pnpm run dev:prepare && nuxt-module-build build",
@@ -83,11 +82,9 @@
     "@nuxt/module-builder": "catalog:nuxt",
     "@nuxt/schema": "catalog:nuxt",
     "@nuxt/test-utils": "catalog:testing",
-    "@release-it/conventional-changelog": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:testing",
     "@vue/test-utils": "catalog:testing",
-    "changelogen": "catalog:",
     "eslint": "catalog:",
     "happy-dom": "catalog:testing",
     "msw": "catalog:testing",
