@@ -6,7 +6,7 @@ import * as tus from 'tus-js-client'
 import { BlendTypeConfig } from './config'
 import { getDatasetEffect } from './datasets'
 import { extractStatusCode, formatErrorMessage, HistoryError } from './errors'
-import { GalaxyFetch, toGalaxyServiceUnavailable } from './galaxy'
+import { GalaxyFetch, toGalaxyServiceUnavailable, withRetry } from './galaxy'
 
 export class TusUploadError extends Data.TaggedError('TusUploadError')<{
   readonly message: string
@@ -133,7 +133,7 @@ export function getHistoryEffect(historyId: string) {
         }),
     })
     return yield* histories
-  })
+  }).pipe(withRetry)
 }
 
 export function getHistory(historyId: string, layer: Layer.Layer<GalaxyFetch>) {
@@ -165,7 +165,7 @@ export function getHistoriesEffect() {
         }),
     })
     return yield* histories
-  })
+  }).pipe(withRetry)
 }
 
 export function getHistories(layer: Layer.Layer<GalaxyFetch>) {
@@ -310,9 +310,9 @@ export function uploadFileToHistoryEffect(
         Effect.tap(() =>
           Console.log(`Uploaded file ${name} to history ${historyId}`),
         ),
-        Effect.catchAllCause((cause) => {
+        Effect.catchAll((error) => {
           return deleteHistoryEffect(historyId).pipe(
-            Effect.flatMap(() => Effect.fail(cause)),
+            Effect.flatMap(() => Effect.fail(error)),
           )
         }),
       )
@@ -387,9 +387,9 @@ export function uploadFileToHistoryFromUrlEffect(params: uploadFileFromUrl) {
           `Uploaded file ${name} to history ${historyId}\n input: ${input}`,
         ),
       ),
-      Effect.catchAllCause((cause) => {
+      Effect.catchAll((error) => {
         return deleteHistoryEffect(historyId).pipe(
-          Effect.flatMap(() => Effect.fail(cause)),
+          Effect.flatMap(() => Effect.fail(error)),
         )
       }),
     )

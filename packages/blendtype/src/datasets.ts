@@ -2,7 +2,7 @@ import type { Layer } from 'effect'
 import type { GalaxyDataset } from './types'
 import { Effect } from 'effect'
 import { DatasetError, extractStatusCode, formatErrorMessage } from './errors'
-import { GalaxyFetch, toGalaxyServiceUnavailable } from './galaxy'
+import { GalaxyFetch, toGalaxyServiceUnavailable, withRetry } from './galaxy'
 
 export function getDatasetEffect(datasetId: string, historyId: string) {
   return Effect.gen(function* () {
@@ -23,7 +23,7 @@ export function getDatasetEffect(datasetId: string, historyId: string) {
       }),
     })
     return yield* dataset
-  })
+  }).pipe(withRetry)
 }
 
 export function getDataset(datasetId: string, historyId: string, layer: Layer.Layer<GalaxyFetch>) {
@@ -32,31 +32,4 @@ export function getDataset(datasetId: string, historyId: string, layer: Layer.La
     Effect.provide(layer),
     Effect.runPromise,
   )
-}
-
-/**
- * Fetches a dataset from the specified URL using Effect-based error handling.
- *
- * @param url - The URL to fetch the dataset from
- * @returns An Effect that yields the fetch Response or fails with a DatasetError
- *
- * @example
- * ```typescript
- * const dataset = fetchDatasetEffect('https://api.example.com/dataset');
- * ```
- *
- * @throws {DatasetError} When the fetch operation fails for any reason
- */
-export function fetchDatasetEffect(url: string) {
-  return Effect.gen(function* () {
-    const response = Effect.tryPromise({
-      try: () => fetch(url),
-      catch: caughtError => new DatasetError({
-        message: formatErrorMessage('dataset from URL', url, 'Error fetching', caughtError),
-        statusCode: extractStatusCode(caughtError),
-        cause: caughtError,
-      }),
-    })
-    return yield* response
-  })
 }

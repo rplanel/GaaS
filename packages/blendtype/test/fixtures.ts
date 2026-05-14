@@ -243,11 +243,13 @@ export function createFailureLayer(error: Error): Layer.Layer<GalaxyFetch> {
 }
 
 /**
- * Creates a mock GalaxyFetch layer that fails with a "Service Unavailable" error.
+ * Creates a mock GalaxyFetch layer that fails with a HTTP 503 Service Unavailable error.
  * This triggers the toGalaxyServiceUnavailable mapping in Promise wrappers.
  */
 export function createServiceUnavailableLayer(): Layer.Layer<GalaxyFetch> {
-  return createFailureLayer(new Error('503 Service Unavailable'))
+  return createFailureLayer(
+    Object.assign(new Error('Service Unavailable'), { statusCode: 503 }),
+  )
 }
 
 /**

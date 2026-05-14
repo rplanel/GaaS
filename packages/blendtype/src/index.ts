@@ -11,6 +11,6 @@ export * from './tools'
 export * from './types'
 export * from './workflows'
 
-export class NotImplemented extends Data.TaggedError('HttpError')<{
+export class NotImplemented extends Data.TaggedError('NotImplemented')<{
   readonly message: string
 }> {}

@@ -10,6 +10,7 @@ import * as ufo from 'ufo'
 import { datasets } from '../../db/schema/galaxy/datasets.js'
 import { objects } from '../../db/schema/storage/objects.js'
 import { Drizzle, eq, useDrizzle } from '../drizzle.js'
+import { fetchUrlEffect } from '../fetch'
 import { takeUniqueOrThrow } from './helper.js'
 import { deleteHistory } from './histories'
 import { createSignedUrl } from './supabase'
@@ -50,7 +51,7 @@ export function uploadDatasetsEffect(params: UploadDatasetParams) {
               const filename = ufo.parseFilename(ufo.decode(signedUrl), { strict: true }) || `gaas-input-dataset-${storageObject.name}`
               let historyDatasetEffect: ReturnType<typeof bt.uploadFileToHistoryEffect>
               if (shouldUseFileUpload) {
-                const response = yield* bt.fetchDatasetEffect(signedUrl)
+                const response = yield* fetchUrlEffect(signedUrl)
                 const buffer = yield* Effect.tryPromise({
                   try: async () => Buffer.from(await response.arrayBuffer()),
                   catch: _caughtError => new bt.HttpError({ message: `Error fetching dataset from ${signedUrl}: ${_caughtError}` }),
