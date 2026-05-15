@@ -36,8 +36,9 @@ async function supabaseAnalysesInputsViewById(supabase: SupabaseClient<Database>
 }
 
 export const analysisInputsViewByIdQuery = defineQueryOptions(
-  ({ analysisId, supabase }: { analysisId: number, supabase: SupabaseClient<Database> }) => ({
-    key: SUPABASE_ANALYSES_INPUTS_VIEW_QUERY_KEYS.byAnalysisId(analysisId),
-    query: () => supabaseAnalysesInputsViewById(supabase, analysisId),
+  ({ analysisId, supabase }: { analysisId: number | undefined, supabase: SupabaseClient<Database> }) => ({
+    key: SUPABASE_ANALYSES_INPUTS_VIEW_QUERY_KEYS.byAnalysisId(analysisId ?? 0),
+    query: () => analysisId ? supabaseAnalysesInputsViewById(supabase, analysisId) : Promise.resolve([]),
+    enabled: !!analysisId,
   }),
 )

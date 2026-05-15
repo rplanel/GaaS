@@ -1,5 +1,5 @@
 import type { ComputedRef, Ref } from 'vue'
-import type { WorkflowRow } from '~/src/runtime/types/nuxt-galaxy'
+import type { WorkflowRow } from '../../../types/nuxt-galaxy'
 import { computed, toValue } from 'vue'
 
 export interface UseDatabaseWorkflowOptions {

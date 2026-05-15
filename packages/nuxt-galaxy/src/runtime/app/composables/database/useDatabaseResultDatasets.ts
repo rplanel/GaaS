@@ -1,6 +1,6 @@
 import type { TagRow } from 'nuxt-galaxy'
 import type { Ref } from 'vue'
-import type { DatasetWithTags } from '~/src/runtime/types/nuxt-galaxy'
+import type { DatasetWithTags } from '../../../types/nuxt-galaxy'
 import { computed, toValue } from 'vue'
 
 export interface UseDatabaseResultDatasetsOptions<TagsType extends string> {

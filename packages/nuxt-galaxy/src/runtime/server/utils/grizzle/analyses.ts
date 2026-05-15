@@ -1,6 +1,6 @@
 import type { Datamap, GalaxyInvocation, GalaxyInvocationIO, GalaxyWorkflowInput, GalaxyWorkflowParameters, InvocationState, InvocationTerminalState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
-import type { NewAnalysis } from '~/src/runtime/types/nuxt-galaxy'
+import type { NewAnalysis } from '../../../types/nuxt-galaxy'
 import * as bt from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { Data, Effect } from 'effect'

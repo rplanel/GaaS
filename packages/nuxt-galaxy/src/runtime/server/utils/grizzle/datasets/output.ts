@@ -1,7 +1,7 @@
 import type { DatasetState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
 
-import type { GetTag } from '~/src/runtime/types/nuxt-galaxy'
+import type { GetTag } from '../../../../types/nuxt-galaxy'
 import * as bt from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { Data, Effect } from 'effect'

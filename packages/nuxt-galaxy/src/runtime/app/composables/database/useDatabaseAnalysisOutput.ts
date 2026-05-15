@@ -1,6 +1,6 @@
 import type { DatasetTerminalState } from 'blendtype'
 import type { Ref } from 'vue'
-import type { AnalysisOutputRow } from '~/src/runtime/types/nuxt-galaxy'
+import type { AnalysisOutputRow } from '../../../types/nuxt-galaxy'
 import { DatasetsTerminalStates } from 'blendtype'
 import { computed, toValue } from 'vue'
 

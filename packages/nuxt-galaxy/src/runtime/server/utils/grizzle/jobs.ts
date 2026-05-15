@@ -1,6 +1,6 @@
 import type { JobState, JobTerminalState, ShowFullJobResponse } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
-import type { NewJob } from '~/src/runtime/types/nuxt-galaxy'
+import type { NewJob } from '../../../types/nuxt-galaxy'
 import { getJobEffect, JobTerminalStates } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { Data, Effect } from 'effect'

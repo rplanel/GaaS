@@ -23,21 +23,13 @@ watch(
 
 const supabase = useSupabaseClient<Database>()
 
-const { data: inputs, refresh: _refreshInputs } = useQuery(() => {
-  const id = analysisId.value
-  if (!id) {
-    return undefined
-  }
-  return analysisInputsViewByIdQuery({ analysisId: id, supabase })
-})
+const { data: inputs, refresh: _refreshInputs } = useQuery(() =>
+  analysisInputsViewByIdQuery({ analysisId: analysisId.value, supabase }),
+)
 
-const { data: analysis, refresh: _refreshAnalysis, isPending: pendingAnalysis, error } = useQuery(() => {
-  const id = analysisId.value
-  if (!id) {
-    return undefined
-  }
-  return analysisByIdWithDetailsQuery({ id, supabase })
-})
+const { data: analysis, refresh: _refreshAnalysis, isPending: pendingAnalysis, error } = useQuery(() =>
+  analysisByIdWithDetailsQuery({ id: analysisId.value, supabase }),
+)
 
 if (error.value) {
   throw createError({
@@ -194,13 +186,9 @@ const { decodedParameters: workflowParametersModel } = useGalaxyDecodeParameters
   analysisParameters,
 )
 
-const { data: outputs, refresh: _refreshOutputs } = useQuery(() => {
-  const id = analysisId.value
-  if (!id) {
-    return undefined
-  }
-  return analysisOutputsViewByIdQuery({ analysisId: id, supabase })
-})
+const { data: outputs, refresh: _refreshOutputs } = useQuery(() =>
+  analysisOutputsViewByIdQuery({ analysisId: analysisId.value, supabase }),
+)
 
 const { data: analysisWithOutputsAndWorkflows } = useQuery(
   () => analysisByIdWithOutputsAndWorkflowsQuery({ id: toValue(analysisId), supabase }),

@@ -1,7 +1,7 @@
 import type { Datamap, DatasetState, DatasetTerminalState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
 
-import type { NewDataset } from '~/src/runtime/types/nuxt-galaxy'
+import type { NewDataset } from '../../../types/nuxt-galaxy'
 import { Buffer } from 'node:buffer'
 import { useRuntimeConfig } from '#imports'
 import * as bt from 'blendtype'

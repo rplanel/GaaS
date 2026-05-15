@@ -38,7 +38,7 @@ const groupId = useId()
 
 const items = toRef(() => props.items)
 
-const normalizedItems = computed(() => items.value.map((item, index) => ({
+const normalizedItems = computed<NormalizedOption[]>(() => items.value.map((item, index) => ({
   ...item,
   id: `${groupId}-option-${index}`,
   internalValue: `${index}`,
