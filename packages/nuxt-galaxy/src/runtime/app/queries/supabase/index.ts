@@ -21,6 +21,10 @@ export { SUPABASE_DATASETS_QUERY_KEYS } from './datasets'
 export { datasetsByIdQuery, previewDatasetQuery, useDownloadDataset } from './datasets'
 export type { PreviewResult } from './datasets'
 
+// Disk usage
+export { DISK_USAGE_QUERY_KEYS } from './diskUsage'
+export { diskUsageByUserQuery } from './diskUsage'
+
 // Instances
 export { SUPABASE_INSTANCES_QUERY_KEYS } from './instances'
 export { instanceByUrlQuery } from './instances'
