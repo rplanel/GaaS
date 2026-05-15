@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { AcceptableValue } from 'reka-ui'
 import { RadioGroupIndicator, RadioGroupItem, RadioGroupRoot } from 'reka-ui'
 import { computed, ref, useId, useSlots, watch } from 'vue'
 
@@ -35,11 +36,13 @@ const emit = defineEmits<{ (e: 'update:modelValue', value: OptionPrimitive | nul
 const slots = useSlots()
 const groupId = useId()
 
-const normalizedItems = computed<NormalizedOption[]>(() => props.items.map((item, index) => ({
+const items = toRef(() => props.items)
+
+const normalizedItems = computed(() => items.value.map((item, index) => ({
   ...item,
   id: `${groupId}-option-${index}`,
   internalValue: `${index}`,
-  label: (item.label.split('.').slice(-1))[0],
+  label: (item.label.split('.').slice(-1))[0] ?? '',
 })))
 
 const innerValue = ref<string | null>(null)
@@ -77,7 +80,9 @@ function labelClasses(option: NormalizedOption, selected: boolean) {
   return [base, focus, hover, active, props.cardClass, option.cardClass].filter(Boolean).join(' ')
 }
 
-function onChange(internalValue: string | null) {
+function onChange(internalValue: AcceptableValue) {
+  if (typeof internalValue !== 'string' && internalValue !== null)
+    return
   innerValue.value = internalValue
   const match = normalizedItems.value.find(option => option.internalValue === internalValue)
   const nextValue = match ? match.value : null
@@ -87,35 +92,22 @@ function onChange(internalValue: string | null) {
 </script>
 
 <template>
-  <RadioGroupRoot
-    :model-value="innerValue"
-    :disabled="disabled"
-    class="contents"
-    @update:model-value="onChange"
-  >
+  <RadioGroupRoot :model-value="innerValue" :disabled="disabled" class="contents" @update:model-value="onChange">
     <div :class="gridClasses">
       <div v-for="option in normalizedItems" :key="option.id" class="relative">
         <RadioGroupItem
-          :id="option.id"
-          :value="option.internalValue"
-          :disabled="isOptionDisabled(option)"
+          :id="option.id" :value="option.internalValue" :disabled="isOptionDisabled(option)"
           class="peer sr-only"
         >
           <RadioGroupIndicator class="sr-only" />
         </RadioGroupItem>
 
         <label
-          :for="option.id"
-          :class="labelClasses(option, innerValue === option.internalValue)"
+          :for="option.id" :class="labelClasses(option, innerValue === option.internalValue)"
           data-test="card-radio-option"
         >
           <div class="flex items-start gap-3">
-            <span
-              v-if="option.icon"
-              class="text-lg shrink-0 text-primary"
-              :class="option.icon"
-              aria-hidden="true"
-            />
+            <span v-if="option.icon" class="text-lg shrink-0 text-primary" :class="option.icon" aria-hidden="true" />
 
             <div class="flex min-w-0 flex-1 flex-col gap-1">
               <span class="font-medium text-default">
@@ -124,10 +116,8 @@ function onChange(internalValue: string | null) {
                 </slot>
               </span>
               <UBadge
-                v-if="option.badge"
-                :color="option.badgeColor || 'primary'"
-                :variant="option.badgeVariant || 'soft'"
-                class=""
+                v-if="option.badge" :color="option.badgeColor || 'primary'"
+                :variant="option.badgeVariant || 'soft'" class=""
               >
                 <slot name="badge" :item="option" :checked="innerValue === option.internalValue">
                   {{ option.badge }}
@@ -143,7 +133,10 @@ function onChange(internalValue: string | null) {
           </div>
 
           <div v-if="slots.footer" class="mt-3">
-            <slot name="footer" :item="option" :checked="innerValue === option.internalValue" :disabled="option.disabled" />
+            <slot
+              name="footer" :item="option" :checked="innerValue === option.internalValue"
+              :disabled="option.disabled"
+            />
           </div>
         </label>
       </div>
