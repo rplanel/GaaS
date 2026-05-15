@@ -18,7 +18,7 @@
     "docs:dev": "pnpm --filter ./docs dev",
     "docs:build": "pnpm --filter ./docs build",
     "docs:generate": "pnpm --filter ./docs generate",
-    "release": "pnpm run lint && pnpm run typecheck && pnpm run test && commit-and-tag-version --commit-all && pnpm -r run release:publish && git push --follow-tags",
+    "release": "pnpm run lint && pnpm run typecheck && pnpm run test && commit-and-tag-version --commit-all && git push --follow-tags && pnpm --filter './packages/**' run release:publish",
     "release:dry-run": "commit-and-tag-version --dry-run",
     "supabase:status": "pnpm supabase --workdir packages/nuxt-galaxy status",
     "supabase:start": "pnpm supabase --workdir packages/nuxt-galaxy start",
