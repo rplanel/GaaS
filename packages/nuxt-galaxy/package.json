@@ -1,7 +1,7 @@
 {
   "name": "nuxt-galaxy",
   "type": "module",
-  "version": "0.0.3-alpha.5",
+  "version": "0.0.3",
   "description": "Galaxy module for Nuxt",
   "license": "MIT",
   "repository": {
