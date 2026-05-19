@@ -97,14 +97,14 @@ function getHasPreviewContent(dataset: AnalysisIOsWithStoratePathAndSize): boole
   return !!getSanitizedPeek(dataset)
 }
 
-const { storagePath, data, status } = useDownloadDataset()
+const { storagePath, data, status, refresh } = useDownloadDataset()
 
 async function handleDownload(payload: AnalysisIOsWithStoratePathAndSize | undefined) {
   if (!payload?.storage_path)
     return
 
   storagePath.value = payload.storage_path
-  // const result = await refresh()
+  await refresh()
 
   if (status.value === 'success' && data.value) {
     const url = URL.createObjectURL(data.value)
@@ -137,7 +137,8 @@ async function handleDownload(payload: AnalysisIOsWithStoratePathAndSize | undef
         }" :transition="{ type: 'spring', stiffness: 300, damping: 30 }" class="h-full"
       >
         <GalaxyAnalysisIoDataset
-          :dataset="dataset" :result-route="dataset?.id != null ? resultRoutes?.[dataset.id]?.to : undefined"
+          :dataset="dataset"
+          :result-route="dataset?.id != null ? resultRoutes?.[dataset.id]?.to : undefined"
           :is-preview-open="openPreviews.has(i)"
           :preview-content="getHasPreviewContent(dataset) ? getSanitizedPeek(dataset) : ''"
           @toggle-preview="togglePreview(i)" @download="handleDownload"
