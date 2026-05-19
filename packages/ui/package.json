@@ -16,6 +16,8 @@
     "lint": "eslint .",
     "test": "vitest",
     "release:publish": "pnpm publish --access public",
+    "release:publish:beta": "pnpm publish --access public --tag beta",
+
     "typecheck": "vue-tsc --noEmit",
     "cleandep": "rm -rf node_modules .data .nuxt .playground/.nuxt .playground/.output .playground/node_modules .playground/.data"
   },
