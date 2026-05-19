@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { generateSequences } from '#layers/@gaas-ui/app/data/sequences-sample'
+import { generateSequences } from '#layers/@gaas/ui/app/data/sequences-sample'
 
 const sequences = generateSequences(5000)
 </script>

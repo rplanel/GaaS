@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AnalysisInputWithStoragePathRow, AnalysisOutputWithStoragePathRow } from 'nuxt-galaxy'
-import { getHumanSize } from '#layers/@gaas-ui/app/utils'
+import { getHumanSize } from '#layers/@gaas/ui/app/utils'
 import DOMPurify from 'isomorphic-dompurify'
 import { motion } from 'motion-v'
 import * as z from 'zod'
