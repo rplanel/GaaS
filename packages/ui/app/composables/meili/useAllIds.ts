@@ -1,20 +1,13 @@
 import type { Filter, SearchParams } from 'meilisearch'
 import { watchThrottled } from '@vueuse/core'
 import { useMeiliIndex } from './useMeiliIndex'
+
 import { useMeiliSearch } from './useMeiliSearch'
 
 export interface UseHeaderOptions {
   meiliIndex: Ref<string>
   filter?: Ref<Filter | undefined>
   searchTerm?: Ref<string>
-}
-
-export interface FetchDataParams {
-  currentPage?: number
-  currentPageSize?: number
-  filter?: Filter | undefined
-  searchTerm: string
-  searchParams?: SearchParams
 }
 
 export function useAllIds(options: UseHeaderOptions) {

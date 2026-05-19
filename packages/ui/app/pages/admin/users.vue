@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { BreadcrumbItem } from '@nuxt/ui'
+
 interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined
 }
@@ -9,6 +11,7 @@ const breadcrumbsItems = toRef(() => props.breadcrumbsItems)
 const pageHeaderProps = {
   title: 'User',
   description: 'Manage the users that are available for this web application',
+
 }
 
 const computedBreadcrumbsItems = computed(() => {
@@ -29,14 +32,6 @@ const computedBreadcrumbsItems = computed(() => {
 
 <template>
   <div>
-    <PageHeader :page-header-props icon="i-lucide:workflow" :breadcrumbs-items="computedBreadcrumbsItems">
-      <template #trailing-content>
-        <UBadge variant="subtle" color="info">
-          {{
-            galaxyInstance.name
-          }}
-        </UBadge>
-      </template>
-    </PageHeader>
+    <PageHeader :page-header-props icon="i-lucide:workflow" :breadcrumbs-items="computedBreadcrumbsItems" />
   </div>
 </template>

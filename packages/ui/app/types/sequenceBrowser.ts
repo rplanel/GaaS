@@ -1,20 +1,20 @@
 export type Strand = 1 | -1
 
-export interface Sequence {
+export interface BaseSequence {
   id: string
   name: string
-  length: number
-  strand?: Strand
-  start?: number
-  end?: number
-}
-
-export interface SequenceCluster {
-  id: string
-  name: string
-  type: 'cluster'
   start: number
   end: number
+}
+
+export interface Sequence extends BaseSequence {
+  type: 'sequence'
+  length: number
+  strand: Strand
+}
+
+export interface SequenceCluster extends BaseSequence {
+  type: 'cluster'
   count: number
   sequences: Sequence[]
 }

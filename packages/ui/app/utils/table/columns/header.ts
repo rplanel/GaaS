@@ -1,16 +1,7 @@
-import type { Column } from '@tanstack/vue-table'
-import type { Coordinator, Selection } from '@uwdata/mosaic-core'
+import type { GetHeaderParams } from '../../../types/plotHeader'
 import PlotTableHeaderCategory from '../../../components/plot/table/header/Category.vue'
-import PlotTableHeaderHistogram from '../../../components/plot/table/header/Histogram.vue'
 
-export interface GetHeaderParams<T> {
-  column: Column<T>
-  label: string
-  variable: string
-  table: string
-  selection: Selection
-  coordinator: Coordinator
-}
+import PlotTableHeaderHistogram from '../../../components/plot/table/header/Histogram.vue'
 
 export function getHistogramHeader<T>(params: GetHeaderParams<T>) {
   const { column, label, variable, table, selection, coordinator } = params

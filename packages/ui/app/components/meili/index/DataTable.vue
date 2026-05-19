@@ -35,7 +35,6 @@ const columnPinning = defineModel<ColumnPinningState>('columnPinning')
 const columnVisibility = defineModel<VisibilityState>('columnVisibility')
 const expanded = defineModel<ExpandedState>('expanded')
 const tableElem = useTemplateRef<{ tableApi: Table<T> }>('tableElem')
-const debug = toRef(props, 'debug')
 const title = toRef(props, 'title')
 const sortingState = toRef(props.sortingState)
 const tableProps = toRef(() => props.tableProps)
@@ -133,7 +132,6 @@ const {
   prev,
   next,
   result,
-  error,
 } = useLoadMore({
   meiliIndex,
   pageSize,
@@ -141,26 +139,6 @@ const {
   searchTerm: globalSearch,
   sortingState,
 })
-
-// -- document ids --
-// const documentIds = defineModel<string[] | undefined>('documentIds')
-// const {
-//   result: allIdsResult,
-//   numberOfDocuments: numberOfDocumentsAllIds,
-//   indexPrimaryKey,
-// } = useAllIds({
-//   meiliIndex,
-//   filter: throttledMeiliFilters,
-//   searchTerm: globalSearch,
-// })
-
-// const sanitizedDocumentIds = computed(() => {
-//   const resultVal = toValue(allIdsResult)
-//   if (!resultVal || !resultVal.hits) {
-//     return []
-//   }
-//   return (resultVal.hits as any[]).map(hit => hit[indexPrimaryKey.value as string] as string)
-// })
 
 watch(
   () => props.pageSize,
@@ -275,28 +253,6 @@ const facetSlotProps = computed(() => {
           </div>
         </div>
       </template>
-      <div v-if="debug">
-        <MeiliIndexInfo :index-name="meiliIndex" />
-        <UCard class="p-4 mb-4">
-          <UAccordion
-            :items="[{
-              id: 'all-ids-info',
-              label: 'All Ids Info',
-            }]"
-          >
-            <template #body="{ item }">
-              <pre>{{ item.data }}</pre>
-            </template>
-          </UAccordion>
-        </UCard>
-        <UCard class="p-4 mb-4">
-          <UAccordion :items="[{ id: 'results-info', label: 'Results Info', data: result }]">
-            <template #body="{ item }">
-              <pre>{{ item.data }}</pre>
-            </template>
-          </UAccordion>
-        </UCard>
-      </div>
 
       <div class="flex flex-col gap-2">
         <div class="flex flex-row gap-4 items-end justify-between mt-4">
@@ -308,53 +264,33 @@ const facetSlotProps = computed(() => {
           <div class="flex flex-row items-center gap-1">
             <div>
               <UButton
-                label="Reset"
-                variant="subtle"
-                size="sm"
-                icon="i-lucide:trash"
-                color="neutral"
+                label="Reset" variant="subtle" size="sm" icon="i-lucide:trash" color="neutral"
                 @click="resetBuildFilters"
               />
             </div>
             <div>
               <UModal title="Build a filter">
                 <div class="flex items-center">
-                  <UButton
-                    label="Filter"
-                    icon="i-lucide:filter"
-                    variant="subtle"
-                    size="sm"
-                    color="neutral"
-                  />
+                  <UButton label="Filter" icon="i-lucide:filter" variant="subtle" size="sm" color="neutral" />
                 </div>
 
                 <template #body>
-                  <slot
-                    name="filter-builder"
-                    :meili-index="meiliIndex"
-                    v-bind="facetSlotProps"
-                  >
-                    <UTabs
-                      v-model="filterBuild" :items="filterBuildOptions" variant="link"
-                      class="mb-4 gap-4"
-                    >
+                  <slot name="filter-builder" :meili-index="meiliIndex" v-bind="facetSlotProps">
+                    <UTabs v-model="filterBuild" :items="filterBuildOptions" variant="link" class="mb-4 gap-4">
                       <template #advanced>
-                        <MeiliIndexFilterAdvancedBuilder
+                        <!-- <MeiliIndexFilterAdvancedBuilder
                           v-model:filter="manualFilter" v-model:search-error="error"
                           :meili-index="meiliIndex"
-                        />
+                        /> -->
                       </template>
                       <template #simple>
-                        <MeiliIndexFilterSimpleBuilder
-                          :meili-index="meiliIndex"
-                          v-bind="facetSlotProps"
-                        />
+                        <MeiliIndexFilterSimpleBuilder :meili-index="meiliIndex" v-bind="facetSlotProps" />
                       </template>
 
                       <template #assisted>
                         <MeiliIndexFilterAssistedBuilder
-                          :meili-index="meiliIndex" :facet-distribution="facetDistribution"
-                          :facet-stats="facetStats"
+                          :meili-index="meiliIndex"
+                          :facet-distribution="facetDistribution" :facet-stats="facetStats"
                         />
                       </template>
                     </UTabs>
@@ -365,15 +301,10 @@ const facetSlotProps = computed(() => {
             <USeparator v-if="mergedFilters && mergedFilters.length > 0" orientation="vertical" class="mx-2 h-8" />
 
             <div class="flex flex-row gap-2">
-              <UBadge
-                v-for="filter in mergedFilters"
-                :key="filter.uuid"
-                variant="soft"
-              >
+              <UBadge v-for="filter in mergedFilters" :key="filter.uuid" variant="soft">
                 <template #trailing>
                   <UButton
-                    icon="lucide:x" size="xs" variant="ghost"
-                    class="p-1"
+                    icon="lucide:x" size="xs" variant="ghost" class="p-1"
                     @click="filter.type === 'manual' ? manualFilter.label = undefined : removeBuildFilter(filter.uuid)"
                   />
                 </template>
@@ -384,28 +315,22 @@ const facetSlotProps = computed(() => {
         </div>
 
         <div class="flex flex-row justify-between">
-          <span
-            v-if="processingTimeMs !== undefined"
-            class="text-xs text-dimmed"
-          >
+          <span v-if="processingTimeMs !== undefined" class="text-xs text-dimmed">
             Processing in {{ processingTimeMs }} ms
           </span>
           <div>
-            <TableColumnVisibility :table-elem="tableElem" />
+            <TableColumnVisibility v-if="tableElem" :table-elem="tableElem" />
           </div>
         </div>
         <UTable
-          v-bind="computedTableProps"
-          ref="tableElem"
-          v-model:sorting="sortingState"
-          v-model:column-pinning="columnPinning"
-          v-model:column-visibility="columnVisibility"
-          v-model:expanded="expanded"
-          class="flex-1 table-fixed"
+          v-bind="computedTableProps" ref="tableElem" v-model:sorting="sortingState"
+          v-model:column-pinning="columnPinning" v-model:column-visibility="columnVisibility"
+          v-model:expanded="expanded" class="flex-1 table-fixed"
         >
           <template v-for="(_, slotName) in $slots" #[slotName]="slotProps">
             <slot
-              v-if="slotName.endsWith('-header')" :name="slotName" v-bind="{ ...slotProps || {}, ...facetSlotProps }"
+              v-if="slotName.endsWith('-header')" :name="slotName"
+              v-bind="{ ...slotProps || {}, ...facetSlotProps }"
             />
             <slot v-else :name="slotName" v-bind="slotProps" />
           </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts" generic="T">
 import type { TableProps } from '@nuxt/ui'
+import type { PaginationState } from '@tanstack/table-core'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 
 interface Props<T> {
@@ -12,9 +13,9 @@ defineProps<Props<T>>()
 const table = useTemplateRef('table')
 const filterInput = useTemplateRef('filterInput')
 const pageSizeOptions = ref([5, 10, 15])
-const pagination = ref({
+const pagination = ref<PaginationState>({
   pageIndex: 0,
-  pageSize: pageSizeOptions.value[0],
+  pageSize: pageSizeOptions.value[0]!,
 })
 const globalFilter = ref('')
 defineShortcuts({

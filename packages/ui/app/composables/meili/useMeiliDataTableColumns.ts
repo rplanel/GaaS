@@ -1,7 +1,12 @@
 import type { TableColumn } from '@nuxt/ui'
 
+type ExtendedTableColumn<T> = TableColumn<T> & {
+  type?: 'categorical' | 'continuous'
+  accessorKey?: string
+}
+
 export interface MeiliDataTableColumnOptions<T> {
-  columns: Ref<TableColumn<T>[]>
+  columns: Ref<ExtendedTableColumn<T>[]>
 }
 export type MeiliDataTableColumnType = 'categorical' | 'continuous' | 'none'
 

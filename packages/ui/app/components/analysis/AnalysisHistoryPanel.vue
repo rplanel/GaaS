@@ -2,6 +2,7 @@
 import type { AccordionItem } from '@nuxt/ui'
 import type { GalaxyTool } from 'blendtype'
 import type { AnalysisDetail, Database, JobRow } from 'nuxt-galaxy'
+import type { EncodedGalaxyWorkflowParameter } from '../../composables/galaxy/types'
 import type { GalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 import { useSupabaseClient } from '#imports'
 // import { analysisByIdWithDetailsQuery, analysisInputsViewByIdQuery, analysisOutputsViewByIdQuery } from ''
@@ -176,10 +177,10 @@ function useAnalysisTools(tools: Ref<Record<string, GalaxyTool>>) {
 
 const analysisParameters = computed(() => {
   const analysisVal = toValue(detailedAnalysis)
-  if (analysisVal) {
-    return analysisVal.parameters
+  if (analysisVal?.parameters) {
+    return analysisVal.parameters as unknown as EncodedGalaxyWorkflowParameter
   }
-  return undefined
+  return {} as EncodedGalaxyWorkflowParameter
 })
 
 const { decodedParameters: workflowParametersModel } = useGalaxyDecodeParameters(
@@ -262,8 +263,8 @@ const sortedOutputs = computed(() => {
       <div class="flex items-center gap-4">
         <USkeleton class="h-20 w-20 rounded-full" />
         <div class="grid gap-2">
-          <USkeleton class="h-8 w-[250px]" />
-          <USkeleton class="h-8 w-[200px]" />
+          <USkeleton class="h-8 w-62.5" />
+          <USkeleton class="h-8 w-50" />
         </div>
       </div>
     </div>

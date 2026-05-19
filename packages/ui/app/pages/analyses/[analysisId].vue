@@ -1,40 +1,27 @@
 <script setup lang="ts">
-import type { Database, WorkflowRow } from 'nuxt-galaxy'
+import type { Database } from 'nuxt-galaxy'
 import { format } from 'date-fns'
 import { useDefinedBreakpoints } from '../../composables/useDefinedBreakpoints'
 
+definePageMeta({
+  name: 'analysis-detail',
+})
+
 const router = useRouter()
-const route = useRoute()
-const { gaasUi: { resultsMenuItems, analyisParametersMenuItems } } = useAppConfig()
+const route = useRoute('analysis-detail')
 const supabase = useSupabaseClient<Database>()
 const analysisId = ref<number | undefined>(undefined)
 const isOpen = ref(true)
 const { isSmallDesktopOrMobile } = useDefinedBreakpoints()
+
 const analysisIdFromRoute = computed(() => {
-  if ('analysisId' in route.params) {
-    const analysisIdParam = route.params.analysisId
-    return Number.parseInt(analysisIdParam as string)
-  }
-  return undefined
+  const analysisIdParam = route.params.analysisId
+  return Number.parseInt(analysisIdParam as string)
 })
 
 const { data: analysis, refresh: refreshAnalysis } = useQuery(
   () => analysisByIdWithOutputsAndWorkflowsQuery({ id: toValue(analysisIdFromRoute), supabase }),
 )
-
-const workflow = computed<WorkflowRow | undefined>(() => {
-  const analysisVal = toValue(analysis)
-  if (!analysisVal) {
-    return undefined
-  }
-  return analysisVal.workflows
-})
-
-export type WorkflowFromAnalysis = typeof workflow.value
-
-const { workflowTagName, workflowTagVersion } = useDatabaseWorkflow({
-  workflow,
-})
 
 watch(() => {
   if (route?.params && 'analysisId' in route.params) {
@@ -64,38 +51,6 @@ function handleUpdates() {
   refreshAnalysis()
 }
 
-const computedResultsMenuItems = computed(() => {
-  const analysisIdVal = toValue(analysisIdFromRoute)
-  const workflowVal = toValue(workflow)
-
-  const items = analyisParametersMenuItems
-    ? [{ ...analyisParametersMenuItems, to: {
-        name: 'analyses-analysisId',
-        params: {
-          analysisId: analysisIdVal,
-        },
-      } }]
-    : []
-  if (!workflowVal || workflowTagVersion === null || workflowTagName === null) {
-    return items
-  }
-  const workflowTagVersionVal = toValue(workflowTagVersion)
-  const workflowTagNameVal = toValue(workflowTagName)
-  if (!workflowTagVersionVal || !workflowTagNameVal) {
-    return items
-  }
-  const resultItems = resultsMenuItems?.[workflowTagNameVal]?.[workflowTagVersionVal]
-  if (!resultItems || !Array.isArray(resultItems)) {
-    return items
-  }
-  return [
-    ...items,
-    ...resultItems.map(item => ({
-      ...item,
-      to: `/analyses/${analysisIdVal}/${item.to}`,
-    })).reverse(),
-  ]
-})
 function enterMotion(delay: number = 0) {
   return {
     initial: { opacity: 0, y: 16 },
@@ -120,7 +75,7 @@ function enterMotion(delay: number = 0) {
           />
         </template>
         <template #default>
-          <UBadge color="neutral" variant="ghost">
+          <UBadge color="neutral" variant="soft">
             {{ format(new Date(analysis.created_at), 'dd MMM HH:mm') }}
           </UBadge>
         </template>
@@ -136,11 +91,6 @@ function enterMotion(delay: number = 0) {
           </UTooltip>
         </template>
       </UDashboardNavbar>
-      <UDashboardToolbar v-if="computedResultsMenuItems?.length > 0">
-        <template #left>
-          <UNavigationMenu :items="computedResultsMenuItems" highlight class="-mx-1 flex-1" />
-        </template>
-      </UDashboardToolbar>
     </template>
 
     <template #body>

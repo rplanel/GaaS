@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import type { Database } from 'nuxt-galaxy'
 
+definePageMeta({
+  name: 'analysis-results',
+})
+
 const supabase = useSupabaseClient<Database>()
-const route = useRoute()
+const route = useRoute('analysis-results')
 const analysisId = computed(() => {
   const idParam = route.params.analysisId
-  if (Array.isArray(idParam)) {
-    return Number.parseInt(idParam[0])
-  }
   return Number.parseInt(idParam as string)
 })
 const { data: analysis, isPending: analysisPending } = useQuery(

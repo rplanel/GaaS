@@ -37,7 +37,7 @@ function clearInput() {
     searchError.value = undefined
   }
   state.filter = ''
-  filter.value = []
+  filter.value = { label: undefined, uuid: props.uuid }
 }
 </script>
 

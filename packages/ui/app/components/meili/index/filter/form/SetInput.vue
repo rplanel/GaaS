@@ -14,8 +14,6 @@ interface Props {
 // props
 const props = defineProps<Props>()
 const model = defineModel<string[] | undefined>()
-const values = ref<SetValues | undefined>(undefined)
-const selectedValues = ref<{ label: string, count: number }[]>([])
 const inputMenuProps = toRef(() => props.inputMenuProps)
 const meiliIndex = toRef(() => props.meiliIndex)
 const filterAttribute = toRef(() => props.filterAttribute)
@@ -68,28 +66,14 @@ const items = computed<InputMenuItem[]>(() => {
   })) || []
 })
 
-const sanitizedInputMenuProps = computed(() => {
+const placeholder = computed(() => {
   const inputMenuPropsVal = toValue(inputMenuProps)
-  return {
-    ...inputMenuPropsVal,
-    multiple: true,
-    items: items.value,
-    placeholder: inputMenuPropsVal?.placeholder || 'Multiple selection',
-  }
+  return inputMenuPropsVal?.placeholder || 'Multiple selection'
 })
 
-watch(selectedValues, (newVal) => {
-  // console.log('selectedValues', newVal)
-  // console.log('model before update', model.value)
-  // if (newVal && newVal.length === 2) {
-  //   const [first, second] = newVal
-  //   if (first && second) {
-  //     console.log('updating values to', [first.label, second.label])
-  //     values.value = [first.label, second.label]
-  //   }
-  // }
-  values.value = newVal.map(v => v.label)
-})
+function isMenuItem(item: unknown): item is { label: string, count: number } {
+  return !!item && typeof item === 'object' && 'label' in item && 'count' in item
+}
 </script>
 
 <template>
@@ -97,21 +81,26 @@ watch(selectedValues, (newVal) => {
     <!-- <pre>facet results: {{ facetResult }}</pre> -->
 
     <UInputMenu
-      v-bind="sanitizedInputMenuProps"
-      v-model="model"
       v-model:search-term="searchTerm"
+      :items="items"
+      :placeholder="placeholder"
+      :multiple="true"
+      :model-value="model"
       ignore-filter
       value-key="label"
       class="w-full"
+      @update:model-value="model = $event as string[]"
     >
       <template #item-label="{ item }">
-        {{ item.label }}
+        <template v-if="isMenuItem(item)">
+          {{ item.label }}
 
-        <span
-          class="text-muted text-xs"
-        >
-          {{ item.count }}
-        </span>
+          <span
+            class="text-muted text-xs"
+          >
+            {{ item.count }}
+          </span>
+        </template>
       </template>
     </UInputMenu>
   </div>

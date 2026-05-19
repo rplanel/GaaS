@@ -1,13 +1,13 @@
 import type { InputMenuItem } from '@nuxt/ui'
 import type { FacetDistribution, FacetStats } from 'meilisearch'
 import type { ZodError } from 'zod'
-import type { FacetFilter } from '../../utils/filterSchema'
-import { operatorsWithNegation, operatorsWithoutNegation } from '../../utils/filterSchema'
+import type { ComparisonOperator, ExistenceOperator, FacetFilter, FacetOperators, FacetValues, FilterType, RangeOperator, SetOperator } from '../../utils/filterSchema'
+import { categoricalOperators, comparisonOperators, continuousOperators, existenceOperators, FacetFilterSchema, operatorsWithNegation, operatorsWithoutNegation, rangeOperators, setOperators } from '../../utils/filterSchema'
 
 export interface UseFacetFilterOptions {
   facetDistribution: Ref<FacetDistribution | undefined>
   facetStats: Ref<FacetStats | undefined>
-  addFilter: (filter: FacetFilter) => void
+  addFilter?: (filter: FacetFilter) => unknown
 
 }
 
@@ -20,6 +20,14 @@ interface OperatorItem {
   preferred: boolean
 }
 
+interface BuilderState {
+  attribute?: string
+  type?: FilterType
+  operator?: FacetOperators
+  values?: FacetValues
+  negation?: 'NOT'
+}
+
 /**
  * composable for building Meili facet filters
  * for a meili index and from user input
@@ -28,7 +36,7 @@ interface OperatorItem {
 export function useFacetFilterBuilder(options: UseFacetFilterOptions) {
   const { facetDistribution, facetStats, addFilter } = options
   const filterNegationOperator = ref<boolean | undefined>(undefined)
-  const state = reactive<Partial<FacetFilter>>({
+  const state = reactive<BuilderState>({
     type: undefined,
     attribute: undefined,
     operator: undefined,
@@ -62,15 +70,18 @@ export function useFacetFilterBuilder(options: UseFacetFilterOptions) {
    * It will wrap addFilter function provide as arguments of the composable with validation and state reset
    */
   function validateAndAddFilter() {
-    if (isFilterValid.value) {
-      addFilter({ ...state })
-      // reset state
-      state.attribute = undefined
-      state.operator = undefined
-      state.values = undefined
-      state.type = undefined
-      state.negation = undefined
-      filterNegationOperator.value = undefined
+    if (addFilter) {
+      const result = FacetFilterSchema.safeParse(state)
+      if (result.success) {
+        addFilter(result.data)
+        // reset state
+        state.attribute = undefined
+        state.operator = undefined
+        state.values = undefined
+        state.type = undefined
+        state.negation = undefined
+        filterNegationOperator.value = undefined
+      }
     }
   }
 

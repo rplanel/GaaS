@@ -52,7 +52,7 @@ const numberOfDocuments = toRef(props, 'numberOfDocuments')
 const { label, facetAttribute } = toRefs(props)
 const modelFilter = defineModel<FacetFilter | undefined>('filter')
 
-const { addFilter: addFacetFilter, removeFilter: removeFacetFilter, filters: filtersForFacetSearch, resetFilters: resetFacetFilters } = useFacetFilters()
+const { addFilter: addFacetFilter, removeFilter: removeFacetFilter, filters: filtersForFacetSearch, resetFilters: resetFacetFilters } = useFacetFilters<FacetFilter>()
 
 const { searchForFacetValues, facetResult } = useFacetSearch({ meiliIndex })
 
@@ -76,6 +76,9 @@ const computedFacetSearchParams = computed<SearchForFacetValuesParams | undefine
   const searchParamsVal = toValue(searchParams)
   const facetAttributeVal = toValue(facetAttribute)
   const meiliFiltersVal = toValue(meiliFilters)
+  if (!facetAttributeVal) {
+    return undefined
+  }
 
   return {
     ...searchParamsVal,
@@ -137,7 +140,7 @@ const { displayedItems, displayedItemCount, aggregatedItems } = useFrequencyPart
   sizeThreshold: 15,
 })
 
-function renameXPx({ x, ...options }) {
+function renameXPx({ x, ...options }: { x: string, [key: string]: any }) {
   return { ...options, px: x }
 }
 
@@ -276,11 +279,15 @@ function nextFacet() {
   const itemToFilterOnNextVal = toValue(itemToFilterOnNext)
   const facetAttributeVal = toValue(facetAttribute)
   // const searchParamsVal = toValue(computedFacetSearchParams)
+  if (!itemToFilterOnNextVal || !facetAttributeVal) {
+    console.warn('Cannot go to next facet, missing item to filter on or facet attribute')
+    return
+  }
   addFacetFilter({
     attribute: facetAttributeVal as Facet,
     type: 'comparison',
     operator: '!=',
-    values: itemToFilterOnNextVal ? itemToFilterOnNextVal.name : undefined,
+    values: itemToFilterOnNextVal.name,
   })
   // if (itemToFilterOnNextVal && columnFacetVal && searchParamsVal) {
   //   searchForFacetValues(
@@ -342,7 +349,7 @@ function createFilter(value: string | Array<string>) {
   }
 }
 
-function handleBarClick(plot) {
+function handleBarClick(plot: { value?: { name: string } }) {
   const plotValue = plot.value
   // console.log('bar clicked', plotValue)
   if (plotValue) {
@@ -365,11 +372,7 @@ function handleBarClick(plot) {
         <template v-if="hasPrevFacet">
           <div>
             <UButton
-              icon="lucide:chevron-left"
-              variant="link"
-              size="xl"
-              class="p-0"
-              :disabled="!hasPrevFacet"
+              icon="lucide:chevron-left" variant="link" size="xl" class="p-0" :disabled="!hasPrevFacet"
               @click="prevFacet"
             />
           </div>
@@ -384,11 +387,7 @@ function handleBarClick(plot) {
         <template v-if="hasNextFacet">
           <div>
             <UButton
-              :disabled="!hasNextFacet"
-              icon="lucide:chevron-right"
-              size="xl"
-              variant="link"
-              class="p-0"
+              :disabled="!hasNextFacet" icon="lucide:chevron-right" size="xl" variant="link" class="p-0"
               @click="nextFacet"
             />
           </div>
@@ -404,7 +403,8 @@ function handleBarClick(plot) {
         <UIcon name="i-mdi:dots-horizontal" class="text-dimmed" />
       </div>
       <div class="truncate max-w-32">
-        {{ displayedFacetEndpoints[displayedFacetEndpoints.length - 1]?.name }} ({{ displayedFacetEndpoints[displayedFacetEndpoints.length - 1]?.count }})
+        {{ displayedFacetEndpoints[displayedFacetEndpoints.length - 1]?.name }} ({{
+          displayedFacetEndpoints[displayedFacetEndpoints.length - 1]?.count }})
       </div>
     </div>
   </div>

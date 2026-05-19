@@ -163,24 +163,25 @@ const dbWorkflowsMap = computed(() => {
   return new Map()
 })
 
-const computedWorkflows = computed(() => {
+const computedWorkflows = computed<ComputedGalaxyWorklowItem[]>(() => {
   const allWorkflowsVal = toValue(allWorkflows)
 
-  if (allWorkflowsVal) {
-    return allWorkflowsVal
-      .map((workflow) => {
-        const version = bt.getWorkflowTagVersion(workflow.tags)
-        const tagName = bt.getWorkflowTagName(workflow.tags)
-        return {
-          ...workflow,
-          version,
-          tagName,
-          activated: dbWorkflowsMap.value.has(workflow.id),
-        }
-      })
-      .filter(({ version, tagName }) => version !== null && tagName !== null)
+  if (!allWorkflowsVal) {
+    return []
   }
-  return []
+
+  return (allWorkflowsVal as GalaxyWorkflowsItem[])
+    .map((workflow) => {
+      const version = bt.getWorkflowTagVersion(workflow.tags)
+      const tagName = bt.getWorkflowTagName(workflow.tags)
+      return {
+        ...workflow,
+        version,
+        tagName,
+        activated: dbWorkflowsMap.value.has(workflow.id),
+      }
+    })
+    .filter(({ version, tagName }) => version !== null && tagName !== null) as ComputedGalaxyWorklowItem[]
 })
 
 const pageHeaderProps = computed(() => {
@@ -188,6 +189,8 @@ const pageHeaderProps = computed(() => {
     title: 'Workflows',
     description:
       'Manage the workflows that are available for this web application',
+    headline: galaxyInstance.value?.name ?? 'Galaxy Instance',
+
   }
 })
 </script>
@@ -195,17 +198,11 @@ const pageHeaderProps = computed(() => {
 <template>
   <div v-if="userRole === 'admin'">
     <div v-if="galaxyInstance">
-      <PageHeader :page-header-props icon="i-lucide:workflow" :breadcrumbs-items="computedBreadcrumbsItems">
-        <template #trailing-content>
-          <UBadge variant="subtle" color="info">
-            {{ galaxyInstance.name }}
-          </UBadge>
-        </template>
-      </PageHeader>
+      <PageHeader :page-header-props icon="i-lucide:workflow" :breadcrumbs-items="computedBreadcrumbsItems" />
       <NuxtErrorBoundary>
         <UTable
           v-if="allWorkflows" sticky :data="computedWorkflows" :columns="galaxyWorkflowGalaxyColumns"
-          class="flex-1 max-h-[500px]"
+          class="flex-1 max-h-125"
         />
         <template #error="error">
           <pre>{{ error }}</pre>

@@ -1,9 +1,9 @@
-import type { NavigationMenuItem } from '@nuxt/ui'
 import type { MaybeRef } from 'vue'
+import type { OrderedNavigationMenuItem } from '../types/navigation'
 import { computed, toValue } from 'vue'
 
 interface NavigationMenuItemParameters {
-  navigationMenuItems: NavigationMenuItem[]
+  navigationMenuItems: OrderedNavigationMenuItem[]
   userRole: MaybeRef<string | undefined>
 }
 

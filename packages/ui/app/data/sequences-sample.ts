@@ -17,11 +17,8 @@ export function generateSequences(count: number): Sequence[] {
     if (rand < 0.4) {
       strand = 1
     }
-    else if (rand < 0.8) {
-      strand = -1
-    }
     else {
-      strand = undefined
+      strand = -1
     }
 
     // Determine prefix based on strand
@@ -47,6 +44,7 @@ export function generateSequences(count: number): Sequence[] {
       start,
       end,
       strand,
+      type: 'sequence',
     })
 
     // Move position for next sequence (current end + gap)

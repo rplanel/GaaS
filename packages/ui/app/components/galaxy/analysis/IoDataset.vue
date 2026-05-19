@@ -5,7 +5,7 @@ import DOMPurify from 'isomorphic-dompurify'
 
 interface Props {
   dataset: AnalysisIOsWithStoratePathAndSize
-  resultRoute?: string
+  resultRoute?: string | undefined
   isPreviewOpen?: boolean
 }
 const props = withDefaults(defineProps<Props>(), { resultRoute: undefined, isPreviewOpen: false })
@@ -110,7 +110,7 @@ const hasPreview = computed(() => !!sanitizedPeek.value)
         />
         <UButton
           icon="i-lucide-download" color="primary" variant="soft" size="xs" label="Download"
-          @click="emit('download', dataset.value)"
+          @click="emit('download', dataset)"
         />
       </div>
     </div>

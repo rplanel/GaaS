@@ -57,10 +57,10 @@ function facetFilterToMeiliFilter(filter: FacetFilter | undefined): string {
  * ```
  */
 export function useMeiliFilter(filters: MaybeRefOrGetter<FacetFilter[] | undefined>) {
-  const meiliFilters = computed(() => {
+  const meiliFilters = computed<string[]>(() => {
     const filtersValue = toValue(filters)
     if (!filtersValue) {
-      return ''
+      return []
     }
     return filtersValue.map(facetFilterToMeiliFilter)
   })

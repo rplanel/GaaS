@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import type { ButtonProps } from '@nuxt/ui'
+
 definePageMeta({
   layout: 'landing',
 })
-const links = ref([
+const links = ref<ButtonProps[]>([
   {
     label: 'Get started',
     to: '/datasets',
@@ -20,7 +22,7 @@ const links = ref([
       :links="links"
     >
       <template #top>
-        <div class="absolute rounded-full dark:bg-(--ui-primary) blur-[300px] size-60 sm:size-80 transform -translate-x-1/2 left-1/2 -translate-y-80" />
+        <div class="absolute rounded-full dark:bg-primary blur-[300px] size-60 sm:size-80 transform -translate-x-1/2 left-1/2 -translate-y-80" />
         <SkyBg />
       </template>
     </UPageHero>

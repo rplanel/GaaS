@@ -74,7 +74,7 @@ const {
         <PlotCount :table :selection :coordinator />
       </div>
       <div class="col-start-6 justify-self-end">
-        <TableColumnVisibility :table-elem="tableElem" />
+        <TableColumnVisibility v-if="tableElem" :table-elem="tableElem" />
       </div>
     </div>
     <div v-if="columns">
@@ -82,7 +82,7 @@ const {
         <div class="overflow-x-auto scrollbar-hide">
           <UTable
             ref="tableElem" v-model:pagination="pagination" v-model:column-visibility="columnVisibility" :columns
-            :data="tableData" sticky :pagination-options="{
+            :data="(tableData as T[])" sticky :pagination-options="{
               getPaginationRowModel: getPaginationRowModel(),
             }" :ui="{
               root: 'min-w-full',

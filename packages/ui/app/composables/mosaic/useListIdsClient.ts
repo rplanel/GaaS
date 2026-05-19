@@ -1,5 +1,6 @@
 import type { Coordinator, Selection } from '@uwdata/mosaic-core'
 import type { FilterExpr } from '@uwdata/mosaic-sql'
+import type { ArrowTable } from '../../types/mosaic'
 import { clausePoints, makeClient } from '@uwdata/mosaic-core'
 import { and, count, isIn, Query } from '@uwdata/mosaic-sql'
 
@@ -122,9 +123,10 @@ export function useListIdsClient(params: UseListIdsClientParams) {
 
         return query
       },
-      queryResult: (queryData) => {
+      queryResult: (queryData: unknown) => {
       // The query result is available.
-        result.value = queryData.toArray()
+        const groupedData = (queryData as ArrowTable).toArray() as Array<Record<string, unknown>>
+        result.value = groupedData
         isError.value = false
         isPending.value = false
       },

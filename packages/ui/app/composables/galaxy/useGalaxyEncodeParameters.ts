@@ -1,9 +1,6 @@
 import type { ComputedRef, MaybeRef } from 'vue'
-
-// import type { WorkflowParametersModel, WorkflowParametersTool } from './useGalaxyDecodeParameters'
+import type { EncodedGalaxyWorkflowParameter, WorkflowParametersModel } from './types'
 import { computed, toValue } from 'vue'
-
-export type EncodedGalaxyWorkflowParameter = Record<string, WorkflowParametersTool>
 
 export function useGalaxyEncodeParameters(parameterModel: MaybeRef<WorkflowParametersModel>): { encodedParameters: ComputedRef<EncodedGalaxyWorkflowParameter> } {
   const encodedParameters = computed<EncodedGalaxyWorkflowParameter>(() => {

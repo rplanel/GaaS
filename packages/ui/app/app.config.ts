@@ -1,5 +1,3 @@
-import type { NavigationMenuItem } from '@nuxt/ui'
-
 export default defineAppConfig({
   gaasUi: {
     name: 'GaaS UI',
@@ -39,23 +37,19 @@ export default defineAppConfig({
             label: 'Workflows',
             description: 'Manage workflows',
             to: '/admin/workflows',
+            order: 1,
           },
           {
             label: 'User',
             icon: 'i-lucide:user',
             description: 'Manage users and roles',
             to: '/admin/users',
+            order: 2,
           },
         ],
       },
 
     ],
-    analyisParametersMenuItems: undefined,
-    // {
-    // label: 'Analysis parameters',
-    // icon: 'mdi:tools',
-    // exact: true,
-    // },
     resultsMenuItems: { } as Record<string, Record<string, unknown>>,
     footerItems: [
       {
@@ -63,8 +57,15 @@ export default defineAppConfig({
         to: 'https://github.com/rplanel/gaas/issues',
         target: '_blank',
         trailingIcon: 'octicon:issue-opened-24',
+        order: 1,
       },
-      { label: 'Code', trailingIcon: 'i-simple-icons-github', to: 'https://github.com/rplanel/gaas', target: '_blank' },
+      {
+        label: 'Code',
+        trailingIcon: 'i-simple-icons-github',
+        to: 'https://github.com/rplanel/gaas',
+        target: '_blank',
+        order: 2,
+      },
     ],
   },
   toaster: {
@@ -93,11 +94,6 @@ export default defineAppConfig({
   },
 })
 
-// should use extends NavigationMenuItem
-// from @nuxt/ui but it is not working right now
-export interface OrderedNavigationMenuItem extends NavigationMenuItem {
-  order: number
-}
 // declare module '@nuxt/schema' {
 //   interface AppConfigInput {
 //     gaasUi?: {

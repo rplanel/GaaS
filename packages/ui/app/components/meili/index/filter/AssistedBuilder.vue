@@ -60,16 +60,16 @@ const {
 // const inputsMenuItems = shallowRef<InputMenuItems>([])
 const facetList = computed(() => {
   const facetDistributionVal = toValue(facetDistribution)
-  // const facetStatsVal = toValue(facetStats)
-  // console.log('facetDistributionVal', facetDistributionVal)
-  // console.log('facetStatsVal', facetStatsVal)
   if (!facetDistributionVal) {
     return []
   }
-  return Object.keys(facetDistributionVal).map(key => ({
-    label: key,
-    count: Object.keys(facetDistributionVal[key]).length,
-  }))
+  return Object.keys(facetDistributionVal).map((key) => {
+    const distribution = facetDistributionVal[key]
+    return {
+      label: key,
+      count: distribution ? Object.keys(distribution as object).length : 0,
+    }
+  })
 })
 
 const facetOptions = computed(() => facetList.value.map(facet => ({
@@ -211,8 +211,9 @@ function parseFilter(attribute: string, operator: FacetOperators, values: FacetV
     values,
   }
   const filter = filterSchemas.reduce((acc, schema) => {
-    const type = schema.shape.type.value
-    const hasNegation = schema.shape?.negation !== undefined
+    const shape = (schema as any).shape
+    const type = shape.type?.value
+    const hasNegation = shape?.negation !== undefined
     if (hasNegation) {
       testedFilter.negation = filterNegationOperator.value
     }
@@ -338,7 +339,7 @@ function checkAndAddFilter() {
         <template #attribute="{ item }">
           <UCard variant="soft" lass="max-w-4xl">
             <template #header>
-              Here you can select the {{ item.title }}: {{ meiliIndex }}
+              Here you can select the {{ (item as StepperItem).title }}: {{ meiliIndex }}
             </template>
             <UPageGrid>
               <UPageCard v-for="facet in facetList" :key="facet.label" variant="ghost" @click="setFilterAttribute(facet.label)">
@@ -351,7 +352,7 @@ function checkAndAddFilter() {
         <template #operator="{ item }">
           <UCard variant="soft" class="max-w-4xl">
             <template #header>
-              Here you can select the {{ item.title }} : {{ meiliIndex }}
+              Here you can select the {{ (item as StepperItem).title }} : {{ meiliIndex }}
             </template>
             <div class="flex flex-col gap-2">
               <div>
@@ -377,7 +378,7 @@ function checkAndAddFilter() {
         <template #values="{ item }">
           <UCard variant="soft" lass="max-w-4xl">
             <template #header>
-              Here you can select the {{ item.title }} : {{ meiliIndex }}
+              Here you can select the {{ (item as StepperItem).title }} : {{ meiliIndex }}
             </template>
             <div>
               <MeiliFilterInputSet
