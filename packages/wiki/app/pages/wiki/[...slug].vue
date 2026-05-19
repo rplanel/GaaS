@@ -19,7 +19,7 @@ const { data: surround } = await useAsyncData(`${route.path}-surround`, () => {
   })
 })
 
-const headline = computed(() => navigation?.value ? findPageHeadline(navigation.value, page.value) : undefined)
+const headline = computed(() => navigation?.value ? findPageHeadline(navigation.value, route.path) : undefined)
 </script>
 
 <template>

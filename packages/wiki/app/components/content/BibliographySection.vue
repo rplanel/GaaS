@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { promiseTimeout, useTimeout } from '@vueuse/core'
-import { useBibliography } from '../../composables/useBibliography'
 
 interface Props {
   dois?: string[]
@@ -66,20 +65,13 @@ watch (selectedRef, (newSelectedRef) => {
     </ProseH2>
     <UPageList divide>
       <UPageCard
-        v-for="(item) in sortedBibliography"
-        :id="item.doi"
-        :key="item.doi"
-        :description="item.authors.join(', ')"
-        variant="ghost"
-        :ui="{ footer: 'pt-1 mt-auto w-full' }"
+        v-for="(item) in sortedBibliography" :id="item.doi" :key="item.doi"
+        :description="item.authors.join(', ')" variant="ghost" :ui="{ footer: 'pt-1 mt-auto w-full' }"
         :highlight="!ready && item.doi === selectedRef"
       >
         <template #title>
           <ULink
-            :id="item.doi"
-            :to="`https://doi.org/${item.doi}`"
-            target="_blank"
-            rel="noopener noreferrer"
+            :id="item.doi" :to="`https://doi.org/${item.doi}`" target="_blank" rel="noopener noreferrer"
             class="text-base text-pretty font-semibold text-highlighted hover:text-primary"
           >
             {{ item.title }}
@@ -100,19 +92,13 @@ watch (selectedRef, (newSelectedRef) => {
             <div v-if="item.abstract" class="flex justify-start">
               <UCollapsible :ui="{ content: 'w-full' }" :unmount-on-hide="false">
                 <UButton
-                  label="Abstract"
-                  color="neutral"
-                  variant="ghost"
-                  trailing-icon="i-lucide-chevron-down"
-                  :ui="{
+                  label="Abstract" color="neutral" variant="ghost" trailing-icon="i-lucide-chevron-down" :ui="{
                     trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200',
                   }"
                 />
 
                 <template #content>
-                  <div
-                    class="flex w-full text-toned text-sm text-justify"
-                  >
+                  <div class="flex w-full text-toned text-sm text-justify">
                     {{ item.abstract }}
                   </div>
                 </template>

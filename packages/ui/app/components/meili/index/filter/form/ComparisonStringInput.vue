@@ -14,9 +14,7 @@ interface Props {
 
 // props
 const props = defineProps<Props>()
-const model = defineModel<string[] | undefined>()
-const value = ref<Exclude<ComparisonValues, number> | undefined>(undefined)
-const selectedValue = ref<{ label: string, count: number } | undefined>(undefined)
+const model = defineModel<string | undefined>()
 const inputMenuProps = toRef(() => props.inputMenuProps)
 const meiliIndex = toRef(() => props.meiliIndex)
 const searchParams = toRef(() => props.searchParams)
@@ -66,19 +64,14 @@ const items = computed<InputMenuItem[]>(() => {
   })) || []
 })
 
-const sanitizedInputMenuProps = computed(() => {
+const placeholder = computed(() => {
   const inputMenuPropsVal = toValue(inputMenuProps)
-  return {
-    ...inputMenuPropsVal,
-    multiple: false,
-    items: items.value,
-    placeholder: inputMenuPropsVal?.placeholder || 'Single selection',
-  }
+  return inputMenuPropsVal?.placeholder || 'Single selection'
 })
 
-watch(selectedValue, (newVal) => {
-  value.value = newVal?.label
-})
+function isMenuItem(item: unknown): item is { label: string, count: number } {
+  return !!item && typeof item === 'object' && 'label' in item && 'count' in item
+}
 </script>
 
 <template>
@@ -86,15 +79,24 @@ watch(selectedValue, (newVal) => {
     <!-- <pre>facet results: {{ facetResult }}</pre> -->
 
     <UInputMenu
-      v-bind="sanitizedInputMenuProps" v-model="model" v-model:search-term="searchTerm" ignore-filter
-      value-key="label" class="w-full"
+      v-model:search-term="searchTerm"
+      :items="items"
+      :placeholder="placeholder"
+      :multiple="false"
+      :model-value="model"
+      ignore-filter
+      value-key="label"
+      class="w-full"
+      @update:model-value="model = $event as string"
     >
       <template #item-label="{ item }">
-        {{ item.label }}
+        <template v-if="isMenuItem(item)">
+          {{ item.label }}
 
-        <span class="text-muted text-xs">
-          {{ item.count }}
-        </span>
+          <span class="text-muted text-xs">
+            {{ item.count }}
+          </span>
+        </template>
       </template>
     </UInputMenu>
   </div>

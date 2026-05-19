@@ -4,13 +4,16 @@
 import type { FileAfterParseHook } from '@nuxt/content'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { searchContentRef } from './app/utils/content/search.js'
+import { searchContentRef } from './app/utils/content/search'
 
 const currentDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineNuxtConfig({
   extends: ['@gaas/ui'],
   devtools: { enabled: true },
+  $meta: {
+    name: '@gaas/wiki',
+  },
   future: {
     compatibilityVersion: 4,
   },

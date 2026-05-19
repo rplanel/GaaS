@@ -175,4 +175,18 @@ export const filterSchemas = [
   SetFacetFilterSchema,
 ]
 
+/**
+ * Flat schema matching the BuilderState reactive object used in the filter builder UI.
+ * Used as the UForm :schema binding so TypeScript is satisfied with the flat state shape.
+ * Deep validation (discriminated union) is done separately via FacetFilterSchema.safeParse().
+ */
+export const BuilderStateSchema = z.object({
+  attribute: z.string().optional(),
+  type: FilterTypeEnum.optional(),
+  operator: FacetOperatorsEnum.optional(),
+  values: FacetValuesSchema.optional(),
+  negation: NegationOperatorEnum.optional(),
+})
+export type BuilderStateType = z.infer<typeof BuilderStateSchema>
+
 // facet group schema

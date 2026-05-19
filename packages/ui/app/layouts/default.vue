@@ -4,7 +4,7 @@ import type { CommandPaletteGroup, CommandPaletteItem, NavigationMenuItem } from
 // import type { SupabaseTypes } from '#build/types/database'
 import type { Database } from 'nuxt-galaxy'
 import type { ShallowRef } from 'vue'
-import type { OrderedNavigationMenuItem } from '../app.config'
+import type { OrderedNavigationMenuItem } from '../types/navigation'
 import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
 // import { SUPABASE_QUERY_KEYS, useSupabaseQuery } from '../composables/useSupabaseQuery'
 
@@ -75,7 +75,8 @@ const sanitizedNavigationMenuItems = computed(() => {
       return item
     })
 })
-const computedLinks = computed<OrderedNavigationMenuItem[][]>(() => {
+
+const computedLinks = computed(() => {
   const itemsVal = toValue(sanitizedNavigationMenuItems)
   itemsVal.sort((a, b) => a.order - b.order)
   if (isAdmin.value) {

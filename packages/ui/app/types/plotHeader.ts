@@ -5,7 +5,9 @@ export interface GetHeaderParams<T> {
   column: Column<T>
   label?: string
   variable: string
+  table: string
   selection: Selection
+  coordinator: Coordinator
 }
 
 export interface UseHeaderParams {

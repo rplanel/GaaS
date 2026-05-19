@@ -7,7 +7,7 @@ interface Props {
   meiliIndex: string
   filterAttribute: string
   filterOperator: SetOperator
-  facetStats?: Ref<FacetStats>
+  facetStats?: FacetStats
   sliderProps?: SliderProps
 }
 

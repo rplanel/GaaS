@@ -3,8 +3,9 @@ import type { SortingState } from '@tanstack/table-core'
 import type { Filter, IndexStats, SearchParams } from 'meilisearch'
 import type { Ref } from 'vue'
 
+import type { FetchDataParams } from './types'
 import { useOffsetPagination, watchThrottled } from '@vueuse/core'
-import { computed, ref, toValue, watch } from 'vue'
+import { computed, ref, shallowRef, toValue, watch } from 'vue'
 import { useMeiliSearch } from './useMeiliSearch'
 
 export interface UseLoadMoreOptions {
@@ -15,16 +16,6 @@ export interface UseLoadMoreOptions {
   searchTerm?: Ref<string>
   sortingState: Ref<SortingState | undefined>
 }
-
-export interface FetchDataParams {
-  currentPage?: number
-  currentPageSize?: number
-  filter?: Filter | undefined
-  searchTerm: string
-  searchParams?: SearchParams
-}
-
-// type PaginationState = Pick<UnwrapNestedRefs<UseOffsetPaginationReturn>, 'currentPage' | 'currentPageSize'>
 
 export function useLoadMore(options: UseLoadMoreOptions) {
   const pageSize = options.pageSize ?? ref(20)

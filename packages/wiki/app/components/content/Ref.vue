@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, toValue } from 'vue'
-import { useCitations } from '../../composables/useCitations'
 
 export interface Props {
   dois?: string | undefined

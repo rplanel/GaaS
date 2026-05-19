@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="T">
+import type { Column } from '@tanstack/table-core'
 import { upperFirst } from 'scule'
 
 export interface ColumnVisibilityProps<T> {
@@ -50,7 +51,7 @@ const {
             v-for="column in filteredColumns" :key="column.id"
             class="flex items-center justify-between py-2 px-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded"
             :class="column.getIsVisible() ? 'font-medium' : 'text-gray-500 dark:text-gray-400'"
-            @click="toggleColumnVisibility(column)"
+            @click="toggleColumnVisibility(column as Column<T, unknown>)"
           >
             <span class="text-sm truncate">{{ upperFirst(column.id || 'N/A') }}</span>
             <UIcon v-if="column.getIsVisible()" name="i-lucide-check" />

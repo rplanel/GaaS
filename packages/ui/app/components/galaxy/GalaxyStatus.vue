@@ -71,7 +71,6 @@ const currentState = computed(() => {
       <UIcon
         :name="currentState.icon"
         :size
-        variant="ghost"
       />
     </span>
     <span v-else>{{ state }}</span>

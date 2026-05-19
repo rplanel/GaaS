@@ -34,6 +34,10 @@ interface DataItemWithFrequency extends DataItem {
   frequency: number
 }
 
+interface ArrowTable {
+  toArray: () => Array<Record<string, unknown>>
+}
+
 const selection = props.selection
 const table = toRef(() => props.table)
 const variableId = toRef(() => props.variableId)
@@ -90,9 +94,9 @@ watchEffect((onCleanup) => {
 
       return query
     },
-    queryResult: (queryData) => {
+    queryResult: (queryData: unknown) => {
       // The query result is available.
-      const groupedData = queryData.toArray() as Array<DataItem>
+      const groupedData = (queryData as ArrowTable).toArray() as Array<DataItem>
       categoryCount.value = groupedData.length
       filteredData.value = groupedData
       isError.value = false
@@ -233,14 +237,14 @@ const { partitionedItems: groupedOtherFilteredData } = useFrequencyPartition<Dat
   aggregateFn: aggregateLowFrequencyItems,
 })
 
-const dataWithPercent = computed(() => {
+const dataWithPercent = computed<DataItem[]>(() => {
   if (!groupedOtherData.value) {
     return []
   }
   return groupedOtherData.value.map(item => ({
     ...item,
     percent: d3.format('.1%')(totalCount.value > 0 ? (item.count / totalCount.value) : 0),
-  }))
+  } as DataItem))
 })
 const hoveredCategory = ref<Record<string, string> & { count: number } | undefined>(undefined)
 
@@ -248,13 +252,13 @@ function normalizeCategoryName(name: string): string {
   return name.replace(/\s+/g, '-').toLowerCase()
 }
 
-const linearGradients = computed(() => {
+const linearGradients = computed<SVGElement[]>(() => {
   const sortedDataVal = toValue(groupedOtherData)
   const filteredDataVal = toValue(groupedOtherFilteredData)
   const variableVal = toValue(aggregatedItemIdsOtherData).has(variableId.value) ? 'Other' : toValue(variableId)
   if (filteredDataVal) {
     return sortedDataVal.map((item) => {
-      const normalizeGradientId = normalizeCategoryName(item[variableVal])
+      const normalizeGradientId = normalizeCategoryName(String(item[variableVal]))
 
       const filteredVal = filteredDataVal.find(d => d[variableVal] === item[variableVal])
       if (!filteredVal) {
@@ -262,7 +266,7 @@ const linearGradients = computed(() => {
         <linearGradient id="gradient-${normalizeGradientId}" gradientTransform="rotate(90)">
           <stop offset="100%" stop-color="#ccc" />
         </linearGradient>
-      </defs>`
+      </defs>` as SVGElement
       }
 
       let percentStop = 100
@@ -274,12 +278,12 @@ const linearGradients = computed(() => {
           <stop offset="${100 - percentStop}%" stop-color="#ccc" />
           <stop offset="${100 - percentStop}%" stop-color="var(--ui-secondary)" />
         </linearGradient>
-      </defs>`
+      </defs>` as SVGElement
         : htl.svg`<defs>
         <linearGradient id="gradient-${normalizeGradientId}" gradientTransform="rotate(90)">
           <stop offset="${percentStop}%" stop-color="var(--ui-secondary)" />
         </linearGradient>
-      </defs>`
+      </defs>` as SVGElement
       return gradient
     })
   }
@@ -291,7 +295,7 @@ const sortedDataWithGradient = computed(() => {
   const variableVal = toValue(variableId)
   return sortedDataVal.map(item => ({
     ...item,
-    gradient: `url(#gradient-${normalizeCategoryName(item[variableVal])})`,
+    gradient: `url(#gradient-${normalizeCategoryName(String(item[variableVal]))})`,
   }))
 })
 
@@ -359,15 +363,13 @@ const plotOptions = computed<PlotOptions>(() => {
   }
 })
 const inputLabel = useTemplateRef('inputLabel')
-function handleInput({ plot }) {
+function handleInput({ plot }: { plot: { value?: DataItem } }) {
   // Handle input events here if needed
   if (plot.value) {
-    hoveredCategory.value = plot.value
-    // infoLabel.value = `${plot.value[variable.value]}: ${plot.value.count}`
+    hoveredCategory.value = plot.value as Record<string, string> & { count: number }
   }
   else {
     hoveredCategory.value = undefined
-    // infoLabel.value = `${categoryCount.value} categories`
   }
 }
 const infoLabel = computed(() => {
@@ -381,26 +383,34 @@ const infoLabel = computed(() => {
   }
   return `${categoryCount.value} categories`
 })
-function publish(value) {
+function publish(value: string | undefined) {
   const mosaicClientVal = toValue(mosaicClient)
   const selectionVal = toValue(selection)
   if (isSelection(selectionVal) && mosaicClientVal) {
-    if (value === '' || value === null)
+    if (value === '' || value === null || value === undefined)
       value = undefined // 'All' option
     const clause = clausePoint(variableId.value, value, { source: mosaicClientVal })
-    selection.update(clause)
+    selectionVal.update(clause)
   }
   else if (isParam(selectionVal)) {
-    selection.update(value)
+    // Param.update(value: T) expects the Param's type parameter
+    // At runtime, null/empty-string is treated as clearing the filter
+    if (value === '' || value === null || value === undefined) {
+      // For Param, passing undefined clears the value
+      selectionVal.update(undefined as unknown as string)
+    }
+    else {
+      selectionVal.update(value)
+    }
   }
 }
 
-function handleClick(plot) {
+function handleClick(plot: { value?: DataItem }) {
   // Handle input events here if needed
   const plotValue = plot.value
   if (plotValue) {
     const catergoryFilterVal = toValue(categoryFilter)
-    const category = plotValue[variableId.value] as string
+    const category = String(plotValue[variableId.value])
     if (category === catergoryFilterVal) {
       categoryFilter.value = undefined // Reset filter
     }

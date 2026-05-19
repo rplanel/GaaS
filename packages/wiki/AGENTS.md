@@ -37,12 +37,6 @@ pnpm generate                              # Static site generation
 pnpm preview                               # Preview build
 ```
 
-### Content Management
-```bash
-pnpm content:query                          # Validate content queries
-pnpm content:generate                       # Regenerate content database
-```
-
 ### Quality Assurance
 ```bash
 pnpm lint                                   # ESLint
@@ -72,7 +66,7 @@ app/
 ├── plugins/                # Content hooks
 └── utils/                  # Content utilities
 nuxt.config.ts              # Layer config
-content.config.ts           # Content collections config
+content.config.mjs           # Content collections config
 .playground/                # Dev playground with content
 ```
 
@@ -104,7 +98,7 @@ export default defineNuxtConfig({
 
 ### Content Collections Configuration
 ```typescript
-// content.config.ts
+// content.config.mjs
 import { defineCollection, defineContentConfig, z } from '@nuxt/content'
 
 export default defineContentConfig({
@@ -182,7 +176,6 @@ async function fetchCitation(doi: string) {
 ### Test Commands
 ```bash
 pnpm test                   # Run vitest
-pnpm test:watch             # Watch mode
 ```
 
 ### Testing Standards

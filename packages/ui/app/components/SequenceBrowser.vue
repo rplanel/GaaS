@@ -85,7 +85,7 @@ function getVisibleSequences(scale: d3.ScaleLinear<number, number>): Sequence[] 
   if (sorted.length === 0)
     return []
 
-  const [viewStart, viewEnd] = scale.domain()
+  const [viewStart, viewEnd] = scale.domain() as [number, number]
 
   // Find sequences whose end >= viewStart and start <= viewEnd
   // bisectEnd finds the first sequence whose end is >= viewStart
@@ -131,7 +131,7 @@ function createBins(
     const endBin = Math.floor((seqEnd - viewStart) / binWidth)
 
     for (let i = Math.max(0, startBin); i <= Math.min(bins.length - 1, endBin); i++) {
-      bins[i].sequences.push(seq)
+      bins[i]!.sequences.push(seq)
     }
   })
 
@@ -197,13 +197,13 @@ function updatePositions() {
 
   // Get visible sequences in current viewport
   const visibleSequences = getVisibleSequences(currentXScale)
-  const [viewStart, viewEnd] = currentXScale.domain()
+  const [viewStart, viewEnd] = currentXScale.domain() as [number, number]
 
   // Determine if we need clustering (too many visible items)
   const useClusters = visibleSequences.length > CLUSTER_THRESHOLD
 
   // Get display data: either clusters or sequences
-  const displayData = useClusters
+  const displayData: (Sequence | SequenceCluster)[] = useClusters
     ? createBins(visibleSequences, viewStart, viewEnd)
     : visibleSequences
 
@@ -224,7 +224,7 @@ function updatePositions() {
           .style('cursor', 'pointer')
           .on('click', (event, d) => {
             event.stopPropagation()
-            if ('type' in d && d.type === 'cluster') {
+            if (d.type === 'cluster') {
               zoomToRegion(d.start, d.end)
             }
           })
@@ -258,7 +258,7 @@ function updatePositions() {
       const end = d.end ?? start + (d as Sequence).length
       const width = Math.max(1, currentXScale(end) - currentXScale(start))
 
-      if ('type' in d && d.type === 'cluster') {
+      if (d.type === 'cluster') {
         // Render cluster: height proportional to count
         const density = d.count / maxCount
         const clusterHeight = Math.max(4, geneHeight * (0.3 + 0.7 * density))
@@ -325,7 +325,8 @@ function zoomToRegion(start: number, end: number) {
   const padding = span * 0.1 // 10% padding
   const targetStart = Math.max(0, start - padding)
   const targetEnd = end + padding
-  const fullExtent = baseXScale.value.domain()[1] - baseXScale.value.domain()[0]
+  const domain = baseXScale.value.domain() as [number, number]
+  const fullExtent = domain[1] - domain[0]
 
   // Calculate scale factor needed
   const k = fullExtent / (targetEnd - targetStart)
@@ -362,8 +363,10 @@ function getInitialTransform(): d3.ZoomTransform {
     return d3.zoomIdentity
 
   const n = Math.min(props.initialVisibleCount, sorted.length)
-  const firstStart = sorted[0].start
-  const lastEnd = sorted[n - 1].end ?? sorted[n - 1].start + sorted[n - 1].length
+  const firstSeq = sorted[0]!
+  const lastSeq = sorted[n - 1]!
+  const firstStart = firstSeq.start
+  const lastEnd = lastSeq.end ?? lastSeq.start + lastSeq.length
 
   // We need a transform T such that T.rescaleX(baseXScale) maps [firstStart, lastEnd] to [0, innerWidth]
   // k = fullRange / subRange, tx = -k * baseXScale(firstStart)
@@ -464,14 +467,8 @@ watch([() => props.sequences, () => props.width, () => props.height], () => {
       </template>
     </ClientOnly>
     <UAlert
-      v-for="(warning, index) in warnings"
-      :key="index"
-      color="warning"
-      variant="subtle"
-      icon="i-heroicons-exclamation-triangle"
-      closable
-      :title="warning"
-      class="mt-1"
+      v-for="(warning, index) in warnings" :key="index" color="warning" variant="subtle"
+      icon="i-heroicons-exclamation-triangle" closable :title="warning" class="mt-1"
     />
   </div>
 </template>

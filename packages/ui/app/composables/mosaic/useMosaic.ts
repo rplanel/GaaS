@@ -1,4 +1,4 @@
-import type { Coordinator } from '@uwdata/mosaic-core'
+import type { Coordinator, QueryType } from '@uwdata/mosaic-core'
 import type { ShallowRef } from 'vue'
 import { loadCSV, loadObjects, loadParquet } from '@uwdata/mosaic-sql'
 import { useAsyncState } from '@vueuse/core'
@@ -56,7 +56,7 @@ export function useMosaic(params: useMosaicParams) {
     return undefined
   })
 
-  async function execQuery(qs: MaybeRef<string | undefined>) {
+  async function execQuery(qs: MaybeRef<QueryType | undefined>) {
     const query = toValue(qs)
     pending.value = true
     if (!query || !coordinator) {

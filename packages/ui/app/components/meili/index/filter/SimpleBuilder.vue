@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { InputMenuProps } from '@nuxt/ui'
 import type { FacetDistribution, FacetStats, SearchParams } from 'meilisearch'
+import type { FacetOperators } from '../../../../utils/filterSchema'
 import { useFacetFilterBuilder } from '../../../../composables/meili/useFacetFilterBuilder'
+import { BuilderStateSchema } from '../../../../utils/filterSchema'
 import MeiliIndexFilterFormComparisonNumberInput from './form/ComparisonNumberInput.vue'
 import MeiliIndexFilterFormComparisonStringInput from './form/ComparisonStringInput.vue'
 import MeiliIndexFilterFormRangeInput from './form/RangeInput.vue'
@@ -32,7 +34,7 @@ interface SimpleFilterBuilderProps {
    * @param filter The FacetFilter object to add. Must be a valid FacetFilter with attribute, operator, and values properties.
    * @see FacetFilter
    */
-  addFilter: (filter: FacetFilter) => void
+  addFilter?: (filter: FacetFilter) => unknown
 
   inputMenuProps?: InputMenuProps
 }
@@ -71,31 +73,12 @@ watch(facetAttribute, (newVal) => {
     state.attribute = newVal
   }
 }, { immediate: true })
-
-const inputValueComponent = computed(() => {
-  if (filterType.value === 'set') {
-    return MeiliIndexFilterFormSetInput
-  }
-  else if (filterType.value === 'range') {
-    return MeiliIndexFilterFormRangeInput
-  }
-  else if (filterType.value === 'comparison' && attributeType.value === 'continuous') {
-    return MeiliIndexFilterFormComparisonNumberInput
-  }
-  else if (filterType.value === 'comparison' && attributeType.value === 'categorical') {
-    return MeiliIndexFilterFormComparisonStringInput
-  }
-  else if (filterType.value === 'comparison' && attributeType.value === 'categorical') {
-    return MeiliIndexFilterFormSetInput
-  }
-  return null
-})
 </script>
 
 <template>
   <div>
     <pre v-if="filterError">Error: {{ filterError }}</pre>
-    <UForm :schema="FacetFilterSchema" :state="state" @submit="onSubmit">
+    <UForm :schema="BuilderStateSchema" :state="state" @submit="onSubmit">
       <div class="flex flex-col gap-2">
         <div class="flex gap-2">
           <UFormField v-if="!facetAttribute" label="Attribute" name="attribute">
@@ -104,23 +87,49 @@ const inputValueComponent = computed(() => {
 
           <UFormField label="Operator" name="operator">
             <UInputMenu
-              v-model="state.operator"
-              v-bind="inputMenuProps"
+              :model-value="state.operator"
               :items="facetOperators"
               value-key="operator"
               label-key="label"
+              @update:model-value="(v) => state.operator = v ? (v as FacetOperators) : undefined"
             />
           </UFormField>
 
-          <UFormField v-if="inputValueComponent" label="Values" name="values">
-            <component
-              :is="inputValueComponent" v-if="inputValueComponent"
-              v-model="state.values"
+          <UFormField v-if="filterType" label="Values" name="values">
+            <MeiliIndexFilterFormSetInput
+              v-if="filterType === 'set'"
+              v-model="state.values as string[]"
               :meili-index="meiliIndex"
-              :filter-attribute="state.attribute"
-              :filter-operator="state.operator"
+              :filter-attribute="state.attribute!"
+              :filter-operator="state.operator as SetOperator"
               :facet-distribution="facetDistribution"
+              :input-menu-props="inputMenuProps"
+              :search-params="searchParams"
+            />
+            <MeiliIndexFilterFormRangeInput
+              v-else-if="filterType === 'range'"
+              v-model="state.values as [number, number]"
+              :meili-index="meiliIndex"
+              :filter-attribute="state.attribute!"
+              :filter-operator="state.operator as SetOperator"
               :facet-stats="facetStats"
+            />
+            <MeiliIndexFilterFormComparisonNumberInput
+              v-else-if="filterType === 'comparison' && attributeType === 'continuous'"
+              v-model="state.values as number"
+              :meili-index="meiliIndex"
+              :filter-attribute="state.attribute!"
+              :filter-operator="state.operator as SetOperator"
+              :facet-stats="facetStats"
+            />
+            <MeiliIndexFilterFormComparisonStringInput
+              v-else-if="filterType === 'comparison' && attributeType === 'categorical'"
+              v-model="state.values as string"
+              :meili-index="meiliIndex"
+              :filter-attribute="state.attribute!"
+              :filter-operator="state.operator as SetOperator"
+              :facet-distribution="facetDistribution"
+              :input-menu-props="inputMenuProps"
               :search-params="searchParams"
             />
           </UFormField>

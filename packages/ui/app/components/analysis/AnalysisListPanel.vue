@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { ButtonProps } from '@nuxt/ui'
-// import type { Database } from '../../types'
+import type { ArrayOrNested, ButtonProps, DropdownMenuItem } from '@nuxt/ui'
 import type { Database } from 'nuxt-galaxy'
 import type { AnalysesListProvide } from '../../layouts/default.vue'
 import type { SanitizedAnalysis } from '../../pages/analyses/index.vue'
@@ -24,7 +23,7 @@ const { data: analyses, refresh: refreshAnalyses } = useQuery(
 
 useSupabaseRealtime('galaxy:analyses', 'analyses', refreshAnalyses)
 
-const items = [
+const items: ArrayOrNested<DropdownMenuItem> = [
   [
     {
       label: 'Rename',
@@ -75,7 +74,7 @@ const sanitizedAnalyses = computed<SanitizedAnalysis[]>(() => {
   const analysesVal = toValue(analyses)
   if (analysesVal && Array.isArray(analysesVal)) {
     return analysesVal?.map((a) => {
-      const { id, name, state, is_sync } = a
+      const { id, name, state, histories: { is_sync } } = a
       return {
         id,
         name,
@@ -186,16 +185,12 @@ async function editAnalysisName(id: number) {
 <template>
   <div class="overflow-y-auto divide-y divide-default overflow-x-auto">
     <div
-      v-for="analysis in sanitizedAnalyses"
-      :key="analysis.id"
+      v-for="analysis in sanitizedAnalyses" :key="analysis.id"
       :ref="(el) => { analysisRefs[analysis.id] = el as Element | null }"
     >
-      <NuxtLink
-        :to="`/analyses/${analysis.id}/results`"
-      >
+      <NuxtLink :to="`/analyses/${analysis.id}/results`">
         <div
-          class="flex flex-col cursor-pointer border-l-2 transition-colors p-4 sm:px-6"
-          :class="[
+          class="flex flex-col cursor-pointer border-l-2 transition-colors p-4 sm:px-6" :class="[
             analysisId === analysis.id
               ? 'border-primary bg-primary/10'
               : 'border-bg hover:border-primary hover:bg-primary/5',
@@ -210,29 +205,19 @@ async function editAnalysisName(id: number) {
                 <UTooltip :text="analysis.name">
                   <GalaxyStatus :state="analysis.state" />
                 </UTooltip>
-              <!-- Content (hidden when collapsed) -->
-              <!-- Editing mode -->
+                <!-- Content (hidden when collapsed) -->
+                <!-- Editing mode -->
               </div>
               <!-- item title -->
               <div class="truncate">
                 <template v-if="isEditingAnalyses?.[analysis.id]">
-                  <UInput
-                    v-model="isEditingAnalyses[analysis.id]"
-                    size="sm"
-                    class="flex-1"
-                  />
+                  <UInput v-model="isEditingAnalyses[analysis.id]" size="sm" class="flex-1" />
                   <UButton
-                    color="success"
-                    variant="ghost"
-                    size="sm"
-                    icon="i-lucide:check"
+                    color="success" variant="ghost" size="sm" icon="i-lucide:check"
                     @click.prevent="editAnalysisName(analysis.id)"
                   />
                   <UButton
-                    color="warning"
-                    variant="ghost"
-                    size="sm"
-                    icon="i-mdi:cancel"
+                    color="warning" variant="ghost" size="sm" icon="i-mdi:cancel"
                     @click.prevent="resetEditAnalysis(analysis.id)"
                   />
                 </template>

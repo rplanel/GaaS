@@ -15,7 +15,7 @@ async function supabaseInstancesQuery({ instanceUrl, supabase }: { instanceUrl: 
     .from('instances')
     .select()
     .eq('url', instanceUrl)
-    .limit(1)
+    .single()
     .then(supabaseResponseToData)
 }
 

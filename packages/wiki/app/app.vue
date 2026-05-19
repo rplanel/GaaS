@@ -1,13 +1,10 @@
 <script setup lang="ts">
-import type { SupabaseTypes } from '#build/types/database'
+import type { Database } from 'nuxt-galaxy'
 import { useNavigationMenuItems } from '@gaas/ui/app/composables/useNavigationMenuItems'
 import { useAppConfig, useAsyncData, useHead, useLazyAsyncData, useSeoMeta } from 'nuxt/app'
 import { computed, provide, ref } from 'vue'
 
-type Database = SupabaseTypes.Database
-
 const { gaasUi: { seo, navigationMenuItems: navigationMenuItemsFromConf } } = useAppConfig()
-
 const { data: navigation } = await useAsyncData('navigation', () => queryCollectionNavigation('content'))
 const { data: files } = useLazyAsyncData('search', () => queryCollectionSearchSections('content'), {
   server: false,

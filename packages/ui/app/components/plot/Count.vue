@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { Table } from '@uwdata/flechette'
 import type { Coordinator, Selection } from '@uwdata/mosaic-core'
 import type { FilterExpr } from '@uwdata/mosaic-sql'
 import { makeClient } from '@uwdata/mosaic-core'
@@ -44,7 +45,7 @@ watchEffect((onCleanup) => {
       const result = await coordinator.query(
         Query.from(tableName).select({ count: count() }),
       )
-      totalCount.value = result.get(0).count
+      totalCount.value = (result as unknown as Table).get(0).count as number
     },
     query: (predicate: FilterExpr) => {
       // Returns a query to retrieve the data.
@@ -56,7 +57,8 @@ watchEffect((onCleanup) => {
     },
     queryResult: (data) => {
       // The query result is available.
-      filteredCount.value = data.get(0).count
+      const table = data as Table
+      filteredCount.value = table.get(0).count as number
       isError.value = false
       isPending.value = false
     },
@@ -81,12 +83,7 @@ watchEffect((onCleanup) => {
 
 <template>
   <div v-if="percent" class="w-full">
-    <UProgress
-      v-model="percent"
-      color="info"
-      size="2xl"
-      :max="100"
-    />
+    <UProgress v-model="percent" color="info" size="2xl" :max="100" />
 
     <div class="text-dimmed text-sm mt-1">
       {{ progressLabel }}
