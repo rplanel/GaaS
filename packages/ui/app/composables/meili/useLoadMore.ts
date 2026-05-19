@@ -53,9 +53,6 @@ export function useLoadMore(options: UseLoadMoreOptions) {
    * This function fetches data from MeiliSearch using the provided pagination parameters
    * (current page and page size) along with the current filter and search term values.
    *
-   * @param params - The pagination state object
-   * @param params.currentPage - The page number to fetch (1-indexed)
-   * @param params.currentPageSize - The number of items per page
    * @returns A promise that resolves when the search operation completes
    *
    * @example
