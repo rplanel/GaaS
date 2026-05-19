@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.4-beta.0](https://gitlab.pasteur.fr/hub/GaaS/compare/v0.0.3...v0.0.4-beta.0) (2026-05-19)
+
 ## [0.0.3](https://gitlab.pasteur.fr/hub/GaaS/compare/v0.0.3-alpha.5...v0.0.3) (2026-05-19)
 
 
