@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import { useCategoryHeader } from '#layers/@gaas-ui/app/composables/plot/table/useCategoryHeader'
-import { useHistogramHeader } from '#layers/@gaas-ui/app/composables/plot/table/useHistogramHeader'
+import { useCategoryHeader } from '#layers/@gaas/ui/app/composables/plot/table/useCategoryHeader'
+import { useHistogramHeader } from '#layers/@gaas/ui/app/composables/plot/table/useHistogramHeader'
 import { coordinator, DuckDBWASMConnector, Selection } from '@uwdata/mosaic-core'
 import { ref } from 'vue'
 

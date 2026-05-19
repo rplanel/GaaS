@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AnalysisIOsWithStoratePathAndSize } from './IoDatasetsList.vue'
-import { getFileTypeInfo } from '#layers/@gaas-ui/app/utils/fileTypeIcon'
+import { getFileTypeInfo } from '#layers/@gaas/ui/app/utils/fileTypeIcon'
 import DOMPurify from 'isomorphic-dompurify'
 
 interface Props {

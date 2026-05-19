@@ -3,9 +3,9 @@ import type {
   MosaicClient,
 } from '@uwdata/mosaic-core'
 import MeiliIndexDataTableSortColumn from '#components'
-import { useListIdsClient } from '#layers/@gaas-ui/app/composables/mosaic/useListIdsClient'
-import { useCategoryHeader } from '#layers/@gaas-ui/app/composables/plot/table/useCategoryHeader'
-import { useHistogramHeader } from '#layers/@gaas-ui/app/composables/plot/table/useHistogramHeader'
+import { useListIdsClient } from '#layers/@gaas/ui/app/composables/mosaic/useListIdsClient'
+import { useCategoryHeader } from '#layers/@gaas/ui/app/composables/plot/table/useCategoryHeader'
+import { useHistogramHeader } from '#layers/@gaas/ui/app/composables/plot/table/useHistogramHeader'
 
 import {
   coordinator,
