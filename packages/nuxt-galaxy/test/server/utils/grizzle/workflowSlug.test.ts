@@ -88,11 +88,11 @@ describe('toWorkflowComponentName', () => {
   })
 
   it('handles slugs with dotted version suffixes', () => {
-    expect(toWorkflowComponentName('my-tool-1.0.0')).toBe('MyTool1.0.0')
+    expect(toWorkflowComponentName('my-tool-1.0.0')).toBe('MyTool100')
   })
 
   it('handles sanitized build metadata in the component name', () => {
-    expect(toWorkflowComponentName('my-tool-2.0.0-galaxy1')).toBe('MyTool2.0.0Galaxy1')
+    expect(toWorkflowComponentName('my-tool-2.0.0-galaxy1')).toBe('MyTool200Galaxy1')
     expect(toWorkflowComponentName('defense-finder-200-galaxy1')).toBe('DefenseFinder200Galaxy1')
   })
 
