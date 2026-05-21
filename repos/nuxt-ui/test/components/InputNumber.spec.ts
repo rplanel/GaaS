@@ -1,0 +1,147 @@
+import { reactive } from 'vue'
+import { describe, it, expect, test } from 'vitest'
+import { axe } from 'vitest-axe'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { renderEach } from '../component-render'
+import { flushPromises } from '@vue/test-utils'
+import InputNumber from '../../src/runtime/components/InputNumber.vue'
+import type { FormInputEvents } from '../../src/module'
+import { renderForm } from '../utils/form'
+import theme from '#build/ui/input-number'
+
+describe('InputNumber', () => {
+  const sizes = Object.keys(theme.variants.size) as any
+  const variants = Object.keys(theme.variants.variant) as any
+
+  renderEach(InputNumber, [
+    // Props
+    ['with name', { props: { name: 'name' } }],
+    ['with placeholder', { props: { placeholder: 'Number...' } }],
+    ['with disabled', { props: { disabled: true } }],
+    ['with required', { props: { required: true } }],
+    ['with orientation vertical', { props: { orientation: 'vertical' } }],
+    ['with incrementIcon', { props: { incrementIcon: 'i-lucide-arrow-left' } }],
+    ['with decrementIcon', { props: { decrementIcon: 'i-lucide-arrow-right' } }],
+    ['without increment', { props: { increment: false } }],
+    ['without increment vertical', { props: { increment: false, orientation: 'vertical' } }],
+    ['without decrement', { props: { decrement: false } }],
+    ['without decrement vertical', { props: { decrement: false, orientation: 'vertical' } }],
+    ['without increment and decrement', { props: { increment: false, decrement: false } }],
+    ['without increment and decrement vertical', { props: { increment: false, decrement: false, orientation: 'vertical' } }],
+    ...sizes.map((size: string) => [`with size ${size}`, { props: { size } }]),
+    ...variants.map((variant: string) => [`with primary variant ${variant}`, { props: { variant } }]),
+    ...variants.map((variant: string) => [`with primary variant ${variant} highlight`, { props: { variant, highlight: true } }]),
+    ...variants.map((variant: string) => [`with neutral variant ${variant}`, { props: { variant, color: 'neutral' } }]),
+    ...variants.map((variant: string) => [`with neutral variant ${variant} highlight`, { props: { variant, color: 'neutral', highlight: true } }]),
+    ['with ariaLabel', { attrs: { 'aria-label': 'Aria label' } }],
+    ['with .optional modifier', { props: { modelModifiers: { optional: true } } }, { input: '', expected: undefined }],
+    ['with as', { props: { as: 'section' } }],
+    ['with class', { props: { class: 'absolute' } }],
+    ['with ui', { props: { ui: { base: 'rounded-full' } } }],
+    // Slots
+    ['with increment slot', { slots: { increment: () => '+' } }],
+    ['with decrement slot', { slots: { decrement: () => '-' } }]
+  ])
+
+  it('passes accessibility tests', async () => {
+    const wrapper = await mountSuspended(InputNumber, {
+      props: {
+        placeholder: 'Enter a number',
+        required: true,
+        incrementIcon: 'i-lucide-plus',
+        decrementIcon: 'i-lucide-minus'
+      }
+    })
+
+    expect(await axe(wrapper.element)).toHaveNoViolations()
+  })
+
+  describe('emits', () => {
+    test('update:modelValue event', async () => {
+      const wrapper = await mountSuspended(InputNumber)
+      const input = wrapper.findComponent({ name: 'NumberFieldRoot' })
+      await input.setValue(1)
+      expect(wrapper.emitted()).toMatchObject({ 'update:modelValue': [[1]] })
+      expect(1).toBe(1)
+    })
+
+    test('change event', async () => {
+      const wrapper = await mountSuspended(InputNumber)
+      const input = wrapper.findComponent({ name: 'NumberFieldRoot' })
+      await input.setValue(1)
+      expect(wrapper.emitted()).toMatchObject({ change: [[{ type: 'change' }]] })
+    })
+
+    test('blur event', async () => {
+      const wrapper = await mountSuspended(InputNumber)
+      const input = wrapper.findComponent({ name: 'NumberFieldInput' })
+      await input.trigger('blur')
+      expect(wrapper.emitted()).toMatchObject({ blur: [[{ type: 'blur' }]] })
+    })
+  })
+
+  describe('form integration', async () => {
+    async function createForm(validateOn?: FormInputEvents[]) {
+      const wrapper = await renderForm({
+        state: reactive({ value: 0 }),
+        props: {
+          validateOn,
+          validateOnInputDelay: 0,
+          async validate(state: any) {
+            if (state.value !== 1)
+              return [{ name: 'value', message: 'Error message' }]
+            return []
+          }
+        },
+        slotTemplate: `
+        <UFormField name="value">
+          <UInputNumber id="input" v-model="state.value" />
+        </UFormField>
+        `
+      })
+      const input = wrapper.findComponent({ name: 'NumberFieldRoot' })
+      return {
+        wrapper,
+        input
+      }
+    }
+
+    test('validate on blur works', async () => {
+      const { input, wrapper } = await createForm(['blur'])
+      const inputDom = wrapper.find('#input')
+
+      await inputDom.trigger('blur')
+      await flushPromises()
+      expect(wrapper.text()).toContain('Error message')
+
+      await input.setValue(1)
+      await inputDom.trigger('blur')
+      await flushPromises()
+      expect(wrapper.html()).not.toContain('Error message')
+    })
+
+    test('validate on change works', async () => {
+      const { input, wrapper } = await createForm(['change'])
+
+      await input.setValue(2)
+      await flushPromises()
+      expect(wrapper.text()).toContain('Error message')
+
+      await input.setValue(1)
+      await flushPromises()
+      expect(wrapper.text()).not.toContain('Error message')
+    })
+
+    test('validate on input works', async () => {
+      const { input, wrapper } = await createForm(['input'])
+
+      await input.setValue(10)
+      await flushPromises()
+      expect(wrapper.html()).toContain('Error message')
+
+      await input.setValue(1)
+      await flushPromises()
+      expect(wrapper.html()).not.toContain('Error message')
+    })
+  })
+})

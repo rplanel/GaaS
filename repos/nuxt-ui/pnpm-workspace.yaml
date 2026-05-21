@@ -1,0 +1,30 @@
+packages:
+  - ./
+  - cli
+  - docs
+  - playgrounds/nuxt
+  - playgrounds/vue
+  - playgrounds/repl
+
+ignoreWorkspaceRootCheck: true
+
+linkWorkspacePackages: true
+
+overrides:
+  '@nuxt/kit': ^4.4.6
+  '@nuxt/test-utils': 4.0.2
+  '@nuxt/ui': workspace:*
+  unplugin: ^3.0.0
+  c12: ^3.3.2
+  typescript: ^6.0.3
+
+allowBuilds:
+  better-sqlite3: true
+  puppeteer: true
+  sharp: true
+  '@parcel/watcher': false
+  '@tailwindcss/oxide': false
+  '@vercel/speed-insights': false
+  esbuild: false
+  unrs-resolver: false
+  vue-demi: false

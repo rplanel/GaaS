@@ -138,9 +138,7 @@ async function handleDownload(payload: AnalysisIOsWithStoratePathAndSize | undef
       >
         <GalaxyAnalysisIoDataset
           :dataset="dataset"
-          :result-route="dataset?.id != null ? resultRoutes?.[dataset.id]?.to : undefined"
           :is-preview-open="openPreviews.has(i)"
-          :preview-content="getHasPreviewContent(dataset) ? getSanitizedPeek(dataset) : ''"
           @toggle-preview="togglePreview(i)" @download="handleDownload"
         />
       </motion.div>
