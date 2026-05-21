@@ -18,8 +18,13 @@ export { analysesOutputsViewQuery, analysisOutputsViewByIdQuery } from './analys
 
 // Datasets (datasets.ts - download functionality and preview)
 export { SUPABASE_DATASETS_QUERY_KEYS } from './datasets'
-export { datasetsByIdQuery, previewDatasetQuery, useDownloadDataset } from './datasets'
+export { datasetsByAnalysisIdQuery, datasetsByIdQuery, previewDatasetQuery } from './datasets'
 export type { PreviewResult } from './datasets'
+
+// Datasets blob (datasetsBlob.ts - download functionality that returns Blob)
+export { SUPABASE_DATASETS_BLOB_QUERY_KEYS } from './datasetsBlob'
+export { analysisDatasetsQuery, supabaseAnalysisDatasetsQuery, useDownloadDataset } from './datasetsBlob'
+export type { DatasetBlob } from './datasetsBlob'
 
 // Disk usage
 export { DISK_USAGE_QUERY_KEYS } from './diskUsage'

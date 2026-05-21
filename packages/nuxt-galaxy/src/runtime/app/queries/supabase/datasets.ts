@@ -1,13 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../../../types/database'
-import { useSupabaseClient } from '#imports'
-import { defineQuery, defineQueryOptions, useQuery } from '@pinia/colada'
-import { ref, toValue } from 'vue'
+import { defineQueryOptions } from '@pinia/colada'
+import { supabaseAnalysesInputsViewByAnalysisId } from './analysisInputsView'
+import { supabaseAnalysesOutputsViewByAnalysisId } from './analysisOutputsView'
 
 export const SUPABASE_DATASETS_QUERY_KEYS = {
   root: ['supabase', 'datasets'] as const,
   list: () => [...SUPABASE_DATASETS_QUERY_KEYS.root, 'list'] as const,
   byId: (id: number) => [...SUPABASE_DATASETS_QUERY_KEYS.root, id] as const,
+  byAnalysisId: (analysisId: number) => [...SUPABASE_DATASETS_QUERY_KEYS.root, 'by-analysis', analysisId] as const,
   download: (storagePath?: string, bucketName?: string) => [...SUPABASE_DATASETS_QUERY_KEYS.root, 'download', {
     storagePath,
     bucketName,
@@ -30,22 +31,19 @@ export const datasetsByIdQuery = defineQueryOptions(
   }),
 )
 
-async function supabaseDownloadDataset(supabase: SupabaseClient<Database>, storagePath: string): Promise<Blob> {
-  const { data, error } = await supabase
-    .storage
-    .from('analysis_files')
-    .download(storagePath)
-
-  if (error) {
-    throw error
-  }
-
-  if (!data) {
-    throw new Error('No data returned from download')
-  }
-
-  return data
+export async function supabaseDatasetsByAnalysisId(supabase: SupabaseClient<Database>, analysisId: number) {
+  return await Promise.all([
+    supabaseAnalysesInputsViewByAnalysisId(supabase, analysisId),
+    supabaseAnalysesOutputsViewByAnalysisId(supabase, analysisId),
+  ])
 }
+
+export const datasetsByAnalysisIdQuery = defineQueryOptions(
+  ({ analysisId, supabase }: { analysisId: number, supabase: SupabaseClient<Database> }) => ({
+    key: SUPABASE_DATASETS_QUERY_KEYS.byAnalysisId(analysisId),
+    query: () => supabaseDatasetsByAnalysisId(supabase, analysisId),
+  }),
+)
 
 /**
  *
@@ -99,25 +97,6 @@ export async function supabasePreviewDataset(supabase: SupabaseClient<Database>,
     fileSize,
   }
 }
-
-export const useDownloadDataset = defineQuery(() => {
-  const supabase = useSupabaseClient<Database>()
-  const bucketName = ref<string>('analysis_files')
-  const storagePath = ref<string | undefined>(undefined)
-
-  const { state, ...rest } = useQuery({
-    key: SUPABASE_DATASETS_QUERY_KEYS.download(toValue(storagePath), toValue(bucketName)),
-    enabled: () => !!supabase && !!toValue(bucketName) && !!toValue(storagePath),
-    query: () => supabaseDownloadDataset(supabase, toValue(storagePath)!),
-  })
-
-  return {
-    bucketName,
-    storagePath,
-    state,
-    ...rest,
-  }
-})
 
 export const previewDatasetQuery = defineQueryOptions(
   ({ storagePath, supabase }: { storagePath: string, supabase: SupabaseClient<Database> }) => ({

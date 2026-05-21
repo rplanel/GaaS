@@ -16,7 +16,7 @@ const targetComponentName = toRef(() => props.targetComponentName)
     <UAlert
       v-if="targetComponentName" icon="i-lucide:puzzle" color="info" variant="outline"
       :title="targetComponentName"
-      :description="`Create \`app/components/${targetComponentName}.vue\` to customize the result page for workflow '${workflowSlug}'.`"
+      :description="`Create \`app/components/${targetComponentName}.global.vue\` to customize the result page for workflow '${workflowSlug}'.`"
     />
   </div>
 </template>
