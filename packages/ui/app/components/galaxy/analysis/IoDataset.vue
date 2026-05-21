@@ -5,10 +5,9 @@ import DOMPurify from 'isomorphic-dompurify'
 
 interface Props {
   dataset: AnalysisIOsWithStoratePathAndSize
-  resultRoute?: string | undefined
   isPreviewOpen?: boolean
 }
-const props = withDefaults(defineProps<Props>(), { resultRoute: undefined, isPreviewOpen: false })
+const props = withDefaults(defineProps<Props>(), { isPreviewOpen: false })
 const emit = defineEmits<{
   (e: 'togglePreview'): void
   (e: 'download', dataset: AnalysisIOsWithStoratePathAndSize): void
@@ -68,64 +67,55 @@ const hasPreview = computed(() => !!sanitizedPeek.value)
 </script>
 
 <template>
-  <div class="rounded-lg border border-default hover:border-accented transition-colors">
-    <!-- Card header -->
-    <div class="flex items-center gap-3 p-4">
-      <!-- File type icon -->
-      <div class="shrink-0">
-        <UIcon :name="fileType.icon" :class="fileType.color" class="size-6" />
-      </div>
+  <UCard variant="soft" class="h-full">
+    <!-- Header: Full width title + metadata -->
+    <template #header>
+      <div class="flex items-start gap-3">
+        <!-- File type icon -->
+        <UIcon :name="fileType.icon" :class="fileType.color" class="size-6 shrink-0" />
 
-      <!-- Dataset info -->
-      <div class="flex-1 min-w-0">
-        <h3 class="font-medium text-sm truncate" :title="dataset?.dataset_name || undefined">
-          {{ dataset?.dataset_name || 'Unknown Dataset' }}
-        </h3>
-        <div class="flex items-center gap-2 mt-1 flex-wrap">
-          <UBadge v-if="fileExtension" variant="subtle" color="neutral" size="xs">
-            {{ fileExtension }}
-          </UBadge>
-          <span v-if="dataset?.humanFileSize" class="text-xs text-muted">
-            {{ dataset.humanFileSize }}
-          </span>
-          <span v-if="dataLines" class="text-xs text-muted">
-            {{ dataLines.toLocaleString() }} lines
-          </span>
-          <span v-if="galaxyMeta?.misc_blurb" class="text-xs text-muted">
-            {{ galaxyMeta.misc_blurb }}
-          </span>
+        <!-- Dataset info -->
+        <div class="flex-1 min-w-0">
+          <h3 class="font-medium text-sm truncate" :title="dataset?.dataset_name || undefined">
+            {{ dataset?.dataset_name || 'Unknown Dataset' }}
+          </h3>
+          <div class="flex items-center gap-2 mt-1 flex-wrap">
+            <UBadge v-if="fileExtension" variant="subtle" color="neutral" size="xs">
+              {{ fileExtension }}
+            </UBadge>
+            <span v-if="dataset?.humanFileSize" class="text-xs text-muted">
+              {{ dataset.humanFileSize }}
+            </span>
+            <span v-if="dataLines" class="text-xs text-muted">
+              {{ dataLines.toLocaleString() }} lines
+            </span>
+            <span v-if="galaxyMeta?.misc_blurb" class="text-xs text-muted">
+              {{ galaxyMeta.misc_blurb }}
+            </span>
+          </div>
         </div>
       </div>
+    </template>
 
-      <!-- Actions -->
-      <div class="flex items-center gap-1 shrink-0">
-        <UButton
-          v-if="resultRoute" icon="i-lucide-chart-no-axes-combined" color="primary" variant="ghost" size="xs"
-          label="Results" :to="resultRoute"
-        />
+    <template v-if="isPreviewOpen && sanitizedPeek" #default>
+      <!-- Body: Preview content (only when open + has content) -->
+      <div
+        class="file-preview text-xs font-mono bg-muted p-4 overflow-x-auto max-h-80 overflow-y-auto"
+        v-html="sanitizedPeek"
+      />
+    </template>
+    <!-- Footer: Actions at bottom -->
+    <template #footer>
+      <div class="flex items-center justify-end gap-1">
         <UButton
           v-if="hasPreview" :icon="isPreviewOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-          color="neutral" variant="ghost" size="xs" :label="isPreviewOpen ? 'Hide' : 'Preview'"
-          @click="emit('togglePreview')"
+          color="neutral" variant="ghost" size="xs" label="Preview" @click="emit('togglePreview')"
         />
         <UButton
           icon="i-lucide-download" color="primary" variant="soft" size="xs" label="Download"
           @click="emit('download', dataset)"
         />
       </div>
-    </div>
-
-    <!-- Expandable preview panel -->
-    <UCollapsible :open="isPreviewOpen" :unmount-on-hide="true">
-      <template #content>
-        <div class="border-t border-default">
-          <div
-            v-if="sanitizedPeek"
-            class="file-preview text-xs font-mono bg-muted p-4 overflow-x-auto max-h-80 overflow-y-auto"
-            v-html="sanitizedPeek"
-          />
-        </div>
-      </template>
-    </UCollapsible>
-  </div>
+    </template>
+  </UCard>
 </template>

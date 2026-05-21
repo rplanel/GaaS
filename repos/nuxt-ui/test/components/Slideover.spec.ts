@@ -1,0 +1,49 @@
+import { describe, it, expect } from 'vitest'
+import { axe } from 'vitest-axe'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { renderEach } from '../component-render'
+import Slideover from '../../src/runtime/components/Slideover.vue'
+import theme from '#build/ui/slideover'
+
+describe('Slideover', () => {
+  const sides = Object.keys(theme.variants.side) as any
+
+  const props = { open: true, portal: false }
+
+  renderEach(Slideover, [
+    // Props
+    ['with open', { props }],
+    ['with title', { props: { ...props, title: 'Title' } }],
+    ['with description', { props: { ...props, title: 'Title', description: 'Description' } }],
+    ...sides.map((side: string) => [`with ${side} side`, { props: { ...props, side, title: 'Title', description: 'Description' } }]),
+    ...sides.map((side: string) => [`with ${side} side inset`, { props: { ...props, side, inset: true, title: 'Title', description: 'Description' } }]),
+    ['without overlay', { props: { ...props, overlay: false, title: 'Title', description: 'Description' } }],
+    ['without transition', { props: { ...props, transition: false, title: 'Title', description: 'Description' } }],
+    ['without close', { props: { ...props, close: false, title: 'Title', description: 'Description' } }],
+    ['with closeIcon', { props: { ...props, closeIcon: 'i-lucide-trash' } }],
+    ['with class', { props: { ...props, class: 'bg-elevated' } }],
+    ['with ui', { props: { ...props, ui: { close: 'end-2' } } }],
+    // Slots
+    ['with default slot', { props, slots: { default: () => 'Default slot' } }],
+    ['with content slot', { props, slots: { content: () => 'Content slot' } }],
+    ['with header slot', { props, slots: { header: () => 'Header slot' } }],
+    ['with title slot', { props, slots: { title: () => 'Title slot' } }],
+    ['with description slot', { props, slots: { description: () => 'Description slot' } }],
+    ['with actions slot', { props, slots: { actions: () => 'Actions slot' } }],
+    ['with close slot', { props, slots: { close: () => 'Close slot' } }],
+    ['with body slot', { props, slots: { body: () => 'Body slot' } }],
+    ['with footer slot', { props, slots: { footer: () => 'Footer slot' } }]
+  ])
+
+  it('passes accessibility tests', async () => {
+    const wrapper = await mountSuspended(Slideover, {
+      props: {
+        ...props,
+        title: 'Title',
+        description: 'Description'
+      }
+    })
+
+    expect(await axe(wrapper.element)).toHaveNoViolations()
+  })
+})
