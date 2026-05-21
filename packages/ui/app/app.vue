@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { PiniaColadaDevtools } from '@pinia/colada-devtools'
-
 const { gaasUi: { seo } } = useAppConfig()
 useHead({
   meta: [
@@ -28,5 +26,4 @@ useSeoMeta({
       <NuxtPage />
     </NuxtLayout>
   </UApp>
-  <PiniaColadaDevtools />
 </template>
