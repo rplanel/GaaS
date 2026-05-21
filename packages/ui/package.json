@@ -64,7 +64,6 @@
   },
   "devDependencies": {
     "@nuxt/test-utils": "catalog:testing",
-    "@pinia/colada-devtools": "catalog:vue",
     "@vue/test-utils": "catalog:testing",
     "drizzle-kit": "catalog:",
     "eslint": "catalog:",
