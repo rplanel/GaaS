@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.4-beta.1](https://gitlab.pasteur.fr/hub/GaaS/compare/v0.0.4-beta.0...v0.0.4-beta.1) (2026-05-21)
+
+
+### Bug Fixes
+
+* **tests:** update workflow slug ([99a8c14](https://gitlab.pasteur.fr/hub/GaaS/commit/99a8c14ea1a306bca62b9c6d1b2e756eb3e0b032))
+* workflow result component resolution to match how nuxt work ([0a1a0d6](https://gitlab.pasteur.fr/hub/GaaS/commit/0a1a0d6c960209f46192ddb596a35a4a42f53d64))
+
 ## [0.0.4-beta.0](https://gitlab.pasteur.fr/hub/GaaS/compare/v0.0.3...v0.0.4-beta.0) (2026-05-19)
 
 ## [0.0.3](https://gitlab.pasteur.fr/hub/GaaS/compare/v0.0.3-alpha.5...v0.0.3) (2026-05-19)

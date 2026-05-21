@@ -1,7 +1,7 @@
 {
   "name": "@gaas/wiki",
   "type": "module",
-  "version": "0.0.4-beta.0",
+  "version": "0.0.4-beta.1",
   "main": "./nuxt.config.ts",
   "files": [
     "app",
