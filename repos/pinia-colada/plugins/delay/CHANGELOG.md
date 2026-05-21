@@ -1,0 +1,66 @@
+## [0.1.5](https://github.com/posva/pinia-colada/compare/@pinia/colada-plugin-delay@0.1.4...@pinia/colada-plugin-delay@0.1.5) (2026-02-22)
+
+- refactor!: remove CJS support ([458071a](https://github.com/posva/pinia-colada/commit/458071a3a16f7f93ecde6b0816ae61239769526f))
+
+### Bug Fixes
+
+- missing type in extension ([7964498](https://github.com/posva/pinia-colada/commit/7964498249257f9f1dbf5b4ad86b9adbb203a19d))
+
+### BREAKING CHANGES
+
+- ESM have been natively supported in node since 18 and
+  is now required.
+
+## [0.1.4](https://github.com/posva/pinia-colada/compare/@pinia/colada-plugin-delay@0.1.3...@pinia/colada-plugin-delay@0.1.4) (2025-12-23)
+
+Fix in build
+
+## [0.1.3](https://github.com/posva/pinia-colada/compare/@pinia/colada-plugin-delay@0.1.2...@pinia/colada-plugin-delay@0.1.3) (2025-12-17)
+
+### Bug Fixes
+
+- use extend action to extend entry ([6843e22](https://github.com/posva/pinia-colada/commit/6843e22d00cff3e6318e833f4deb36751be2cc47)), closes [#442](https://github.com/posva/pinia-colada/issues/442)
+
+## [0.1.2](https://github.com/posva/pinia-colada/compare/@pinia/colada-plugin-delay@0.1.1...@pinia/colada-plugin-delay@0.1.2) (2025-12-16)
+
+No changes in this release.
+
+## [0.1.1](https://github.com/posva/pinia-colada/compare/@pinia/colada-plugin-delay@0.1.0...@pinia/colada-plugin-delay@0.1.1) (2025-10-30)
+
+No changes in this release.
+
+## [0.1.0](https://github.com/posva/pinia-colada/compare/@pinia/colada-plugin-delay@0.0.6...@pinia/colada-plugin-delay@0.1.0) (2025-05-21)
+
+### Code Refactoring
+
+- **types:** rename `TResult` into TData ([09338a2](https://github.com/posva/pinia-colada/commit/09338a26a3b2b09463e457a1711900abe6bcdeff))
+
+## [0.0.6](https://github.com/posva/pinia-colada/compare/@pinia/colada-plugin-delay@0.0.5...@pinia/colada-plugin-delay@0.0.6) (2025-04-25)
+
+### Bug Fixes
+
+- loose peer dep requirement until v1 ([a7cd094](https://github.com/posva/pinia-colada/commit/a7cd09461b45f8b2c3255016c3a9e4d6abb0242d)), closes [#264](https://github.com/posva/pinia-colada/issues/264)
+
+## [0.0.5](https://github.com/posva/pinia-colada/compare/@pinia/colada-plugin-delay@0.0.4...@pinia/colada-plugin-delay@0.0.5) (2025-03-26)
+
+Type fixes
+
+## [0.0.4](https://github.com/posva/pinia-colada/compare/@pinia/colada-plugin-delay@0.0.3...@pinia/colada-plugin-delay@0.0.4) (2025-03-04)
+
+This release contains no changes
+
+## [0.0.3](https://github.com/posva/pinia-colada/compare/@pinia/colada-plugin-delay@0.0.2...@pinia/colada-plugin-delay@0.0.3) (2025-01-31)
+
+No Changes
+
+## [0.0.2](https://github.com/posva/pinia-colada/compare/@pinia/colada-plugin-delay@0.0.1...@pinia/colada-plugin-delay@0.0.2) (2024-11-09)
+
+No changes.
+
+## 0.0.1 (2024-11-06)
+
+### Features
+
+- add initial delay plugin ([42c8760](https://github.com/posva/pinia-colada/commit/42c876047927b777b9e047b2aa8beae90407fbc2))
+- allow extending useQuery return ([ef06628](https://github.com/posva/pinia-colada/commit/ef066280baedfd155eb7f040d72a8f6ef0c8e771))
+- **plugins:** pass scope for added variables ([a3b666f](https://github.com/posva/pinia-colada/commit/a3b666fd8a16fd2ec81017cf928025889e8b5181))

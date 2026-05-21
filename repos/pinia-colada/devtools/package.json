@@ -1,0 +1,74 @@
+{
+  "name": "@pinia/colada-devtools",
+  "type": "module",
+  "version": "0.4.4",
+  "packageManager": "pnpm@10.30.1",
+  "description": "Devtools for Pinia Colada",
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": {
+    "name": "Eduardo San Martin Morote",
+    "email": "posva13@gmail.com"
+  },
+  "license": "MIT",
+  "funding": "https://github.com/sponsors/posva",
+  "homepage": "https://github.com/posva/pinia-colada#readme",
+  "repository": "posva/pinia-colada",
+  "bugs": {
+    "url": "https://github.com/posva/pinia-colada/issues"
+  },
+  "keywords": [
+    "pinia",
+    "plugin",
+    "data",
+    "fetching",
+    "query",
+    "mutation",
+    "cache",
+    "layer"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": "./dist/index.js",
+    "./panel": "./dist-panel/index.js",
+    "./shared": "./dist-shared/index.js"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "dist-panel",
+    "dist-shared"
+  ],
+  "scripts": {
+    "dev:app": "vite",
+    "dev:db": "pnpm run -C ../playground dev:db",
+    "dev": "pnpm run --stream '/^dev:/'",
+    "test:types": "vue-tsc --noEmit",
+    "prebuild": "pnpm -C .. run build",
+    "build:main": "vite build --config vite.config.ts",
+    "build:shared": "vite build --config vite.config.shared.ts",
+    "build:panel": "vite build --config vite.config.panel.ts",
+    "build": "pnpm run --stream '/^build:/'"
+  },
+  "devDependencies": {
+    "@iconify-json/lucide": "^1.2.94",
+    "@pinia/colada": "workspace:^*",
+    "@posva/splitpanes": "^4.0.6",
+    "@tailwindcss/vite": "^4.2.1",
+    "@vueuse/core": "^14.2.1",
+    "mande": "^2.0.9",
+    "match-container": "^0.1.1",
+    "pinia": "^3.0.4",
+    "tailwindcss": "^4.2.1",
+    "unplugin-icons": "^23.0.1",
+    "unplugin-vue-components": "^31.0.0",
+    "vite-plugin-dts": "^4.5.4",
+    "vue": "^3.5.29",
+    "vue-router": "^5.0.3",
+    "vue-tsc": "^3.2.5"
+  }
+}

@@ -1,0 +1,41 @@
+LOCUS       pBbE0c-RFP              2815 bp    DNA     circular  20-AUG-2015
+ACCESSION   pBbE0c-RFP
+VERSION     pBbE0c-RFP.1
+KEYWORDS    .
+FEATURES             Location/Qualifiers
+     rep_origin      complement(1202..1884)
+                     /label="colE1 origin"
+                     /vntifkey="33"
+                     /gene="ColE1 Origin"
+                     /note="REP_ORIGIN REP_ORIGIN [ColE1]"
+                     /note="REP_ORIGIN [ColE1]"
+     terminator      1890..1995
+                     /label="T0"
+                     /vntifkey="43"
+                     /note="TERMINATOR [p15A KanR]"
+                     /note="TERMINATOR TERMINATOR [p15A KanR]"
+                     /gene="Terminator"
+     gene            complement(2011..2670)
+                     /label="CmR"
+                     /gene="CmR"
+                     /vntifkey="22"
+                     /note="GENE [ZFP-GG destination LacUV5 p15A CmR]"
+                     /note="[ZFP-GG destination LacUV5 p15A CmR]"
+     gene            2812..915
+                     /label="RFP cassette"
+                     /gene="RFP cassette"
+                     /note="GENE [pBbE0k-RFP]"
+                     /note="GENE GENE [pBbE0k-RFP]"
+ORIGIN      
+        1 cagctagctc agtcctaggt actgtgctag ctactagtga aagaggagaa atactagatg
+       61 gcttcctccg aagacgttat caaagagttc atgcgtttca aagttcgtat ggaaggttcc
+      121 gttaacggtc acgagttcga aatcgaaggt gaaggtgaag gtcgtccgta cgaaggtacc
+      181 cagaccgcta aactgaaagt taccaaaggt ggtccgctgc cgttcgcttg ggacatcctg
+      241 tccccgcagt tccagtacgg ttccaaagct tacgttaaac acccggctga catcccggac
+      301 tacctgaaac tgtccttccc ggaaggtttc aaatgggaac gtgttatgaa cttcgaagac
+      361 ggtggtgttg ttaccgttac ccaggactcc tccctgcaag acggtgagtt catctacaaa
+      421 gttaaactgc gtggtaccaa cttcccgtcc gacggtccgg ttatgcagaa aaaaaccatg
+      481 ggttgggaag cttccaccga acgtatgtac ccggaagacg gtgctctgaa aggtgaaatc
+      541 aaaatgcgtc tgaaactgaa agacggtggt cactacgacg ctgaagttaa aaccacctac
+      601 atggctaaaa aaccggttca gctgccgggt gcttacaaaa ccgacatcaa actggacatc
+//

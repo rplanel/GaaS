@@ -1,0 +1,65 @@
+name: Publish Any Commit
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'tsdown.config.ts'
+      - 'plugins/*/src/**'
+      - 'plugins/*/package.json'
+      - 'plugins/*/tsdown.config.ts'
+      - 'nuxt/src/**'
+      - 'nuxt/package.json'
+      - 'devtools/src/**'
+      - 'devtools/package.json'
+
+  push:
+    branches:
+      - main
+    tags:
+      - '!**'
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'tsdown.config.ts'
+      - 'plugins/*/src/**'
+      - 'plugins/*/package.json'
+      - 'plugins/*/tsdown.config.ts'
+      - 'nuxt/src/**'
+      - 'nuxt/package.json'
+      - 'devtools/src/**'
+      - 'devtools/package.json'
+
+jobs:
+  build:
+    if: "!startsWith(github.event.pull_request.title, 'renovate/')"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare Nuxt
+        run: pnpm -C ./nuxt dev:prepare
+
+      - name: Build @pinia/colada
+        run: pnpm build
+
+      - name: Build plugins, devtools and Nuxt module
+        run: pnpm build:all
+
+      - name: Release
+        run: pnpm dlx pkg-pr-new publish --compact --pnpm . './plugins/*' ./nuxt ./devtools

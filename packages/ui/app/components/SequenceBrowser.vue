@@ -20,27 +20,27 @@ const props = withDefaults(defineProps<SequenceBrowserProps>(), {
 const margin = { top: 10, right: 20, bottom: 30, left: 20 }
 const innerWidth = computed(() => props.width - margin.left - margin.right)
 const innerHeight = computed(() => props.height - margin.top - margin.bottom)
-
+const sequences = toRef(() => props.sequences)
 const svgRef = useTemplateRef<SVGSVGElement>('svgRef')
 const isClientReady = ref(false)
 
-const validatedSequences = computed(() => {
-  return props.sequences.map((seq) => {
-    const start = seq.start ?? 0
-    const end = seq.end ?? start + seq.length
-    return {
-      ...seq,
-      start,
-      end,
-      length: end - start,
-    }
-  })
-})
+// const validatedSequences = computed(() => {
+//   return props.sequences.map((seq) => {
+//     const start = seq.start ?? 0
+//     const end = seq.end ?? start + seq.length
+//     return {
+//       ...seq,
+//       start,
+//       end,
+//       length: end - start,
+//     }
+//   })
+// })
 
 // Compute warnings separately to avoid side effects in computed
 const warnings = computed(() => {
   const w: string[] = []
-  for (const seq of props.sequences) {
+  for (const seq of sequences.value) {
     const start = seq.start ?? 0
     const end = seq.end ?? start + seq.length
     const computedLength = end - start
@@ -57,8 +57,8 @@ const sequenceExtent = computed(() => {
     return [0, 1] as [number, number]
   }
 
-  const minStart = d3.min(validatedSequences.value, d => d.start ?? 0) ?? 0
-  const maxEnd = d3.max(validatedSequences.value, d => d.end ?? (d.start ?? 0) + d.length) ?? 1
+  const minStart = d3.min(sequences.value, d => d.start ?? 0) ?? 0
+  const maxEnd = d3.max(sequences.value, d => d.end ?? (d.start ?? 0) + d.length) ?? 1
 
   return [minStart, maxEnd] as [number, number]
 })
@@ -72,7 +72,7 @@ const baseXScale = computed(() => {
 
 // Pre-sorted sequences for fast binary search during viewport culling
 const sortedSequences = computed(() => {
-  return [...validatedSequences.value].sort((a, b) => a.start - b.start)
+  return [...sequences.value].sort((a, b) => a.start - b.start)
 })
 
 // Bisector for fast lookup by start position

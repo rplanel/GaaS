@@ -1,0 +1,48 @@
+{
+  "name": "playground",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm run --stream '/^dev:/'",
+    "dev:client": "vite",
+    "dev:db": "json-server --port 7777 db.json",
+    "dev_devtools": "pnpm run -C ../devtools build:panel -w",
+    "preview": "vite preview",
+    "build": "vite build",
+    "type-check": "vue-tsc --build --force"
+  },
+  "dependencies": {
+    "@headlessui/vue": "^1.7.23",
+    "@heroicons/vue": "^2.2.0",
+    "@pinia/colada": "workspace:*",
+    "@pinia/colada-plugin-cache-persister": "workspace:^",
+    "@pinia/colada-plugin-debug": "workspace:^",
+    "@pinia/colada-plugin-retry": "workspace:^",
+    "@vueuse/core": "^14.2.1",
+    "@vueuse/integrations": "^14.2.1",
+    "@vueuse/router": "^14.2.1",
+    "fuse.js": "^7.1.0",
+    "mande": "^2.0.9",
+    "pinia": "^3.0.4",
+    "vue": "^3.5.29",
+    "vue-router": "^5.0.3",
+    "water.css": "^2.1.1"
+  },
+  "devDependencies": {
+    "@pinia/colada-devtools": "workspace:^",
+    "@tailwindcss/vite": "^4.2.1",
+    "@types/node": "^24.10.13",
+    "@vitejs/plugin-vue": "^6.0.4",
+    "@vue/tsconfig": "^0.8.1",
+    "autoprefixer": "^10.4.26",
+    "json-server": "0.17.4",
+    "npm-run-all2": "^8.0.4",
+    "tailwindcss": "^4.2.1",
+    "typescript": "~5.9.3",
+    "unplugin-vue-router": "^0.19.2",
+    "vite": "^7.3.1",
+    "vite-plugin-vue-devtools": "^8.0.6",
+    "vue-tsc": "^3.2.5"
+  }
+}

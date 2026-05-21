@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "lib": ["esnext", "dom"],
+    "module": "Preserve",
+    "moduleResolution": "Bundler"
+  },
+  "references": [
+    {
+      "path": "./tsconfig.pinia-colada.json"
+    }
+    // {
+    //   "path": "./plugins/retry/tsconfig.json"
+    // }
+  ],
+  "files": []
+}

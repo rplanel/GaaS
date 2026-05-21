@@ -1,0 +1,34 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "rootDir": ".",
+    "composite": true,
+    "noEmit": true,
+    "module": "esnext",
+    "target": "esnext",
+    "skipLibCheck": true,
+    "lib": ["esnext", "dom"],
+    "moduleResolution": "Bundler",
+    "paths": {
+      "@pinia/colada-devtools/panel": ["./src/panel/index.ts"],
+      "@pinia/colada-devtools/shared": ["./src/shared/index.ts"],
+      "@pinia/colada-devtools": ["./src/index.ts"]
+    },
+    "types": ["unplugin-icons/types/vue"]
+  },
+  "include": [
+    "./src/**/*",
+    "./env.d.ts",
+    "./auto-imports.d.ts",
+    "./components.d.ts",
+    "./typed-router.d.ts",
+    "./vite.config.*"
+  ],
+  "vueCompilerOptions": {
+    "plugins": [
+      "unplugin-vue-router/volar/sfc-route-blocks",
+      "unplugin-vue-router/volar/sfc-typed-router"
+    ]
+  }
+}

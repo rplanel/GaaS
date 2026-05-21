@@ -26,7 +26,7 @@ export const analysesInputsViewQuery = defineQueryOptions(
   }),
 )
 
-async function supabaseAnalysesInputsViewById(supabase: SupabaseClient<Database>, analysisId: number) {
+export async function supabaseAnalysesInputsViewByAnalysisId(supabase: SupabaseClient<Database>, analysisId: number) {
   return supabase
     .schema('galaxy')
     .from('analysis_inputs_with_storage_path')
@@ -38,7 +38,7 @@ async function supabaseAnalysesInputsViewById(supabase: SupabaseClient<Database>
 export const analysisInputsViewByIdQuery = defineQueryOptions(
   ({ analysisId, supabase }: { analysisId: number | undefined, supabase: SupabaseClient<Database> }) => ({
     key: SUPABASE_ANALYSES_INPUTS_VIEW_QUERY_KEYS.byAnalysisId(analysisId ?? 0),
-    query: () => analysisId ? supabaseAnalysesInputsViewById(supabase, analysisId) : Promise.resolve([]),
+    query: () => analysisId ? supabaseAnalysesInputsViewByAnalysisId(supabase, analysisId) : Promise.resolve([]),
     enabled: !!analysisId,
   }),
 )

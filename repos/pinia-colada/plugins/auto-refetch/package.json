@@ -1,0 +1,60 @@
+{
+  "name": "@pinia/colada-plugin-auto-refetch",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "0.2.5",
+  "description": "Automatically refetch queries when they become stale in Pinia Colada",
+  "author": {
+    "name": "Eduardo San Martin Morote",
+    "email": "posva13@gmail.com"
+  },
+  "license": "MIT",
+  "funding": "https://github.com/sponsors/posva",
+  "homepage": "https://github.com/posva/pinia-colada/blob/main/plugins/auto-refetch/README.md",
+  "repository": "posva/pinia-colada",
+  "bugs": {
+    "url": "https://github.com/posva/pinia-colada/issues"
+  },
+  "keywords": [
+    "pinia",
+    "plugin",
+    "data",
+    "fetching",
+    "query",
+    "mutation",
+    "cache",
+    "layer",
+    "refetch"
+  ],
+  "sideEffects": false,
+  "exports": "./dist/index.mjs",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*",
+        "./*"
+      ]
+    }
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s --commit-path . -l @pinia/colada-plugin-auto-refetch -r 1",
+    "test": "vitest --ui"
+  },
+  "peerDependencies": {
+    "@pinia/colada": "workspace:>="
+  },
+  "devDependencies": {
+    "@pinia/colada": "workspace:^",
+    "@posva/test-utils": "workspace:^"
+  }
+}
