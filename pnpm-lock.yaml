@@ -139,9 +139,6 @@ catalogs:
     eslint-plugin-format:
       specifier: ^1.0.2
       version: 1.5.0
-    h3:
-      specifier: ^1.15.4
-      version: 1.15.11
     htl:
       specifier: ^0.3.1
       version: 0.3.1
@@ -373,9 +370,6 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 3.21.2
-      h3:
-        specifier: 'catalog:'
-        version: 1.15.11
       ofetch:
         specifier: 'catalog:'
         version: 1.5.1
@@ -11918,7 +11912,7 @@ snapshots:
       ufo: 1.6.4
       unifont: 0.7.4
       unplugin: 3.0.0
-      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0)(drizzle-orm@1.0.0-rc.4-5d5b77c(@opentelemetry/api@1.9.1)(better-sqlite3@12.10.0)(effect@3.21.2)(postgres@3.4.9)(zod@3.25.76)))(ioredis@5.10.1)
+      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0))(ioredis@5.10.1)
     transitivePeerDependencies:
       - '@azure/app-configuration'
       - '@azure/cosmos'
@@ -12129,7 +12123,7 @@ snapshots:
       std-env: 4.1.0
       ufo: 1.6.4
       unctx: 2.5.0
-      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0)(drizzle-orm@1.0.0-rc.4-5d5b77c(@opentelemetry/api@1.9.1)(better-sqlite3@12.10.0)(effect@3.21.2)(postgres@3.4.9)(zod@3.25.76)))(ioredis@5.10.1)
+      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0))(ioredis@5.10.1)
       vue: 3.5.34(typescript@5.9.3)
       vue-bundle-renderer: 2.2.0
       vue-devtools-stub: 0.1.0
@@ -12199,7 +12193,7 @@ snapshots:
       std-env: 4.1.0
       ufo: 1.6.4
       unctx: 2.5.0
-      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0)(drizzle-orm@1.0.0-rc.4-5d5b77c(@opentelemetry/api@1.9.1)(better-sqlite3@12.10.0)(effect@3.21.2)(postgres@3.4.9)(zod@3.25.76)))(ioredis@5.10.1)
+      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0))(ioredis@5.10.1)
       vue: 3.5.34(typescript@5.9.3)
       vue-bundle-renderer: 2.2.0
       vue-devtools-stub: 0.1.0
@@ -12269,7 +12263,7 @@ snapshots:
       std-env: 4.1.0
       ufo: 1.6.4
       unctx: 2.5.0
-      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0)(drizzle-orm@1.0.0-rc.4-5d5b77c(@opentelemetry/api@1.9.1)(better-sqlite3@12.10.0)(effect@3.21.2)(postgres@3.4.9)(zod@3.25.76)))(ioredis@5.10.1)
+      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0))(ioredis@5.10.1)
       vue: 3.5.34(typescript@5.9.3)
       vue-bundle-renderer: 2.2.0
       vue-devtools-stub: 0.1.0
@@ -14089,7 +14083,7 @@ snapshots:
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 25.9.1
+      '@types/node': 24.12.4
 
   '@typescript-eslint/eslint-plugin@8.59.4(@typescript-eslint/parser@8.59.4(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)':
     dependencies:
@@ -16838,7 +16832,7 @@ snapshots:
       pathe: 2.0.3
       ufo: 1.6.4
       unifont: 0.7.4
-      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0)(drizzle-orm@1.0.0-rc.4-5d5b77c(@opentelemetry/api@1.9.1)(better-sqlite3@12.10.0)(effect@3.21.2)(postgres@3.4.9)(zod@3.25.76)))(ioredis@5.10.1)
+      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0))(ioredis@5.10.1)
     optionalDependencies:
       vite: 7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.9.0)
     transitivePeerDependencies:
@@ -17063,7 +17057,7 @@ snapshots:
 
   happy-dom@20.9.0:
     dependencies:
-      '@types/node': 25.9.1
+      '@types/node': 24.12.4
       '@types/whatwg-mimetype': 3.0.2
       '@types/ws': 8.18.1
       entities: 7.0.1
@@ -17374,7 +17368,7 @@ snapshots:
       sharp: 0.32.6
       svgo: 3.3.3
       ufo: 1.6.4
-      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0)(drizzle-orm@1.0.0-rc.4-5d5b77c(@opentelemetry/api@1.9.1)(better-sqlite3@12.10.0)(effect@3.21.2)(postgres@3.4.9)(zod@3.25.76)))(ioredis@5.10.1)
+      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0))(ioredis@5.10.1)
       xss: 1.0.15
     transitivePeerDependencies:
       - '@azure/app-configuration'
@@ -17418,7 +17412,7 @@ snapshots:
       sharp: 0.34.5
       svgo: 4.0.1
       ufo: 1.6.4
-      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0)(drizzle-orm@1.0.0-rc.4-5d5b77c(@opentelemetry/api@1.9.1)(better-sqlite3@12.10.0)(effect@3.21.2)(postgres@3.4.9)(zod@3.25.76)))(ioredis@5.10.1)
+      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0))(ioredis@5.10.1)
       xss: 1.0.15
     transitivePeerDependencies:
       - '@azure/app-configuration'
@@ -18669,7 +18663,7 @@ snapshots:
       unenv: 2.0.0-rc.24
       unimport: 6.3.0(oxc-parser@0.131.0)
       unplugin-utils: 0.3.1
-      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0)(drizzle-orm@1.0.0-rc.4-5d5b77c(@opentelemetry/api@1.9.1)(better-sqlite3@12.10.0)(effect@3.21.2)(postgres@3.4.9)(zod@3.25.76)))(ioredis@5.10.1)
+      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0))(ioredis@5.10.1)
       untyped: 2.0.0
       unwasm: 0.5.3
       youch: 4.1.1
@@ -18828,7 +18822,7 @@ snapshots:
       strip-literal: 3.1.0
       ufo: 1.6.4
       unplugin: 2.3.11
-      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0)(drizzle-orm@1.0.0-rc.4-5d5b77c(@opentelemetry/api@1.9.1)(better-sqlite3@12.10.0)(effect@3.21.2)(postgres@3.4.9)(zod@3.25.76)))(ioredis@5.10.1)
+      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0))(ioredis@5.10.1)
       unwasm: 0.5.3
       yoga-wasm-web: 0.3.3
     transitivePeerDependencies:
@@ -18879,7 +18873,7 @@ snapshots:
       nuxt-component-meta: 0.17.2(magicast@0.5.3)
       remark-mdc: 3.11.0
       shiki: 4.1.0
-      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0)(drizzle-orm@1.0.0-rc.4-5d5b77c(@opentelemetry/api@1.9.1)(better-sqlite3@12.10.0)(effect@3.21.2)(postgres@3.4.9)(zod@3.25.76)))(ioredis@5.10.1)
+      unstorage: 1.17.5(db0@0.3.4(better-sqlite3@12.10.0))(ioredis@5.10.1)
       zod: 4.4.3
       zod-to-json-schema: 3.25.2(zod@4.4.3)
     optionalDependencies:
@@ -21500,7 +21494,7 @@ snapshots:
       '@unrs/resolver-binding-win32-ia32-msvc': 1.12.2
       '@unrs/resolver-binding-win32-x64-msvc': 1.12.2
 
-  unstorage@1.17.5(db0@0.3.4(better-sqlite3@12.10.0)(drizzle-orm@1.0.0-rc.4-5d5b77c(@opentelemetry/api@1.9.1)(better-sqlite3@12.10.0)(effect@3.21.2)(postgres@3.4.9)(zod@3.25.76)))(ioredis@5.10.1):
+  unstorage@1.17.5(db0@0.3.4(better-sqlite3@12.10.0))(ioredis@5.10.1):
     dependencies:
       anymatch: 3.1.3
       chokidar: 5.0.0

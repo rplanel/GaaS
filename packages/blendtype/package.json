@@ -42,7 +42,6 @@
   "dependencies": {
     "dotenv": "catalog:",
     "effect": "catalog:",
-    "h3": "catalog:",
     "ofetch": "catalog:",
     "tus-js-client": "catalog:",
     "ufo": "catalog:",
