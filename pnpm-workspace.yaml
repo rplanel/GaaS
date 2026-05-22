@@ -60,7 +60,6 @@ catalog:
   eslint: ^9.39.1
   eslint-config-unjs: ^0.5.0
   eslint-plugin-format: ^1.0.2
-  h3: ^1.15.4
   htl: ^0.3.1
   isomorphic-dompurify: ^3.4.0
   jiti: ^2.6.1
