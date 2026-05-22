@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.4-beta.2](https://gitlab.pasteur.fr/hub/GaaS/compare/v0.0.4-beta.1...v0.0.4-beta.2) (2026-05-22)
+
+
+### Features
+
+* add codegraph tool ([62f140a](https://gitlab.pasteur.fr/hub/GaaS/commit/62f140a204ec4f97be8b1a89c6ab69d875256a9d))
+* **database:** Add a utility script that can seed the database from a json file ([f16c090](https://gitlab.pasteur.fr/hub/GaaS/commit/f16c090b12bc98bda5d0271cf0d3546b1c69d1dc))
+
+
+### Bug Fixes
+
+* **database:** seed script zod enum ([25bb211](https://gitlab.pasteur.fr/hub/GaaS/commit/25bb2114840bbd4c408bfa79bbb6b3664ed0ba77))
+
 ## [0.0.4-beta.1](https://gitlab.pasteur.fr/hub/GaaS/compare/v0.0.4-beta.0...v0.0.4-beta.1) (2026-05-21)
 
 
