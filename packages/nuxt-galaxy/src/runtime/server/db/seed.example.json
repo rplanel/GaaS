@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nuxt Galaxy Seed Configuration",
+  "description": "Configuration file for seeding Galaxy database with instances, users, and role permissions",
+  "instances": [
+    {
+      "url": "https://galaxy.example.org",
+      "name": "My Galaxy Instance"
+    }
+  ],
+  "users": [
+    {
+      "email": "admin@example.org",
+      "instanceUrl": "https://galaxy.example.org"
+    }
+  ],
+  "rolePermissions": [
+    {
+      "roleName": "admin",
+      "permissions": [
+        "workflows.insert",
+        "workflows.delete",
+        "instances.insert",
+        "instances.delete",
+        "users.delete"
+      ]
+    },
+    {
+      "roleName": "user",
+      "permissions": [
+        "workflows.select",
+        "instances.select",
+        "users.select"
+      ]
+    }
+  ]
+}
