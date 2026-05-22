@@ -30,13 +30,9 @@ export const seedConfigSchema = z.object({
 
   rolePermissions: z.array(
     z.object({
-      roleName: z.enum(RoleTypes, {
-        errorMap: () => ({ message: `Role must be one of: ${RoleTypes.join(', ')}` }),
-      }),
+      roleName: z.enum(RoleTypes, { message: `Role must be one of: ${RoleTypes.join(', ')}` }),
       permissions: z.array(
-        z.enum(RolePermissions, {
-          errorMap: () => ({ message: `Invalid permission` }),
-        }),
+        z.enum(RolePermissions, { message: `Invalid permission` }),
       ).min(1, 'At least one permission is required'),
     }),
   ).optional().default([]),
