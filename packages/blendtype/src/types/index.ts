@@ -22,7 +22,9 @@ export interface ErrorWithStatus {
   statusCode: number
 }
 
-export type Datamap = Record<`${number}`, { id: string, name: string, storage_object_id?: string }>
+export interface DataFromMap { id: string, name: string, storage_object_id?: string }
+
+export type Datamap = Record<`${number}`, DataFromMap>
 
 export const GalaxyStates = [
   'new',
