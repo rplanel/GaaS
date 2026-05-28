@@ -1,0 +1,19 @@
+{
+  "name": "example-i18n",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "test": "vitest run",
+    "postinstall": "nuxt prepare"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "latest",
+    "@nuxtjs/i18n": "10.3.0",
+    "nuxt": "4.4.2",
+    "vitest": "4.1.5"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>nuxt/renovate-config-nuxt",
+    ":pinDevDependencies",
+    ":widenPeerDependencies"
+  ],
+  "ignorePaths": [
+    "**/stubs/**"
+  ],
+  "packageRules": [
+    {
+      "groupName": "vitest",
+      "matchPackageNames": [
+        "vite-node",
+        "vitest",
+        "/^@vitest//"
+      ]
+    },
+    {
+      "groupName": "node",
+      "matchPackageNames": [
+        "@types/node"
+      ]
+    },
+    {
+      "groupName": "typescript",
+      "matchPackageNames": [
+        "typescript"
+      ]
+    }
+  ]
+}
