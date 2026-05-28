@@ -1,0 +1,8 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`shallowMount > renders props for stubbed component in a snapshot 1`] = `
+<div>
+  <my-label-stub val="username"></my-label-stub>
+  <async-component-stub></async-component-stub>
+</div>
+`;
