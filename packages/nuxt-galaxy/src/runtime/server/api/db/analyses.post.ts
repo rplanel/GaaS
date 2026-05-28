@@ -24,7 +24,7 @@ export default defineEventHandler<{ body: AnalysisBody }>(
           const message = health.status === 'maintenance'
             ? `Galaxy is under maintenance: ${health.maintenance?.message}`
             : 'Galaxy is currently unavailable'
-          yield* Effect.fail(new CheckGalaxyHealthError({ message }))
+          return yield* Effect.fail(new CheckGalaxyHealthError({ message }))
         }
 
         const workflow = yield* getWorkflowEffect(workflowId)
@@ -36,7 +36,6 @@ export default defineEventHandler<{ body: AnalysisBody }>(
             historyId: historyDb.id,
             ownerId: supabaseUser.id,
             event,
-            file: false,
           })
           // load input dataset sous la forme de datamap mais comme id pg id
           const workflowInput: GalaxyWorkflowInput = {}
@@ -66,7 +65,7 @@ export default defineEventHandler<{ body: AnalysisBody }>(
         }
       }
       else {
-        yield* Effect.fail(new GetSupabaseUserError({ message: 'No user found' }))
+        return yield* Effect.fail(new GetSupabaseUserError({ message: 'No user found' }))
       }
     })
     const finalLayer = Layer.mergeAll(

@@ -46,7 +46,7 @@ export function getWorkflowAnalysesEffect(workflowId: number) {
         .overrideTypes<WorkflowAnalysis, { merge: false }>(),
     )
     if (error) {
-      yield* Effect.fail(
+      return yield* Effect.fail(
         new GetWorkflowAnalysesError({
           message: `Failed to get analyses for workflow ${workflowId} : ${error.message}`,
         }),

@@ -83,7 +83,7 @@ export function uploadFileToStorageEffect(bucket: string, file: File) {
     )
     if (error) {
       console.error('Error uploading file to storage:', error)
-      yield* Effect.fail(
+      return yield* Effect.fail(
         new UploadFileToStorageError({
           message: `Failed to upload file: ${error.message}`,
         }),
@@ -155,7 +155,7 @@ export function insertUploadedDatasetEffect(uploadedDataset: { storageObjectId: 
         .select(),
     )
     if (error) {
-      yield* Effect.fail(
+      return yield* Effect.fail(
         new UploadFileToStorageError({
           message: `Failed to insert dataset: ${error.message}`,
         }),
@@ -174,7 +174,7 @@ export function getSupabaseUser() {
     const supabase = yield* SupabaseClientLayer
     const { data, error } = yield* Effect.promise(() => supabase.auth.getUser())
     if (error) {
-      yield* Effect.fail(
+      return yield* Effect.fail(
         new GetSupabaseUserError({
           message: `Failed to get auth user: ${error.message}`,
         }),
