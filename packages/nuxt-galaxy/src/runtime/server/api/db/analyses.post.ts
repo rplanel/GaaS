@@ -4,6 +4,7 @@ import { toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect, Layer } from 'effect'
 import { defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle.js'
+import { UrlFetch } from '../../utils/fetch'
 import { useGalaxyLayer } from '../../utils/galaxy.js'
 import { runAnalysis } from '../../utils/grizzle/analyses.js'
 import { uploadDatasetsEffect } from '../../utils/grizzle/datasets'
@@ -69,9 +70,10 @@ export default defineEventHandler<{ body: AnalysisBody }>(
       }
     })
     const finalLayer = Layer.mergeAll(
+      Drizzle.Live,
       ServerSupabaseClient.Live,
       ServerSupabaseClaims.Live,
-      Drizzle.Live,
+      UrlFetch.Live,
     )
     return program.pipe(
       toGalaxyServiceUnavailable,

@@ -9,8 +9,8 @@ import { Console, Data, Effect } from 'effect'
 import * as ufo from 'ufo'
 import { datasets } from '../../db/schema/galaxy/datasets.js'
 import { objects } from '../../db/schema/storage/objects.js'
-import { Drizzle, eq, useDrizzle } from '../drizzle.js'
-import { fetchUrlEffect } from '../fetch'
+import { Drizzle, eq } from '../drizzle.js'
+import { UrlFetch } from '../fetch'
 import { takeUniqueOrThrow } from './helper.js'
 import { deleteHistory } from './histories'
 import { createSignedUrl } from './supabase'
@@ -87,7 +87,8 @@ export function uploadSingleDatasetEffect(params: UploadSingleDatasetParams) {
 
     let historyDatasetEffect: ReturnType<typeof bt.uploadFileToHistoryEffect>
     if (shouldUseFileUpload) {
-      const response = yield* fetchUrlEffect(signedUrl)
+      const fetcher = yield* UrlFetch
+      const response = yield* fetcher(signedUrl)
       const buffer = yield* Effect.tryPromise({
         try: async () => Buffer.from(await response.arrayBuffer()),
         catch: _caughtError => new bt.HttpError({ message: `Error fetching dataset from ${signedUrl}: ${_caughtError}` }),
@@ -206,10 +207,13 @@ export function isDatasetTerminalState(state: DatasetState): boolean {
 }
 
 export function insertDatasetEffect(dataset: NewDataset) {
-  return Effect.tryPromise({
-    try: () => useDrizzle().insert(datasets).values(
-      dataset,
-    ).onConflictDoNothing().returning().then(takeUniqueOrThrow),
-    catch: error => new InsertDatasetError({ message: `Error inserting dataset: ${error}` }),
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle.insert(datasets).values(
+        dataset,
+      ).onConflictDoNothing().returning().then(takeUniqueOrThrow),
+      catch: error => new InsertDatasetError({ message: `Error inserting dataset: ${error}` }),
+    })
   })
 }
