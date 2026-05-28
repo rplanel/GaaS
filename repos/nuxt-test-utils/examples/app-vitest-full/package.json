@@ -1,0 +1,33 @@
+{
+  "private": true,
+  "name": "example-app-vitest-full",
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "dev:prepare": "nuxt prepare",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "test:dev": "nuxt dev --no-fork",
+    "test:unit": "vitest",
+    "test:types": "nuxt prepare && vue-tsc --noEmit",
+    "test:jsdom": "VITEST_DOM_ENV=jsdom pnpm test:unit --run",
+    "test:happy-dom": "VITEST_DOM_ENV=happy-dom pnpm test:unit --run",
+    "test": "pnpm test:happy-dom && pnpm test:jsdom && pnpm test:dev && pnpm test:types"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "latest",
+    "@testing-library/vue": "8.1.0",
+    "@vitest/ui": "4.1.5",
+    "happy-dom": "20.9.0",
+    "jsdom": "29.1.0",
+    "listhen": "1.9.1",
+    "nuxt": "4.4.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.5",
+    "vue-tsc": "3.2.7"
+  },
+  "dependencies": {
+    "idb-keyval": "^6.2.2"
+  }
+}

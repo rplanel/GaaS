@@ -1,0 +1,25 @@
+{
+  "name": "example-content",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "dev:prepare": "nuxt prepare",
+    "generate": "nuxt generate",
+    "test": "pnpm test:nuxt-environment && pnpm test:browser",
+    "test:browser": "VITEST_BROWSER_ENABLED=true vitest run",
+    "test:nuxt-environment": "vitest run",
+    "preview": "nuxt preview"
+  },
+  "devDependencies": {
+    "@nuxt/content": "3.13.0",
+    "@nuxt/test-utils": "latest",
+    "@vitest/browser": "4.1.5",
+    "@vitest/browser-playwright": "4.1.5",
+    "better-sqlite3": "12.9.0",
+    "nuxt": "4.4.2",
+    "vitest": "4.1.5",
+    "vitest-browser-vue": "2.1.0"
+  }
+}
