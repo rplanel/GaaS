@@ -373,7 +373,7 @@ export function uploadFileToHistoryFromUrlEffect(params: uploadFileFromUrl) {
         new HistoryError({
           message: formatErrorMessage(
             'file from URL',
-            name,
+            srcUrl,
             'Error uploading',
             caughtError,
           ),
