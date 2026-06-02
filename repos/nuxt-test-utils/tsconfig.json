@@ -1,0 +1,17 @@
+{
+  "extends": "./.nuxt/tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "Bundler"
+  },
+  "exclude": [
+    "config.d.ts",
+    "e2e.d.ts",
+    "playwright.d.ts",
+    "experimental.d.ts",
+    "module.d.ts",
+    "runtime.d.ts",
+    "vitest-environment.d.ts",
+    "dist/**",
+    "examples/*",
+  ]
+}

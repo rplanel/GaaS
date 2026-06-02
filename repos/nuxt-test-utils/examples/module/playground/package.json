@@ -1,0 +1,17 @@
+{
+  "private": true,
+  "name": "example-module-playground",
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate"
+  },
+  "devDependencies": {
+    "nuxt": "4.4.2"
+  },
+  "dependencies": {
+    "vue": "^3.5.33",
+    "vue-router": "^5.0.6"
+  }
+}

@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
       .select())
 
     if (error) {
-      Effect.fail(new Error(`supabase error: ${error.message}\ncode : ${error.code}`))
+      return yield* Effect.fail(new Error(`supabase error: ${error.message}\ncode : ${error.code}`))
     }
 
     if (historiesDb) {

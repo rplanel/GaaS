@@ -18,7 +18,7 @@ const links = ref<ButtonProps[]>([
 <template>
   <div class="relative">
     <UPageHero
-      title="Welcome to GaaS" description="Is a set to enable usage and integration of Galaxy within Nuxt"
+      title="Welcome to GaaS" description="Is a set of tools to enable usage and integration of Galaxy within Nuxt"
       :links="links"
     >
       <template #top>
