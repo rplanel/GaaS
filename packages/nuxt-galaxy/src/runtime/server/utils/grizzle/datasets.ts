@@ -53,7 +53,6 @@ export interface UploadDatasetParams {
   historyId: number
   ownerId: string
   event: H3Event<EventHandlerRequest>
-  useBlobUpload?: boolean
 }
 
 interface UploadSingleDatasetParams {
@@ -85,7 +84,7 @@ export function uploadSingleDatasetEffect(params: UploadSingleDatasetParams) {
 
     const filename = ufo.parseFilename(ufo.decode(signedUrl), { strict: true }) || `gaas-input-dataset-${storageObject.name}`
 
-    let historyDatasetEffect: ReturnType<typeof bt.uploadFileToHistoryEffect>
+    let historyDatasetEffect: ReturnType<typeof bt.uploadFileToHistoryFromBufferEffect> | ReturnType<typeof bt.uploadFileToHistoryFromUrlEffect>
     if (shouldUseFileUpload) {
       const fetcher = yield* UrlFetch
       const response = yield* fetcher(signedUrl)
@@ -96,14 +95,14 @@ export function uploadSingleDatasetEffect(params: UploadSingleDatasetParams) {
       if (buffer.length === 0) {
         return yield* Effect.fail(new bt.HttpError({ message: `Dataset at ${signedUrl} is empty` }))
       }
-      historyDatasetEffect = bt.uploadFileToHistoryEffect({
+      historyDatasetEffect = bt.uploadFileToHistoryFromBufferEffect({
         historyId: galaxyHistoryId,
         buffer,
         name: filename,
       })
     }
     else {
-      historyDatasetEffect = bt.uploadFileToHistoryEffect({
+      historyDatasetEffect = bt.uploadFileToHistoryFromUrlEffect({
         historyId: galaxyHistoryId,
         srcUrl: signedUrl,
         name: filename,
@@ -157,15 +156,15 @@ export function uploadSingleDatasetEffect(params: UploadSingleDatasetParams) {
 }
 
 export function uploadDatasetsEffect(params: UploadDatasetParams) {
-  const { datamap, galaxyHistoryId, historyId, ownerId, event, useBlobUpload } = params
+  const { datamap, galaxyHistoryId, historyId, ownerId, event } = params
 
   // Detect if we're in local development (localhost/127.0.0.1 Supabase).
   // In dev mode, signed URLs are not accessible to remote Galaxy instances,
   // so we always use blob upload instead of URL-based upload.
   const config = useRuntimeConfig()
-  const supabaseUrl = (config.public as { supabaseUrl?: string }).supabaseUrl || ''
+  const supabaseUrl = config.public.supabaseUrl || ''
   const isLocalDev = supabaseUrl.includes('127.0.0.1') || supabaseUrl.includes('localhost')
-  const shouldUseFileUpload = useBlobUpload ?? isLocalDev
+  const shouldUseFileUpload = config.public.galaxy?.useBlobUpload ?? isLocalDev
 
   return Effect.all(
     Object.entries(datamap).map(([step, { storage_object_id: storageObjectId }]) =>

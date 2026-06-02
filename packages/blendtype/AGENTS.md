@@ -150,7 +150,7 @@ export async function operation(params: OperationParams) {
 | `config.ts` | Configuration | BlendTypeConfig, initializeGalaxyClient() |
 | `tools.ts` | Tool API | getTool(), getToolEffect() |
 | `workflows.ts` | Workflows | getWorkflow(), invokeWorkflow() |
-| `histories.ts` | Histories | createHistory(), uploadFileToHistory() |
+| `histories.ts` | Histories | createHistory(), uploadFileToHistoryFromBufferEffect(), uploadFileToHistoryFromUrlEffect() |
 | `datasets.ts` | Datasets | getDataset() |
 | `jobs.ts` | Job monitoring | getJob() |
 | `invocations.ts` | Invocations | getInvocation() |

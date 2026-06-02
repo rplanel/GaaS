@@ -5,7 +5,7 @@ vi.mock('#imports', () => ({
   useRuntimeConfig: vi.fn(() => ({
     public: {
       galaxy: { url: 'https://galaxy.example.com' },
-      supabaseUrl: 'http://localhost:54321',
+      supabaseUrl: 'https://remote.supabase.co',
     },
     galaxy: {
       apiKey: 'test-api-key',

@@ -1,5 +1,3 @@
-import type { ModuleOptions } from 'nuxt-galaxy'
-// https://nuxt.com/docs/api/configuration/nuxt-config
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -63,5 +61,8 @@ export default defineNuxtConfig({
     redirectOptions: {
       exclude: ['/wiki', '/wiki/**'],
     },
-  } as Partial<ModuleOptions>,
+  },
+  galaxy: {
+    useBlobUpload: true,
+  },
 })

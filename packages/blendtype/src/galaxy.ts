@@ -78,7 +78,7 @@ export function makeGalaxyLayer(config: BlendTypeConfigImpl) {
   const configLayer = makeConfigLayer(config)
   const galaxyFetchLayer = GalaxyFetch.Live.pipe(Layer.provide(configLayer))
   // Expose both GalaxyFetch and BlendTypeConfig so downstream effects
-  // that directly read config (e.g., uploadFileToHistoryEffect for TUS endpoint)
+  // that directly read config (e.g., uploadFileToHistoryFromBufferEffect for TUS endpoint)
   // are also satisfied.
   return Layer.merge(galaxyFetchLayer, configLayer)
 }

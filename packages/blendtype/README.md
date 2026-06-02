@@ -148,21 +148,43 @@ async function manageHistory() {
 }
 ```
 
-### TUS Resumable File Uploads
+### TUS Resumable File Uploads (Buffer)
 
 ```typescript
 import { Buffer } from 'node:buffer'
-import { uploadFileToHistory } from 'blendtype'
+import { uploadFileToHistoryFromBufferEffect } from 'blendtype'
+import { Effect } from 'effect'
 
 async function uploadData() {
   const buffer = Buffer.from('Your data here...')
 
   // Upload file to a specific history
-  const dataset = await uploadFileToHistory({
-    historyId: 'your-history-id',
-    blob: buffer,
-    name: 'data.txt'
-  })
+  const dataset = await Effect.runPromise(
+    uploadFileToHistoryFromBufferEffect({
+      historyId: 'your-history-id',
+      buffer,
+      name: 'data.txt'
+    })
+  )
+
+  console.log(`Uploaded: ${dataset.name} with ID ${dataset.id}`)
+}
+```
+
+### URL-based File Uploads
+
+```typescript
+import { uploadFileToHistoryFromUrlEffect } from 'blendtype'
+import { Effect } from 'effect'
+
+async function uploadFromUrl() {
+  const dataset = await Effect.runPromise(
+    uploadFileToHistoryFromUrlEffect({
+      historyId: 'your-history-id',
+      srcUrl: 'https://example.com/data.txt',
+      name: 'data.txt'
+    })
+  )
 
   console.log(`Uploaded: ${dataset.name} with ID ${dataset.id}`)
 }
@@ -245,7 +267,7 @@ const safeProgram = Effect.gen(function* () {
 ### Using Effect Composition
 
 ```typescript
-import { createHistory, invokeWorkflow, uploadFileToHistory } from 'blendtype'
+import { createHistory, invokeWorkflow, uploadFileToHistoryFromBufferEffect } from 'blendtype'
 import { Effect, pipe } from 'effect'
 
 // Compose multiple operations into a single effect
@@ -255,9 +277,9 @@ const analysisPipeline = pipe(
     const history = yield* createHistoryEffect('Automated Analysis')
 
     // Upload input data
-    const inputDataset = yield* uploadFileToHistoryEffect({
+    const inputDataset = yield* uploadFileToHistoryFromBufferEffect({
       historyId: history.id,
-      blob: dataBuffer,
+      buffer: dataBuffer,
       name: 'input.txt'
     })
 

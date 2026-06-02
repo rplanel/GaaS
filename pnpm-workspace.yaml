@@ -14,6 +14,7 @@ trustPolicyExclude:
   - nuxt-component-meta@0.17.2
   - semver@5.7.2
   - effect@4.0.0-beta.67
+  - tinyclip@0.1.13
 packages:
   - packages/blendtype
   - packages/nuxt-galaxy
