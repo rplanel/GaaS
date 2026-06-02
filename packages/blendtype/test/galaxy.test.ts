@@ -29,7 +29,7 @@ describe('makeGalaxyLayer', () => {
     pipe(
       Effect.gen(function* () {
         // Verify we can access BlendTypeConfig from the layer
-        // This is needed by uploadFileToHistoryEffect which reads config directly
+        // This is needed by uploadFileToHistoryFromBufferEffect which reads config directly
         const config = yield* BlendTypeConfig
         expect(config.apiKey).toBe('test-key')
         expect(config.url).toBe('https://galaxy.test')

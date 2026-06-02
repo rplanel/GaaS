@@ -51,7 +51,7 @@ yarn add blendtype
 #### Basic Configuration
 
 ```typescript
-import { initializeGalaxyClient, createHistory, uploadFileToHistory } from 'blendtype'
+import { createHistory, initializeGalaxyClient, uploadFileToHistory } from 'blendtype'
 
 // Initialize the client
 initializeGalaxyClient({
@@ -73,17 +73,17 @@ const uploadResult = await uploadFileToHistory({
 #### Effect-based Usage
 
 ```typescript
+import { createHistoryEffect, uploadFileToHistoryFromBufferEffect } from 'blendtype'
 import { Effect } from 'effect'
-import { createHistoryEffect, uploadFileToHistoryEffect } from 'blendtype'
 
 const program = Effect.gen(function* () {
   // Create history
   const history = yield* createHistoryEffect('My Analysis')
 
   // Upload file
-  const dataset = yield* uploadFileToHistoryEffect({
+  const dataset = yield* uploadFileToHistoryFromBufferEffect({
     historyId: history.id,
-    blob: myBlob,
+    buffer: myBlob,
     name: 'data.txt'
   })
 
@@ -93,7 +93,7 @@ const program = Effect.gen(function* () {
 
 ### Core Functions
 
-- **Histories**: `createHistory`, `getHistory`, `deleteHistory`, `uploadFileToHistory`
+- **Histories**: `createHistory`, `getHistory`, `deleteHistory`, `uploadFileToHistoryFromBufferEffect`, `uploadFileToHistoryFromUrlEffect`
 - **Datasets**: `getDataset`, `downloadDataset`
 - **Workflows**: `getWorkflows`, `getWorkflow`, `invokeWorkflow`
 - **Jobs**: `getJob`, `getJobOutputs`
