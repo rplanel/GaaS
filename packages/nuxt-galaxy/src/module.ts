@@ -66,6 +66,15 @@ export interface ModuleOptions {
    */
   runMigrations: boolean
 
+  /**
+   * Force blob upload mode for dataset uploads.
+   * When enabled, datasets are always uploaded as binary blobs directly to Galaxy
+   * instead of using signed URLs (useful for Galaxy instances that cannot reach Supabase storage).
+   * When undefined, the module auto-detects based on Supabase URL.
+   * @default undefined
+   * @type boolean | undefined
+   */
+  useBlobUpload?: boolean
 }
 
 export default defineNuxtModule<ModuleOptions>({
@@ -110,7 +119,7 @@ export default defineNuxtModule<ModuleOptions>({
     email: process.env.GALAXY_EMAIL || 'admin@example.org',
     databaseUrl: process.env.GALAXY_DRIZZLE_DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
     runMigrations: false,
-
+    useBlobUpload: undefined,
   },
 
   // Shorthand sugar to register Nuxt hooks
@@ -139,8 +148,8 @@ export default defineNuxtModule<ModuleOptions>({
     const runtimeConfig = nuxt.options.runtimeConfig
     nuxt.options.runtimeConfig.public.galaxy = defu(
       runtimeConfig.public.galaxy || {},
-      { url: moduleOptions.url },
-    )
+      { url: moduleOptions.url, useBlobUpload: moduleOptions.useBlobUpload },
+    ) as typeof nuxt.options.runtimeConfig.public.galaxy
 
     // Add supabase URL to public runtime config for server-side detection
     nuxt.options.runtimeConfig.public.supabaseUrl = runtimeConfig.public.supabaseUrl || process.env.SUPABASE_URL || ''
@@ -295,18 +304,20 @@ export default defineNuxtModule<ModuleOptions>({
   },
 })
 
-// declare module '@nuxt/schema' {
-
-//   interface PublicRuntimeConfig {
-//     galaxy: {
-//       url: string
-//     }
-//   }
-//   interface RuntimeConfig {
-//     galaxy: {
-//       apiKey: string
-//       email: string
-//       localDocker: boolean
-//     }
-//   }
-// }
+declare module '@nuxt/schema' {
+  interface PublicRuntimeConfig {
+    galaxy: {
+      url: string
+      useBlobUpload?: boolean
+    }
+  }
+  interface RuntimeConfig {
+    galaxy: {
+      apiKey: string
+      email: string
+      drizzle: {
+        databaseUrl: string
+      }
+    }
+  }
+}

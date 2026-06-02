@@ -352,7 +352,6 @@ describe('uploadDatasetsEffect', () => {
       historyId: 1,
       ownerId: 'owner-uuid-1',
       event: mockEvent,
-      useBlobUpload: false,
     }).pipe(
       Effect.provide(drizzle.layer),
       Effect.provide(signedUrlSupabaseLayer()),
@@ -378,7 +377,6 @@ describe('uploadDatasetsEffect', () => {
       historyId: 1,
       ownerId: 'owner-uuid-1',
       event: mockEvent,
-      useBlobUpload: true,
     }).pipe(
       Effect.provide(drizzle.layer),
       Effect.provide(signedUrlSupabaseLayer()),
@@ -403,7 +401,6 @@ describe('uploadDatasetsEffect', () => {
       historyId: 1,
       ownerId: 'owner-uuid-1',
       event: mockEvent,
-      useBlobUpload: false,
     }).pipe(
       Effect.provide(drizzle.layer),
       Effect.provide(signedUrlSupabaseLayer()),

@@ -15,32 +15,6 @@ export class TusUploadError extends Data.TaggedError('TusUploadError')<{
 
 export type TusUploadSource = File | Blob | Buffer | Pick<ReadableStreamDefaultReader, 'read'>
 
-/**
- * Performs a resumable TUS upload to Galaxy server.
- *
- * Uploads a file to the Galaxy server using the TUS (Tus.io) resumable upload protocol.
- * This allows for chunked uploads that can be resumed if interrupted.
- *
- * @param source - The file content to upload (File, Blob, Buffer, or ReadableStreamDefaultReader)
- * @param tusEndpoint - The Galaxy TUS endpoint URL (e.g., https://galaxy.example.com/api/upload/resumable_upload/)
- * @param metadata - File metadata for Galaxy including history_id, file_type, dbkey, and name
- * @param apiKey - Galaxy API key for authentication via x-api-key header
- * @param chunkSize - Upload chunk size in bytes, defaults to 10MB (10485760)
- * @returns Effect.Effect<string, TusUploadError> - Effect that resolves to the session ID on success,
- *          or fails with TusUploadError if upload fails
- * @example
- * ```typescript
- * const effect = uploadWithTus(
- *   buffer,
- *   'https://galaxy.example.com/api/upload/resumable_upload/',
- *   { history_id: 'abc123', name: 'data.txt', file_type: 'auto', dbkey: '?' },
- *   'my-api-key'
- * )
- * const sessionId = await Effect.runPromise(effect)
- * ```
- * @throws {TusUploadError} When TUS upload fails or error callback is triggered
- * @see https://tus.io/ - TUS upload protocol documentation
- */
 export function uploadWithTus(
   source: TusUploadSource,
   tusEndpoint: string,
@@ -216,125 +190,103 @@ interface UploadFileBaseParams {
   historyId: string
   name: string
 }
-interface uploadFileFromUrl extends UploadFileBaseParams {
+export interface uploadFileFromUrl extends UploadFileBaseParams {
   srcUrl: string
 }
 
-interface uploadFileFromFile extends UploadFileBaseParams {
+export interface uploadFileFromFile extends UploadFileBaseParams {
   buffer: Buffer
 }
 
-export function uploadFileToHistoryEffect(
-  params: uploadFileFromUrl | uploadFileFromFile,
-) {
+export function uploadFileToHistoryFromBufferEffect(params: uploadFileFromFile) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
     const config = yield* BlendTypeConfig
+    const { historyId, buffer, name } = params
 
-    if ('buffer' in params) {
-      const { historyId, buffer, name } = params
+    const uploadSource = buffer
 
-      // TUS in Node.js requires Buffer or Readable stream
-      const uploadSource = buffer
+    // TUS resumable upload endpoint
+    const tusEndpoint = `${config.url}/api/upload/resumable_upload/`
 
-      // TUS resumable upload endpoint
-      const tusEndpoint = `${config.url}/api/upload/resumable_upload/`
+    // Build metadata for TUS upload
+    const metadata: Record<string, string> = {
+      history_id: historyId,
+      file_type: 'auto',
+      dbkey: '?',
+      name,
+    }
 
-      // Build metadata for TUS upload
-      const metadata: Record<string, string> = {
-        history_id: historyId,
-        file_type: 'auto',
-        dbkey: '?',
-        name,
-      }
+    yield* Console.log(
+      `Starting TUS upload for ${name} to history ${historyId}`,
+    )
 
-      yield* Console.log(
-        `Starting TUS upload for ${name} to history ${historyId}`,
-      )
+    // Perform TUS chunked upload
+    const sessionId = yield* uploadWithTus(
+      uploadSource,
+      tusEndpoint,
+      metadata,
+      config.apiKey,
+    )
 
-      // Perform TUS chunked upload
-      const sessionId = yield* uploadWithTus(
-        uploadSource,
-        tusEndpoint,
-        metadata,
-        config.apiKey,
-      )
+    yield* Console.log(`TUS upload complete, session_id: ${sessionId}`)
 
-      yield* Console.log(`TUS upload complete, session_id: ${sessionId}`)
-
-      // Submit the uploaded file reference to Galaxy
-      // Using files_0|file_data format as expected by Galaxy API
-      const payload: Record<string, unknown> = {
-        history_id: historyId,
-        targets: [
-          {
-            destination: { type: 'hdas' },
-            elements: [
-              {
-                src: 'files',
-                name,
-                dbkey: '?',
-                ext: 'auto',
-                space_to_tab: false,
-                to_posix_lines: true,
-              },
-            ],
-          },
-        ],
-        auto_decompress: true,
-        [`files_0|file_data`]: {
-          session_id: sessionId,
-          name,
-        },
-      }
-
-      const uploadedDataset = yield* Effect.tryPromise({
-        try: () =>
-          fetchApi<GalaxyUploadedDataset>('api/tools/fetch', {
-            method: 'POST',
-            body: JSON.stringify(payload),
-          }),
-        catch: caughtError =>
-          new HistoryError({
-            message: formatErrorMessage(
-              'file',
+    // Submit the uploaded file reference to Galaxy
+    const payload: Record<string, unknown> = {
+      history_id: historyId,
+      targets: [
+        {
+          destination: { type: 'hdas' },
+          elements: [
+            {
+              src: 'files',
               name,
-              'Error uploading',
-              caughtError,
-            ),
-            historyId,
-            statusCode: extractStatusCode(caughtError),
-            cause: caughtError,
-          }),
-      }).pipe(
-        Effect.tap(() =>
-          Console.log(`Uploaded file ${name} to history ${historyId}`),
-        ),
-        Effect.catchAll((error) => {
-          return deleteHistoryEffect(historyId).pipe(
-            Effect.flatMap(() => Effect.fail(error)),
-          )
+              dbkey: '?',
+              ext: 'auto',
+              space_to_tab: false,
+              to_posix_lines: true,
+            },
+          ],
+        },
+      ],
+      auto_decompress: true,
+      [`files_0|file_data`]: {
+        session_id: sessionId,
+        name,
+      },
+    }
+
+    const uploadedDataset = yield* Effect.tryPromise({
+      try: () =>
+        fetchApi<GalaxyUploadedDataset>('api/tools/fetch', {
+          method: 'POST',
+          body: JSON.stringify(payload),
         }),
-      )
+      catch: caughtError =>
+        new HistoryError({
+          message: formatErrorMessage(
+            'file',
+            name,
+            'Error uploading',
+            caughtError,
+          ),
+          historyId,
+          statusCode: extractStatusCode(caughtError),
+          cause: caughtError,
+        }),
+    }).pipe(
+      Effect.tap(() =>
+        Console.log(`Uploaded file ${name} to history ${historyId}`),
+      ),
+      Effect.catchAll((error) => {
+        return deleteHistoryEffect(historyId).pipe(
+          Effect.flatMap(() => Effect.fail(error)),
+        )
+      }),
+    )
 
-      return uploadedDataset
-    }
-    else {
-      const uploadedDataset = uploadFileToHistoryFromUrlEffect(params)
-      return yield* uploadedDataset
-    }
+    return uploadedDataset
   })
-}
-
-export function uploadFileToHistory(
-  params: uploadFileFromUrl | uploadFileFromFile,
-  layer: Layer.Layer<GalaxyFetch | BlendTypeConfig>,
-) {
-  return uploadFileToHistoryEffect(params).pipe(
-    toGalaxyServiceUnavailable,
-    Effect.provide(layer),
-    Effect.runPromise,
-  )
 }
 
 export function uploadFileToHistoryFromUrlEffect(params: uploadFileFromUrl) {
