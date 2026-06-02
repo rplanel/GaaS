@@ -1,0 +1,21 @@
+{
+  "name": "example-app-playwright",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "nuxt": "^4.4.2"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "latest",
+    "@playwright/test": "1.59.1",
+    "std-env": "4.1.0"
+  }
+}

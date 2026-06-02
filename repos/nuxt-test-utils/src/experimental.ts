@@ -1,0 +1,22 @@
+import { $fetch as _$fetch, fetch as _fetch } from 'ofetch'
+import { resolve } from 'pathe'
+import { stringifyQuery } from 'ufo'
+import { useTestContext } from './e2e/context'
+import { $fetch } from './e2e/server'
+
+/**
+ * This is a function to render a component directly with the Nuxt server.
+ */
+export function $fetchComponent(filepath: string, props?: Record<string, unknown>) {
+  return $fetch(componentTestUrl(filepath, props))
+}
+
+export function componentTestUrl(filepath: string, props?: Record<string, unknown>) {
+  const ctx = useTestContext()
+  filepath = resolve(ctx.options.rootDir, filepath)
+  const path = stringifyQuery({
+    path: filepath,
+    props: JSON.stringify(props),
+  })
+  return `/__nuxt_component_test__/?${path}`
+}

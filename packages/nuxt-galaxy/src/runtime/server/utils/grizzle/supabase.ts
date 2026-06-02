@@ -82,7 +82,7 @@ export function uploadFileToStorage(event: H3Event<EventHandlerRequest>, dataset
     )
     if (error) {
       console.error('Error uploading file to storage:', error)
-      yield* Effect.fail(new UploadFileToStorageError({ message: error.message }))
+      return yield* Effect.fail(new UploadFileToStorageError({ message: error.message }))
     }
     // Return both id and path for storage operations
     return {
@@ -104,7 +104,7 @@ export function createSignedUrl(event: H3Event<EventHandlerRequest>, path: strin
       () => supabase.storage.from('analysis_files').createSignedUrl(path, 60),
     )
     if (error) {
-      yield* Effect.fail(new CreateSignedUrlError({ message: error.message }))
+      return yield* Effect.fail(new CreateSignedUrlError({ message: error.message }))
     }
     return data?.signedUrl
   })

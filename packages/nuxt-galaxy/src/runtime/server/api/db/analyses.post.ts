@@ -4,6 +4,7 @@ import { toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect, Layer } from 'effect'
 import { defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle.js'
+import { UrlFetch } from '../../utils/fetch'
 import { useGalaxyLayer } from '../../utils/galaxy.js'
 import { runAnalysis } from '../../utils/grizzle/analyses.js'
 import { uploadDatasetsEffect } from '../../utils/grizzle/datasets'
@@ -24,7 +25,7 @@ export default defineEventHandler<{ body: AnalysisBody }>(
           const message = health.status === 'maintenance'
             ? `Galaxy is under maintenance: ${health.maintenance?.message}`
             : 'Galaxy is currently unavailable'
-          yield* Effect.fail(new CheckGalaxyHealthError({ message }))
+          return yield* Effect.fail(new CheckGalaxyHealthError({ message }))
         }
 
         const workflow = yield* getWorkflowEffect(workflowId)
@@ -36,7 +37,6 @@ export default defineEventHandler<{ body: AnalysisBody }>(
             historyId: historyDb.id,
             ownerId: supabaseUser.id,
             event,
-            file: false,
           })
           // load input dataset sous la forme de datamap mais comme id pg id
           const workflowInput: GalaxyWorkflowInput = {}
@@ -66,13 +66,14 @@ export default defineEventHandler<{ body: AnalysisBody }>(
         }
       }
       else {
-        yield* Effect.fail(new GetSupabaseUserError({ message: 'No user found' }))
+        return yield* Effect.fail(new GetSupabaseUserError({ message: 'No user found' }))
       }
     })
     const finalLayer = Layer.mergeAll(
+      Drizzle.Live,
       ServerSupabaseClient.Live,
       ServerSupabaseClaims.Live,
-      Drizzle.Live,
+      UrlFetch.Live,
     )
     return program.pipe(
       toGalaxyServiceUnavailable,

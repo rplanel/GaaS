@@ -1,0 +1,22 @@
+{
+  "name": "example-app-bun",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "nuxt": "^4.4.2"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "latest",
+    "@types/bun": "1.3.13",
+    "playwright-core": "1.59.1",
+    "typescript": "6.0.3"
+  }
+}

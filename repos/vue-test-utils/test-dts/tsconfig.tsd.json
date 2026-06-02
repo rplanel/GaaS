@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "noEmit": true,
+    "lib": ["DOM", "ES2019"],
+    "types": ["node"],
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "noUncheckedIndexedAccess": true,
+    "strictNullChecks": false
+  },
+  "exclude": ["../src"],
+  "include": ["../dist", "../test-dts"]
+}
