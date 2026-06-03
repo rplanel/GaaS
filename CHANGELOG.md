@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.4-beta.3](https://gitlab.pasteur.fr/hub/GaaS/compare/v0.0.4-beta.2...v0.0.4-beta.3) (2026-06-03)
+
+
+### Features
+
+* better error message, display url ([5eb819f](https://gitlab.pasteur.fr/hub/GaaS/commit/5eb819f76daefb4c6758ae9441e2a22a20f95910))
+* **upload:** configurable blob upload mode + explicit blendtype upload functions ([3b38266](https://gitlab.pasteur.fr/hub/GaaS/commit/3b38266e208477bf153d1a85d06dc4fbae4dbeb7))
+
+
+### Bug Fixes
+
+* **build:** broken lock file ([b7ddf41](https://gitlab.pasteur.fr/hub/GaaS/commit/b7ddf4172b04760e25cb990d5a5339146d94520b))
+* **type:** set a type for the data in Datamap in order to be used with Object.entries for example ([7570bed](https://gitlab.pasteur.fr/hub/GaaS/commit/7570beddd2808cf9185d88f09d0b430e3468f39a))
+
 ## [0.0.4-beta.2](https://gitlab.pasteur.fr/hub/GaaS/compare/v0.0.4-beta.1...v0.0.4-beta.2) (2026-05-22)
 
 
