@@ -29,7 +29,6 @@
     "@antfu/eslint-config": "catalog:",
     "@unocss/eslint-plugin": "catalog:",
     "commit-and-tag-version": "catalog:",
-    "context-mode": "catalog:",
     "eslint": "catalog:",
     "eslint-plugin-format": "catalog:",
     "jiti": "catalog:",
