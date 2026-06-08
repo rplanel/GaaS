@@ -48,14 +48,14 @@
   },
   "dependencies": {
     "find-my-way-ts": "^0.1.6",
-    "msgpackr": "^1.11.10",
+    "msgpackr": "^1.11.13",
     "multipasta": "^0.2.7"
   },
   "peerDependencies": {
     "effect": "workspace:^"
   },
   "devDependencies": {
-    "ajv": "^8.17.1",
+    "ajv": "^8.20.0",
     "effect": "workspace:^"
   }
 }

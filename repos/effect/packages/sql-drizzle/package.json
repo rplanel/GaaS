@@ -57,12 +57,12 @@
     "@effect/sql-mysql2": "workspace:^",
     "@effect/sql-pg": "workspace:^",
     "@effect/sql-sqlite-node": "workspace:^",
-    "@testcontainers/mysql": "^10.25.0",
-    "@testcontainers/postgresql": "^10.25.0",
-    "@types/pg": "^8.15.6",
-    "drizzle-orm": "^0.43.1",
+    "@testcontainers/mysql": "^10.28.0",
+    "@testcontainers/postgresql": "^10.28.0",
+    "@types/pg": "^8.20.0",
+    "drizzle-orm": "^0.45.2",
     "effect": "workspace:^",
-    "pg": "^8.16.3"
+    "pg": "^8.21.0"
   },
   "peerDependencies": {
     "@effect/sql": "workspace:^",

@@ -49,8 +49,8 @@
     "@effect/experimental": "workspace:^",
     "@effect/platform": "workspace:^",
     "@effect/sql": "workspace:^",
-    "@testcontainers/postgresql": "^10.25.0",
-    "@types/pg": "^8.15.6",
+    "@testcontainers/postgresql": "^10.28.0",
+    "@types/pg": "^8.20.0",
     "@types/pg-cursor": "^2.7.2",
     "effect": "workspace:^"
   },
@@ -61,10 +61,10 @@
     "effect": "workspace:^"
   },
   "dependencies": {
-    "pg": "^8.16.3",
-    "pg-connection-string": "2.9.1",
-    "pg-cursor": "^2.15.3",
-    "pg-pool": "^3.10.1",
+    "pg": "^8.21.0",
+    "pg-connection-string": "2.13.0",
+    "pg-cursor": "^2.20.0",
+    "pg-pool": "^3.14.0",
     "pg-types": "^4.1.0"
   }
 }
