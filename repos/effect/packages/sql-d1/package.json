@@ -54,7 +54,7 @@
     "@effect/platform": "workspace:^",
     "@effect/sql": "workspace:^",
     "effect": "workspace:^",
-    "miniflare": "^4.20250508.0"
+    "miniflare": "^4.20260603.0"
   },
   "peerDependencies": {
     "@effect/experimental": "workspace:^",
@@ -63,6 +63,6 @@
     "effect": "workspace:^"
   },
   "dependencies": {
-    "@cloudflare/workers-types": "^4.20250515.0"
+    "@cloudflare/workers-types": "^4.20260606.1"
   }
 }

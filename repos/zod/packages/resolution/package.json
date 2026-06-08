@@ -6,9 +6,9 @@
   "main": "./dist/index.cjs",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^22.13.13",
-    "execa": "^9.5.2",
-    "typescript": "^5.8.2"
+    "@types/node": "^22.19.20",
+    "execa": "^9.6.1",
+    "typescript": "^5.9.3"
   },
   "files": [
     "./bin/*",

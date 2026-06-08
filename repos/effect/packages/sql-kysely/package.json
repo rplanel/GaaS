@@ -56,17 +56,17 @@
     "@effect/sql-mysql2": "workspace:^",
     "@effect/sql-pg": "workspace:^",
     "@effect/sql-sqlite-node": "workspace:^",
-    "@testcontainers/mssqlserver": "^10.25.0",
-    "@testcontainers/mysql": "^10.25.0",
-    "@testcontainers/postgresql": "^10.25.0",
+    "@testcontainers/mssqlserver": "^10.28.0",
+    "@testcontainers/mysql": "^10.28.0",
+    "@testcontainers/postgresql": "^10.28.0",
     "@types/better-sqlite3": "^7.6.13",
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3": "^12.10.0",
     "effect": "workspace:^",
-    "kysely": "^0.28.2"
+    "kysely": "^0.29.2"
   },
   "peerDependencies": {
     "@effect/sql": "workspace:^",
     "effect": "workspace:^",
-    "kysely": "^0.28.2"
+    "kysely": "^0.29.2"
   }
 }

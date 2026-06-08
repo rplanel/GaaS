@@ -12,10 +12,10 @@ linkWorkspacePackages: true
 
 overrides:
   '@nuxt/kit': ^4.4.6
-  '@nuxt/test-utils': 4.0.2
+  '@nuxt/test-utils': 4.0.3
   '@nuxt/ui': workspace:*
   unplugin: ^3.0.0
-  c12: ^3.3.2
+  c12: ^3.3.4
   typescript: ^6.0.3
 
 allowBuilds:
