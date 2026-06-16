@@ -1,9 +1,97 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": [
-    "context-mode"
+  "plugin": ["context-mode","superpowers@git+https://github.com/obra/superpowers.git"],
+  "instructions": [
+    "AGENTS.md"
   ],
+  "references": {
+    "nuxt": {
+      "repository": "nuxt/nuxt",
+      "branch": "v4.4.7",
+      "description": "Nuxt framework source — use for core framework behavior, rendering modes, and module APIs"
+    },
+    "nuxt-ui": {
+      "repository": "nuxt/ui",
+      "branch": "v4.8.1",
+      "description": "Nuxt UI component library — use for component props, theming, and usage examples"
+    },
+    "effect": {
+      "repository": "Effect-TS/effect",
+      "branch": "effect@3.21.2",
+      "description": "Effect-TS runtime — use for Effect, Layer, Context.Tag, and error handling patterns"
+    },
+    "supabase-js": {
+      "repository": "supabase/supabase-js",
+      "branch": "v2.107.0",
+      "description": "Supabase JavaScript client — use for auth, database, and realtime client APIs"
+    },
+    "drizzle-orm": {
+      "repository": "drizzle-team/drizzle-orm",
+      "branch": "beta",
+      "description": "Drizzle ORM source — use for schema definitions, query syntax, and migration APIs (project uses 1.0.0-rc pre-release)"
+    },
+    "galaxy": {
+      "repository": "galaxyproject/galaxy",
+      "branch": "v26.0.1",
+      "description": "Galaxy server and official TypeScript API client source — use client/packages/api-client/ for generated OpenAPI types and endpoint usage, lib/galaxy/webapps/galaxy/api/ for server-side endpoint semantics, and lib/galaxy/schema/ for request/response models."
+    }
+  },
+  "provider": {
+    "litellm": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "AI@Pasteur",
+      "options": {
+        "baseURL": "https://ia.pasteur.cloud"
+      },
+      "models": {
+        "big": {
+          "name": "big"
+        },
+        "medium-reasoning": {
+          "name": "medium-reasoning"
+        },
+        "medium": {
+          "name": "medium"
+        },
+        "small": {
+          "name": "small"
+        }
+      }
+    },
+    "litellm-ext": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "AI-ext@Pasteur",
+      "options": {
+        "baseURL": "https://ia-ext.pasteur.cloud"
+      },
+      "models": {
+        "anthropic/claude-opus-4-6": {
+          "name": "anthropic/claude-opus-4-6"
+        }
+      }
+    }
+  },
   "mcp": {
+    "nuxt": {
+      "type": "remote",
+      "url": "https://nuxt.com/mcp",
+      "enabled": true
+    },
+    "nuxt-ui": {
+      "type": "remote",
+      "url": "https://ui.nuxt.com/mcp",
+      "enabled": true
+    },
+    "nuxt-seo": {
+      "type": "remote",
+      "url": "https://nuxtseo.com/mcp",
+      "enabled": false
+    },
+    "vuetify": {
+      "type": "remote",
+      "url": "https://mcp.vuetifyjs.com/mcp",
+      "enabled": true
+    },
     "codegraph": {
       "type": "local",
       "command": [
