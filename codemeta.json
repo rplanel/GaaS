@@ -1,0 +1,38 @@
+{
+  "@context": "https://w3id.org/codemeta/3.1",
+  "@type": "SoftwareSourceCode",
+  "name": "GaaS",
+  "description": "Galaxy as a Service (GaaS) - A monorepo providing Galaxy API client libraries, Nuxt modules, UI components, and documentation for building Galaxy-integrated web applications.",
+  "version": "0.0.4-beta.3",
+  "license": "https://spdx.org/licenses/MIT.html",
+  "codeRepository": "https://gitlab.pasteur.fr/hub/GaaS",
+  "issueTracker": "https://gitlab.pasteur.fr/hub/GaaS/-/issues",
+  "dateModified": "2026-06-16",
+  "author": [
+    {
+      "@id": "https://orcid.org/0000-0002-7826-3316",
+      "@type": "Person",
+      "givenName": "Rémi",
+      "familyName": "Planel",
+      "email": "rplanel@gmail.com",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Institut Pasteur"
+      }
+    }
+  ],
+  "maintainer": "https://orcid.org/0000-0002-7826-3316",
+  "programmingLanguage": ["TypeScript", "JavaScript", "Python", "Vue"],
+  "softwareRequirements": ["Node.js 20+", "pnpm 10.27.0"],
+  "developmentStatus": "active",
+  "keywords": [
+    "galaxy",
+    "galaxy-project",
+    "nuxt",
+    "typescript",
+    "effect-ts",
+    "supabase",
+    "api-client",
+    "monorepo"
+  ]
+}
