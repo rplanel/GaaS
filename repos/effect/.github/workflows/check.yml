@@ -55,7 +55,7 @@ jobs:
       - uses: oven-sh/setup-bun@v1
         if: matrix.runtime == 'Bun'
         with:
-          bun-version: 1.0.25
+          bun-version: 1.3.14
       - name: Test
         run: pnpm vitest --shard ${{ matrix.shard }}
         if: matrix.runtime == 'Node'
