@@ -34,7 +34,7 @@ app.add_typer(
     help="Manage MeiliSearch API keys.",
 )
 
-console = Console()
+console = Console(stderr=True)
 
 
 @app.callback()
