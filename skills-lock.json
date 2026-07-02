@@ -13,6 +13,12 @@
       "skillPath": "skills/duckdb-docs/SKILL.md",
       "computedHash": "6aa9b9d013487eace5398a0e035cf5ee3efd220b34349a46e7c335cf079f7e66"
     },
+    "gaas-cli-dev": {
+      "source": "git@gitlab.pasteur.fr:gaas/gaas-skills.git",
+      "sourceType": "git",
+      "skillPath": "skills/gaas-cli-dev/SKILL.md",
+      "computedHash": "b9ef21ee7b199334b4164b2b72a570fec635e7e82e3abd59bfcdbd1e84eb036f"
+    },
     "install-duckdb": {
       "source": "duckdb/duckdb-skills",
       "sourceType": "github",
