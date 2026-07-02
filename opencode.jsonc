@@ -34,6 +34,66 @@
       "repository": "galaxyproject/galaxy",
       "branch": "v26.0.1",
       "description": "Galaxy server and official TypeScript API client source — use client/packages/api-client/ for generated OpenAPI types and endpoint usage, lib/galaxy/webapps/galaxy/api/ for server-side endpoint semantics, and lib/galaxy/schema/ for request/response models."
+    },
+    "pinia-colada": {
+      "repository": "posva/pinia-colada",
+      "branch": "v1.3.1",
+      "description": "Pinia Colada data fetching library — use for useQuery, defineQueryOptions, query caches, mutations, and @pinia/colada-nuxt module integration"
+    },
+    "nuxtjs-supabase": {
+      "repository": "nuxt-modules/supabase",
+      "branch": "v2.0.9",
+      "description": "@nuxtjs/supabase Nuxt module — use for Supabase SSR auth, useSupabaseClient/useSupabaseUser composables, serverSupabaseServiceRole, and module configuration"
+    },
+    "d3-selection": {
+      "repository": "d3/d3-selection",
+      "branch": "v3.0.0",
+      "description": "D3 selection API — use for select/selectAll, data binding, joins, transitions, and DOM manipulation patterns"
+    },
+    "d3-zoom": {
+      "repository": "d3/d3-zoom",
+      "branch": "v3.0.0",
+      "description": "D3 zoom behavior — use for zoom transforms, scaleExtent, translateExtent, and pan/zoom event handling"
+    },
+    "d3-array": {
+      "repository": "d3/d3-array",
+      "branch": "v3.2.4",
+      "description": "D3 array utilities — use for bin, group, rollup, extent, max/min, sort, and statistical helpers"
+    },
+    "uwdata-mosaic-core": {
+      "repository": "uwdata/mosaic",
+      "branch": "v0.26.0",
+      "description": "Mosaic core — use for coordinator, DuckDB connectors, Selection, and reactive data flow"
+    },
+    "uwdata-mosaic-sql": {
+      "repository": "uwdata/mosaic",
+      "branch": "v0.26.0",
+      "description": "Mosaic SQL utilities — use for query building, SQL helpers, and database expression generation"
+    },
+    "uwdata-vgplot": {
+      "repository": "uwdata/mosaic",
+      "branch": "v0.26.0",
+      "description": "Mosaic vgplot — use for declarative visualization grammars, marks, and chart specifications"
+    },
+    "nuxt-content": {
+      "repository": "nuxt/content",
+      "branch": "v3.14.0",
+      "description": "@nuxt/content module — use for content collections, defineContentConfig, queryCollection, and MDX/Markdown rendering"
+    },
+    "nuxt-test-utils": {
+      "repository": "nuxt/test-utils",
+      "branch": "v4.0.3",
+      "description": "@nuxt/test-utils — use for mountSuspended, setupTestUtils, and Nuxt/Vitest integration"
+    },
+    "vue-test-utils": {
+      "repository": "vuejs/test-utils",
+      "branch": "v2.4.11",
+      "description": "@vue/test-utils — use for mount, shallowMount, flushPromises, and Vue component testing"
+    },
+    "zod": {
+      "repository": "colinhacks/zod",
+      "branch": "v4.4.3",
+      "description": "Zod schema validation — use for z.object, z.coerce, infer, parse, and Zod v4 APIs"
     }
   },
   "provider": {
@@ -86,11 +146,6 @@
       "type": "remote",
       "url": "https://nuxtseo.com/mcp",
       "enabled": false
-    },
-    "vuetify": {
-      "type": "remote",
-      "url": "https://mcp.vuetifyjs.com/mcp",
-      "enabled": true
     },
     "codegraph": {
       "type": "local",
