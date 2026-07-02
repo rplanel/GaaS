@@ -23,9 +23,12 @@ export default defineNuxtConfig({
     '@nuxt/test-utils/module',
     '@nuxt/eslint',
     'nuxt-galaxy',
-     '@pinia/nuxt',
+    '@pinia/nuxt',
     '@pinia/colada-nuxt',
     'motion-v/nuxt',
+    '@nuxt/content',
+    'nuxt-studio',
+
   ],
 
   runtimeConfig: {
@@ -67,6 +70,8 @@ export default defineNuxtConfig({
         '@vueuse/integrations/useJwt',
         '@tanstack/vue-table',
         'zod-validation-error',
+        // 'shaders',
+        // 'shaders/vue',
       ],
     },
   },

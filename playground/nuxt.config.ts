@@ -9,11 +9,9 @@ export default defineNuxtConfig({
     '../packages/wiki',
   ],
   modules: [
-    '@nuxt/ui',
+    // '@nuxt/ui',
     '@nuxt/devtools',
-    '@nuxt/content',
     '@nuxt/eslint',
-    'nuxt-studio',
   ],
   compatibilityDate: '2024-11-01',
   future: {

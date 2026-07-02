@@ -34,6 +34,7 @@
     "@iconify-json/streamline": "catalog:",
     "@iconify-json/svg-spinners": "catalog:",
     "@iconify-json/tabler": "catalog:",
+    "@nuxt/content": "catalog:nuxt",
     "@nuxt/eslint": "catalog:nuxt",
     "@nuxt/ui": "catalog:nuxt",
     "@nuxtjs/supabase": "catalog:nuxt",
@@ -56,7 +57,9 @@
     "meilisearch": "catalog:",
     "motion-v": "catalog:",
     "nuxt-galaxy": "workspace:*",
+    "nuxt-studio": "catalog:nuxt",
     "pinia": "catalog:vue",
+    "shaders": "catalog:",
     "uuid": "catalog:",
     "zod": "catalog:",
     "zod-validation-error": "catalog:"
