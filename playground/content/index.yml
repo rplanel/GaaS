@@ -1,0 +1,75 @@
+title: Galaxyas a Service
+cta:
+  title: |-
+    Ready to integrate
+    Galaxy?
+  description: Get started with GaaS today. Free, open source, and production-ready.
+  command: pnpm dlx nuxi init my-gaas-app
+  links:
+    - label: Get started
+      color: primary
+      to: '#'
+description: Run bioinformatics at scale in your Nuxt apps. Seamlessly integrate Galaxy workflows, datasets, and analyses.
+features:
+  headline: Capabilities
+  title: Complete Galaxy toolkit for Nuxt.
+  description: From workflow execution to real-time visualization, GaaS provides everything you need to integrate Galaxy.
+  items:
+    - icon: i-lucide-workflow
+      title: Workflow Execution
+      description: Run Galaxy workflows with real-time status tracking and monitoring.
+    - icon: i-lucide-database
+      title: Dataset Management
+      description: Upload and manage datasets with Supabase integration seamlessly.
+    - icon: i-lucide-file-text
+      title: Content System
+      description: Built-in wiki capabilities powered by Nuxt Content for documentation.
+    - icon: i-lucide-shield
+      title: Role-Based Access
+      description: Fine-grained permissions with Galaxy RBAC and authentication.
+    - icon: i-lucide-zap
+      title: Real-time Sync
+      description: Live updates via Supabase Realtime for instant collaboration.
+    - icon: i-lucide-bar-chart
+      title: Data Visualization
+      description: Rich visualizations with Mosaic, D3, and interactive plots.
+hero:
+  headline: v0.0.4 — Now with zero-config Galaxy
+  links:
+    - label: Get started
+      color: primary
+      size: xl
+      to: '#'
+    - label: View docs
+      size: xl
+      color: neutral
+      variant: soft
+      to: '#'
+logos:
+  title: Built with
+  items:
+    - i-simple-icons-nuxt
+    - i-simple-icons-vue
+    - i-simple-icons-typescript
+    - i-simple-icons-supabase
+    - ''
+metrics:
+  headline: By the numbers
+  title: Built for production workloads.
+  description: Handle complex bioinformatics pipelines at scale with enterprise features.
+  items:
+    - value: 99.9%
+      label: Uptime
+      class: text-success
+    - value: <50ms
+      label: Query time
+      class: text-primary
+    - value: ∞
+      label: Workflows
+      class: text-info
+    - value: '0'
+      label: Config needed
+      class: text-warning
+seo:
+  title: GaaS - Galaxy as a Service
+  description: Integrate bioinformatics workflows directly into your Nuxt applications with zero friction.

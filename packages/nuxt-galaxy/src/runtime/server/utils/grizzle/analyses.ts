@@ -29,7 +29,7 @@ export function runAnalysis(
 
 ) {
   return Effect.gen(function* () {
-    const galaxyInvocation = yield* bt.invokeWorkflowEffect (
+    const galaxyInvocation = yield* bt.invokeWorkflowEffect(
       galaxyHistoryId,
       galaxyWorkflowId,
       inputs,

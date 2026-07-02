@@ -71,6 +71,7 @@ catalog:
   ofetch: ^1.5.1
   postgres: ^3.4.7
   seqparse: ^0.2.2
+  shaders: ^2.5.128
   simple-git-hooks: ^2.13.1
   supabase: ^2.72.8
   tus-js-client: ^4.3.1
