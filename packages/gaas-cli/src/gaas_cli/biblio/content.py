@@ -3,7 +3,7 @@ from rich.console import Console
 import frontmatter
 import re
 
-console = Console()
+console = Console(stderr=True)
 
 
 def gen_content_dois(content_dir: str, verbose: bool = False):
