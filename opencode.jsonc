@@ -7,22 +7,22 @@
   "references": {
     "nuxt": {
       "repository": "nuxt/nuxt",
-      "branch": "v4.4.7",
+      "branch": "v4.4.8",
       "description": "Nuxt framework source — use for core framework behavior, rendering modes, and module APIs"
     },
     "nuxt-ui": {
       "repository": "nuxt/ui",
-      "branch": "v4.8.1",
+      "branch": "v4.9.0",
       "description": "Nuxt UI component library — use for component props, theming, and usage examples"
     },
     "effect": {
       "repository": "Effect-TS/effect",
-      "branch": "effect@3.21.2",
+      "branch": "effect@3.21.4",
       "description": "Effect-TS runtime — use for Effect, Layer, Context.Tag, and error handling patterns"
     },
     "supabase-js": {
       "repository": "supabase/supabase-js",
-      "branch": "v2.107.0",
+      "branch": "v2.110.0",
       "description": "Supabase JavaScript client — use for auth, database, and realtime client APIs"
     },
     "drizzle-orm": {
@@ -77,7 +77,7 @@
     },
     "nuxt-content": {
       "repository": "nuxt/content",
-      "branch": "v3.14.0",
+      "branch": "v3.15.0",
       "description": "@nuxt/content module — use for content collections, defineContentConfig, queryCollection, and MDX/Markdown rendering"
     },
     "nuxt-test-utils": {
