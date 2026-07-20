@@ -66,6 +66,12 @@ meili_data/
 
 gaas-logo*
 
+# OpenCode review-loop handoff files
+.opencode/loop/
+
+# Subagent-driven development ledger
+.superpowers/sdd/
+
 tmp/
 
 repos
