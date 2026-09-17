@@ -239,7 +239,7 @@ config.public.meilisearch
 <!-- evlog:start -->
 ## Logging
 
-This project uses [evlog](https://evlog.dev) for structured, request-scoped logging. The authoritative conventions — which surface uses which logger, what context to attach, and how to handle errors — live in [`../../.planning/LOGGING-SPEC.md`](../../.planning/LOGGING-SPEC.md). Read that document before adding or changing logging.
+This project uses [evlog](https://evlog.dev) for structured, request-scoped logging. The authoritative conventions — which surface uses which logger, what context to attach, and how to handle errors — live in [`../../docs/LOGGING-SPEC.md`](../../docs/LOGGING-SPEC.md). Read that document before adding or changing logging.
 
 Quick orientation:
 - **Server API routes** use `const log = useLogger(event)` (auto-imported from `evlog`).

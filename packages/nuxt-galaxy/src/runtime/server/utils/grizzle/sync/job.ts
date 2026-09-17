@@ -4,7 +4,7 @@ import type { Database } from '../../../../types/database'
 import * as bt from 'blendtype'
 import { Data, Effect } from 'effect'
 
-// Sync trace fields: see .planning/LOGGING-SPEC.md ## Sync trace field allowlist
+// Sync trace fields: see docs/LOGGING-SPEC.md ## Sync trace field allowlist
 
 export class SyncJobError extends Data.TaggedError('SyncJobError')<{
   readonly message: string

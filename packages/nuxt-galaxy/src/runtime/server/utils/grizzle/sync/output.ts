@@ -6,7 +6,7 @@ import { Data, Effect } from 'effect'
 import { logStreamBytes } from '../stream-log'
 import { uploadStreamToStorage } from '../supabase'
 
-// Sync trace fields: see .planning/LOGGING-SPEC.md ## Sync trace field allowlist
+// Sync trace fields: see docs/LOGGING-SPEC.md ## Sync trace field allowlist
 
 export class SyncOutputError extends Data.TaggedError('SyncOutputError')<{
   readonly message: string

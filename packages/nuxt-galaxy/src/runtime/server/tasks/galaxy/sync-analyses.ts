@@ -9,7 +9,7 @@ import { useGalaxyLayer } from '../../utils/galaxy'
 import { createServiceRoleSupabaseClient } from '../../utils/grizzle/supabase'
 import { syncAnalysisEffect } from '../../utils/grizzle/sync/analysis'
 
-// Sync trace fields: see .planning/LOGGING-SPEC.md ## Sync trace field allowlist
+// Sync trace fields: see docs/LOGGING-SPEC.md ## Sync trace field allowlist
 
 // This scheduled task is the sole mutator of Galaxy sync state.
 // On-demand sync requests must enqueue `galaxy:sync-analyses` via runTask
