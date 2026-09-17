@@ -10,8 +10,10 @@ definePageMeta({
 const router = useRouter()
 const route = useRoute('analysis-detail')
 const supabase = useSupabaseClient<Database>()
+const toast = useToast()
 const analysisId = ref<number | undefined>(undefined)
 const isOpen = ref(true)
+const isSyncing = ref(false)
 const { isSmallDesktopOrMobile } = useDefinedBreakpoints()
 
 const analysisIdFromRoute = computed(() => {
@@ -43,12 +45,41 @@ watch(() => {
   }
 }, { immediate: true, deep: true })
 
+// Display-only refresh: these subscriptions re-fetch displayed rows and must not trigger Galaxy sync.
 useSupabaseRealtime(`histories:${toValue(analysisIdFromRoute)}`, 'histories', handleUpdates)
 useSupabaseRealtime(`jobs:${toValue(analysisIdFromRoute)}`, 'jobs', handleUpdates)
 useSupabaseRealtime(`analysis_outputs:${toValue(analysisIdFromRoute)}`, 'analysis_outputs', handleUpdates)
 
 function handleUpdates() {
   refreshAnalysis()
+}
+
+async function syncAnalysis() {
+  isSyncing.value = true
+  try {
+    // Nitro omits module-registered param-in-middle routes from layer-generated typed routes;
+    // resolve the URL in a variable so $fetch does not match the sibling DELETE route.
+    const syncUrl = `/api/db/analyses/${analysisIdFromRoute.value}/sync`
+    await $fetch(syncUrl, { method: 'POST' })
+    toast.add({
+      title: 'Sync queued',
+      description: 'The analysis sync has been queued.',
+      color: 'success',
+      icon: 'i-lucide-circle-check',
+    })
+  }
+  catch (error) {
+    const { errorMessage } = useErrorMessage(error)
+    toast.add({
+      title: 'Sync failed',
+      description: errorMessage.value || 'Sync request failed. Please try again or check the analysis status.',
+      color: 'error',
+      icon: 'i-lucide-circle-x',
+    })
+  }
+  finally {
+    isSyncing.value = false
+  }
 }
 
 function enterMotion(delay: number = 0) {
@@ -82,6 +113,9 @@ function enterMotion(delay: number = 0) {
         <template #right>
           <UTooltip text="Rename Analysis">
             <UButton color="neutral" variant="ghost" icon="i-lucide-pen" />
+          </UTooltip>
+          <UTooltip text="Sync now">
+            <UButton color="primary" variant="ghost" icon="i-lucide:refresh-cw" :loading="isSyncing" @click="syncAnalysis" />
           </UTooltip>
           <UTooltip text="Run Again">
             <UButton color="neutral" variant="ghost" icon="i-lucide:refresh-ccw" />

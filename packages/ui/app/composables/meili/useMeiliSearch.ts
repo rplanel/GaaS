@@ -2,6 +2,7 @@
 
 import type { SearchParams, SearchResponse } from 'meilisearch'
 import { useState } from '#imports'
+import { log } from 'evlog/client'
 import { MeiliSearch } from 'meilisearch'
 
 export function useMeiliSearch(index: string, stateIndexSuffix: string = '') {
@@ -24,7 +25,12 @@ export function useMeiliSearch(index: string, stateIndexSuffix: string = '') {
       return resp
     }
     catch (e) {
-      console.error('MeiliSearch Error:', e)
+      log.error({
+        action: 'meilisearch:search_failed',
+        tag: 'useMeiliSearch',
+        index,
+        error: getErrorMessage(e),
+      })
       result.value = null
       error.value = getErrorMessage(e)
       // throw createError({ statusCode: 500, statusMessage: e.message })

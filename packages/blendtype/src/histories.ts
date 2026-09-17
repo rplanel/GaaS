@@ -389,3 +389,57 @@ export function downloadDataset(historyId: string, datasetId: string, layer: Lay
     Effect.runPromise,
   )
 }
+
+export function downloadDatasetStream(historyId: string, datasetId: string, layer: Layer.Layer<GalaxyFetch>) {
+  return downloadDatasetStreamEffect(historyId, datasetId).pipe(
+    toGalaxyServiceUnavailable,
+    Effect.provide(layer),
+    Effect.runPromise,
+  )
+}
+
+export function downloadDatasetStreamEffect(historyId: string, datasetId: string): Effect.Effect<ReadableStream<Uint8Array> | NodeJS.ReadableStream | null, HistoryError, GalaxyFetch> {
+  return Effect.gen(function* () {
+    const log = (message: string, extra: Record<string, unknown> = {}) =>
+      Effect.log(`[downloadDatasetStreamEffect] ${message}`).pipe(
+        Effect.annotateLogs({ historyId, datasetId, function: 'downloadDatasetStreamEffect', ...extra }),
+      )
+
+    const fetchApi = yield* GalaxyFetch
+    yield* log('start')
+    const datasetDescription = yield* getDatasetEffect(datasetId, historyId).pipe(
+      Effect.tapError(error => log('error getting dataset', { error: error.message })),
+      Effect.mapError(error =>
+        new HistoryError({
+          message: formatErrorMessage('dataset', datasetId, 'Error getting dataset', error),
+          historyId,
+          statusCode: error.statusCode,
+          cause: error,
+        }),
+      ),
+    )
+    yield* log('dataset file_size and state', { file_size: datasetDescription.file_size, state: datasetDescription.state })
+    if (datasetDescription.file_size === 0) {
+      yield* log('returning null because file_size === 0')
+      return null
+    }
+    const url = `api/histories/${historyId}/contents/${datasetId}/display`
+    yield* log('fetching stream', { url })
+    const stream = yield* Effect.tryPromise<ReadableStream<Uint8Array> | NodeJS.ReadableStream, unknown>({
+      try: () => fetchApi<ReadableStream<Uint8Array>, 'stream'>(url, { method: 'GET', responseType: 'stream' }),
+      catch: caughtError => caughtError,
+    }).pipe(
+      Effect.tapError(caughtError => log('error fetching stream', { error: String(caughtError) })),
+      Effect.mapError((caughtError: unknown) =>
+        new HistoryError({
+          message: formatErrorMessage('dataset', datasetId, 'Error downloading stream', caughtError),
+          historyId,
+          statusCode: extractStatusCode(caughtError),
+          cause: caughtError,
+        }),
+      ),
+    )
+    yield* log('stream fetched successfully', { streamType: stream.constructor.name })
+    return stream
+  }).pipe(withRetry)
+}

@@ -1,66 +1,20 @@
-import type { DatasetTerminalState, HistoryState } from 'blendtype'
-import type { EventHandlerRequest, H3Event } from 'h3'
+import type { HistoryState } from 'blendtype'
 import type { NewHistory } from '../../../types/nuxt-galaxy'
 import { useRuntimeConfig } from '#imports'
+import { HistoryStates } from 'blendtype'
 import * as bt from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { Data, Effect } from 'effect'
 import { analyses } from '../../db/schema/galaxy/analyses'
 import { histories } from '../../db/schema/galaxy/histories'
 import { Drizzle } from '../drizzle'
-import { getInvocationOutputs, synchronizeJobsEffect } from './analyses'
-import { getAllAnalysisInputDatasets, synchronizeInputDatasetEffect } from './datasets/input'
 import { takeUniqueOrThrow } from './helper.js'
-import { getAnalysisJobs, isJobSyncEffect } from './jobs'
 import { getCurrentUserEffect } from './user'
 
 // const supabase = useSupabaseClient();
 
 export function isHistoryTerminalState(state: HistoryState): boolean {
-  return bt.DatasetsTerminalStates.includes(state as DatasetTerminalState)
-}
-
-export function synchronizeHistoryEffect(historyId: number, ownerId: string, event: H3Event<EventHandlerRequest>) {
-  return Effect.gen(function* () {
-    const historyDb = yield* getAnalysisHistory(historyId, ownerId)
-    if (historyDb) {
-      const isSync = yield* isHistorySyncEffect(historyId, historyDb.histories.id, ownerId)
-      if (isSync) {
-        return
-      }
-      const analysisInputsDb = yield* getAllAnalysisInputDatasets(historyDb.analyses.id, ownerId)
-      yield* Effect.all(
-        analysisInputsDb.map((analysisInput) => {
-          return Effect.gen(function* () {
-            yield* synchronizeInputDatasetEffect(
-              analysisInput.datasets.galaxyId,
-              historyDb.analyses.id,
-              historyId,
-              event,
-              ownerId,
-            )
-          })
-        }),
-      )
-      yield* synchronizeJobsEffect(
-        historyDb.analyses.id,
-        historyDb.histories.id,
-        ownerId,
-        event,
-      )
-      if (!isHistoryTerminalState(historyDb.histories.state)) {
-        const galaxyHistoryId = historyDb.histories.galaxyId
-        const galaxyHistory = yield* bt.getHistoryEffect(galaxyHistoryId)
-        if (historyDb.histories.state !== galaxyHistory.state) {
-          yield* updateHistoryState(historyId, galaxyHistory.state)
-        }
-      }
-      if (historyDb.histories.state === 'error') {
-        updateIsHistorySync(historyId, ownerId)
-        yield* updateHistoryState(historyId, 'running')
-      }
-    }
-  })
+  return (HistoryStates as readonly string[]).includes(state) && ['ok', 'error', 'failed', 'deleted'].includes(state)
 }
 
 export class GetHistoryError extends Data.TaggedError('GetHistoryError')<{
@@ -170,49 +124,6 @@ export function insertHistory(history: NewHistory) {
       catch: error => new InsertHistoryError({ message: `Error inserting history: ${error}` }),
     })
   })
-}
-
-export function isHistorySyncEffect(historyId: number, analysisId: number, ownerId: string) {
-  return Effect.gen(function* () {
-    const historyDb = yield* getAnalysisHistory(historyId, ownerId)
-    if (!historyDb) {
-      return false
-    }
-    const isSync = historyDb.histories.isSync
-    if (isSync) {
-      return true
-    }
-    const jobsWithOutputs = yield* getInvocationOutputs(analysisId, ownerId)
-    const isAllJobsSync = yield* isSynchronizedAnalysisJobs(analysisId, jobsWithOutputs, ownerId)
-    const isHistorySync = isHistoryTerminalState(historyDb.histories.state) && isAllJobsSync
-    if (isHistorySync) {
-      yield* updateIsHistorySync(historyId, ownerId)
-      return isHistorySync
-    }
-    return false
-  })
-}
-
-export function isSynchronizedAnalysisJobs(analysisId: number, jobsWithOutputs: Record<string, {
-  galaxyDatasetIds: string[]
-  galaxyJobId: string
-  stepId: number
-}> | undefined, ownerId: string) {
-  if (!jobsWithOutputs) {
-    return Effect.succeed(false)
-  }
-  return Effect.all(
-    Object.entries(jobsWithOutputs).map(([galaxyJobId, { galaxyDatasetIds }]) => {
-      return Effect.gen(function* () {
-        const jobDb = yield* getAnalysisJobs(analysisId, galaxyJobId, ownerId)
-        if (jobDb) {
-          return yield* isJobSyncEffect(jobDb.id, jobDb.state, galaxyDatasetIds, ownerId)
-        }
-        // const jobDb = yield* getOrCreateJobEffect(analysisId, galaxyJobId, stepId, ownerId)
-        return false
-      })
-    }),
-  ).pipe(Effect.map(d => d.every(d => d)))
 }
 
 export class UpdateHistoryState extends Data.TaggedError('UpdateHistoryState')<{

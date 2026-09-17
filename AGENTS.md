@@ -115,6 +115,21 @@ pnpm typecheck      # vue-tsc --noEmit
 - **Entry**: `gaas` command from `gaas_cli.main:app`
 - **Dependencies**: Manage with `uv` (not pip)
 
+<!-- evlog:start -->
+## Logging
+
+This project uses [evlog](https://evlog.dev) for structured, request-scoped logging. The authoritative conventions — which surface uses which logger, what context to attach, and how to handle errors — live in [`.planning/LOGGING-SPEC.md`](.planning/LOGGING-SPEC.md). Read that document before adding or changing logging.
+
+Quick orientation:
+- **Server API routes** use `const log = useLogger(event)` (auto-imported from `evlog`).
+- **Client composables and components** use the `log` symbol from `evlog/client` (auto-imported in Nuxt layers; otherwise `import { log } from 'evlog/client'`).
+- **Nuxt module lifecycle and build-time diagnostics** use `@nuxt/kit`'s `logger.withTag(...)`.
+- **Standalone scripts and scheduled tasks** with no HTTP event use `initLogger` or `createRequestLogger` from `evlog`.
+- **Effect programs** use `Effect.log*` / `Effect.logInfo` / `Effect.logError`; these are routed to evlog by the `runGalaxyEffect` / `runTaskEffect` helpers.
+
+**Never log secrets** — passwords, tokens, API keys such as `GALAXY_API_KEY` and Supabase service keys, full card numbers, session JWTs, or user tokens. Redaction is enabled in production, but choosing safe fields is the first line of defense.
+<!-- evlog:end -->
+
 ## Section 4: Testing Rules
 
 ### Test Commands
@@ -268,3 +283,17 @@ If search returns 0 results, proceed as a fresh session.
 | `ctx purge` | Call `purge` MCP tool with confirm: true. Warns before wiping knowledge base. |
 
 After /clear or /compact: knowledge base and session stats preserved. Use `ctx purge` to start fresh.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitLab project (gitlab.pasteur.fr, `gaas/GaaS`, the `origin` remote), operated via the `glab` CLI. The GitHub remote is a mirror. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage labels are used verbatim: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` at the repo root plus ADRs under `docs/adr/`. See `docs/agents/domain.md`.

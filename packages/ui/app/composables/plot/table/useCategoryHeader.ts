@@ -23,6 +23,7 @@
  */
 
 import type { GetHeaderParams, UseHeaderParams } from '../../../types/plotHeader'
+import { log } from 'evlog/client'
 import { h } from 'vue'
 import PlotTableHeaderCategory from '../../../components/plot/table/header/Category.vue'
 
@@ -35,7 +36,12 @@ export function useCategoryHeader(params: UseHeaderParams) {
     const { column, label, variable, selection } = params
     // const mosaicCoordinatorVal = coordinator as
     if (!selection || !coordinator) {
-      console.warn('Missing required parameters for category header:', { table, selection, coordinator })
+      log.warn({
+        action: 'category_header:missing_params',
+        tag: 'useCategoryHeader',
+        hasSelection: !!selection,
+        hasCoordinator: !!coordinator,
+      })
       return h('div', { class: 'w-full' }, 'No data available')
     }
     return h('div', { class: 'w-full' }, [

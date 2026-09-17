@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
 
 /**
  * CLI to run nuxt-galaxy database migrations.
@@ -19,7 +18,12 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import dotenvx from '@dotenvx/dotenvx'
 import { defineCommand, runMain } from 'citty'
+import { getEnvironment, initLogger, log } from 'evlog'
 import { getMigrationsFolder, runMigrations } from '../dist/runtime/server/lib/migrate.js'
+
+if (getEnvironment().service === 'app') {
+  initLogger({ env: { service: 'nuxt-galaxy' } })
+}
 
 const main = defineCommand({
   meta: {
@@ -53,26 +57,25 @@ const main = defineCommand({
 
     try {
       dotenvx.config({ path: envFilePath, quiet: true })
-      console.log(`📄 Loaded env from ${envFilePath}`)
+      log.info({ message: 'Loaded env file', path: envFilePath })
     }
     catch (err) {
       if (args.envFile) {
-        console.warn(`⚠️  Failed to load ${envFilePath}: ${err.message}`)
+        log.warn({ message: 'Failed to load env file', path: envFilePath, error: err.message })
       }
     }
 
     const databaseUrl = args.databaseUrl || process.env.GALAXY_DRIZZLE_DATABASE_URL
 
     if (!databaseUrl) {
-      console.error('❌ Error: Database URL is required.\n')
-      console.error('Set GALAXY_DRIZZLE_DATABASE_URL environment variable or pass it as an argument:')
-      console.error('  npx nuxt-galaxy-migrate postgres://user:pass@host:port/db\n')
-      console.error('Run with --help for more options.')
+      log.error('migrate', 'Database URL is required')
+      log.error('migrate', 'Set GALAXY_DRIZZLE_DATABASE_URL environment variable or pass it as an argument:')
+      log.error('migrate', '  npx nuxt-galaxy-migrate postgres://user:pass@host:port/db')
+      log.error('migrate', 'Run with --help for more options.')
       process.exit(1)
     }
 
-    console.log(`📂 Migrations folder: ${getMigrationsFolder()}`)
-    console.log(`🔄 Running nuxt-galaxy database migrations...\n`)
+    log.info({ message: 'Running database migrations', operation: 'migrate', migrationsFolder: getMigrationsFolder() })
 
     return runMigrations(databaseUrl, {
       migrationsTable: args.table,

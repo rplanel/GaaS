@@ -35,6 +35,9 @@ export const analyses = galaxy.table(
     stdout: text('stdout'),
     invocation: json('invocation').notNull(),
     isSync: boolean('is_sync').default(false),
+    syncAttempts: integer('sync_attempts').default(0).notNull(),
+    lastSyncErrorAt: timestamp('last_sync_error_at', { withTimezone: true }),
+    nextSyncAt: timestamp('next_sync_at', { withTimezone: true }),
   },
   table => [
     index().on(table.ownerId),

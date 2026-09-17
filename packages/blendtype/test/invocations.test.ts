@@ -1,7 +1,8 @@
 import { Effect, pipe } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { InvocationError } from '../src/errors'
-import { getInvocation, getInvocationEffect } from '../src/invocations'
+import { getInvocation, getInvocationEffect, getInvocationJobsSummary, getInvocationJobsSummaryEffect } from '../src/invocations'
+import { InvocationStates, InvocationTerminalStates } from '../src/types/invocation'
 import {
   createFailureLayer,
   createHttpErrorLayer,
@@ -13,11 +14,8 @@ import {
   extractFiberFailure,
   HTTP_STATUS_CODES,
   mockGalaxyInvocation,
+  mockGalaxyInvocationJobsSummary,
 } from './fixtures'
-
-// ============================================================================
-// getInvocationEffect
-// ============================================================================
 
 describe('getInvocationEffect', () => {
   describe('success cases', () => {
@@ -35,14 +33,14 @@ describe('getInvocationEffect', () => {
         Effect.runPromise,
       ))
 
-    it('should construct correct API URL', () =>
+    it('should construct correct API URL and URL-encode the invocation id', () =>
       pipe(
         Effect.gen(function* () {
           const trackingLayer = createUrlTrackingLayer(mockGalaxyInvocation)
-          yield* getInvocationEffect('inv-abc').pipe(
+          yield* getInvocationEffect('inv/abc').pipe(
             Effect.provide(trackingLayer),
           )
-          expect(trackingLayer.getLastUrl()).toBe('api/invocations/inv-abc')
+          expect(trackingLayer.getLastUrl()).toBe('api/invocations/inv%2Fabc')
         }),
         Effect.runPromise,
       ))
@@ -124,10 +122,6 @@ describe('getInvocationEffect', () => {
   })
 })
 
-// ============================================================================
-// getInvocation (Promise wrapper)
-// ============================================================================
-
 describe('getInvocation (Promise wrapper)', () => {
   it('should resolve with invocation data when given a success layer', async () => {
     const result = await getInvocation('test-invocation-id', createSuccessLayer(mockGalaxyInvocation))
@@ -155,6 +149,131 @@ describe('getInvocation (Promise wrapper)', () => {
   it('should propagate HTTP status codes through the wrapper', async () => {
     try {
       await getInvocation('test-invocation-id', createHttpErrorLayer(HTTP_STATUS_CODES.NOT_FOUND, 'Not Found'))
+      expect.unreachable('Should have thrown')
+    }
+    catch (error) {
+      const inner = extractFiberFailure(error)
+      expect(inner).toBeInstanceOf(InvocationError)
+      expect((inner as InvocationError).statusCode).toBe(HTTP_STATUS_CODES.NOT_FOUND)
+    }
+  })
+})
+
+describe('invocation state constants', () => {
+  it('includes all Galaxy OpenAPI invocation states', () => {
+    expect(InvocationStates).toEqual(expect.arrayContaining([
+      'new',
+      'requires_materialization',
+      'ready',
+      'scheduled',
+      'cancelled',
+      'cancelling',
+      'failed',
+      'completed',
+    ]))
+  })
+
+  it('contains only the true Galaxy terminal states', () => {
+    expect(InvocationTerminalStates).toEqual(['cancelled', 'failed', 'completed'])
+  })
+})
+
+describe('getInvocationJobsSummaryEffect', () => {
+  describe('success cases', () => {
+    it('should successfully retrieve an invocation jobs summary', () =>
+      pipe(
+        Effect.gen(function* () {
+          const summary = yield* getInvocationJobsSummaryEffect('test-invocation-id')
+
+          expect(summary).toEqual(mockGalaxyInvocationJobsSummary)
+          expect(summary.id).toBe('test-invocation-id')
+          expect(summary.states).toEqual({ ok: 1 })
+          expect(summary.populated_state).toBe('ok')
+        }),
+        Effect.provide(createSuccessLayer(mockGalaxyInvocationJobsSummary)),
+        Effect.runPromise,
+      ))
+
+    it('should construct correct API URL and URL-encode the invocation id', () =>
+      pipe(
+        Effect.gen(function* () {
+          const trackingLayer = createUrlTrackingLayer(mockGalaxyInvocationJobsSummary)
+          yield* getInvocationJobsSummaryEffect('inv/abc').pipe(
+            Effect.provide(trackingLayer),
+          )
+          expect(trackingLayer.getLastUrl()).toBe('api/invocations/inv%2Fabc/jobs_summary')
+        }),
+        Effect.runPromise,
+      ))
+  })
+
+  describe('error cases', () => {
+    it('should handle network failures', () =>
+      pipe(
+        Effect.gen(function* () {
+          const exit = yield* Effect.exit(
+            getInvocationJobsSummaryEffect('test-invocation-id'),
+          )
+
+          expectFailure(exit, (error) => {
+            expect(error).toBeInstanceOf(InvocationError)
+            expect(error.message).toContain('Error getting invocation jobs summary test-invocation-id')
+            expect(error.invocationId).toBe('test-invocation-id')
+          })
+        }),
+        Effect.provide(
+          createFailureLayer(new Error(ERROR_MESSAGES.NETWORK_REFUSED)),
+        ),
+        Effect.runPromise,
+      ))
+
+    it('should handle 404 not found error', () =>
+      pipe(
+        Effect.gen(function* () {
+          const exit = yield* Effect.exit(
+            getInvocationJobsSummaryEffect('non-existent'),
+          )
+
+          expectFailure(exit, (error) => {
+            expect(error).toBeInstanceOf(InvocationError)
+            expect(error.statusCode).toBe(HTTP_STATUS_CODES.NOT_FOUND)
+          })
+        }),
+        Effect.provide(
+          createHttpErrorLayer(HTTP_STATUS_CODES.NOT_FOUND, 'Not Found'),
+        ),
+        Effect.runPromise,
+      ))
+  })
+})
+
+describe('getInvocationJobsSummary (Promise wrapper)', () => {
+  it('should resolve with jobs summary data when given a success layer', async () => {
+    const result = await getInvocationJobsSummary('test-invocation-id', createSuccessLayer(mockGalaxyInvocationJobsSummary))
+    expect(result).toEqual(mockGalaxyInvocationJobsSummary)
+    expect(result.id).toBe('test-invocation-id')
+  })
+
+  it('should reject when given a failure layer', async () => {
+    await expect(
+      getInvocationJobsSummary('test-invocation-id', createFailureLayer(new Error(ERROR_MESSAGES.NETWORK_REFUSED))),
+    ).rejects.toThrow()
+  })
+
+  it('should map Service Unavailable to GalaxyServiceUnavailable', async () => {
+    try {
+      await getInvocationJobsSummary('test-invocation-id', createServiceUnavailableLayer())
+      expect.unreachable('Should have thrown')
+    }
+    catch (error) {
+      const inner = extractFiberFailure(error)
+      expect((inner as any)._tag).toBe('GalaxyServiceUnavailable')
+    }
+  })
+
+  it('should propagate HTTP status codes through the wrapper', async () => {
+    try {
+      await getInvocationJobsSummary('test-invocation-id', createHttpErrorLayer(HTTP_STATUS_CODES.NOT_FOUND, 'Not Found'))
       expect.unreachable('Should have thrown')
     }
     catch (error) {

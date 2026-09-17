@@ -12,6 +12,8 @@ import {
   expectFailure,
   mockDbAnalysisInput,
   mockDbDataset,
+  mockDrizzleInsertRejects,
+  mockDrizzleSelectRejects,
 } from '../../fixtures'
 
 describe('getAllAnalysisInputDatasets', () => {
@@ -44,15 +46,7 @@ describe('getAllAnalysisInputDatasets', () => {
 
   it('should fail with GetAnalysisInputError on database error', async () => {
     const drizzle = createMockDrizzle()
-    drizzle.mock.select.mockImplementation(() => {
-      const chain: Record<string, unknown> = {}
-      chain.from = () => chain
-      chain.innerJoin = () => chain
-      chain.where = () => chain
-      chain.then = (_r: unknown, reject: (e: Error) => void) =>
-        Promise.reject(new Error('DB error')).catch(reject)
-      return chain
-    })
+    drizzle.mock.select.mockImplementation(mockDrizzleSelectRejects(['from', 'innerJoin', 'where'], new Error('DB error')))
 
     const exit = await getAllAnalysisInputDatasets(1, 'owner-uuid-1').pipe(
       Effect.provide(drizzle.layer),
@@ -111,15 +105,7 @@ describe('insertAnalysisInputEffect', () => {
 
   it('should fail with InsertAnalysisInputError on database error', async () => {
     const drizzle = createMockDrizzle()
-    drizzle.mock.insert.mockImplementation(() => {
-      const chain: Record<string, unknown> = {}
-      chain.values = () => chain
-      chain.returning = () => chain
-      chain.onConflictDoNothing = () => chain
-      chain.then = (_r: unknown, reject: (e: Error) => void) =>
-        Promise.reject(new Error('Insert failed')).catch(reject)
-      return chain
-    })
+    drizzle.mock.insert.mockImplementation(mockDrizzleInsertRejects(['values', 'returning', 'onConflictDoNothing'], new Error('Insert failed')))
 
     const exit = await insertAnalysisInputEffect(1, 1, 'ok').pipe(
       Effect.provide(drizzle.layer),

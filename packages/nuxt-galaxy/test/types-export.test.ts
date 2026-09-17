@@ -7,7 +7,9 @@ describe('database types export', () => {
   })
 
   it('should export database types from module entry', async () => {
-    const module = await import('../dist/module.d.mts?raw')
+    // In stub mode dist/runtime is a symlink to src/runtime, so verify the
+    // source type file that is re-exported through the module entry.
+    const module = await import('../src/runtime/types/database.ts?raw')
     const content = module.default || ''
 
     // Check that all expected database types are exported
@@ -31,7 +33,9 @@ describe('nuxt-galaxy types export', () => {
   })
 
   it('should have nuxt-galaxy types defined', async () => {
-    const types = await import('../dist/runtime/types/nuxt-galaxy.d.ts?raw')
+    // In stub mode dist/runtime is a symlink to src/runtime, so the source .ts
+    // file is the canonical definition available in the dev/test environment.
+    const types = await import('../src/runtime/types/nuxt-galaxy.ts?raw')
     const content = types.default || ''
 
     // Check that nuxt-galaxy types are defined

@@ -24,5 +24,8 @@ export default defineConfig({
     // Common settings for all packages
     globals: true,
     environment: 'node',
+    // Use threads pool to avoid forks-pool IPC write failures (errno -122 / EDQUOT)
+    // in this runtime environment.
+    pool: 'threads',
   },
 })

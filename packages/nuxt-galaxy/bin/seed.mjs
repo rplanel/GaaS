@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
 
 /**
  * CLI to seed nuxt-galaxy database.
@@ -28,8 +27,13 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import dotenvx from '@dotenvx/dotenvx'
 import { defineCommand, runMain } from 'citty'
+import { getEnvironment, initLogger, log } from 'evlog'
 import { z } from 'zod'
 import { ExitCodes, runSeed, validateSeedConfig } from '../dist/runtime/server/lib/seed.js'
+
+if (getEnvironment().service === 'app') {
+  initLogger({ env: { service: 'nuxt-galaxy' } })
+}
 
 const main = defineCommand({
   meta: {
@@ -66,19 +70,19 @@ const main = defineCommand({
     try {
       dotenvx.config({ path: envFilePath, quiet: true })
       if (!args.dryRun) {
-        console.log(`📄 Loaded env from ${envFilePath}`)
+        log.info({ message: 'Loaded env file', path: envFilePath })
       }
     }
     catch (err) {
       if (args.envFile) {
-        console.warn(`⚠️  Failed to load ${envFilePath}: ${err.message}`)
+        log.warn({ message: 'Failed to load env file', path: envFilePath, error: err.message })
       }
     }
 
     // Read and parse config file
     const configPath = resolve(args.configFile)
     if (!existsSync(configPath)) {
-      console.error(`❌ Config file not found: ${configPath}`)
+      log.error({ message: 'Config file not found', operation: 'seed', path: configPath })
       process.exit(ExitCodes.CONFIG_ERROR)
     }
 
@@ -88,7 +92,7 @@ const main = defineCommand({
       config = JSON.parse(fileContent)
     }
     catch (err) {
-      console.error(`❌ Failed to parse config file: ${err.message}`)
+      log.error({ message: 'Failed to parse config file', operation: 'seed', path: configPath, error: err.message })
       process.exit(ExitCodes.CONFIG_ERROR)
     }
 
@@ -97,16 +101,16 @@ const main = defineCommand({
     try {
       validatedConfig = validateSeedConfig(config)
       if (!args.dryRun) {
-        console.log('✅ Config validation passed')
+        log.info('seed', 'Config validation passed')
       }
     }
     catch (err) {
       if (err instanceof z.ZodError) {
-        console.error('❌ Validation error:')
+        log.error('Validation error')
         const issues = err.issues || err.errors || []
         issues.forEach((e) => {
           const path = e.path && e.path.length > 0 ? e.path.join('.') : 'root'
-          console.error(`   - ${path}: ${e.message}`)
+          log.error({ message: 'Config validation issue', operation: 'seed', path, issue: e.message })
         })
         process.exit(ExitCodes.VALIDATION_ERROR)
       }
@@ -115,10 +119,13 @@ const main = defineCommand({
 
     // Dry run mode
     if (args.dryRun) {
-      console.log('✅ Dry run: Config is valid')
-      console.log(`   Instances: ${validatedConfig.instances.length}`)
-      console.log(`   Users: ${validatedConfig.users.length}`)
-      console.log(`   Role permissions: ${validatedConfig.rolePermissions.length}`)
+      log.info({
+        message: 'Dry run: Config is valid',
+        operation: 'seed',
+        instances: validatedConfig.instances.length,
+        users: validatedConfig.users.length,
+        rolePermissions: validatedConfig.rolePermissions.length,
+      })
       process.exit(ExitCodes.SUCCESS)
     }
 
@@ -126,10 +133,10 @@ const main = defineCommand({
     const databaseUrl = args.databaseUrl || process.env.GALAXY_DRIZZLE_DATABASE_URL
 
     if (!databaseUrl) {
-      console.error('❌ Error: Database URL is required.\n')
-      console.error('Set GALAXY_DRIZZLE_DATABASE_URL environment variable or pass --database-url:')
-      console.error('  npx nuxt-galaxy-seed seed.config.json --database-url postgres://user:pass@host:port/db\n')
-      console.error('Run with --help for more options.')
+      log.error('seed', 'Database URL is required')
+      log.error('seed', 'Set GALAXY_DRIZZLE_DATABASE_URL environment variable or pass --database-url:')
+      log.error('seed', '  npx nuxt-galaxy-seed seed.config.json --database-url postgres://user:pass@host:port/db')
+      log.error('seed', 'Run with --help for more options.')
       process.exit(ExitCodes.DATABASE_ERROR)
     }
 
@@ -140,18 +147,18 @@ const main = defineCommand({
     }
     catch (err) {
       if (err instanceof ReferenceError) {
-        console.error(`❌ Reference error: ${err.message}`)
+        log.error({ message: 'Reference error', operation: 'seed', error: err.message })
         process.exit(ExitCodes.REFERENCE_ERROR)
       }
       if (err instanceof z.ZodError) {
-        console.error(`❌ Validation error: ${err.message}`)
+        log.error({ message: 'Validation error', operation: 'seed', error: err.message })
         process.exit(ExitCodes.VALIDATION_ERROR)
       }
       if ((err instanceof Error && err.message.includes('database')) || err.message.includes('connection')) {
-        console.error(`❌ Database error: ${err.message}`)
+        log.error({ message: 'Database error', operation: 'seed', error: err.message })
         process.exit(ExitCodes.DATABASE_ERROR)
       }
-      console.error(`❌ General error: ${err.message}`)
+      log.error({ message: 'General error', operation: 'seed', error: err.message })
       process.exit(ExitCodes.GENERAL_ERROR)
     }
   },

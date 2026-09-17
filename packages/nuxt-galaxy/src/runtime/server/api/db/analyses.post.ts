@@ -4,6 +4,7 @@ import { toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect, Layer } from 'effect'
 import { defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle.js'
+import { runGalaxyEffect } from '../../utils/evlog-effect'
 import { UrlFetch } from '../../utils/fetch'
 import { useGalaxyLayer } from '../../utils/galaxy.js'
 import { runAnalysis } from '../../utils/grizzle/analyses.js'
@@ -52,6 +53,11 @@ export default defineEventHandler<{ body: AnalysisBody }>(
               }
               return acc
             }, workflowInput)
+          const workflowSnapshot = {
+            workflowName: workflow.name ?? null,
+            galaxyWorkflowId: workflow.galaxyId ?? null,
+            workflowVersion: workflow.versionKey ?? null,
+          }
           return yield* runAnalysis(
             name,
             historyDb.galaxyId,
@@ -62,6 +68,7 @@ export default defineEventHandler<{ body: AnalysisBody }>(
             inputs,
             parameters || {},
             datamap,
+            workflowSnapshot,
           )
         }
       }
@@ -75,11 +82,13 @@ export default defineEventHandler<{ body: AnalysisBody }>(
       ServerSupabaseClaims.Live,
       UrlFetch.Live,
     )
-    return program.pipe(
-      toGalaxyServiceUnavailable,
-      Effect.provide(finalLayer),
-      Effect.provide(useGalaxyLayer()),
-      Effect.runPromise,
+    return runGalaxyEffect(
+      event,
+      program.pipe(
+        toGalaxyServiceUnavailable,
+        Effect.provide(finalLayer),
+        Effect.provide(useGalaxyLayer()),
+      ),
     )
   },
 

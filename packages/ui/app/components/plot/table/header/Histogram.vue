@@ -2,6 +2,7 @@
 import type { Coordinator, Selection } from '@uwdata/mosaic-core'
 import { PlotRange } from '#components'
 import * as vg from '@uwdata/vgplot'
+import { log } from 'evlog/client'
 import { usePlotLayout } from '../../../../composables/plot/usePlotLayout'
 
 interface Props {
@@ -102,7 +103,11 @@ onMounted(() => {
   }
 })
 onUnmounted(() => {
-  console.warn('Unmounting histogram plot for variable:', toValue(variable))
+  log.info({
+    action: 'histogram:unmounted',
+    tag: 'Histogram',
+    variable: toValue(variable),
+  })
 })
 </script>
 

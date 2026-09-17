@@ -41,6 +41,7 @@
     "nuxt": "catalog:nuxt",
     "playwright-core": "catalog:testing",
     "typescript": "catalog:",
+    "vitest": "catalog:testing",
     "vue": "catalog:",
     "vue-tsc": "catalog:"
   }

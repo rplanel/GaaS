@@ -335,6 +335,7 @@ function staggerMotion(index: number = 0) {
           />
 
           <UButton
+            v-if="page.cta.command"
             :label="page.cta.command"
             :trailing-icon="copied ? 'i-lucide-copy-check' : 'i-lucide-copy'"
             color="neutral"

@@ -109,6 +109,32 @@ export interface AnalysisBody {
   workflowId: number
 }
 
+export interface AnalysisMonitoringCounts {
+  total: number
+  success: number
+  error: number
+  cancelled: number
+  pending: number
+}
+
+export interface AnalysisMonitoringWorkflowUsage extends AnalysisMonitoringCounts {
+  workflowId: number | null
+  name: string | null
+  version: string | null
+  successRate: number
+}
+
+export interface AnalysisMonitoringTrendPoint extends AnalysisMonitoringCounts {
+  bucket: string
+  successRate: number
+}
+
+export interface AnalysisMonitoringStats extends AnalysisMonitoringCounts {
+  perWorkflow: AnalysisMonitoringWorkflowUsage[]
+  trend: AnalysisMonitoringTrendPoint[]
+  successRate: number
+}
+
 // Drizzle Database type related
 
 export const RoleTypes = [

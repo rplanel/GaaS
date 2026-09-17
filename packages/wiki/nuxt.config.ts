@@ -4,9 +4,11 @@
 import type { FileAfterParseHook } from '@nuxt/content'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { logger } from '@nuxt/kit'
 import { searchContentRef } from './app/utils/content/search'
 
 const currentDir = dirname(fileURLToPath(import.meta.url))
+const log = logger.withTag('@gaas/wiki')
 
 export default defineNuxtConfig({
   extends: ['@gaas/ui'],
@@ -24,6 +26,7 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@nuxt/content',
     'nuxt-studio',
+    'evlog/nuxt',
   ],
   css: [
     join(currentDir, './app/assets/css/main.css'),
@@ -31,9 +34,13 @@ export default defineNuxtConfig({
   hooks: {
     'content:file:afterParse': function (ctx: FileAfterParseHook) {
       if (ctx.file.id.startsWith('content/wiki/')) {
-        console.log('Parsed content:', ctx.file.id)
+        log.info(`Parsed content: ${ctx.file.id}`)
+        const body = ctx.content.body as {
+          value: unknown[]
+          toc: { links: { depth: number, id: string, text: string }[] }
+        }
         const dois = []
-        for (const block of ctx.content.body.value) {
+        for (const block of body.value) {
           dois.push(...searchContentRef(block))
         }
         const uniqueDois = new Set(
@@ -48,11 +55,11 @@ export default defineNuxtConfig({
         }
 
         // Add bibliography section to content
-        ctx.content.body.value.push(
+        body.value.push(
           ['bibliography-section', { ':dois': JSON.stringify(Array.from(uniqueDois)) }],
         )
         // Add bibliography section to table of contents
-        ctx.content.body.toc.links.push({ depth: 2, text: 'Bibliography', id: 'bibliography' })
+        body.toc.links.push({ depth: 2, text: 'Bibliography', id: 'bibliography' })
       }
     },
   },
@@ -65,6 +72,9 @@ export default defineNuxtConfig({
       saveRedirectToCookie: true,
 
     },
+  },
+  evlog: {
+    env: { service: 'wiki' },
   },
 
 })

@@ -13,7 +13,9 @@ const mockSupabaseUser = {
 
 const mockDbWorkflow = {
   id: 1,
+  name: 'Test Workflow',
   galaxyId: 'galaxy-wf-1',
+  versionKey: '1.0',
 }
 
 const mockDbHistory = {
@@ -170,6 +172,25 @@ describe('post /api/db/analyses', () => {
     const result = await handler({} as any)
 
     expect(result).toEqual(mockAnalysisResult)
+  })
+
+  it('should thread the resolved workflow snapshot into runAnalysis', async () => {
+    const analysesModule = await import('../../../../src/runtime/server/utils/grizzle/analyses.js')
+    const runAnalysisMock = analysesModule.runAnalysis as ReturnType<typeof vi.fn>
+    runAnalysisMock.mockClear()
+
+    const handler = (await import('../../../../src/runtime/server/api/db/analyses.post')).default
+    await handler({} as any)
+
+    const callArgs = runAnalysisMock.mock.calls[0]
+    // runAnalysis(name, galaxyHistoryId, galaxyWorkflowId, historyId, workflowId,
+    //             ownerId, inputs, parameters, datamap, workflowSnapshot)
+    const workflowSnapshot = callArgs[9]
+    expect(workflowSnapshot).toEqual({
+      workflowName: mockDbWorkflow.name,
+      galaxyWorkflowId: mockDbWorkflow.galaxyId,
+      workflowVersion: mockDbWorkflow.versionKey,
+    })
   })
 
   it('should fail when user is not authenticated', async () => {

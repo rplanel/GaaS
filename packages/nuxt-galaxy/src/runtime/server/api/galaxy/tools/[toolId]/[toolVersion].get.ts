@@ -2,6 +2,7 @@ import { getToolEffect, toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect } from 'effect'
 import { defineEventHandler, getRouterParam } from 'h3'
 import { decode } from 'ufo'
+import { runGalaxyEffect } from '../../../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../../../utils/galaxy'
 
 /**
@@ -15,10 +16,9 @@ export default defineEventHandler(async (event) => {
   const toolId = getRouterParam(event, 'toolId')
   const toolVersion = getRouterParam(event, 'toolVersion')
   if (toolId && toolVersion) {
-    return getToolEffect(decode(toolId), toolVersion).pipe(
+    return runGalaxyEffect(event, getToolEffect(decode(toolId), toolVersion).pipe(
       toGalaxyServiceUnavailable,
       Effect.provide(useGalaxyLayer()),
-      Effect.runPromise,
-    )
+    ))
   }
 })

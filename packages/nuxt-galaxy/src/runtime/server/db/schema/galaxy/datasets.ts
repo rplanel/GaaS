@@ -41,11 +41,11 @@ export const datasets = galaxy.table(
     id: serial('id').primaryKey(),
     ownerId: uuid('owner_id').notNull().references(() => owners.id, { onDelete: 'cascade' }),
     historyId: integer('history_id').notNull().references(() => histories.id, { onDelete: 'cascade' }),
-    storageObjectId: uuid('storage_object_id').notNull().references(
+    storageObjectId: uuid('storage_object_id').references(
       () => objects.id,
       { onDelete: 'cascade' },
     ),
-    storagePath: varchar('storage_path', { length: 512 }).notNull(),
+    storagePath: varchar('storage_path', { length: 512 }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     uuid: uuid('uuid').notNull().unique(),
     galaxyMetadata: jsonb('galaxy_metadata').notNull().$type<GalaxyDatasetMetadata>(),

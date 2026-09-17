@@ -1,7 +1,7 @@
-import type { GalaxyDataset, GalaxyHistoryDetailed, GalaxyInvocation, GalaxyVersion, GalaxyWorkflow, GalaxyWorkflowExport, ShowFullJobResponse } from 'blendtype'
+import type { GalaxyDataset, GalaxyHistoryDetailed, GalaxyInvocation, GalaxyVersion, GalaxyWorkflow, GalaxyWorkflowExport, InvocationJobsSummary, ShowFullJobResponse } from 'blendtype'
 import type { Context } from 'effect'
 import type { EventHandlerRequest, H3Event } from 'h3'
-import { GalaxyFetch } from 'blendtype'
+import { GalaxyApiError, GalaxyFetch } from 'blendtype'
 import { Effect, Exit, Layer } from 'effect'
 import { vi } from 'vitest'
 import { Drizzle } from '../../src/runtime/server/utils/drizzle'
@@ -133,6 +133,13 @@ export const mockGalaxyInvocation: GalaxyInvocation = {
   history_id: 'galaxy-history-1',
   uuid: 'invocation-uuid-1',
   steps: [],
+}
+
+export const mockGalaxyInvocationJobsSummary: InvocationJobsSummary = {
+  model: 'WorkflowInvocation',
+  id: 'galaxy-invocation-1',
+  states: { ok: 1 },
+  populated_state: 'ok',
 }
 
 export const mockGalaxyJob: ShowFullJobResponse = {
@@ -286,19 +293,26 @@ export function createMockGalaxyLayer<T>(response: T): Layer.Layer<GalaxyFetch> 
   )
 }
 
-/**
- * Creates a GalaxyFetch layer with URL-based routing for different responses.
- */
 export function createRoutedGalaxyLayer(
-  routes: Record<string, unknown>,
+  routes: Record<string, unknown | Array<unknown | Error>>,
 ): Layer.Layer<GalaxyFetch> {
+  const counters: Record<string, number> = {}
   return Layer.effect(
     GalaxyFetch,
     Effect.sync(() =>
       (async (url: string) => {
         for (const [pattern, response] of Object.entries(routes)) {
-          if (url.includes(pattern))
-            return response
+          if (url.includes(pattern)) {
+            const index = counters[pattern] ?? 0
+            counters[pattern] = index + 1
+            const value = Array.isArray(response)
+              ? response[Math.min(index, response.length - 1)]
+              : response
+            if (value instanceof Error) {
+              throw value
+            }
+            return value
+          }
         }
         throw new Error(`No mock route for URL: ${url}`)
       }) as unknown as GalaxyFetchService,
@@ -313,6 +327,40 @@ export function createFailingGalaxyLayer(error: Error): Layer.Layer<GalaxyFetch>
   return Layer.succeed(
     GalaxyFetch,
     (async () => { throw error }) as unknown as GalaxyFetchService,
+  )
+}
+
+/**
+ * Creates a GalaxyFetch layer that returns a transient HTTP error for the first
+ * `failureCount` calls matching any of `failingPatterns`, then falls back to the
+ * provided route responses. Useful for exercising the 503/429 retry path end-to-end.
+ */
+export function create503GalaxyLayer(
+  routes: Record<string, unknown>,
+  failingPatterns: string[],
+  options?: { failureCount?: number, statusCode?: number, message?: string },
+): Layer.Layer<GalaxyFetch> {
+  let failuresRemaining = options?.failureCount ?? 1
+  const statusCode = options?.statusCode ?? 503
+  const message = options?.message ?? 'Service Unavailable'
+  return Layer.effect(
+    GalaxyFetch,
+    Effect.sync(() =>
+      (async (url: string) => {
+        if (failuresRemaining > 0 && failingPatterns.some(pattern => url.includes(pattern))) {
+          failuresRemaining--
+          throw new GalaxyApiError({ message, statusCode })
+        }
+        for (const [pattern, response] of Object.entries(routes)) {
+          if (url.includes(pattern)) {
+            if (response instanceof Error)
+              throw response
+            return response
+          }
+        }
+        throw new Error(`No mock route for URL: ${url}`)
+      }) as unknown as GalaxyFetchService,
+    ),
   )
 }
 
@@ -355,23 +403,74 @@ export function createMockDrizzleResult(result: unknown) {
   return chainable
 }
 
+type DrizzleSelectMethod = 'from' | 'where' | 'innerJoin' | 'orderBy' | 'limit' | 'groupBy'
+// Includes 'onConflictDoNothing' because production insert paths use it,
+// even though the original acceptance criteria did not list it.
+type DrizzleInsertMethod = 'values' | 'onConflictDoUpdate' | 'onConflictDoNothing' | 'returning'
+type DrizzleUpdateMethod = 'set' | 'where' | 'returning'
+type DrizzleDeleteMethod = 'where' | 'returning'
+
+function createDrizzleRejectChain(methods: string[], error: Error) {
+  const chain: Record<string, unknown> = {}
+  for (const method of methods) {
+    if (method === 'then') {
+      throw new Error(`Cannot overwrite '.then' on a Drizzle reject chain; 'then' is reserved for the terminal thenable.`)
+    }
+    chain[method] = vi.fn(() => chain)
+  }
+  chain.then = vi.fn((_resolve: unknown, reject: (e: Error) => unknown) => {
+    reject(error)
+  })
+  return chain
+}
+
+export function mockDrizzleSelectRejects(methods: [DrizzleSelectMethod, ...DrizzleSelectMethod[]], error: Error) {
+  return vi.fn(() => createDrizzleRejectChain(methods, error))
+}
+
+export function mockDrizzleInsertRejects(methods: [DrizzleInsertMethod, ...DrizzleInsertMethod[]], error: Error) {
+  return vi.fn(() => createDrizzleRejectChain(methods, error))
+}
+
+export function mockDrizzleUpdateRejects(methods: [DrizzleUpdateMethod, ...DrizzleUpdateMethod[]], error: Error) {
+  return vi.fn(() => createDrizzleRejectChain(methods, error))
+}
+
+export function mockDrizzleDeleteRejects(methods: [DrizzleDeleteMethod, ...DrizzleDeleteMethod[]], error: Error) {
+  return vi.fn(() => createDrizzleRejectChain(methods, error))
+}
+
 /**
  * Creates a mock Drizzle instance that returns configurable results.
- * Use `setResult()` to change the returned data between test cases.
+ * Use `setResult()` to change the returned data between test cases, or
+ * `enqueueResult()` to push a FIFO queue of results popped one per
+ * `.select()`/`.insert()`/`.update()`/`.delete()` call (falling back to
+ * `currentResult` when the queue is empty). The queue is what makes the
+ * multi-query trend path (`selectTrendRange` + `selectTrendBuckets` under
+ * `Effect.all`) testable with a distinct result per query.
  */
 export function createMockDrizzle() {
   let currentResult: unknown = []
+  const resultQueue: unknown[] = []
+
+  const shiftResult = () =>
+    resultQueue.length > 0 ? resultQueue.shift()! : currentResult
 
   const mock = {
-    select: vi.fn(() => createMockDrizzleResult(currentResult)),
-    insert: vi.fn(() => createMockDrizzleResult(currentResult)),
-    update: vi.fn(() => createMockDrizzleResult(currentResult)),
-    delete: vi.fn(() => createMockDrizzleResult(currentResult)),
+    select: vi.fn(() => createMockDrizzleResult(shiftResult())),
+    insert: vi.fn(() => createMockDrizzleResult(shiftResult())),
+    update: vi.fn(() => createMockDrizzleResult(shiftResult())),
+    delete: vi.fn(() => createMockDrizzleResult(shiftResult())),
   }
+
+  Object.assign(mock, {
+    transaction: vi.fn((cb: (client: typeof mock) => Promise<unknown>) => cb(mock)),
+  })
 
   return {
     mock,
     setResult: (result: unknown) => { currentResult = result },
+    enqueueResult: (result: unknown) => { resultQueue.push(result) },
     layer: Layer.succeed(Drizzle, mock as any),
   }
 }
@@ -386,12 +485,16 @@ export function createMockDrizzle() {
 export function createMockSupabaseClient(overrides?: {
   authUser?: { user: typeof mockSupabaseUser } | null
   authError?: { message: string, code: string } | null
+  session?: { access_token: string } | null
+  sessionError?: { message: string, code: string } | null
   queryResult?: { data: unknown, error: unknown }
   storageResult?: { data: unknown, error: unknown }
 }) {
   const defaults = {
     authUser: { user: mockSupabaseUser },
     authError: null,
+    session: { access_token: 'mock-access-token' },
+    sessionError: null,
     queryResult: { data: [], error: null },
     storageResult: { data: { id: 'storage-id', path: 'path/to/file' }, error: null },
   }
@@ -422,6 +525,12 @@ export function createMockSupabaseClient(overrides?: {
         Promise.resolve({
           data: opts.authUser,
           error: opts.authError,
+        }),
+      ),
+      getSession: vi.fn(() =>
+        Promise.resolve({
+          data: { session: opts.session },
+          error: opts.sessionError,
         }),
       ),
     },

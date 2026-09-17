@@ -6,6 +6,9 @@ export default defineConfig({
       {
         test: {
           name: 'unit',
+          // Use threads pool to avoid forks-pool IPC write failures (errno -122 / EDQUOT)
+          // in this runtime environment.
+          pool: 'threads',
           environment: 'node',
           include: ['test/unit/**/*.test.ts'],
           exclude: ['**/node_modules/**', '**/.nuxt/**', '**/.playground/**'],
@@ -14,6 +17,9 @@ export default defineConfig({
       {
         test: {
           name: 'nuxt',
+          // Use threads pool to avoid forks-pool IPC write failures (errno -122 / EDQUOT)
+          // in this runtime environment.
+          pool: 'threads',
           environment: 'nuxt',
           include: ['test/nuxt/**/*.test.ts'],
           environmentOptions: {

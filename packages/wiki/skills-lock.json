@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "analyze-logs": {
+      "source": "evlog.dev",
+      "sourceType": "well-known",
+      "computedHash": "cfee596309cadb10ded04df7b15f10ebaf016faa591eb78b847d328dab553e77"
+    },
+    "build-audit-logs": {
+      "source": "evlog.dev",
+      "sourceType": "well-known",
+      "computedHash": "d2836433a45d3763403a87803f48df7a48f6c2c52355dfca3c3e29238e5b7cf5"
+    },
+    "review-logging-patterns": {
+      "source": "evlog.dev",
+      "sourceType": "well-known",
+      "computedHash": "ec2a14dfb5c6cc8eacfef4bbcd35a8bb02a7de16c801083f14024137c22b5cc9"
+    }
+  }
+}

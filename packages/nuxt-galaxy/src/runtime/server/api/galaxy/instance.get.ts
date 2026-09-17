@@ -4,14 +4,17 @@ import { useRuntimeConfig } from '#imports'
 import { getVersionEffect, toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect } from 'effect'
 import { defineEventHandler } from 'h3'
+import { runGalaxyEffect } from '../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../utils/galaxy'
 
-export default defineEventHandler(async (): Promise<GalaxyInstanceDetails> => {
+export default defineEventHandler(async (event): Promise<GalaxyInstanceDetails> => {
   const { public: { galaxy: { url } } } = useRuntimeConfig()
-  const version: GalaxyVersion = await getVersionEffect.pipe(
-    toGalaxyServiceUnavailable,
-    Effect.provide(useGalaxyLayer()),
-    Effect.runPromise,
+  const version: GalaxyVersion = await runGalaxyEffect(
+    event,
+    getVersionEffect.pipe(
+      toGalaxyServiceUnavailable,
+      Effect.provide(useGalaxyLayer()),
+    ),
   )
   return { url, ...version }
 })

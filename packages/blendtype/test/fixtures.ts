@@ -1,6 +1,6 @@
 import type { Context } from 'effect'
-import type { GalaxyDataset, GalaxyHistoryDetailed, GalaxyInvocation, GalaxyTool, GalaxyVersion, GalaxyWorkflow, GalaxyWorkflowsItem, HistoryStateDetails, HistoryStateIds, ShowFullJobResponse } from '../src/types'
-import { Effect, Exit, Layer } from 'effect'
+import type { GalaxyDataset, GalaxyHistoryDetailed, GalaxyInvocation, GalaxyTool, GalaxyVersion, GalaxyWorkflow, GalaxyWorkflowsItem, HistoryStateDetails, HistoryStateIds, InvocationJobsSummary, ShowFullJobResponse } from '../src/types'
+import { Effect, Exit, HashMap, Layer, Logger, LogLevel } from 'effect'
 import { GalaxyFetch } from '../src/galaxy'
 
 // ============================================================================
@@ -194,6 +194,13 @@ export const mockGalaxyInvocation: GalaxyInvocation = {
   steps: [],
 }
 
+export const mockGalaxyInvocationJobsSummary: InvocationJobsSummary = {
+  model: 'WorkflowInvocation',
+  id: 'test-invocation-id',
+  states: { ok: 1 },
+  populated_state: 'ok',
+}
+
 export const mockGalaxyJob: ShowFullJobResponse = {
   model_class: 'Job',
   id: 'test-job-id',
@@ -263,6 +270,27 @@ export function createHttpErrorLayer(
     statusCode,
   })
   return createFailureLayer(error)
+}
+
+/**
+ * Creates a test layer that captures all log output at Debug level and above.
+ * Pushes formatted strings `[LEVEL] message key=value ...` into the provided array.
+ */
+export function createLogCaptureLayer(messages: string[]): Layer.Layer<never> {
+  const logger = Logger.make(({ logLevel, message, annotations }) => {
+    const level = logLevel.label
+    const annotationString = HashMap.toEntries(annotations)
+      .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+      .join(' ')
+    const formatted = annotationString.length > 0
+      ? `[${level}] ${String(message)} ${annotationString}`
+      : `[${level}] ${String(message)}`
+    messages.push(formatted)
+  })
+
+  return Logger.replace(Logger.defaultLogger, logger).pipe(
+    Layer.merge(Logger.minimumLogLevel(LogLevel.Debug)),
+  )
 }
 
 /**

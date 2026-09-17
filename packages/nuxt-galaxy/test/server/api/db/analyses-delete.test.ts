@@ -1,5 +1,7 @@
 import { Context, Effect, Layer } from 'effect'
-import { describe, expect, it, vi } from 'vitest'
+import { useLogger } from 'evlog'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createMockRequestLogger } from '../../setup'
 
 const mockSupabaseUser = {
   id: 'owner-uuid-1',
@@ -7,6 +9,13 @@ const mockSupabaseUser = {
 }
 
 const mockDeleteResult = [{ id: 1 }]
+
+class GetSupabaseUserError extends Error {
+  readonly _tag = 'GetSupabaseUserError'
+  constructor(opts: { message: string }) {
+    super(opts.message)
+  }
+}
 
 // Define mock service classes at top-level (before vi.mock hoisting)
 class MockDrizzle extends Context.Tag('@nuxt-galaxy/Drizzle')<MockDrizzle, any>() {
@@ -42,6 +51,7 @@ vi.mock('../../../../src/runtime/server/utils/grizzle/supabase', () => ({
   ServerSupabaseClient: MockServerSupabaseClient,
   ServerSupabaseClaims: MockServerSupabaseClaims,
   getSupabaseUser: vi.fn(() => Effect.succeed(mockSupabaseUser)),
+  GetSupabaseUserError,
 }))
 
 // Mock analyses
@@ -62,16 +72,28 @@ vi.mock('h3', async (importOriginal) => {
   }
 })
 
+beforeEach(() => {
+  vi.clearAllMocks()
+})
+
 describe('delete /api/db/analyses/:analysisId', () => {
   it('should delete an analysis and return the result', async () => {
+    const requestLog = createMockRequestLogger()
+    vi.mocked(useLogger).mockReturnValue(requestLog)
+
     const handler = (await import('../../../../src/runtime/server/api/db/analyses/[analysisId].delete')).default
 
-    const result = await handler({} as any)
+    const result = await handler({ path: '/api/db/analyses/1', method: 'DELETE' } as any)
 
     expect(result).toEqual(mockDeleteResult)
+    expect(useLogger).toHaveBeenCalledWith(expect.anything())
+    expect(requestLog.set).toHaveBeenCalledWith({ handler: '/api/db/analyses/1', method: 'DELETE' })
   })
 
   it('should return undefined when analysisId is missing', async () => {
+    const requestLog = createMockRequestLogger()
+    vi.mocked(useLogger).mockReturnValue(requestLog)
+
     const h3 = await import('h3')
     const getRouterParamSpy = h3.getRouterParam as ReturnType<typeof vi.fn>
     getRouterParamSpy.mockReturnValue(undefined)
@@ -80,6 +102,7 @@ describe('delete /api/db/analyses/:analysisId', () => {
     const result = await handler({} as any)
 
     expect(result).toBeUndefined()
+    expect(useLogger).not.toHaveBeenCalled()
 
     // Restore
     getRouterParamSpy.mockImplementation((_event: unknown, param: string) => {
@@ -87,5 +110,41 @@ describe('delete /api/db/analyses/:analysisId', () => {
         return '1'
       return undefined
     })
+  })
+
+  it('should reject unauthenticated users with 401', async () => {
+    const supabaseMock = await import('../../../../src/runtime/server/utils/grizzle/supabase')
+    const getSupabaseUserSpy = supabaseMock.getSupabaseUser as ReturnType<typeof vi.fn>
+    getSupabaseUserSpy.mockReturnValueOnce(Effect.fail(new GetSupabaseUserError({ message: 'Unauthorized' })))
+
+    const handler = (await import('../../../../src/runtime/server/api/db/analyses/[analysisId].delete')).default
+
+    await expect(handler({} as any)).rejects.toMatchObject({
+      statusCode: 401,
+      statusMessage: 'Unauthorized',
+    })
+
+    // Restore
+    getSupabaseUserSpy.mockReturnValue(Effect.succeed(mockSupabaseUser))
+  })
+
+  it('should log cause and return 500 on unexpected errors', async () => {
+    const requestLog = createMockRequestLogger()
+    vi.mocked(useLogger).mockReturnValue(requestLog)
+
+    const analysesMock = await import('../../../../src/runtime/server/utils/grizzle/analyses')
+    const deleteAnalysisSpy = analysesMock.deleteAnalysis as ReturnType<typeof vi.fn>
+    deleteAnalysisSpy.mockReturnValueOnce(Effect.fail(new Error('db connection lost')))
+
+    const handler = (await import('../../../../src/runtime/server/api/db/analyses/[analysisId].delete')).default
+
+    await expect(handler({ path: '/api/db/analyses/1', method: 'DELETE' } as any)).rejects.toMatchObject({
+      statusCode: 500,
+      statusMessage: 'Internal Server Error',
+    })
+    expect(requestLog.error).toHaveBeenCalledWith('delete analysis handler failed', expect.objectContaining({ cause: expect.stringContaining('db connection lost') }))
+
+    // Restore
+    deleteAnalysisSpy.mockReturnValue(Effect.succeed(mockDeleteResult))
   })
 })

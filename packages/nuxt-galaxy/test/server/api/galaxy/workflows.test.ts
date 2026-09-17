@@ -1,3 +1,4 @@
+import { Effect } from 'effect'
 import { describe, expect, it, vi } from 'vitest'
 
 const mockWorkflows = [
@@ -8,7 +9,7 @@ const mockWorkflows = [
 // Mock blendtype
 vi.mock('blendtype', () => ({
   getWorkflowsEffect: vi.fn(() => ({
-    pipe: () => Promise.resolve(mockWorkflows),
+    pipe: () => Effect.succeed(mockWorkflows),
   })),
   toGalaxyServiceUnavailable: vi.fn(),
   makeGalaxyLayer: vi.fn(() => ({})),

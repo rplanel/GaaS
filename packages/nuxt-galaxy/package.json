@@ -74,6 +74,7 @@
     "defu": "catalog:",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
+    "evlog": "catalog:",
     "jwt-decode": "catalog:",
     "postgres": "catalog:"
   },

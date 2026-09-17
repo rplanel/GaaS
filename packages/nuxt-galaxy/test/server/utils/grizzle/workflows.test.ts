@@ -14,6 +14,7 @@ import {
   expectFailure,
   mockDbUser,
   mockDbWorkflow,
+  mockDrizzleSelectRejects,
   mockGalaxyWorkflowExport,
   mockSupabaseUser,
 } from '../../fixtures'
@@ -55,14 +56,7 @@ describe('getWorkflowEffect', () => {
 
   it('should fail with GetWorkflowError on database error', async () => {
     const drizzle = createMockDrizzle()
-    drizzle.mock.select.mockImplementation(() => {
-      const chain: Record<string, unknown> = {}
-      chain.from = () => chain
-      chain.where = () => chain
-      chain.then = (_r: unknown, reject: (e: Error) => void) =>
-        Promise.reject(new Error('DB error')).catch(reject)
-      return chain
-    })
+    drizzle.mock.select.mockImplementation(mockDrizzleSelectRejects(['from', 'where'], new Error('DB error')))
 
     const exit = await getWorkflowEffect(1).pipe(
       Effect.provide(drizzle.layer),

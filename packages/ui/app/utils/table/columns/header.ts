@@ -1,4 +1,5 @@
 import type { GetHeaderParams } from '../../../types/plotHeader'
+import { log } from 'evlog/client'
 import PlotTableHeaderCategory from '../../../components/plot/table/header/Category.vue'
 
 import PlotTableHeaderHistogram from '../../../components/plot/table/header/Histogram.vue'
@@ -6,7 +7,12 @@ import PlotTableHeaderHistogram from '../../../components/plot/table/header/Hist
 export function getHistogramHeader<T>(params: GetHeaderParams<T>) {
   const { column, label, variable, table, selection, coordinator } = params
   if (!selection || !coordinator) {
-    console.warn('Missing required parameters for histogram header:', { table, selection, coordinator })
+    log.warn({
+      action: 'table_header:missing_params',
+      tag: 'getHistogramHeader',
+      hasSelection: !!selection,
+      hasCoordinator: !!coordinator,
+    })
     return h('div', { class: 'w-full' }, 'No data available')
   }
   return h('div', { class: 'w-full' }, [
@@ -28,7 +34,12 @@ export function getCategoryHeader<T>(params: GetHeaderParams<T>) {
   const { column, label, variable, table, selection, coordinator } = params
   // const mosaicCoordinatorVal = coordinator as
   if (!selection || !coordinator) {
-    console.warn('Missing required parameters for category header:', { table, selection, coordinator })
+    log.warn({
+      action: 'table_header:missing_params',
+      tag: 'getCategoryHeader',
+      hasSelection: !!selection,
+      hasCoordinator: !!coordinator,
+    })
     return h('div', { class: 'w-full' }, 'No data available')
   }
   return h('div', { class: 'w-full' }, [

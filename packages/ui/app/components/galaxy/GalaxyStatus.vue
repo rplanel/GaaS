@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { GalaxyState } from 'blendtype'
+import type { GalaxyState, InvocationState } from 'blendtype'
 
 interface Props {
-  state?: GalaxyState | undefined
+  state?: GalaxyState | InvocationState | undefined
   size?: number | string
 }
 const props = withDefaults(defineProps<Props>(), {
@@ -13,12 +13,13 @@ const props = withDefaults(defineProps<Props>(), {
 const excludeStates = ['setting_metadata', 'failed_metadata'] as const
 
 type ExcludeState = (typeof excludeStates)[number]
+type SupportedState = Exclude<GalaxyState | InvocationState, ExcludeState>
 
 const state = toRef(() => props.state)
 const size = toRef(() => props.size)
 
 const galaxyStateToIcon: Record<
-  Exclude<GalaxyState, ExcludeState>,
+  SupportedState,
   { icon: string, color: string }
 > = {
   running: { icon: 'i-svg-spinners:bars-scale', color: 'text-primary' },
@@ -28,6 +29,7 @@ const galaxyStateToIcon: Record<
   queued: { icon: 'i-mdi:tray-full', color: 'text-primary' },
   cancelled: { icon: 'i-mdi:cancel', color: 'text-warning' },
   cancelling: { icon: 'i-mdi:cancel', color: 'text-warning' },
+  completed: { icon: 'i-mdi:check-circle', color: 'text-success' },
   deferred: { icon: '', color: '' },
   deleted: { icon: '', color: '' },
   deleting: { icon: '', color: '' },
@@ -36,6 +38,7 @@ const galaxyStateToIcon: Record<
   failed: { icon: 'i-mdi:alert-circle', color: 'text-error' },
   paused: { icon: 'i-mdi:pause', color: 'text-primary' },
   ready: { icon: '', color: '' },
+  requires_materialization: { icon: 'i-mdi:cube-scan', color: 'text-info' },
   resubmitted: { icon: '', color: '' },
   scheduled: {
     icon: 'material-symbols:schedule-send-outline',
@@ -55,7 +58,7 @@ const currentState = computed(() => {
     stateVal
     && excludeStates.find(exState => exState === stateVal) === undefined
   ) {
-    const s = stateVal as Exclude<GalaxyState, ExcludeState>
+    const s = stateVal as SupportedState
     return galaxyStateToIconVal[s]
   }
   return undefined

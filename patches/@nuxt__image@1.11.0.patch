@@ -1,0 +1,19 @@
+diff --git a/dist/runtime/components/NuxtPicture.vue b/dist/runtime/components/NuxtPicture.vue
+index 506f5ad0297f4d3551ee1c16d4d33e9343f72f1d..8a35ad0773e32f6099d344ec8fa53989ab528072 100644
+--- a/dist/runtime/components/NuxtPicture.vue
++++ b/dist/runtime/components/NuxtPicture.vue
+@@ -24,6 +24,7 @@
+ </template>
+ 
+ <script setup lang="ts">
++// @ts-nocheck
+ import type { Head } from '@unhead/vue'
+ 
+ import { computed, onMounted, ref, useAttrs } from 'vue'
+@@ -169,5 +170,6 @@ onMounted(() => {
+ </script>
+ 
+ <script lang="ts">
++// @ts-nocheck
+ export { pictureProps } from './_base'
+ </script>
