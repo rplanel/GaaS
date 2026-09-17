@@ -1,36 +1,31 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { getHumanSize } from '../utils'
-
-const user = useSupabaseUser()
-const { diskUsage, status, error, data, isLoading, isPending, state } = useDiskUsage()
-const fileSize = computed(() => getHumanSize(diskUsage.value))
+const breadcrumbsItems = ref([
+  {
+    icon: 'lucide:house',
+    disabled: false,
+    to: '/',
+  },
+  {
+    label: 'Profile',
+    disabled: true,
+    to: '/profile',
+  },
+])
 </script>
 
 <template>
-  <UDashboardPanel>
+  <UDashboardPanel id="profile-panel" title="User Profile">
     <template #header>
-      <UDashboardNavbar title="User Profile">
+      <UDashboardNavbar title="User Profile" :ui="{ right: 'gap-3' }">
         <template #leading>
           <UDashboardSidebarCollapse />
         </template>
       </UDashboardNavbar>
     </template>
     <template #body>
-      <div class="mb-4 p-4 rounded text-sm font-mono">
-        <div>state: {{ state }}</div>
-        <div>status: {{ status }}</div>
-        <div>isPending: {{ isPending }}</div>
-        <div>isLoading: {{ isLoading }}</div>
-        <div>data: {{ data }}</div>
-        <div>error: {{ error }}</div>
-        <div>diskUsage: {{ diskUsage }}</div>
-      </div>
-      <div>
-        <UBadge :label="fileSize" />
-      </div>
-      {{ fileSize }}
-      <pre>{{ user }}</pre>
+      <UPage>
+        <NuxtPage :breadcrumbs-items="breadcrumbsItems" />
+      </UPage>
     </template>
   </UDashboardPanel>
 </template>
