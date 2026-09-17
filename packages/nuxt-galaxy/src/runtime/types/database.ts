@@ -1,12 +1,12 @@
-export type Json
-  = | string
-    | number
-    | boolean
-    | null
-    | { [key: string]: Json | undefined }
-    | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
-export interface Database {
+export type Database = {
   galaxy: {
     Tables: {
       analyses: {
@@ -18,12 +18,15 @@ export interface Database {
           id: number
           invocation: Json
           is_sync: boolean | null
+          last_sync_error_at: string | null
           name: string
+          next_sync_at: string | null
           owner_id: string
           parameters: Json
-          state: Database['galaxy']['Enums']['invocation_state']
+          state: Database["galaxy"]["Enums"]["invocation_state"]
           stderr: string | null
           stdout: string | null
+          sync_attempts: number
           workflow_id: number
         }
         Insert: {
@@ -34,12 +37,15 @@ export interface Database {
           id?: number
           invocation: Json
           is_sync?: boolean | null
+          last_sync_error_at?: string | null
           name: string
+          next_sync_at?: string | null
           owner_id: string
           parameters: Json
-          state: Database['galaxy']['Enums']['invocation_state']
+          state: Database["galaxy"]["Enums"]["invocation_state"]
           stderr?: string | null
           stdout?: string | null
+          sync_attempts?: number
           workflow_id: number
         }
         Update: {
@@ -50,28 +56,31 @@ export interface Database {
           id?: number
           invocation?: Json
           is_sync?: boolean | null
+          last_sync_error_at?: string | null
           name?: string
+          next_sync_at?: string | null
           owner_id?: string
           parameters?: Json
-          state?: Database['galaxy']['Enums']['invocation_state']
+          state?: Database["galaxy"]["Enums"]["invocation_state"]
           stderr?: string | null
           stdout?: string | null
+          sync_attempts?: number
           workflow_id?: number
         }
         Relationships: [
           {
-            foreignKeyName: 'analyses_history_id_histories_id_fkey'
-            columns: ['history_id']
+            foreignKeyName: "analyses_history_id_histories_id_fkey"
+            columns: ["history_id"]
             isOneToOne: true
-            referencedRelation: 'histories'
-            referencedColumns: ['id']
+            referencedRelation: "histories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analyses_workflow_id_workflows_id_fkey'
-            columns: ['workflow_id']
+            foreignKeyName: "analyses_workflow_id_workflows_id_fkey"
+            columns: ["workflow_id"]
             isOneToOne: false
-            referencedRelation: 'workflows'
-            referencedColumns: ['id']
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -80,48 +89,104 @@ export interface Database {
           analysis_id: number
           dataset_id: number
           id: number
-          state: Database['galaxy']['Enums']['dataset_state']
+          state: Database["galaxy"]["Enums"]["dataset_state"]
         }
         Insert: {
           analysis_id: number
           dataset_id: number
           id?: number
-          state: Database['galaxy']['Enums']['dataset_state']
+          state: Database["galaxy"]["Enums"]["dataset_state"]
         }
         Update: {
           analysis_id?: number
           dataset_id?: number
           id?: number
-          state?: Database['galaxy']['Enums']['dataset_state']
+          state?: Database["galaxy"]["Enums"]["dataset_state"]
         }
         Relationships: [
           {
-            foreignKeyName: 'analysis_inputs_analysis_id_analyses_id_fkey'
-            columns: ['analysis_id']
+            foreignKeyName: "analysis_inputs_analysis_id_analyses_id_fkey"
+            columns: ["analysis_id"]
             isOneToOne: false
-            referencedRelation: 'analyses'
-            referencedColumns: ['id']
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "analysis_inputs_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: true
-            referencedRelation: 'analysis_inputs_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "analysis_inputs_with_storage_path"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "analysis_inputs_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: true
-            referencedRelation: 'analysis_outputs_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "analysis_outputs_with_storage_path"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "analysis_inputs_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: true
-            referencedRelation: 'datasets'
-            referencedColumns: ['id']
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analysis_monitoring: {
+        Row: {
+          analysis_id: number | null
+          completed_at: string | null
+          error_message: string | null
+          galaxy_invocation_id: string
+          galaxy_workflow_id: string | null
+          id: number
+          name: string
+          outcome: Database["galaxy"]["Enums"]["monitoring_outcome"]
+          owner_id: string
+          started_at: string
+          workflow_id: number
+          workflow_name: string | null
+          workflow_version: string | null
+        }
+        Insert: {
+          analysis_id?: number | null
+          completed_at?: string | null
+          error_message?: string | null
+          galaxy_invocation_id: string
+          galaxy_workflow_id?: string | null
+          id?: number
+          name: string
+          outcome?: Database["galaxy"]["Enums"]["monitoring_outcome"]
+          owner_id: string
+          started_at?: string
+          workflow_id: number
+          workflow_name?: string | null
+          workflow_version?: string | null
+        }
+        Update: {
+          analysis_id?: number | null
+          completed_at?: string | null
+          error_message?: string | null
+          galaxy_invocation_id?: string
+          galaxy_workflow_id?: string | null
+          id?: number
+          name?: string
+          outcome?: Database["galaxy"]["Enums"]["monitoring_outcome"]
+          owner_id?: string
+          started_at?: string
+          workflow_id?: number
+          workflow_name?: string | null
+          workflow_version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_monitoring_analysis_id_analyses_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -131,57 +196,57 @@ export interface Database {
           dataset_id: number
           id: number
           job_id: number
-          state: Database['galaxy']['Enums']['dataset_state']
+          state: Database["galaxy"]["Enums"]["dataset_state"]
         }
         Insert: {
           analysis_id: number
           dataset_id: number
           id?: number
           job_id: number
-          state: Database['galaxy']['Enums']['dataset_state']
+          state: Database["galaxy"]["Enums"]["dataset_state"]
         }
         Update: {
           analysis_id?: number
           dataset_id?: number
           id?: number
           job_id?: number
-          state?: Database['galaxy']['Enums']['dataset_state']
+          state?: Database["galaxy"]["Enums"]["dataset_state"]
         }
         Relationships: [
           {
-            foreignKeyName: 'analysis_outputs_analysis_id_analyses_id_fkey'
-            columns: ['analysis_id']
+            foreignKeyName: "analysis_outputs_analysis_id_analyses_id_fkey"
+            columns: ["analysis_id"]
             isOneToOne: false
-            referencedRelation: 'analyses'
-            referencedColumns: ['id']
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "analysis_outputs_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: false
-            referencedRelation: 'analysis_inputs_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "analysis_inputs_with_storage_path"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "analysis_outputs_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: false
-            referencedRelation: 'analysis_outputs_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "analysis_outputs_with_storage_path"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "analysis_outputs_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: false
-            referencedRelation: 'datasets'
-            referencedColumns: ['id']
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_outputs_job_id_jobs_id_fkey'
-            columns: ['job_id']
+            foreignKeyName: "analysis_outputs_job_id_jobs_id_fkey"
+            columns: ["job_id"]
             isOneToOne: false
-            referencedRelation: 'jobs'
-            referencedColumns: ['id']
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -200,18 +265,18 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'analysis_outputs_to_tags_fYukbuGjHKjM_fkey'
-            columns: ['analysis_output_id']
+            foreignKeyName: "analysis_outputs_to_tags_fYukbuGjHKjM_fkey"
+            columns: ["analysis_output_id"]
             isOneToOne: false
-            referencedRelation: 'analysis_outputs'
-            referencedColumns: ['id']
+            referencedRelation: "analysis_outputs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_outputs_to_tags_tag_id_tags_id_fkey'
-            columns: ['tag_id']
+            foreignKeyName: "analysis_outputs_to_tags_tag_id_tags_id_fkey"
+            columns: ["tag_id"]
             isOneToOne: false
-            referencedRelation: 'tags'
-            referencedColumns: ['id']
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -225,8 +290,8 @@ export interface Database {
           history_id: number
           id: number
           owner_id: string
-          storage_object_id: string
-          storage_path: string
+          storage_object_id: string | null
+          storage_path: string | null
           uuid: string
         }
         Insert: {
@@ -238,8 +303,8 @@ export interface Database {
           history_id: number
           id?: number
           owner_id: string
-          storage_object_id: string
-          storage_path: string
+          storage_object_id?: string | null
+          storage_path?: string | null
           uuid: string
         }
         Update: {
@@ -251,24 +316,24 @@ export interface Database {
           history_id?: number
           id?: number
           owner_id?: string
-          storage_object_id?: string
-          storage_path?: string
+          storage_object_id?: string | null
+          storage_path?: string | null
           uuid?: string
         }
         Relationships: [
           {
-            foreignKeyName: 'datasets_history_id_histories_id_fkey'
-            columns: ['history_id']
+            foreignKeyName: "datasets_history_id_histories_id_fkey"
+            columns: ["history_id"]
             isOneToOne: false
-            referencedRelation: 'histories'
-            referencedColumns: ['id']
+            referencedRelation: "histories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'datasets_storage_object_id_objects_id_fkey'
-            columns: ['storage_object_id']
+            foreignKeyName: "datasets_storage_object_id_objects_id_fkey"
+            columns: ["storage_object_id"]
             isOneToOne: false
-            referencedRelation: 'datasets_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "datasets_with_storage_path"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -287,32 +352,32 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'datasets_to_tags_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "datasets_to_tags_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: false
-            referencedRelation: 'analysis_inputs_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "analysis_inputs_with_storage_path"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'datasets_to_tags_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "datasets_to_tags_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: false
-            referencedRelation: 'analysis_outputs_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "analysis_outputs_with_storage_path"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'datasets_to_tags_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "datasets_to_tags_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: false
-            referencedRelation: 'datasets'
-            referencedColumns: ['id']
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'datasets_to_tags_tag_id_tags_id_fkey'
-            columns: ['tag_id']
+            foreignKeyName: "datasets_to_tags_tag_id_tags_id_fkey"
+            columns: ["tag_id"]
             isOneToOne: false
-            referencedRelation: 'tags'
-            referencedColumns: ['id']
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -326,7 +391,7 @@ export interface Database {
           is_sync: boolean
           name: string
           owner_id: string
-          state: Database['galaxy']['Enums']['history_state']
+          state: Database["galaxy"]["Enums"]["history_state"]
           user_id: number
         }
         Insert: {
@@ -338,7 +403,7 @@ export interface Database {
           is_sync?: boolean
           name: string
           owner_id: string
-          state: Database['galaxy']['Enums']['history_state']
+          state: Database["galaxy"]["Enums"]["history_state"]
           user_id: number
         }
         Update: {
@@ -350,16 +415,16 @@ export interface Database {
           is_sync?: boolean
           name?: string
           owner_id?: string
-          state?: Database['galaxy']['Enums']['history_state']
+          state?: Database["galaxy"]["Enums"]["history_state"]
           user_id?: number
         }
         Relationships: [
           {
-            foreignKeyName: 'histories_user_id_user_id_fkey'
-            columns: ['user_id']
+            foreignKeyName: "histories_user_id_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: 'user'
-            referencedColumns: ['id']
+            referencedRelation: "user"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -390,7 +455,7 @@ export interface Database {
           id: number
           is_sync: boolean
           owner_id: string
-          state: Database['galaxy']['Enums']['job_state']
+          state: Database["galaxy"]["Enums"]["job_state"]
           stderr: string | null
           stdout: string | null
           step_id: number
@@ -404,7 +469,7 @@ export interface Database {
           id?: number
           is_sync?: boolean
           owner_id: string
-          state: Database['galaxy']['Enums']['job_state']
+          state: Database["galaxy"]["Enums"]["job_state"]
           stderr?: string | null
           stdout?: string | null
           step_id: number
@@ -418,7 +483,7 @@ export interface Database {
           id?: number
           is_sync?: boolean
           owner_id?: string
-          state?: Database['galaxy']['Enums']['job_state']
+          state?: Database["galaxy"]["Enums"]["job_state"]
           stderr?: string | null
           stdout?: string | null
           step_id?: number
@@ -426,11 +491,11 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'jobs_analysis_id_analyses_id_fkey'
-            columns: ['analysis_id']
+            foreignKeyName: "jobs_analysis_id_analyses_id_fkey"
+            columns: ["analysis_id"]
             isOneToOne: false
-            referencedRelation: 'analyses'
-            referencedColumns: ['id']
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -460,6 +525,35 @@ export interface Database {
           start_at?: string
         }
         Relationships: []
+      }
+      sync_locks: {
+        Row: {
+          analysis_id: number
+          expires_at: string
+          id: number
+          locked_at: string
+        }
+        Insert: {
+          analysis_id: number
+          expires_at: string
+          id?: number
+          locked_at?: string
+        }
+        Update: {
+          analysis_id?: number
+          expires_at?: string
+          id?: number
+          locked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_locks_analysis_id_analyses_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: true
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tags: {
         Row: {
@@ -497,11 +591,11 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'uploaded_datasets_storage_object_id_objects_id_fkey'
-            columns: ['storage_object_id']
+            foreignKeyName: "uploaded_datasets_storage_object_id_objects_id_fkey"
+            columns: ["storage_object_id"]
             isOneToOne: true
-            referencedRelation: 'datasets_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "datasets_with_storage_path"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -523,11 +617,11 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'user_instance_id_instances_id_fkey'
-            columns: ['instance_id']
+            foreignKeyName: "user_instance_id_instances_id_fkey"
+            columns: ["instance_id"]
             isOneToOne: false
-            referencedRelation: 'instances'
-            referencedColumns: ['id']
+            referencedRelation: "instances"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -570,11 +664,11 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'workflows_user_id_user_id_fkey'
-            columns: ['user_id']
+            foreignKeyName: "workflows_user_id_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: 'user'
-            referencedColumns: ['id']
+            referencedRelation: "user"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -593,18 +687,18 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'workflows_to_tags_tag_id_tags_id_fkey'
-            columns: ['tag_id']
+            foreignKeyName: "workflows_to_tags_tag_id_tags_id_fkey"
+            columns: ["tag_id"]
             isOneToOne: false
-            referencedRelation: 'tags'
-            referencedColumns: ['id']
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'workflows_to_tags_workflow_id_workflows_id_fkey'
-            columns: ['workflow_id']
+            foreignKeyName: "workflows_to_tags_workflow_id_workflows_id_fkey"
+            columns: ["workflow_id"]
             isOneToOne: false
-            referencedRelation: 'workflows'
-            referencedColumns: ['id']
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -624,53 +718,53 @@ export interface Database {
           metadata: Json | null
           name: string | null
           owner_id: string | null
-          state: Database['galaxy']['Enums']['dataset_state'] | null
+          state: Database["galaxy"]["Enums"]["dataset_state"] | null
           storage_object_id: string | null
           storage_path: string | null
           uuid: string | null
         }
         Relationships: [
           {
-            foreignKeyName: 'analysis_inputs_analysis_id_analyses_id_fkey'
-            columns: ['analysis_id']
+            foreignKeyName: "analysis_inputs_analysis_id_analyses_id_fkey"
+            columns: ["analysis_id"]
             isOneToOne: false
-            referencedRelation: 'analyses'
-            referencedColumns: ['id']
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "analysis_inputs_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: true
-            referencedRelation: 'analysis_inputs_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "analysis_inputs_with_storage_path"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "analysis_inputs_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: true
-            referencedRelation: 'analysis_outputs_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "analysis_outputs_with_storage_path"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_inputs_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "analysis_inputs_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: true
-            referencedRelation: 'datasets'
-            referencedColumns: ['id']
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'datasets_history_id_histories_id_fkey'
-            columns: ['history_id']
+            foreignKeyName: "datasets_history_id_histories_id_fkey"
+            columns: ["history_id"]
             isOneToOne: false
-            referencedRelation: 'histories'
-            referencedColumns: ['id']
+            referencedRelation: "histories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'datasets_storage_object_id_objects_id_fkey'
-            columns: ['storage_object_id']
+            foreignKeyName: "datasets_storage_object_id_objects_id_fkey"
+            columns: ["storage_object_id"]
             isOneToOne: false
-            referencedRelation: 'datasets_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "datasets_with_storage_path"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -689,60 +783,60 @@ export interface Database {
           metadata: Json | null
           name: string | null
           owner_id: string | null
-          state: Database['galaxy']['Enums']['dataset_state'] | null
+          state: Database["galaxy"]["Enums"]["dataset_state"] | null
           storage_object_id: string | null
           storage_path: string | null
           uuid: string | null
         }
         Relationships: [
           {
-            foreignKeyName: 'analysis_outputs_analysis_id_analyses_id_fkey'
-            columns: ['analysis_id']
+            foreignKeyName: "analysis_outputs_analysis_id_analyses_id_fkey"
+            columns: ["analysis_id"]
             isOneToOne: false
-            referencedRelation: 'analyses'
-            referencedColumns: ['id']
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "analysis_outputs_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: false
-            referencedRelation: 'analysis_inputs_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "analysis_inputs_with_storage_path"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "analysis_outputs_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: false
-            referencedRelation: 'analysis_outputs_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "analysis_outputs_with_storage_path"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_outputs_dataset_id_datasets_id_fkey'
-            columns: ['dataset_id']
+            foreignKeyName: "analysis_outputs_dataset_id_datasets_id_fkey"
+            columns: ["dataset_id"]
             isOneToOne: false
-            referencedRelation: 'datasets'
-            referencedColumns: ['id']
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'analysis_outputs_job_id_jobs_id_fkey'
-            columns: ['job_id']
+            foreignKeyName: "analysis_outputs_job_id_jobs_id_fkey"
+            columns: ["job_id"]
             isOneToOne: false
-            referencedRelation: 'jobs'
-            referencedColumns: ['id']
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'datasets_history_id_histories_id_fkey'
-            columns: ['history_id']
+            foreignKeyName: "datasets_history_id_histories_id_fkey"
+            columns: ["history_id"]
             isOneToOne: false
-            referencedRelation: 'histories'
-            referencedColumns: ['id']
+            referencedRelation: "histories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'datasets_storage_object_id_objects_id_fkey'
-            columns: ['storage_object_id']
+            foreignKeyName: "datasets_storage_object_id_objects_id_fkey"
+            columns: ["storage_object_id"]
             isOneToOne: false
-            referencedRelation: 'datasets_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "datasets_with_storage_path"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -766,18 +860,18 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'datasets_history_id_histories_id_fkey'
-            columns: ['history_id']
+            foreignKeyName: "datasets_history_id_histories_id_fkey"
+            columns: ["history_id"]
             isOneToOne: false
-            referencedRelation: 'histories'
-            referencedColumns: ['id']
+            referencedRelation: "histories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'datasets_storage_object_id_objects_id_fkey'
-            columns: ['storage_object_id']
+            foreignKeyName: "datasets_storage_object_id_objects_id_fkey"
+            columns: ["storage_object_id"]
             isOneToOne: false
-            referencedRelation: 'datasets_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "datasets_with_storage_path"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -791,68 +885,74 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'uploaded_datasets_storage_object_id_objects_id_fkey'
-            columns: ['storage_object_id']
+            foreignKeyName: "uploaded_datasets_storage_object_id_objects_id_fkey"
+            columns: ["storage_object_id"]
             isOneToOne: true
-            referencedRelation: 'datasets_with_storage_path'
-            referencedColumns: ['id']
+            referencedRelation: "datasets_with_storage_path"
+            referencedColumns: ["id"]
           },
         ]
       }
     }
     Functions: {
-      [_ in never]: never
+      acquire_sync_lock: {
+        Args: { p_analysis_id: number; p_ttl_seconds: number }
+        Returns: boolean
+      }
     }
     Enums: {
       dataset_state:
-        | 'ok'
-        | 'empty'
-        | 'error'
-        | 'discarded'
-        | 'failed_metadata'
-        | 'new'
-        | 'upload'
-        | 'queued'
-        | 'running'
-        | 'paused'
-        | 'setting_metadata'
-        | 'deferred'
+        | "ok"
+        | "empty"
+        | "error"
+        | "discarded"
+        | "failed_metadata"
+        | "new"
+        | "upload"
+        | "queued"
+        | "running"
+        | "paused"
+        | "setting_metadata"
+        | "deferred"
       history_state:
-        | 'new'
-        | 'upload'
-        | 'queued'
-        | 'running'
-        | 'ok'
-        | 'empty'
-        | 'error'
-        | 'paused'
-        | 'setting_metadata'
-        | 'failed_metadata'
-        | 'deferred'
-        | 'discarded'
+        | "new"
+        | "upload"
+        | "queued"
+        | "running"
+        | "ok"
+        | "empty"
+        | "error"
+        | "paused"
+        | "setting_metadata"
+        | "failed_metadata"
+        | "deferred"
+        | "discarded"
       invocation_state:
-        | 'cancelled'
-        | 'failed'
-        | 'scheduled'
-        | 'new'
-        | 'ready'
-        | 'cancelling'
+        | "cancelled"
+        | "failed"
+        | "completed"
+        | "new"
+        | "requires_materialization"
+        | "ready"
+        | "scheduled"
+        | "cancelling"
       job_state:
-        | 'deleted'
-        | 'deleting'
-        | 'error'
-        | 'ok'
-        | 'new'
-        | 'resubmitted'
-        | 'upload'
-        | 'waiting'
-        | 'queued'
-        | 'running'
-        | 'failed'
-        | 'paused'
-        | 'stop'
-        | 'stopped'
-        | 'skipped'
+        | "deleted"
+        | "deleting"
+        | "error"
+        | "ok"
+        | "new"
+        | "resubmitted"
+        | "upload"
+        | "waiting"
+        | "queued"
+        | "running"
+        | "failed"
+        | "paused"
+        | "stop"
+        | "stopped"
+        | "skipped"
+      monitoring_outcome: "pending" | "success" | "error" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -863,41 +963,41 @@ export interface Database {
       role_permissions: {
         Row: {
           id: number
-          permission: Database['galaxy_rbac']['Enums']['role_permissions_type']
+          permission: Database["galaxy_rbac"]["Enums"]["role_permissions_type"]
           role_id: number
         }
         Insert: {
           id?: number
-          permission: Database['galaxy_rbac']['Enums']['role_permissions_type']
+          permission: Database["galaxy_rbac"]["Enums"]["role_permissions_type"]
           role_id: number
         }
         Update: {
           id?: number
-          permission?: Database['galaxy_rbac']['Enums']['role_permissions_type']
+          permission?: Database["galaxy_rbac"]["Enums"]["role_permissions_type"]
           role_id?: number
         }
         Relationships: [
           {
-            foreignKeyName: 'role_permissions_role_id_roles_id_fkey'
-            columns: ['role_id']
+            foreignKeyName: "role_permissions_role_id_roles_id_fkey"
+            columns: ["role_id"]
             isOneToOne: false
-            referencedRelation: 'roles'
-            referencedColumns: ['id']
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
           },
         ]
       }
       roles: {
         Row: {
           id: number
-          name: Database['galaxy_rbac']['Enums']['role_type']
+          name: Database["galaxy_rbac"]["Enums"]["role_type"]
         }
         Insert: {
           id?: number
-          name: Database['galaxy_rbac']['Enums']['role_type']
+          name: Database["galaxy_rbac"]["Enums"]["role_type"]
         }
         Update: {
           id?: number
-          name?: Database['galaxy_rbac']['Enums']['role_type']
+          name?: Database["galaxy_rbac"]["Enums"]["role_type"]
         }
         Relationships: []
       }
@@ -919,11 +1019,11 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'user_roles_role_id_roles_id_fkey'
-            columns: ['role_id']
+            foreignKeyName: "user_roles_role_id_roles_id_fkey"
+            columns: ["role_id"]
             isOneToOne: false
-            referencedRelation: 'roles'
-            referencedColumns: ['id']
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -934,43 +1034,44 @@ export interface Database {
     Functions: {
       authorize: {
         Args: {
-          requested_permission: Database['galaxy_rbac']['Enums']['role_permissions_type']
+          requested_permission: Database["galaxy_rbac"]["Enums"]["role_permissions_type"]
         }
         Returns: boolean
       }
-      custom_access_token_hook: { Args: { event: Json }, Returns: Json }
+      custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       role_permissions_type:
-        | 'workflows.insert'
-        | 'workflows.update'
-        | 'workflows.select'
-        | 'workflows.delete'
-        | 'instances.insert'
-        | 'instances.delete'
-        | 'instances.update'
-        | 'instances.select'
-        | 'users.select'
-        | 'users.insert'
-        | 'users.update'
-        | 'users.delete'
-        | 'roles.select'
-        | 'roles.insert'
-        | 'roles.update'
-        | 'roles.delete'
-        | 'role_permissions.select'
-        | 'role_permissions.insert'
-        | 'role_permissions.update'
-        | 'role_permissions.delete'
-        | 'tags.select'
-        | 'tags.insert'
-        | 'tags.update'
-        | 'tags.delete'
-        | 'user_roles.select'
-        | 'user_roles.insert'
-        | 'user_roles.update'
-        | 'user_roles.delete'
-      role_type: 'admin' | 'user'
+        | "workflows.insert"
+        | "workflows.update"
+        | "workflows.select"
+        | "workflows.delete"
+        | "instances.insert"
+        | "instances.delete"
+        | "instances.update"
+        | "instances.select"
+        | "users.select"
+        | "users.insert"
+        | "users.update"
+        | "users.delete"
+        | "roles.select"
+        | "roles.insert"
+        | "roles.update"
+        | "roles.delete"
+        | "role_permissions.select"
+        | "role_permissions.insert"
+        | "role_permissions.update"
+        | "role_permissions.delete"
+        | "tags.select"
+        | "tags.insert"
+        | "tags.update"
+        | "tags.delete"
+        | "user_roles.select"
+        | "user_roles.insert"
+        | "user_roles.update"
+        | "user_roles.delete"
+      role_type: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -978,214 +1079,218 @@ export interface Database {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-  | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
-      & DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
-    & DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
-      ? R
-      : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables']
-    & DefaultSchema['Views'])
-    ? (DefaultSchema['Tables']
-      & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
-        ? R
-        : never
+      ? R
+      : never
     : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-  | keyof DefaultSchema['Tables']
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
-    Insert: infer I
-  }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
       ? I
       : never
     : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-  | keyof DefaultSchema['Tables']
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
-    Update: infer U
-  }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
       ? U
       : never
     : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-  | keyof DefaultSchema['Enums']
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
-    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-  | keyof DefaultSchema['CompositeTypes']
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
-    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
   galaxy: {
     Enums: {
       dataset_state: [
-        'ok',
-        'empty',
-        'error',
-        'discarded',
-        'failed_metadata',
-        'new',
-        'upload',
-        'queued',
-        'running',
-        'paused',
-        'setting_metadata',
-        'deferred',
+        "ok",
+        "empty",
+        "error",
+        "discarded",
+        "failed_metadata",
+        "new",
+        "upload",
+        "queued",
+        "running",
+        "paused",
+        "setting_metadata",
+        "deferred",
       ],
       history_state: [
-        'new',
-        'upload',
-        'queued',
-        'running',
-        'ok',
-        'empty',
-        'error',
-        'paused',
-        'setting_metadata',
-        'failed_metadata',
-        'deferred',
-        'discarded',
+        "new",
+        "upload",
+        "queued",
+        "running",
+        "ok",
+        "empty",
+        "error",
+        "paused",
+        "setting_metadata",
+        "failed_metadata",
+        "deferred",
+        "discarded",
       ],
       invocation_state: [
-        'cancelled',
-        'failed',
-        'scheduled',
-        'new',
-        'ready',
-        'cancelling',
+        "cancelled",
+        "failed",
+        "completed",
+        "new",
+        "requires_materialization",
+        "ready",
+        "scheduled",
+        "cancelling",
       ],
       job_state: [
-        'deleted',
-        'deleting',
-        'error',
-        'ok',
-        'new',
-        'resubmitted',
-        'upload',
-        'waiting',
-        'queued',
-        'running',
-        'failed',
-        'paused',
-        'stop',
-        'stopped',
-        'skipped',
+        "deleted",
+        "deleting",
+        "error",
+        "ok",
+        "new",
+        "resubmitted",
+        "upload",
+        "waiting",
+        "queued",
+        "running",
+        "failed",
+        "paused",
+        "stop",
+        "stopped",
+        "skipped",
       ],
+      monitoring_outcome: ["pending", "success", "error", "cancelled"],
     },
   },
   galaxy_rbac: {
     Enums: {
       role_permissions_type: [
-        'workflows.insert',
-        'workflows.update',
-        'workflows.select',
-        'workflows.delete',
-        'instances.insert',
-        'instances.delete',
-        'instances.update',
-        'instances.select',
-        'users.select',
-        'users.insert',
-        'users.update',
-        'users.delete',
-        'roles.select',
-        'roles.insert',
-        'roles.update',
-        'roles.delete',
-        'role_permissions.select',
-        'role_permissions.insert',
-        'role_permissions.update',
-        'role_permissions.delete',
-        'tags.select',
-        'tags.insert',
-        'tags.update',
-        'tags.delete',
-        'user_roles.select',
-        'user_roles.insert',
-        'user_roles.update',
-        'user_roles.delete',
+        "workflows.insert",
+        "workflows.update",
+        "workflows.select",
+        "workflows.delete",
+        "instances.insert",
+        "instances.delete",
+        "instances.update",
+        "instances.select",
+        "users.select",
+        "users.insert",
+        "users.update",
+        "users.delete",
+        "roles.select",
+        "roles.insert",
+        "roles.update",
+        "roles.delete",
+        "role_permissions.select",
+        "role_permissions.insert",
+        "role_permissions.update",
+        "role_permissions.delete",
+        "tags.select",
+        "tags.insert",
+        "tags.update",
+        "tags.delete",
+        "user_roles.select",
+        "user_roles.insert",
+        "user_roles.update",
+        "user_roles.delete",
       ],
-      role_type: ['admin', 'user'],
+      role_type: ["admin", "user"],
     },
   },
 } as const
+

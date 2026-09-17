@@ -1,8 +1,9 @@
+import { Effect } from 'effect'
 import { describe, expect, it, vi } from 'vitest'
 
 // Mock blendtype
 vi.mock('blendtype', () => ({
-  getVersionEffect: { pipe: vi.fn(() => Promise.resolve({
+  getVersionEffect: { pipe: vi.fn(() => Effect.succeed({
     version_major: '23',
     version_minor: '1',
   })) },

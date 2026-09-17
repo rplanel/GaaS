@@ -122,67 +122,6 @@ export function insertAnalysisInputEffect(analysisId: number, datasetId: number,
   })
 }
 
-export function synchronizeInputDatasetEffect(
-  galaxyDatasetId: string,
-  analysisId: number,
-  historyId: number,
-  event: H3Event<EventHandlerRequest>,
-  ownerId: string,
-) {
-  return Effect.gen(function* () {
-    const inputDatasetDb = yield* getOrCreateInputDatasetEffect(
-      galaxyDatasetId,
-      analysisId,
-      historyId,
-      event,
-      ownerId,
-    )
-    if (inputDatasetDb) {
-      const isSync = yield* isInputDatasetSyncEffect(galaxyDatasetId, ownerId)
-      if (isSync) {
-        return
-      }
-      const isTerminal = isDatasetTerminalState(inputDatasetDb.state)
-      if (!isTerminal) {
-        const historyDb = yield* getHistoryDb(historyId, ownerId)
-        if (!historyDb) {
-          return
-        }
-        const galaxyDataset = yield* bt.getDatasetEffect(galaxyDatasetId, historyDb.galaxyId)
-        if (inputDatasetDb.state !== galaxyDataset.state) {
-          yield* updateAnalysisInputStateEffect(galaxyDataset, inputDatasetDb.id, inputDatasetDb.datasetId)
-        }
-      }
-    }
-  })
-}
-
-export class GetAnalysisInputStateError extends Data.TaggedError('GetAnalysisInputStateError')<{
-  readonly message: string
-}> {}
-
-export function getAnalysisInputState(galaxyDatasetId: string, ownerId: string) {
-  return Effect.gen(function* () {
-    const useDrizzle = yield* Drizzle
-    return yield* Effect.tryPromise({
-      try: () => useDrizzle
-        .select({ state: analysisInputs.state })
-        .from(analysisInputs)
-        .innerJoin(datasets, eq(datasets.id, analysisInputs.datasetId))
-        .where(
-          and(
-            eq(datasets.galaxyId, galaxyDatasetId),
-            eq(datasets.ownerId, ownerId),
-          ),
-        )
-        .then(takeUniqueOrThrow),
-      catch: error => new GetAnalysisInputStateError({ message: `Error getting dataset: ${error}` }),
-    }).pipe(
-      Effect.map(d => d?.state),
-    )
-  })
-}
-
 export function updateDatasetBlurbEffect(datasetDbId: number, miscBlurb: string) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
@@ -250,12 +189,5 @@ export function updateAnalysisInputStateEffect(dataset: bt.GalaxyDataset, inputD
         return new UpdateAnalysisInputStateError({ message: `Error updating dataset: ${error}` })
       },
     })
-  })
-}
-
-export function isInputDatasetSyncEffect(galaxyDatasetId: string, ownerId: string) {
-  return Effect.gen(function* () {
-    const state = yield* getAnalysisInputState(galaxyDatasetId, ownerId)
-    return state ? isDatasetTerminalState(state) : false
   })
 }

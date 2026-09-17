@@ -1,9 +1,11 @@
+import type { Context } from 'effect'
 import type * as TusTypes from 'tus-js-client'
 import type { TusUploadError } from '../src/histories'
-import { Effect, pipe } from 'effect'
+import { Effect, Layer, pipe } from 'effect'
 import * as tus from 'tus-js-client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { HistoryError } from '../src/errors'
+import { GalaxyFetch } from '../src/galaxy'
 import {
   createHistory,
   createHistoryEffect,
@@ -11,16 +13,18 @@ import {
   deleteHistoryEffect,
   downloadDataset,
   downloadDatasetEffect,
+  downloadDatasetStream,
+  downloadDatasetStreamEffect,
   getHistories,
   getHistoriesEffect,
   getHistory,
   getHistoryEffect,
   uploadWithTus,
 } from '../src/histories'
-
 import {
   createFailureLayer,
   createHttpErrorLayer,
+  createLogCaptureLayer,
   createServiceUnavailableLayer,
   createSuccessLayer,
   createUrlTrackingLayer,
@@ -393,6 +397,173 @@ describe('downloadDataset (Promise wrapper)', () => {
       const inner = extractFiberFailure(error)
       expect((inner as any)._tag).toBe('GalaxyServiceUnavailable')
     }
+  })
+})
+
+function createMockGalaxyLayer(responses: Record<string, unknown>): Layer.Layer<GalaxyFetch> {
+  return Layer.succeed(
+    GalaxyFetch,
+    (async (url: string, _options?: unknown) => {
+      const response = responses[url]
+      if (response !== undefined)
+        return response
+      throw new Error(`Unexpected request URL: ${url}`)
+    }) as unknown as Context.Tag.Service<GalaxyFetch>,
+  )
+}
+
+// ============================================================================
+// downloadDatasetStreamEffect
+// ============================================================================
+
+describe('downloadDatasetStreamEffect', () => {
+  it('returns null for zero-byte dataset', async () => {
+    const logs: string[] = []
+    const logLayer = createLogCaptureLayer(logs)
+    const layer = createMockGalaxyLayer({
+      'api/histories/hid/contents/did': { file_size: 0, id: 'did', state: 'ok' },
+    })
+    const result = await downloadDatasetStreamEffect('hid', 'did').pipe(
+      Effect.provide(layer),
+      Effect.provide(logLayer),
+      Effect.runPromise,
+    )
+    expect(result).toBeNull()
+    expect(logs).toHaveLength(3)
+    expect(logs.some(l => l.includes('[INFO] [downloadDatasetStreamEffect] start'))).toBe(true)
+    expect(logs.some(l => l.includes('file_size=0'))).toBe(true)
+    expect(logs.some(l => l.includes('state="ok"'))).toBe(true)
+    expect(logs.some(l => l.includes('returning null because file_size === 0'))).toBe(true)
+    expect(logs.every(l => l.includes('historyId="hid"') && l.includes('datasetId="did"') && l.includes('function="downloadDatasetStreamEffect"'))).toBe(true)
+  })
+
+  it('returns a stream for non-empty dataset', async () => {
+    const logs: string[] = []
+    const logLayer = createLogCaptureLayer(logs)
+    const stream = new ReadableStream({
+      start(c) {
+        c.enqueue(new Uint8Array([1, 2, 3]))
+        c.close()
+      },
+    })
+    const layer = createMockGalaxyLayer({
+      'api/histories/hid/contents/did/display': stream,
+      'api/histories/hid/contents/did': { file_size: 3, id: 'did', state: 'ok' },
+    })
+    const result = await downloadDatasetStreamEffect('hid', 'did').pipe(
+      Effect.provide(layer),
+      Effect.provide(logLayer),
+      Effect.runPromise,
+    )
+    expect(result).toBe(stream)
+    expect(logs).toHaveLength(4)
+    expect(logs.some(l => l.includes('[INFO] [downloadDatasetStreamEffect] start'))).toBe(true)
+    expect(logs.some(l => l.includes('file_size=3'))).toBe(true)
+    expect(logs.some(l => l.includes('state="ok"'))).toBe(true)
+    expect(logs.some(l => l.includes('fetching stream'))).toBe(true)
+    expect(logs.some(l => l.includes('url="api/histories/hid/contents/did/display"'))).toBe(true)
+    expect(logs.some(l => l.includes('stream fetched successfully'))).toBe(true)
+    expect(logs.some(l => l.includes('streamType="ReadableStream"'))).toBe(true)
+    expect(logs.every(l => l.includes('historyId="hid"') && l.includes('datasetId="did"') && l.includes('function="downloadDatasetStreamEffect"'))).toBe(true)
+  })
+
+  it('wraps getDatasetEffect failures in HistoryError', async () => {
+    const logs: string[] = []
+    const logLayer = createLogCaptureLayer(logs)
+    const layer = Layer.succeed(
+      GalaxyFetch,
+      (async (url: string) => {
+        if (url === 'api/histories/hid/contents/did')
+          throw new Error('dataset lookup failed')
+        throw new Error(`Unexpected request URL: ${url}`)
+      }) as unknown as Context.Tag.Service<GalaxyFetch>,
+    )
+
+    const exit = await downloadDatasetStreamEffect('hid', 'did').pipe(
+      Effect.provide(layer),
+      Effect.provide(logLayer),
+      Effect.exit,
+      Effect.runPromise,
+    )
+
+    expectFailure(exit, (error) => {
+      expect(error).toBeInstanceOf(HistoryError)
+      expect(error.message).toContain('Error getting dataset')
+      expect(error.historyId).toBe('hid')
+    })
+    expect(logs).toHaveLength(2)
+    expect(logs.some(l => l.includes('[INFO] [downloadDatasetStreamEffect] start'))).toBe(true)
+    expect(logs.some(l => l.includes('error getting dataset'))).toBe(true)
+    expect(logs.some(l => l.includes('error="Error getting dataset did: dataset lookup failed"'))).toBe(true)
+    expect(logs.every(l => l.includes('historyId="hid"') && l.includes('datasetId="did"') && l.includes('function="downloadDatasetStreamEffect"'))).toBe(true)
+  })
+
+  it('wraps display fetch failures in HistoryError', async () => {
+    const logs: string[] = []
+    const logLayer = createLogCaptureLayer(logs)
+    const layer = Layer.succeed(
+      GalaxyFetch,
+      (async (url: string) => {
+        if (url === 'api/histories/hid/contents/did')
+          return { file_size: 3, id: 'did', state: 'ok' }
+        if (url === 'api/histories/hid/contents/did/display')
+          throw new Error('stream fetch failed')
+        throw new Error(`Unexpected request URL: ${url}`)
+      }) as unknown as Context.Tag.Service<GalaxyFetch>,
+    )
+
+    const exit = await downloadDatasetStreamEffect('hid', 'did').pipe(
+      Effect.provide(layer),
+      Effect.provide(logLayer),
+      Effect.exit,
+      Effect.runPromise,
+    )
+
+    expectFailure(exit, (error) => {
+      expect(error).toBeInstanceOf(HistoryError)
+      expect(error.message).toContain('Error downloading stream')
+      expect(error.historyId).toBe('hid')
+    })
+    expect(logs).toHaveLength(4)
+    expect(logs.some(l => l.includes('[INFO] [downloadDatasetStreamEffect] start'))).toBe(true)
+    expect(logs.some(l => l.includes('file_size=3'))).toBe(true)
+    expect(logs.some(l => l.includes('state="ok"'))).toBe(true)
+    expect(logs.some(l => l.includes('fetching stream'))).toBe(true)
+    expect(logs.some(l => l.includes('url="api/histories/hid/contents/did/display"'))).toBe(true)
+    expect(logs.some(l => l.includes('error fetching stream'))).toBe(true)
+    expect(logs.some(l => l.includes('error="Error: stream fetch failed"'))).toBe(true)
+    expect(logs.every(l => l.includes('historyId="hid"') && l.includes('datasetId="did"') && l.includes('function="downloadDatasetStreamEffect"'))).toBe(true)
+  })
+})
+
+describe('downloadDatasetStream (Promise wrapper)', () => {
+  it('should resolve with null for zero-byte dataset', async () => {
+    const result = await downloadDatasetStream(
+      'hid',
+      'did',
+      createMockGalaxyLayer({
+        'api/histories/hid/contents/did': { file_size: 0, id: 'did', state: 'ok' },
+      }),
+    )
+    expect(result).toBeNull()
+  })
+
+  it('should resolve with a stream for non-empty dataset', async () => {
+    const stream = new ReadableStream({
+      start(c) {
+        c.enqueue(new Uint8Array([1, 2, 3]))
+        c.close()
+      },
+    })
+    const result = await downloadDatasetStream(
+      'hid',
+      'did',
+      createMockGalaxyLayer({
+        'api/histories/hid/contents/did/display': stream,
+        'api/histories/hid/contents/did': { file_size: 3, id: 'did', state: 'ok' },
+      }),
+    )
+    expect(result).toBe(stream)
   })
 })
 

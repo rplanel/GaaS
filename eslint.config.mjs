@@ -5,5 +5,7 @@ export default antfu({
   vue: true,
   ignores: [
     '**/.agents/**',
+    '**/.planning/**',
+    'packages/nuxt-galaxy/src/runtime/types/database.ts',
   ],
 })

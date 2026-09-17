@@ -18,6 +18,9 @@ import {
   createMockGalaxyLayer,
   expectFailure,
   mockDbHistory,
+  mockDrizzleDeleteRejects,
+  mockDrizzleInsertRejects,
+  mockDrizzleSelectRejects,
   mockGalaxyHistory,
 } from '../../fixtures'
 
@@ -32,11 +35,14 @@ vi.mock('../../../../src/runtime/server/utils/grizzle/user', () => ({
 }))
 
 describe('isHistoryTerminalState', () => {
+  it('uses HistoryStates, not DatasetStates', () => {
+    expect(isHistoryTerminalState('ok')).toBe(true)
+    expect(isHistoryTerminalState('running')).toBe(false)
+  })
+
   it('should return true for terminal states', () => {
     expect(isHistoryTerminalState('ok')).toBe(true)
     expect(isHistoryTerminalState('error')).toBe(true)
-    expect(isHistoryTerminalState('empty')).toBe(true)
-    expect(isHistoryTerminalState('discarded')).toBe(true)
   })
 
   it('should return false for non-terminal states', () => {
@@ -44,6 +50,8 @@ describe('isHistoryTerminalState', () => {
     expect(isHistoryTerminalState('running')).toBe(false)
     expect(isHistoryTerminalState('queued')).toBe(false)
     expect(isHistoryTerminalState('upload')).toBe(false)
+    expect(isHistoryTerminalState('empty')).toBe(false)
+    expect(isHistoryTerminalState('discarded')).toBe(false)
   })
 })
 
@@ -74,14 +82,7 @@ describe('getHistoryDb', () => {
 
   it('should fail with GetHistoryError on database error', async () => {
     const drizzle = createMockDrizzle()
-    drizzle.mock.select.mockImplementation(() => {
-      const chain: Record<string, unknown> = {}
-      chain.from = () => chain
-      chain.where = () => chain
-      chain.then = (_r: unknown, reject: (e: Error) => void) =>
-        Promise.reject(new Error('DB error')).catch(reject)
-      return chain
-    })
+    drizzle.mock.select.mockImplementation(mockDrizzleSelectRejects(['from', 'where'], new Error('DB error')))
 
     const exit = await getHistoryDb(1, 'owner-uuid-1').pipe(
       Effect.provide(drizzle.layer),
@@ -146,14 +147,7 @@ describe('insertHistory', () => {
 
   it('should fail with InsertHistoryError on database error', async () => {
     const drizzle = createMockDrizzle()
-    drizzle.mock.insert.mockImplementation(() => {
-      const chain: Record<string, unknown> = {}
-      chain.values = () => chain
-      chain.returning = () => chain
-      chain.then = (_r: unknown, reject: (e: Error) => void) =>
-        Promise.reject(new Error('Insert failed')).catch(reject)
-      return chain
-    })
+    drizzle.mock.insert.mockImplementation(mockDrizzleInsertRejects(['values', 'returning'], new Error('Insert failed')))
 
     const exit = await insertHistory({
       name: 'Test',
@@ -187,13 +181,7 @@ describe('deleteHistory', () => {
 
   it('should fail with DeleteGalaxyHistoryError on database error', async () => {
     const drizzle = createMockDrizzle()
-    drizzle.mock.delete.mockImplementation(() => {
-      const chain: Record<string, unknown> = {}
-      chain.where = () => chain
-      chain.then = (_r: unknown, reject: (e: Error) => void) =>
-        Promise.reject(new Error('Delete failed')).catch(reject)
-      return chain
-    })
+    drizzle.mock.delete.mockImplementation(mockDrizzleDeleteRejects(['where'], new Error('Delete failed')))
 
     const exit = await deleteHistory(1).pipe(
       Effect.provide(drizzle.layer),

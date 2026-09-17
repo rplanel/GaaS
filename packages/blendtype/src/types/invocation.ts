@@ -3,13 +3,15 @@ import type { JobState } from './job'
 export const InvocationTerminalStates = [
   'cancelled',
   'failed',
-  'scheduled',
+  'completed',
 ] as const
 
 export const InvocationStates = [
   ...InvocationTerminalStates,
   'new',
+  'requires_materialization',
   'ready',
+  'scheduled',
   'cancelling',
 ] as const
 
@@ -51,6 +53,13 @@ export interface GalaxyInvoke {
   history_id: string
   uuid: string
 }
+export interface InvocationJobsSummary {
+  model: 'WorkflowInvocation'
+  id: string
+  states: Partial<Record<JobState, number>>
+  populated_state: JobState
+}
+
 export interface GalaxyInvocation extends GalaxyInvoke {
   steps: GalaxyInvocationStep[]
   inputs?: Record<string, GalaxyInvocationIO>

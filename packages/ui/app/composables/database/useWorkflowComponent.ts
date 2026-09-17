@@ -1,5 +1,4 @@
 import type { WorkflowRow } from 'nuxt-galaxy'
-// import { useDatabaseWorkflow } from 'nuxt-galaxy'
 import { pascalCase } from 'scule'
 
 export interface UseWorkflowComponentOptions {

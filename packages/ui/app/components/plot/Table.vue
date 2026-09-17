@@ -13,8 +13,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const columnVisibility = defineModel('columnVisibility', {
-  type: Object as () => Record<string, boolean>,
+const columnVisibility = defineModel<Record<string, boolean>>('columnVisibility', {
   default: () => ({}),
 })
 const { coordinator, selection } = props

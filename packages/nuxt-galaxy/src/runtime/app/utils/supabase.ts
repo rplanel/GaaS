@@ -1,6 +1,7 @@
 import type { Database } from '../../types/database'
 import { toValue, useSupabaseClient, useSupabaseUser } from '#imports'
 import { Context, Data, Effect, Layer } from 'effect'
+import { log } from 'evlog/client'
 
 /**
  * Effect layer for the client-side Supabase client.
@@ -82,7 +83,11 @@ export function uploadFileToStorageEffect(bucket: string, file: File) {
       () => supabase.storage.from(bucket).upload(`${uniqueDirectory}/${file.name}`, file),
     )
     if (error) {
-      console.error('Error uploading file to storage:', error)
+      log.error({
+        message: 'error uploading file to storage',
+        tag: 'uploadFileToStorageEffect',
+        error,
+      })
       return yield* Effect.fail(
         new UploadFileToStorageError({
           message: `Failed to upload file: ${error.message}`,

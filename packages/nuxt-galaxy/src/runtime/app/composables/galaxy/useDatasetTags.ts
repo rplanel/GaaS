@@ -1,4 +1,5 @@
 import type { TagRow } from 'nuxt-galaxy'
+import { log } from 'evlog/client'
 import { computed, toValue } from 'vue'
 
 export interface UseDatasetTagsOptions<TagsType extends string> {
@@ -26,7 +27,11 @@ export function useDatasetTags<TagsType extends string>(options: UseDatasetTagsO
   })
 
   if (stringifyTags.value === null) {
-    console.warn(`cannot handle this result file : ${toValue(dataset).datasets.dataset_name}`)
+    log.warn({
+      message: 'cannot handle dataset tags',
+      tag: 'useDatasetTags',
+      datasetName: toValue(dataset).datasets.dataset_name,
+    })
   }
 
   return {

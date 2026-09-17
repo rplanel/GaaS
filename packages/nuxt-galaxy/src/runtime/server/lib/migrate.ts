@@ -1,9 +1,13 @@
-/* eslint-disable no-console */
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate as drizzleMigrate } from 'drizzle-orm/postgres-js/migrator'
+import { getEnvironment, initLogger, log } from 'evlog'
 import postgres from 'postgres'
+
+if (getEnvironment().service === 'app') {
+  initLogger({ env: { service: 'nuxt-galaxy' } })
+}
 
 /**
  * Get the absolute path to the bundled migration files.
@@ -59,7 +63,7 @@ export async function runMigrations(
       ...(options?.migrationsTable && { migrationsTable: options.migrationsTable }),
       ...(options?.migrationsSchema && { migrationsSchema: options.migrationsSchema }),
     })
-    console.log('✅ nuxt-galaxy: Database migrations applied successfully')
+    log.info('migrations', 'Database migrations applied successfully')
   }
   finally {
     await client.end()

@@ -40,6 +40,6 @@
     "pre-commit": "pnpm lint-staged"
   },
   "lint-staged": {
-    "*": "eslint --fix"
+    "*": "node scripts/lint-staged.mjs"
   }
 }

@@ -2,56 +2,31 @@ export default defineAppConfig({
   ui: {
     colors: {
       primary: 'indigo',
-      neutral: 'zinc',
-    },
-    footer: {
-      slots: {
-        root: 'border-t border-default',
-        left: 'text-sm text-muted',
-      },
-    },
-  },
-  seo: {
-    siteName: 'GaaS docs',
+      neutral: 'zinc'
+    }
   },
   header: {
     title: 'GaaS docs',
-    to: '/',
-    logo: {
-      alt: '',
-      light: '',
-      dark: '',
-    },
-    search: true,
-    colorMode: true,
-    links: [{
-      'icon': 'i-simple-icons-github',
-      'to': 'https://github.com/rplanel/GaaS',
-      'target': '_blank',
-      'aria-label': 'GaaS on GitHub',
-    }],
+    to: '/'
   },
   footer: {
-    credits: `Copyright © ${new Date().getFullYear()}`,
-    colorMode: false,
-    links: [{
-      'icon': 'i-simple-icons-github',
-      'to': 'https://github.com/rplanel/GaaS',
-      'target': '_blank',
-      'aria-label': 'GaaS on GitHub',
-    }],
+    credits: `Copyright © ${new Date().getFullYear()}`
+  },
+  github: {
+    url: 'https://github.com/rplanel/GaaS',
+    branch: 'monitoring-analyses',
+    rootDir: 'docs'
   },
   toc: {
     title: 'Table of Contents',
     bottom: {
       title: 'Community',
-      edit: 'https://github.com/rplanel/GaaS/docs/edit/main/content',
       links: [{
         icon: 'i-lucide-star',
         label: 'Star on GitHub',
         to: 'https://github.com/rplanel/GaaS',
-        target: '_blank',
-      }],
-    },
-  },
+        target: '_blank'
+      }]
+    }
+  }
 })

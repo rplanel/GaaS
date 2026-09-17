@@ -57,8 +57,11 @@ const workflowGalaxyId = computed(() => {
   return undefined
 })
 
+// Display-only refresh: this subscription re-fetches displayed rows and must not trigger Galaxy sync.
 useSupabaseRealtime(`galaxy:histories:${props.analysisId}`, 'histories', refresh)
+// Display-only refresh: this subscription re-fetches displayed rows and must not trigger Galaxy sync.
 useSupabaseRealtime(`galaxy:jobs:${props.analysisId}`, 'jobs', refresh)
+// Display-only refresh: this subscription re-fetches displayed rows and must not trigger Galaxy sync.
 useSupabaseRealtime(`galaxy:analysis_outputs:${props.analysisId}`, 'analysis_outputs', refresh)
 
 const {

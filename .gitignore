@@ -75,3 +75,21 @@ gaas-logo*
 tmp/
 
 repos
+
+# evlog local log files
+.evlog/
+
+# evlog CLI generated skill artifacts (kept untracked until intentionally adopted)
+**/.agents/skills/analyze-logs/
+**/.agents/skills/build-audit-logs/
+**/.agents/skills/create-evlog-adapter/
+**/.agents/skills/create-evlog-enricher/
+**/.agents/skills/review-logging-patterns/
+**/.claude/skills/analyze-logs
+**/.claude/skills/build-audit-logs
+**/.claude/skills/create-evlog-adapter
+**/.claude/skills/create-evlog-enricher
+**/.claude/skills/review-logging-patterns
+**/skills-lock.json
+**/CLAUDE.md
+packages/nuxt-galaxy/src/runtime/server/db/seed.json

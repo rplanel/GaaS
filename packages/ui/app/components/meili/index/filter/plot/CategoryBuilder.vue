@@ -8,6 +8,7 @@ import { useMeiliFilter } from '#layers/@gaas/ui/app/composables/meili/useMeiliF
 import { usePlotLayout } from '#layers/@gaas/ui/app/composables/plot/usePlotLayout'
 import * as Plot from '@observablehq/plot'
 import { useElementSize } from '@vueuse/core'
+import { log } from 'evlog/client'
 import { useFrequencyPartition } from '../../../../../composables/useFrequencyPartition'
 
 export interface CategoryHeaderProps {
@@ -163,7 +164,12 @@ const navWidth = computed(() => {
 const computedWidth = computed(() => {
   const widthVal = toValue(width)
   const plotContainerWidthVal = toValue(plotContainerWidth)
-  console.warn('plotContainerWidthVal', plotContainerWidthVal, ' - widthVal', widthVal)
+  log.debug({
+    action: 'category_builder:width_debug',
+    tag: 'CategoryBuilder',
+    plotContainerWidth: plotContainerWidthVal,
+    width: widthVal,
+  })
   const navWidthAndGap = navWidth.value + 8 // 8px gap
   return widthVal > navWidthAndGap ? widthVal - navWidthAndGap : widthVal
 })
@@ -280,7 +286,10 @@ function nextFacet() {
   const facetAttributeVal = toValue(facetAttribute)
   // const searchParamsVal = toValue(computedFacetSearchParams)
   if (!itemToFilterOnNextVal || !facetAttributeVal) {
-    console.warn('Cannot go to next facet, missing item to filter on or facet attribute')
+    log.warn({
+      action: 'category_builder:next_facet_missing_data',
+      tag: 'CategoryBuilder',
+    })
     return
   }
   addFacetFilter({
@@ -323,7 +332,10 @@ function createFilter(value: string | Array<string>) {
   }
   else {
     if (!facetAttributeVal) {
-      console.warn('Column is undefined, cannot create filter')
+      log.warn({
+        action: 'category_builder:create_filter_missing_column',
+        tag: 'CategoryBuilder',
+      })
     }
     if (addFilter) {
       resetFacetFilters()
@@ -351,7 +363,6 @@ function createFilter(value: string | Array<string>) {
 
 function handleBarClick(plot: { value?: { name: string } }) {
   const plotValue = plot.value
-  // console.log('bar clicked', plotValue)
   if (plotValue) {
     const value = plotValue.name
     currentFilterId.value = createFilter(value)

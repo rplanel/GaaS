@@ -2,8 +2,8 @@ import type { Coordinator, Selection } from '@uwdata/mosaic-core'
 import type { FilterExpr, SelectExpr } from '@uwdata/mosaic-sql'
 import type { Ref } from 'vue'
 import { makeClient } from '@uwdata/mosaic-core'
-
 import { Query } from '@uwdata/mosaic-sql'
+import { log } from 'evlog/client'
 
 export interface UseMosaicDataParams {
   table: Ref<string>
@@ -27,33 +27,32 @@ export function useMosaicData<T>(params: UseMosaicDataParams) {
 
   watchEffect((onCleanup) => {
     const selectClauseVal = toValue(selectClause)
-    // console.info(selectClauseVal)
     const tableName = toValue(table)
     const selectionVal = selection
     // const coordinatorVal = toValue(effectiveCoordinator)
     if (!tableName) {
-      console.warn('Table name is not defined.')
+      log.warn({ action: 'mosaic:missing_table', tag: 'useMosaicData' })
       return
     }
     if (!selectionVal) {
-      console.warn('Selection is not defined.')
+      log.warn({ action: 'mosaic:missing_selection', tag: 'useMosaicData' })
       return
     }
     if (!selectClauseVal) {
-      console.warn('Select clause is not defined.')
+      log.warn({ action: 'mosaic:missing_select_clause', tag: 'useMosaicData' })
       return
     }
     // Early returns for missing dependencies
     if (!coordinator || !selectionVal) {
-      console.warn('Coordinator or selection is not defined.')
+      log.warn({ action: 'mosaic:missing_coordinator_or_selection', tag: 'useMosaicData' })
       return
     }
     if (!tableName) {
-      console.warn('Table name is not defined.')
+      log.warn({ action: 'mosaic:missing_table', tag: 'useMosaicData' })
       return
     }
     if (!selectClauseVal) {
-      console.warn('Select clause is not defined.')
+      log.warn({ action: 'mosaic:missing_select_clause', tag: 'useMosaicData' })
       return
     }
 
@@ -68,7 +67,11 @@ export function useMosaicData<T>(params: UseMosaicDataParams) {
           tableData.value = result.toArray() as T[]
         }
         catch (error) {
-          console.error('Error in prepare phase:', error)
+          log.error({
+            action: 'mosaic:prepare_failed',
+            tag: 'useMosaicData',
+            error: String(error),
+          })
           isError.value = true
         }
       },
@@ -84,7 +87,11 @@ export function useMosaicData<T>(params: UseMosaicDataParams) {
           isPending.value = false
         }
         catch (error) {
-          console.error('Error processing query result:', error)
+          log.error({
+            action: 'mosaic:query_result_failed',
+            tag: 'useMosaicData',
+            error: String(error),
+          })
           isError.value = true
           isPending.value = false
         }
@@ -96,13 +103,16 @@ export function useMosaicData<T>(params: UseMosaicDataParams) {
       queryError: (err) => {
         isPending.value = false
         isError.value = true
-        console.error(`Error running query: ${err.message}`)
+        log.error({
+          action: 'mosaic:query_failed',
+          tag: 'useMosaicData',
+          error: err.message,
+        })
         throw createError(`Error running query: ${err.message}`)
       },
     })
 
     onCleanup(() => {
-      // console.info('Destroying Mosaic client in useMosaicData cleanup.')
       client.destroy()
     })
   })

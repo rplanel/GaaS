@@ -1,6 +1,7 @@
 import { getHistoryEffect, toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect } from 'effect'
 import { defineEventHandler } from 'h3'
+import { runGalaxyEffect } from '../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../utils/galaxy'
 import { ServerSupabaseClient } from '../../utils/grizzle/supabase'
 
@@ -25,10 +26,9 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  return program.pipe(
+  return runGalaxyEffect(event, program.pipe(
     toGalaxyServiceUnavailable,
     Effect.provide(ServerSupabaseClient.Live),
     Effect.provide(useGalaxyLayer()),
-    Effect.runPromise,
-  )
+  ))
 })

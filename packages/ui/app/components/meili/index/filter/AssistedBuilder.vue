@@ -2,6 +2,7 @@
 import type { StepperItem } from '@nuxt/ui'
 import type { FacetDistribution, FacetStats } from 'meilisearch'
 import type { FacetFilter, FacetOperators, FacetValues, FilterType } from '../../../../utils/filterSchema'
+import { log } from 'evlog/client'
 import { ref } from 'vue'
 import { useFacetFilter } from '../../../../composables/meili/useFacetFilter'
 import {
@@ -200,10 +201,6 @@ const filterType = computed<FilterType | undefined>(() => {
   return undefined
 })
 
-// watch(filterValues, (newVal) => {
-//   // console.log('filterValues changed', newVal)
-// })
-
 function parseFilter(attribute: string, operator: FacetOperators, values: FacetValues): FacetFilter | undefined {
   const testedFilter: any = {
     attribute,
@@ -226,11 +223,6 @@ function parseFilter(attribute: string, operator: FacetOperators, values: FacetV
   return filter
 }
 const validatedFilter = computed(() => {
-  // console.log('validating filter', {
-  //   attribute: filterAttribute.value,
-  //   operator: filterOperator.value,
-  //   values: filterValues.value,
-  // })
   if (!filterAttribute.value || !filterOperator.value || filterValues.value === undefined) {
     return undefined
   }
@@ -240,7 +232,9 @@ const validatedFilter = computed(() => {
 function checkAndAddFilter() {
   const validatedFilterVal = validatedFilter.value
   if (!validatedFilterVal) {
-    console.warn('Cannot add filter: filter is not valid', {
+    log.warn({
+      action: 'filter_builder:invalid_filter',
+      tag: 'AssistedBuilder',
       attribute: filterAttribute.value,
       operator: filterOperator.value,
       values: filterValues.value,

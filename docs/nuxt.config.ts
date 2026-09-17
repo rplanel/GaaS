@@ -1,82 +1,56 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+
+  extends: ['docus'],
+
   modules: [
     '@nuxt/eslint',
     '@nuxt/image',
     '@nuxt/ui',
     '@nuxt/content',
-    'nuxt-og-image',
-    'nuxt-llms',
-    '@nuxt/test-utils',
+    '@nuxt/test-utils'
   ],
 
   devtools: {
-    enabled: true,
-  },
-
-  css: ['./app/assets/css/main.css'],
-
-  content: {
-    build: {
-      markdown: {
-        toc: {
-          searchDepth: 1,
-        },
-      },
-    },
+    enabled: true
   },
 
   future: {
-    compatibilityVersion: 4,
+    compatibilityVersion: 4
   },
-
   compatibilityDate: '2024-07-11',
 
   nitro: {
     prerender: {
-      routes: [
-        '/',
-      ],
-      crawlLinks: true,
-    },
+      routes: ['/'],
+      crawlLinks: true
+    }
+  },
+
+  typescript: {
+    tsConfig: {
+      compilerOptions: {
+        skipLibCheck: true
+      },
+      exclude: [
+        '../../node_modules/.pnpm/docus@*/node_modules/docus/app/composables/useSeo.ts',
+        '../../node_modules/.pnpm/docus@*/node_modules/docus/app/plugins/i18n.ts',
+        '../../node_modules/.pnpm/docus@*/node_modules/docus/modules/assistant/runtime/composables/useAssistant.ts',
+        '../../node_modules/.pnpm/@nuxt+image@*/node_modules/@nuxt/image/dist/runtime/components/NuxtPicture.vue'
+      ]
+    }
   },
 
   eslint: {
     config: {
       stylistic: {
         commaDangle: 'never',
-        braceStyle: '1tbs',
-      },
-    },
+        braceStyle: '1tbs'
+      }
+    }
   },
 
   icon: {
-    provider: 'iconify',
-  },
-
-  llms: {
-    domain: 'https://docs-template.nuxt.dev/',
-    title: 'Nuxt Docs Template',
-    description: 'A template for building documentation with Nuxt UI Pro and Nuxt Content.',
-    full: {
-      title: 'Nuxt Docs Template - Full Documentation',
-      description: 'This is the full documentation for the Nuxt Docs Template.',
-    },
-    sections: [
-      {
-        title: 'Getting Started',
-        contentCollection: 'docs',
-        contentFilters: [
-          { field: 'path', operator: 'LIKE', value: '/getting-started%' },
-        ],
-      },
-      {
-        title: 'Essentials',
-        contentCollection: 'docs',
-        contentFilters: [
-          { field: 'path', operator: 'LIKE', value: '/essentials%' },
-        ],
-      },
-    ],
-  },
+    provider: 'iconify'
+  }
 })

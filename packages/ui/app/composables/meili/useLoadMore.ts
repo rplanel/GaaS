@@ -5,6 +5,7 @@ import type { Ref } from 'vue'
 
 import type { FetchDataParams } from './types'
 import { useOffsetPagination, watchThrottled } from '@vueuse/core'
+import { log } from 'evlog/client'
 import { computed, ref, shallowRef, toValue, watch } from 'vue'
 import { useMeiliSearch } from './useMeiliSearch'
 
@@ -69,7 +70,11 @@ export function useLoadMore(options: UseLoadMoreOptions) {
       // runOnce.value = true
     }
     catch (e) {
-      console.error('MeiliSearch Error:', e)
+      log.error({
+        action: 'meilisearch:paginated_search_failed',
+        tag: 'useLoadMore',
+        error: String(e),
+      })
     }
   }
 

@@ -1,6 +1,6 @@
-/* eslint-disable no-console */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
+import { getEnvironment, initLogger, log } from 'evlog'
 import postgres from 'postgres'
 import { z } from 'zod'
 import { RolePermissions, RoleTypes } from '../../types/nuxt-galaxy'
@@ -9,6 +9,10 @@ import { instances } from '../db/schema/galaxy/instances'
 import { users } from '../db/schema/galaxy/users'
 import { rolePermissions } from '../db/schema/galaxyRbac/rolePermissions'
 import { roles } from '../db/schema/galaxyRbac/roles'
+
+if (getEnvironment().service === 'app') {
+  initLogger({ env: { service: 'nuxt-galaxy' } })
+}
 
 /**
  * Zod schema for seed configuration
@@ -66,14 +70,14 @@ export function validateSeedConfig(config: unknown): SeedConfig {
  * @param databaseUrl - PostgreSQL connection string
  */
 export async function runSeed(config: SeedConfig, databaseUrl: string): Promise<void> {
-  console.log('🌱 Seeding database...')
+  log.info('seed', 'Seeding database')
 
   const client = postgres(databaseUrl)
   const db = drizzle({ client, relations })
 
   try {
     // Insert instances (idempotent via unique constraint on url)
-    console.log(`📦 Seeding ${config.instances.length} instance(s)...`)
+    log.info({ message: 'Seeding instances', operation: 'seed', count: config.instances.length })
     for (const instance of config.instances) {
       await db.insert(instances)
         .values({
@@ -81,12 +85,12 @@ export async function runSeed(config: SeedConfig, databaseUrl: string): Promise<
           name: instance.name,
         })
         .onConflictDoNothing()
-      console.log(`   ✅ Instance: ${instance.name} (${instance.url})`)
+      log.info({ message: 'Seeded instance', operation: 'seed', name: instance.name, url: instance.url })
     }
 
     // Insert users (linked to instances by URL lookup)
     if (config.users.length > 0) {
-      console.log(`👤 Seeding ${config.users.length} user(s)...`)
+      log.info({ message: 'Seeding users', operation: 'seed', count: config.users.length })
       for (const user of config.users) {
         const [instance] = await db.select()
           .from(instances)
@@ -103,13 +107,13 @@ export async function runSeed(config: SeedConfig, databaseUrl: string): Promise<
           })
           .onConflictDoNothing()
 
-        console.log(`   ✅ User: ${user.email} (${instance.name})`)
+        log.info({ message: 'Seeded user', operation: 'seed', email: user.email, instance: instance.name })
       }
     }
 
     // Insert role permissions (linked to roles by name lookup)
     if (config.rolePermissions.length > 0) {
-      console.log(`🔐 Seeding role permissions...`)
+      log.info('seed', 'Seeding role permissions')
       for (const rp of config.rolePermissions) {
         const [role] = await db.select()
           .from(roles)
@@ -128,11 +132,11 @@ export async function runSeed(config: SeedConfig, databaseUrl: string): Promise<
           .values(permissionsToInsert)
           .onConflictDoNothing()
 
-        console.log(`   ✅ Role '${rp.roleName}': ${rp.permissions.length} permission(s)`)
+        log.info({ message: 'Seeded role permissions', operation: 'seed', role: rp.roleName, count: rp.permissions.length })
       }
     }
 
-    console.log('🎉 Seeding completed successfully!')
+    log.info('seed', 'Seeding completed successfully')
   }
   catch (error) {
     if (error instanceof Error) {

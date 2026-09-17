@@ -3,6 +3,7 @@ import { toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect, Layer } from 'effect'
 import { defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle'
+import { runGalaxyEffect } from '../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../utils/galaxy'
 import { ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase'
 import { insertWorkflow } from '../../utils/grizzle/workflows'
@@ -26,11 +27,13 @@ export default defineEventHandler<
       Drizzle.Live,
     )
 
-    return insertWorkflow(galaxyId, url, email, event).pipe(
-      toGalaxyServiceUnavailable,
-      Effect.provide(finalLayer),
-      Effect.provide(useGalaxyLayer()),
-      Effect.runPromise,
+    return runGalaxyEffect(
+      event,
+      insertWorkflow(galaxyId, url, email, event).pipe(
+        toGalaxyServiceUnavailable,
+        Effect.provide(finalLayer),
+        Effect.provide(useGalaxyLayer()),
+      ),
     )
   },
 )

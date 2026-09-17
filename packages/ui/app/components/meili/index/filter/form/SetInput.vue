@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { InputMenuItem, InputMenuProps } from '@nuxt/ui'
 import type { FacetDistribution } from 'meilisearch'
+import { log } from 'evlog/client'
 import { useFacetSearch } from '../../../../../composables/meili/useFacetSearch'
 
 interface Props {
@@ -28,17 +29,18 @@ onMounted(() => {
 })
 
 if (!setOperators.includes(filterOperator.value)) {
-  console.warn(`MeiliFilterInputSet: filterOperator should be 'in' or 'not in', got '${filterOperator.value}'`)
+  log.error({
+    action: 'filter_set_input:invalid_operator',
+    tag: 'SetInput',
+    operator: filterOperator.value,
+  })
   throw createError(`MeiliFilterInputSet: filterOperator should be 'in', got '${filterOperator.value}'`)
 }
 
 watch(searchTerm, (newVal) => {
-  // console.log('watch searchTerm', newVal)
   if (!newVal) {
     return
   }
-  // console.log('searchTerm changed', newVal)
-  // console.log('filterAttribute', filterAttribute.value)
   searchForFacetValues({ facetName: filterAttribute.value, facetQuery: newVal })
 })
 

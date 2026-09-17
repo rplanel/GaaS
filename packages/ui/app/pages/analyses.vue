@@ -5,7 +5,6 @@ const defaultSize = ref(25)
 // const minMaxPanelSize = { min: 15, max: 50 }
 const analysesListInjected = inject<AnalysesListProvide>('analysesList')
 const { analysesList } = analysesListInjected || {}
-$fetch('/sync')
 </script>
 
 <template>

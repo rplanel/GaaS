@@ -1,5 +1,4 @@
 import process from 'node:process'
-
 import {
   addImports,
   addImportsDir,
@@ -8,9 +7,11 @@ import {
   addServerPlugin,
   createResolver,
   defineNuxtModule,
+  installModule,
   logger,
 } from '@nuxt/kit'
 import { defu } from 'defu'
+import * as logOptions from './log-options'
 
 const log = logger.withTag('nuxt-galaxy')
 export * from './runtime/app/utils/errors'
@@ -75,6 +76,48 @@ export interface ModuleOptions {
    * @type boolean | undefined
    */
   useBlobUpload?: boolean
+
+  /**
+   * Logging configuration for the module.
+   * Uses evlog under the hood.
+   */
+  logs?: logOptions.LogOptions
+
+  /**
+   * Sync lock TTL in seconds.
+   * How long a sync lock remains valid before another worker can reclaim it.
+   * @default 900
+   * @type number
+   */
+  syncLockTtlSeconds?: number
+
+  /**
+   * Maximum number of analyses to sync in one scheduled task batch.
+   * @default 20
+   * @type number
+   */
+  syncBatchSize?: number
+
+  /**
+   * Maximum number of retries for transient sync failures.
+   * @default 3
+   * @type number
+   */
+  syncMaxRetries?: number
+
+  /**
+   * Base delay in milliseconds before the first retry after a transient failure.
+   * @default 200
+   * @type number
+   */
+  syncRetryBaseDelayMs?: number
+
+  /**
+   * Maximum delay in milliseconds between retries.
+   * @default 2000
+   * @type number
+   */
+  syncRetryMaxDelayMs?: number
 }
 
 export default defineNuxtModule<ModuleOptions>({
@@ -120,6 +163,12 @@ export default defineNuxtModule<ModuleOptions>({
     databaseUrl: process.env.GALAXY_DRIZZLE_DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
     runMigrations: false,
     useBlobUpload: undefined,
+    logs: {},
+    syncLockTtlSeconds: 900,
+    syncBatchSize: 20,
+    syncMaxRetries: 3,
+    syncRetryBaseDelayMs: 200,
+    syncRetryMaxDelayMs: 2000,
   },
 
   // Shorthand sugar to register Nuxt hooks
@@ -137,6 +186,34 @@ export default defineNuxtModule<ModuleOptions>({
   async setup(moduleOptions, nuxt) {
     // We create the `experimental` object if it doesn't exist yet
     const resolver = createResolver(import.meta.url)
+
+    const syncBatchSize = moduleOptions.syncBatchSize ?? 20
+    const syncMaxRetries = moduleOptions.syncMaxRetries ?? 3
+    const syncLockTtlSeconds = moduleOptions.syncLockTtlSeconds ?? 900
+    const syncRetryBaseDelayMs = moduleOptions.syncRetryBaseDelayMs ?? 200
+    const syncRetryMaxDelayMs = moduleOptions.syncRetryMaxDelayMs ?? 2000
+
+    if (!(syncBatchSize > 0))
+      throw new Error('syncBatchSize must be positive')
+    if (!(syncMaxRetries >= 0))
+      throw new Error('syncMaxRetries must be non-negative')
+    if (!(syncLockTtlSeconds > 0))
+      throw new Error('syncLockTtlSeconds must be positive')
+    if (!(syncRetryBaseDelayMs >= 0))
+      throw new Error('syncRetryBaseDelayMs must be non-negative')
+    if (!(syncRetryMaxDelayMs >= syncRetryBaseDelayMs))
+      throw new Error('syncRetryMaxDelayMs must be >= syncRetryBaseDelayMs')
+
+    const _resolvedLogs = logOptions.resolveLogOptions(nuxt.options.dev, moduleOptions.logs)
+
+    await installModule('evlog/nuxt', {
+      enabled: _resolvedLogs.enabled,
+      env: { service: _resolvedLogs.service },
+      minLevel: _resolvedLogs.minLevel,
+      pretty: _resolvedLogs.pretty,
+      console: _resolvedLogs.console,
+      redact: _resolvedLogs.redact,
+    })
 
     // Also set supabase types in runtime config to ensure it's picked up
     nuxt.options.supabase = defu(nuxt.options.supabase || {}, {
@@ -165,8 +242,16 @@ export default defineNuxtModule<ModuleOptions>({
         drizzle: {
           databaseUrl: moduleOptions.databaseUrl,
         },
+        logs: _resolvedLogs,
+        sync: {
+          lockTtlSeconds: syncLockTtlSeconds,
+          batchSize: syncBatchSize,
+          maxRetries: syncMaxRetries,
+          retryBaseDelayMs: syncRetryBaseDelayMs,
+          retryMaxDelayMs: syncRetryMaxDelayMs,
+        },
       },
-    )
+    ) as typeof nuxt.options.runtimeConfig.galaxy
 
     // Make sure url and key are set
     if (!nuxt.options.runtimeConfig.public.galaxy.url) {
@@ -225,12 +310,19 @@ export default defineNuxtModule<ModuleOptions>({
 
     addServerImportsDir(resolver.resolve('./runtime/server/utils'))
     addServerImportsDir(resolver.resolve('./runtime/server/db'))
-    // Galaxy
-    addServerHandler({
-      route: '/sync',
-      handler: resolver.resolve('./runtime/server/routes/sync'),
-      method: 'get',
+    // Nitro tasks
+    nuxt.options.nitro = defu(nuxt.options.nitro || {}, {
+      experimental: { tasks: true },
+      scheduledTasks: { '*/30 * * * * *': ['galaxy:sync-analyses'] },
+      tasks: {
+        'galaxy:sync-analyses': {
+          handler: resolver.resolve('./runtime/server/tasks/galaxy/sync-analyses'),
+          description: 'Sync pending Galaxy analyses to Supabase',
+        },
+      },
     })
+
+    // Galaxy
     addServerHandler({
       route: '/api/galaxy/instance',
       handler: resolver.resolve('./runtime/server/api/galaxy/instance.get'),
@@ -280,9 +372,27 @@ export default defineNuxtModule<ModuleOptions>({
     })
 
     addServerHandler({
+      route: '/api/db/analyses/monitoring',
+      handler: resolver.resolve('./runtime/server/api/db/analyses/monitoring.get'),
+      method: 'get',
+    })
+
+    addServerHandler({
+      route: '/api/db/analyses/monitoring/admin',
+      handler: resolver.resolve('./runtime/server/api/db/analyses/monitoring/admin.get'),
+      method: 'get',
+    })
+
+    addServerHandler({
       route: '/api/db/analyses/:analysisId',
       handler: resolver.resolve('./runtime/server/api/db/analyses/[analysisId].delete'),
       method: 'delete',
+    })
+
+    addServerHandler({
+      route: '/api/db/analyses/:id/sync',
+      handler: resolver.resolve('./runtime/server/api/db/analyses/[id]/sync.post'),
+      method: 'post',
     })
 
     addServerHandler({
@@ -295,6 +405,7 @@ export default defineNuxtModule<ModuleOptions>({
     // Add server plugin
     /*********************/
     addServerPlugin(resolver.resolve('./runtime/server/plugins/galaxy.server'))
+    addServerPlugin(resolver.resolve('./runtime/server/plugins/evlog.server'))
 
     // Optionally run database migrations on server startup
     if (moduleOptions.runMigrations) {
@@ -317,6 +428,14 @@ declare module '@nuxt/schema' {
       email: string
       drizzle: {
         databaseUrl: string
+      }
+      logs: logOptions.ResolvedLogOptions
+      sync: {
+        lockTtlSeconds: number
+        batchSize: number
+        maxRetries: number
+        retryBaseDelayMs: number
+        retryMaxDelayMs: number
       }
     }
   }

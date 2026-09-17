@@ -1,7 +1,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js'
-
 import type { Database } from '../../types/database'
 import { onMounted, onUnmounted, useSupabaseClient } from '#imports'
+import { log } from 'evlog/client'
 
 interface ChannelData {
   count: number
@@ -15,6 +15,10 @@ const channels: Record<string, ChannelData> = {}
  * A composable function to manage Supabase realtime subscriptions.
  * It allows subscribing to a specific channel and table, and handles
  * the event when changes occur in the specified table.
+ *
+ * This composable refreshes displayed Supabase rows only and must not trigger
+ * Galaxy sync state mutations. The `galaxy:sync-analyses` scheduled task is the
+ * sole owner of sync-state changes.
  *
  * @param channelName - The name of the channel to subscribe to.
  * @param tableName - The name of the table to listen for changes.
@@ -36,6 +40,12 @@ export function useSupabaseRealtime(
         count: 0,
         eventHandlers: [],
       }
+      log.info({
+        message: 'subscribing to Supabase realtime channel',
+        tag: 'useSupabaseRealtime',
+        channelName,
+        tableName,
+      })
       channel
         .on(
           'postgres_changes',
@@ -45,42 +55,34 @@ export function useSupabaseRealtime(
             table: tableName,
           },
           () => {
-            // console.log(`Received event on channel: ${channelName}`)
-            eventHandler()
+            channels[channelName]?.eventHandlers.forEach(handler => handler())
           },
         )
         .subscribe()
-      // console.log(`Subscribing to Supabase realtime channel: ${channelName}`)
     }
     const channelData = channels[channelName]
     channelData.count++
-    // Add the event handler to the channel
-    channelData.eventHandlers = [...channels[channelName].eventHandlers, eventHandler]
-
-    // channelData.channel.on(
-    //   'postgres_changes',
-    //   {
-    //     event: '*',
-    //     schema: 'galaxy',
-    //     table: tableName,
-    //   },
-    //   () => channelData.eventHandlers.forEach((handler) => {
-    //     console.log(`Executing event handler for channel: ${channelName}`)
-    //     console.log(`Table: ${tableName}`)
-    //     handler()
-    //   }),
-    // )
+    // Add the event handler to the channel only if not already registered
+    if (!channelData.eventHandlers.includes(eventHandler)) {
+      channelData.eventHandlers.push(eventHandler)
+    }
 
     // Subscribe to the channel only once
   }
 
   function unsubscribe() {
-    // console.log(`Unsubscribing from Supabase realtime channel: ${channelName}`)
-    if (channelName in channels) {
-      const channelData = channels[channelName]
-      if (!channelData) {
-        return
-      }
+    log.info({
+      message: 'unsubscribing from Supabase realtime channel',
+      tag: 'useSupabaseRealtime',
+      channelName,
+    })
+    const channelData = channels[channelName]
+    if (!channelData) {
+      return
+    }
+    channelData.count--
+    channelData.eventHandlers = channelData.eventHandlers.filter(h => h !== eventHandler)
+    if (channelData.count <= 0) {
       supabase.removeChannel(channelData.channel)
       delete channels[channelName]
     }

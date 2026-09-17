@@ -1,7 +1,16 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { EventHandlerRequest, H3Event } from 'h3'
 import type { Database } from '../../../types/database'
+import type { RoleType } from '../../../types/nuxt-galaxy'
+import process from 'node:process'
+import { useRuntimeConfig } from '#imports'
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+import { createClient } from '@supabase/supabase-js'
+import { and, eq } from 'drizzle-orm'
 import { Context, Data, Effect, Layer } from 'effect'
+import { roles } from '../../db/schema/galaxyRbac/roles'
+import { userRoles } from '../../db/schema/galaxyRbac/userRoles'
+import { Drizzle } from '../drizzle'
 
 export class ServerSupabaseClientError extends Data.TaggedError('NoServerSupabaseClientError')<{
   readonly message: string
@@ -43,6 +52,14 @@ export class GetSupabaseUserError extends Data.TaggedError('GetSupabaseUserError
   readonly message: string
 }> {}
 
+export class ForbiddenError extends Data.TaggedError('ForbiddenError')<{
+  readonly message: string
+}> {}
+
+export class AdminRoleCheckError extends Data.TaggedError('AdminRoleCheckError')<{
+  readonly message: string
+}> {}
+
 export function createServerSupabaseClaims(event: H3Event<EventHandlerRequest>) {
   return Effect.tryPromise({
     try: () => serverSupabaseUser(event),
@@ -71,24 +88,53 @@ export class UploadFileToStorageError extends Data.TaggedError('UploadFileToStor
   readonly message: string
 }> {}
 
+export function createServiceRoleSupabaseClient() {
+  return Effect.gen(function* () {
+    const config = useRuntimeConfig()
+    const url = (config.public.supabase?.url as string | undefined)
+      || process.env.SUPABASE_URL
+      || process.env.NUXT_PUBLIC_SUPABASE_URL
+    const secretKey = ((config.supabase as any)?.secretKey as string | undefined)
+      || process.env.NUXT_SUPABASE_SECRET_KEY
+      || process.env.SUPABASE_SERVICE_KEY
+      || process.env.SUPABASE_SERVICE_ROLE_KEY
+      || process.env.NUXT_SUPABASE_SERVICE_KEY
+      || process.env.NUXT_SUPABASE_SERVICE_ROLE_KEY
+    const serviceKey = (config.supabase as any)?.serviceKey as string | undefined
+    const serverKey = secretKey || serviceKey
+    if (!url || !serverKey) {
+      return yield* Effect.fail(new ServerSupabaseClientError({
+        message: 'Missing Supabase URL or service role key in runtime config or environment variables',
+      }))
+    }
+    return createClient<Database>(url, serverKey, {
+      auth: { detectSessionInUrl: false, persistSession: false, autoRefreshToken: false },
+    })
+  })
+}
+
+export function uploadStreamToStorage(
+  supabase: SupabaseClient<Database>,
+  path: string,
+  stream: NodeJS.ReadableStream | ReadableStream<Uint8Array>,
+) {
+  return Effect.gen(function* () {
+    const { data, error } = yield* Effect.promise(() =>
+      supabase.storage.from('analysis_files').upload(path, stream),
+    )
+    if (error) {
+      return yield* Effect.fail(new UploadFileToStorageError({ message: error.message }))
+    }
+    return { id: data!.id, path: data!.path }
+  })
+}
+
 export function uploadFileToStorage(event: H3Event<EventHandlerRequest>, datasetName: string, datasetBlob: Blob) {
   return Effect.gen(function* () {
     const createSupabase = yield* ServerSupabaseClient
     const supabase = yield* createSupabase(event)
-    const { data, error } = yield* Effect.promise(
-      () => supabase.storage
-        .from('analysis_files')
-        .upload(`${crypto.randomUUID()}/${datasetName}`, datasetBlob),
-    )
-    if (error) {
-      console.error('Error uploading file to storage:', error)
-      return yield* Effect.fail(new UploadFileToStorageError({ message: error.message }))
-    }
-    // Return both id and path for storage operations
-    return {
-      id: data?.id,
-      path: data?.path,
-    }
+    const path = `${crypto.randomUUID()}/${datasetName}`
+    return yield* uploadStreamToStorage(supabase, path, datasetBlob.stream() as ReadableStream<Uint8Array>)
   })
 }
 
@@ -123,5 +169,35 @@ export function getSupabaseUser(event: H3Event<EventHandlerRequest>) {
       )
     }
     return authUser.user
+  })
+}
+
+/**
+ * Generic role gate (D-01..D-04): verifies that `user` holds the given `role`
+ * via the Drizzle `userRoles ⋈ roles WHERE roles.name = role` join (limit 1).
+ * Returns Unit on success, ForbiddenError (403) when the user has no such role,
+ * or AdminRoleCheckError (500) when the query itself is rejected. Per D-04 this
+ * helper performs NO logging — denial and failure logging happen at the handler
+ * layer only.
+ */
+export function requireRole(
+  user: { readonly id: string },
+  role: RoleType,
+): Effect.Effect<void, AdminRoleCheckError | ForbiddenError, Drizzle> {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    const roleRows = yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .select({ userId: userRoles.userId })
+        .from(userRoles)
+        .innerJoin(roles, eq(userRoles.roleId, roles.id))
+        .where(and(eq(userRoles.userId, user.id), eq(roles.name, role)))
+        .limit(1),
+      catch: error => new AdminRoleCheckError({ message: `Failed to verify ${role} role: ${error}` }),
+    })
+    if (roleRows.length === 0) {
+      return yield* Effect.fail(new ForbiddenError({ message: 'Forbidden: admin role required' }))
+    }
+    return yield* Effect.void
   })
 }

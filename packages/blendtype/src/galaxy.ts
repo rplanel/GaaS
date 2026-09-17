@@ -21,10 +21,11 @@ import { extractStatusCode, formatErrorMessage, GalaxyApiError } from './errors'
  * ```ts
  * import { Effect } from 'effect'
  *
- * const myEffect = Effect.sync(() => console.log('Using GalaxyFetch layer'))
- *   .pipe(Effect.provide(GalaxyFetch.Live))
+ * const myEffect = Effect.gen(function* () {
+ *   yield* Effect.logInfo('Using GalaxyFetch layer')
+ * }).pipe(Effect.provide(GalaxyFetch.Live))
  *
- * myEffect.run()
+ * Effect.runPromise(myEffect)
  * ```
  */
 export class GalaxyFetch extends Context.Tag('@blendtype/GalaxyFetch')<

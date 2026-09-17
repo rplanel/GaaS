@@ -1,5 +1,28 @@
 import { vi } from 'vitest'
 
+export function createMockRequestLogger() {
+  return {
+    set: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    emit: vi.fn(() => null),
+    getContext: vi.fn(() => ({})),
+  }
+}
+
+vi.mock('evlog', () => ({
+  log: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+  createRequestLogger: vi.fn(() => createMockRequestLogger()),
+  useLogger: vi.fn(() => createMockRequestLogger()),
+}))
+
 // Mock #imports (Nuxt auto-imports used by server code)
 vi.mock('#imports', () => ({
   useRuntimeConfig: vi.fn(() => ({
@@ -13,6 +36,13 @@ vi.mock('#imports', () => ({
       drizzle: {
         databaseUrl: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
       },
+      sync: {
+        lockTtlSeconds: 900,
+        batchSize: 20,
+        maxRetries: 3,
+        retryBaseDelayMs: 200,
+        retryMaxDelayMs: 2000,
+      },
     },
   })),
   createError: vi.fn((opts: string | { statusCode?: number, statusMessage?: string }) => {
@@ -23,6 +53,7 @@ vi.mock('#imports', () => ({
       statusMessage: opts.statusMessage,
     })
   }),
+  useLogger: vi.fn(() => createMockRequestLogger()),
 }))
 
 // Mock #supabase/server (Nuxt Supabase module auto-imports)

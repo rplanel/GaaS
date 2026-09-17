@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const HeroShaders = defineAsyncComponent(() =>
-  import('~/components/HeroShaders.client.vue'),
+  import('./HeroShaders.client.vue'),
 )
 </script>
 

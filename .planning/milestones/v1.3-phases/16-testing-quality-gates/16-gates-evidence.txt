@@ -1,0 +1,63 @@
+# Phase 16 Quality-Gate Evidence (TEST-05)
+
+Milestone-level green gate run for the Analysis Usage Statistics milestone (v1.3).
+All three root gates exited 0 on the current working tree. No protected file or
+config was modified to force a pass; no HUSKY=0 / --no-verify was used.
+
+Timestamp: 2026-08-11T14:02:00Z
+Working tree branch: monitoring-analyses
+Node: v24.12.0 | pnpm: 10.27.0 | Vitest: 4.1.10
+
+---
+
+## Gate 1: pnpm lint  (exit: 0)
+
+Command: `pnpm lint`
+(pnpm --filter './packages/**' lint)
+
+- packages/blendtype lint: Done
+- packages/nuxt-galaxy lint: Done
+- packages/ui lint: Done
+- packages/wiki lint: Done
+
+Result: PASS — all packages lint clean (ESLint + @antfu/eslint-config).
+
+---
+
+## Gate 2: pnpm typecheck  (exit: 0)
+
+Command: `pnpm typecheck`
+(pnpm --filter './packages/**' run typecheck)
+
+- packages/blendtype typecheck: Done  (tsc --noEmit --skipLibCheck)
+- packages/nuxt-galaxy typecheck: Done  (vue-tsc --noEmit && playground vue-tsc --noEmit)
+- packages/ui typecheck: Done  (vue-tsc --noEmit)
+- packages/wiki typecheck: Done  (vue-tsc --noEmit)
+
+Result: PASS — all packages typecheck clean (TypeScript strict / vue-tsc).
+
+---
+
+## Gate 3: pnpm test  (exit: 0)
+
+Command: `pnpm test`
+(pnpm --filter './packages/**' test)
+
+- packages/blendtype: 9 test files, 144 tests passed (coverage: stmts 76.92%, lines 76.68%)
+- packages/nuxt-galaxy client (vitest.config.ts): 10 test files, 64 tests passed
+- packages/nuxt-galaxy server (vitest.config.server.ts, threads pool): 37 test files, 292 passed / 3 skipped
+- packages/ui: 5 test files, 12 tests passed
+- packages/wiki: 1 test file, 5 tests passed
+
+The server suite reflects the Phase 16 additions from Plan 16-01:
+- survival-flow.test.ts (D-07 integrated create -> delete -> survive flow)
+- requireRole role-agnosticism sub-test (D-06) in supabase.test.ts
+
+Result: PASS — all package suites green.
+
+---
+
+## Final assertion
+
+All three root quality gates exited 0: lint PASS, typecheck PASS, test PASS.
+This note constitutes the TEST-05 milestone evidence.

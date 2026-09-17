@@ -1,20 +1,18 @@
-import type { Datamap, GalaxyInvocation, GalaxyInvocationIO, GalaxyWorkflowInput, GalaxyWorkflowParameters, InvocationState, InvocationTerminalState } from 'blendtype'
-import type { EventHandlerRequest, H3Event } from 'h3'
+import type { Datamap, GalaxyInvocation, GalaxyInvocationIO, GalaxyWorkflowInput, GalaxyWorkflowParameters } from 'blendtype'
+import type { Context } from 'effect'
 import type { NewAnalysis } from '../../../types/nuxt-galaxy'
+import type { WorkflowSnapshot } from './analysisMonitoring'
 import * as bt from 'blendtype'
 import { and, eq } from 'drizzle-orm'
 import { Data, Effect } from 'effect'
 import { analyses } from '../../db/schema/galaxy/analyses'
 import { histories } from '../../db/schema/galaxy/histories'
 import { Drizzle } from '../drizzle'
+import { finalizeAnalysisMonitoringEffect, insertAnalysisMonitoringEffect } from './analysisMonitoring'
 import { insertAnalysisInputEffect } from './datasets/input'
 import { takeUniqueOrThrow } from './helper'
-import { isHistorySyncEffect, synchronizeHistoryEffect } from './histories'
-import { synchronizeJobEffect } from './jobs'
 
-export function isAnalysisTerminalState(state: InvocationState): boolean {
-  return bt.InvocationTerminalStates.includes(state as InvocationTerminalState)
-}
+export { isInvocationTerminalState } from './analysisMonitoring'
 
 export function runAnalysis(
   analysisName: string,
@@ -26,6 +24,7 @@ export function runAnalysis(
   inputs: GalaxyWorkflowInput,
   parameters: GalaxyWorkflowParameters,
   datamap: Datamap,
+  workflowSnapshot?: WorkflowSnapshot,
 
 ) {
   return Effect.gen(function* () {
@@ -57,7 +56,7 @@ export function runAnalysis(
       datamap,
       invocation,
     }
-    const insertedAnalysis = yield* insertAnalysis(newAnalysis)
+    const insertedAnalysis = yield* insertAnalysis(newAnalysis, workflowSnapshot)
     if (insertedAnalysis) {
       const { insertedId: insertedAnalysisId } = insertedAnalysis
       results.id = insertedAnalysisId
@@ -92,21 +91,40 @@ export function deleteAnalysis(
 ) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
-    return yield* getHistoryAnalysis(analysisId, ownerId).pipe(
+    const { finalizedRow, deleted } = yield* getHistoryAnalysis(analysisId, ownerId).pipe(
       Effect.flatMap((historyAnalysis) => {
         if (historyAnalysis) {
           return bt.deleteHistoryEffect(historyAnalysis.histories.galaxyId)
             .pipe(Effect.flatMap(() => Effect.tryPromise({
-              try: () => useDrizzle
-                .delete(analyses)
-                .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
-                .returning(),
+              try: () => useDrizzle.transaction(async (tx) => {
+                // First finalize a stranded `pending` monitoring row to
+                // `cancelled` while `analysis_id` is still set (D-08: the
+                // `ON DELETE SET NULL` FK would null it after the delete), then
+                // delete the analysis row — both atomically on this `tx` (D-07).
+                const finalizedRow = await finalizeAnalysisMonitoringEffect(
+                  analysisId,
+                  ownerId,
+                  tx,
+                ).pipe(Effect.runPromise)
+                const deleted = await tx
+                  .delete(analyses)
+                  .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
+                  .returning()
+                return { finalizedRow, deleted }
+              }),
               catch: error => new DeleteAnalysisError({ message: `Error deleting analysis: ${error}` }),
             })))
         }
         return Effect.fail(new DeleteAnalysisError({ message: `Error deleting analysis: Analysis not found` }))
       }),
     )
+    // Emit from the deleteAnalysis Effect scope (under runGalaxyEffect's evlog
+    // layers), symmetric with the sync task's 'monitoring outcome updated', only
+    // when a row was actually finalised (D-09: a no-op stays silent).
+    if (finalizedRow) {
+      yield* Effect.logInfo('monitoring outcome finalized', { analysisId, ownerId, outcome: 'cancelled' })
+    }
+    return deleted
   })
 }
 
@@ -114,17 +132,39 @@ export class InsertAnalysisError extends Data.TaggedError('InsertAnalysisError')
   readonly message: string
 }> { }
 
-export function insertAnalysis(analysis: NewAnalysis) {
+export function insertAnalysis(analysis: NewAnalysis, workflowSnapshot?: WorkflowSnapshot) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
     return yield* Effect.tryPromise({
-      try: () => useDrizzle
-        .insert(analyses)
-        .values(analysis)
-        .returning({
-          insertedId: analyses.id,
-        })
-        .then(takeUniqueOrThrow),
+      try: () => useDrizzle.transaction(async (tx) => {
+        const inserted = await tx
+          .insert(analyses)
+          .values(analysis)
+          .returning({ insertedId: analyses.id })
+          .then(takeUniqueOrThrow)
+        if (!inserted) {
+          throw new Error('Analysis insert returned no row')
+        }
+        // Delegate the monitoring insert to the canonical helper, running it on
+        // the passed `tx` (D-03/D-04). The helper is an Effect that yields
+        // `Drizzle`; provide that service with the same `tx` client so it never
+        // opens a separate connection — keeping both writes atomic in this
+        // transaction. (The provided service is inert: the helper uses `tx`
+        // directly, so D-04 holds.)
+        await insertAnalysisMonitoringEffect(
+          inserted.insertedId,
+          analysis.ownerId,
+          analysis.workflowId,
+          analysis.name,
+          analysis.galaxyId,
+          workflowSnapshot,
+          tx,
+        ).pipe(
+          Effect.provideService(Drizzle, tx as unknown as Context.Tag.Service<typeof Drizzle>),
+          Effect.runPromise,
+        )
+        return inserted
+      }),
       catch: error => new InsertAnalysisError({ message: `Error inserting analysis: ${error}` }),
     })
   })
@@ -177,58 +217,6 @@ export function getAnalysis(analysisId: number, ownerId: string) {
   })
 }
 
-export function synchronizeJobsEffect(analysisId: number, historyId: number, ownerId: string, event: H3Event<EventHandlerRequest>) {
-  return Effect.gen(function* () {
-    const invocationOutputs = yield* getInvocationOutputs(analysisId, ownerId)
-    if (invocationOutputs) {
-      return yield* Effect.all(
-        Object
-          .entries(invocationOutputs)
-          .map(([galaxyJobId, { galaxyDatasetIds, stepId }]) => {
-            return synchronizeJobEffect(
-              galaxyJobId,
-              stepId,
-              analysisId,
-              historyId,
-              galaxyDatasetIds,
-              ownerId,
-              event,
-            )
-          }),
-      )
-    }
-  })
-}
-
-export function synchronizeAnalysisEffect(
-  analysisId: number,
-  ownerId: string,
-  event: H3Event<EventHandlerRequest>,
-) {
-  return Effect.gen(function* () {
-    const invocationDb = yield* getHistoryAnalysis(analysisId, ownerId)
-
-    if (!invocationDb || invocationDb.analyses.isSync) {
-      return
-    }
-    yield* synchronizeHistoryEffect(invocationDb.histories.id, ownerId, event)
-    const galaxyInvocationId = invocationDb.analyses.galaxyId
-    const invocation = yield* bt.getInvocationEffect(galaxyInvocationId)
-
-    if (!isAnalysisTerminalState(invocationDb.analyses.state)) {
-      if (invocation.state !== invocationDb.analyses.state) {
-        yield* updateAnalysisState(analysisId, invocation, ownerId)
-      }
-    }
-    else {
-      const isSync = yield* isHistorySyncEffect(invocationDb.histories.id, analysisId, ownerId)
-      if (isSync) {
-        yield* updateAnalysisIsSync(isSync, analysisId, ownerId)
-      }
-    }
-  })
-}
-
 export function updateAnalysisState(analysisId: number, invocation: GalaxyInvocation, ownerId: string) {
   return Effect.gen(function* () {
     const drizzle = yield* Drizzle
@@ -263,17 +251,6 @@ export function updateAnalysisIsSync(isSync: boolean, analysisId: number, ownerI
         .then(takeUniqueOrThrow),
       catch: error => new UpdateAnalysisIsSyncError({ message: `Error updating analysis state: ${error}` }),
     })
-  })
-}
-
-export function synchronizeAnalysesEffect(event: H3Event<EventHandlerRequest>, ownerId: string) {
-  return Effect.gen(function* () {
-    const analysesDb = yield* getAllAnalyses(ownerId)
-    return yield* Effect.all(
-      analysesDb.map(({ id: analysisId }) => {
-        return synchronizeAnalysisEffect(analysisId, ownerId, event)
-      }),
-    )
   })
 }
 
