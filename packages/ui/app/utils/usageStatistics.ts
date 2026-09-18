@@ -1,3 +1,5 @@
+import type { AnalysisMonitoringTrendPoint } from 'nuxt-galaxy'
+
 /** Stands in for a success rate that has no value yet. */
 export const NO_SUCCESS_RATE_LABEL = '—'
 
@@ -68,4 +70,70 @@ export function workflowUsageLabel(usage: {
   }
 
   return usage.name
+}
+
+/**
+ * The four outcomes, with the words and colours a reader sees. One definition
+ * serves the tiles, the table columns and the trend chart, so a label or a
+ * colour can never mean one thing in a tile and another in the chart.
+ */
+export const OUTCOME_FIELDS = [
+  { key: 'success', label: 'Succeeded', icon: 'i-lucide-circle-check', fill: 'var(--ui-color-success-500)' },
+  { key: 'error', label: 'Failed', icon: 'i-lucide-circle-x', fill: 'var(--ui-color-error-500)' },
+  { key: 'cancelled', label: 'Cancelled', icon: 'i-lucide-ban', fill: 'var(--ui-color-neutral-400)' },
+  { key: 'pending', label: 'Pending', icon: 'i-lucide-clock', fill: 'var(--ui-color-warning-500)' },
+] as const satisfies ReadonlyArray<{
+  key: 'success' | 'error' | 'cancelled' | 'pending'
+  label: string
+  icon: string
+  fill: string
+}>
+
+export interface TrendSegment {
+  /** The bucket this segment belongs to, as the server labelled it. */
+  bucket: string
+  /** The outcome, in the words a reader sees. */
+  outcome: string
+  count: number
+  fill: string
+}
+
+/**
+ * Flattens a trend into one segment per bucket per outcome, which is the shape
+ * a stacked bar chart needs. Outcomes that did not occur are left out, so a
+ * zero-filled bucket contributes no segment and draws no bar; it keeps its
+ * place on the axis through the chart's explicit bucket domain instead.
+ */
+export function trendSegments(trend: readonly AnalysisMonitoringTrendPoint[]): TrendSegment[] {
+  return trend.flatMap(point =>
+    OUTCOME_FIELDS
+      .filter(field => point[field.key] > 0)
+      .map(field => ({
+        bucket: point.bucket,
+        outcome: field.label,
+        count: point[field.key],
+        fill: field.fill,
+      })),
+  )
+}
+
+/**
+ * What a reader sees on hovering one bucket: when it starts, how much ran, how
+ * it turned out, and the rate. Only outcomes that occurred are listed. A rate
+ * with no value is explained rather than shown as a bare dash, which carries
+ * no meaning away from the tile that defines it.
+ */
+export function trendBucketSummary(point: AnalysisMonitoringTrendPoint): string {
+  const breakdown = OUTCOME_FIELDS
+    .filter(field => point[field.key] > 0)
+    .map(field => `${point[field.key]} ${field.label}`)
+
+  const rate = formatSuccessRate(point)
+
+  return [
+    `${point.bucket} (UTC)`,
+    `${point.total} analyses`,
+    ...(breakdown.length > 0 ? [breakdown.join(', ')] : []),
+    `Success rate ${rate.label}${rate.tooltip ? ` (${rate.tooltip})` : ''}`,
+  ].join('\n')
 }

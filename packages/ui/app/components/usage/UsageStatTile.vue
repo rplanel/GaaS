@@ -7,6 +7,8 @@ interface Props {
   /** Shown on hover. Set when the value needs explaining, such as a dash. */
   tooltip?: string | undefined
   icon?: string | undefined
+  /** Colours the icon, so a tile and its bar in the trend read as the same outcome. */
+  iconColor?: string | undefined
   /** Makes the whole tile a link. */
   to?: string | undefined
 }
@@ -15,6 +17,7 @@ const props = withDefaults(defineProps<Props>(), {
   value: undefined,
   tooltip: undefined,
   icon: undefined,
+  iconColor: undefined,
   to: undefined,
 })
 
@@ -31,7 +34,7 @@ const root = computed(() => (props.to ? NuxtLink : 'div'))
     :class="to ? 'transition-colors hover:border-primary hover:bg-primary/5' : ''"
   >
     <span class="flex items-center gap-1.5 text-sm text-muted">
-      <UIcon v-if="icon" :name="icon" class="size-4 shrink-0" />
+      <UIcon v-if="icon" :name="icon" class="size-4 shrink-0" :style="iconColor ? { color: iconColor } : undefined" />
       {{ label }}
     </span>
 
