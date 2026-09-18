@@ -5,6 +5,7 @@ import { Drizzle } from '../../../../src/runtime/server/utils/drizzle'
 import {
   selectCounts,
   selectTrendBuckets,
+  selectTrendRange,
   selectWorkflowUsage,
 } from '../../../../src/runtime/server/utils/grizzle/analysisMonitoring'
 
@@ -69,5 +70,54 @@ describe('counts and per-workflow SQL', () => {
       expect(counts.length).toBeGreaterThan(0)
       expect(counts.every(count => count.endsWith('::int'))).toBe(true)
     }
+  })
+})
+
+/** A month, as the endpoint will hand it down: from inclusive, to exclusive. */
+const FROM = new Date('2026-08-01T00:00:00.000Z')
+const TO = new Date('2026-09-01T00:00:00.000Z')
+// a timestamptz column takes its bound as an ISO string, not as the Date given
+const FROM_PARAM = FROM.toISOString()
+const TO_PARAM = TO.toISOString()
+
+describe('usage filters', () => {
+  it('narrows nothing when no range is asked for', () => {
+    for (const query of [selectCounts(OWNER), selectWorkflowUsage(OWNER), selectTrendRange(OWNER)]) {
+      const { sql, params } = emitted(query)
+
+      // the trend range names started_at in min()/max(), so it is a bound that
+      // must be absent here, not the column
+      expect(sql).not.toMatch(/"started_at" (?:>=|<) /)
+      expect(params).toEqual([OWNER])
+    }
+  })
+
+  it('narrows every dimension by the range it is given', () => {
+    for (const query of [
+      selectCounts(OWNER, { from: FROM, to: TO }),
+      selectWorkflowUsage(OWNER, { from: FROM, to: TO }),
+      selectTrendBuckets(OWNER, 'day', { from: FROM, to: TO }),
+      selectTrendRange(OWNER, { from: FROM, to: TO }),
+    ]) {
+      const { sql, params } = emitted(query)
+
+      // the trend dimensions name started_at in their own expressions, so the
+      // bounds are what is asserted, not the mere mention of the column
+      expect(sql).toMatch(/"started_at" >= \$\d/)
+      expect(sql).toMatch(/"started_at" < \$\d/)
+      expect(params).toEqual([OWNER, FROM_PARAM, TO_PARAM])
+    }
+  })
+
+  it('narrows by a range with no owner, for the admin endpoint', () => {
+    const { sql, params } = emitted(selectCounts(undefined, { from: FROM, to: TO }))
+
+    expect(sql).toMatch(/"started_at" >= \$\d/)
+    expect(params).toEqual([FROM_PARAM, TO_PARAM])
+  })
+
+  it('takes one bound without the other', () => {
+    expect(emitted(selectCounts(OWNER, { from: FROM })).params).toEqual([OWNER, FROM_PARAM])
+    expect(emitted(selectCounts(OWNER, { to: TO })).params).toEqual([OWNER, TO_PARAM])
   })
 })

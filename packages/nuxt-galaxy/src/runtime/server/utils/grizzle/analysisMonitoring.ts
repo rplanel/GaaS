@@ -1,8 +1,9 @@
 import type { InvocationJobsSummary, InvocationState, InvocationTerminalState, JobState } from 'blendtype'
+import type { SQL } from 'drizzle-orm'
 import type { AnalysisMonitoringTrendPoint, AnalysisMonitoringWorkflowUsage } from '../../../types/nuxt-galaxy'
 import type { useDrizzle } from '../drizzle'
 import { InvocationTerminalStates, JobStates } from 'blendtype'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, gte, lt, sql } from 'drizzle-orm'
 import { Data, Effect } from 'effect'
 import { analysisMonitoring } from '../../db/schema/galaxy/analysisMonitoring'
 import { Drizzle } from '../drizzle'
@@ -277,12 +278,48 @@ export function finalizeAnalysisMonitoringEffect(
   })
 }
 
+/**
+ * What narrows usage statistics. Every field absent means what an absent
+ * request parameter has always meant: all time.
+ */
+export interface UsageFilters {
+  /** Analyses started at or after this instant. */
+  readonly from?: Date | undefined
+  /**
+   * Analyses started strictly before this instant. The endpoint turns the
+   *  inclusive calendar day a reader picks into this exclusive bound.
+   */
+  readonly to?: Date | undefined
+}
+
+/**
+ * The WHERE every usage dimension shares, so counts, per-workflow usage and
+ * trend always cover exactly the same analyses and cannot disagree. Undefined
+ * when nothing narrows the query, which is the admin view over all time.
+ *
+ * The range filters on when an analysis started (D-06), never on when it
+ * finished, so a long-running analysis belongs to the bucket it began in.
+ */
+function usageWhere(ownerId: string | undefined, filters: UsageFilters): SQL | undefined {
+  const conditions: SQL[] = []
+  if (ownerId !== undefined) {
+    conditions.push(eq(analysisMonitoring.ownerId, ownerId))
+  }
+  if (filters.from !== undefined) {
+    conditions.push(gte(analysisMonitoring.startedAt, filters.from))
+  }
+  if (filters.to !== undefined) {
+    conditions.push(lt(analysisMonitoring.startedAt, filters.to))
+  }
+  return and(...conditions)
+}
+
 export class GetAnalysisMonitoringCountsError extends Data.TaggedError('GetAnalysisMonitoringCountsError')<{
   readonly message: string
 }> {}
 
 // exported so the SQL it emits can be asserted without a database
-export function selectCounts(ownerId?: string) {
+export function selectCounts(ownerId?: string, filters: UsageFilters = {}) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
     const baseQuery = useDrizzle
@@ -294,15 +331,14 @@ export function selectCounts(ownerId?: string) {
         pending: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'pending')::int`,
       })
       .from(analysisMonitoring)
-    return ownerId
-      ? baseQuery.where(eq(analysisMonitoring.ownerId, ownerId))
-      : baseQuery
+    const where = usageWhere(ownerId, filters)
+    return where ? baseQuery.where(where) : baseQuery
   })
 }
 
-export function getAnalysisMonitoringCounts(ownerId: string) {
+export function getAnalysisMonitoringCounts(ownerId: string, filters: UsageFilters = {}) {
   return Effect.gen(function* () {
-    const query = yield* selectCounts(ownerId)
+    const query = yield* selectCounts(ownerId, filters)
     const row = yield* Effect.tryPromise({
       try: () => query.then(takeUniqueOrThrow),
       catch: error => new GetAnalysisMonitoringCountsError({ message: `Error getting monitoring counts: ${error}` }),
@@ -317,9 +353,9 @@ export function getAnalysisMonitoringCounts(ownerId: string) {
   })
 }
 
-export function getAllAnalysisMonitoringCounts() {
+export function getAllAnalysisMonitoringCounts(filters: UsageFilters = {}) {
   return Effect.gen(function* () {
-    const query = yield* selectCounts()
+    const query = yield* selectCounts(undefined, filters)
     const row = yield* Effect.tryPromise({
       try: () => query.then(takeUniqueOrThrow),
       catch: error => new GetAnalysisMonitoringCountsError({ message: `Error getting monitoring counts: ${error}` }),
@@ -366,7 +402,7 @@ interface WorkflowUsageRow {
 }
 
 // exported so the SQL it emits can be asserted without a database
-export function selectWorkflowUsage(ownerId?: string) {
+export function selectWorkflowUsage(ownerId?: string, filters: UsageFilters = {}) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
     const base = useDrizzle
@@ -382,9 +418,8 @@ export function selectWorkflowUsage(ownerId?: string) {
       })
       .from(analysisMonitoring)
       .groupBy(analysisMonitoring.workflowId)
-    return ownerId
-      ? base.where(eq(analysisMonitoring.ownerId, ownerId))
-      : base
+    const where = usageWhere(ownerId, filters)
+    return where ? base.where(where) : base
   })
 }
 
@@ -435,9 +470,9 @@ function shapeWorkflowUsage(rows: WorkflowUsageRow[]): AnalysisMonitoringWorkflo
   return entries
 }
 
-export function getWorkflowUsage(ownerId: string) {
+export function getWorkflowUsage(ownerId: string, filters: UsageFilters = {}) {
   return Effect.gen(function* () {
-    const query = yield* selectWorkflowUsage(ownerId)
+    const query = yield* selectWorkflowUsage(ownerId, filters)
     const rows = yield* Effect.tryPromise({
       try: () => query.then(rows => rows as WorkflowUsageRow[], (reason) => { throw reason }),
       catch: error => new GetWorkflowUsageError({ message: `Error getting workflow usage: ${error}` }),
@@ -446,9 +481,9 @@ export function getWorkflowUsage(ownerId: string) {
   })
 }
 
-export function getAllWorkflowUsage() {
+export function getAllWorkflowUsage(filters: UsageFilters = {}) {
   return Effect.gen(function* () {
-    const query = yield* selectWorkflowUsage()
+    const query = yield* selectWorkflowUsage(undefined, filters)
     const rows = yield* Effect.tryPromise({
       try: () => query.then(rows => rows as WorkflowUsageRow[], (reason) => { throw reason }),
       catch: error => new GetWorkflowUsageError({ message: `Error getting workflow usage: ${error}` }),
@@ -520,7 +555,7 @@ function utcBucket(gran: TrendGranularity) {
   return sql<string>`date_trunc('${sql.raw(BUCKET_UNITS[gran])}', ${analysisMonitoring.startedAt} AT TIME ZONE 'UTC')`
 }
 
-function selectTrendRange(ownerId?: string) {
+export function selectTrendRange(ownerId?: string, filters: UsageFilters = {}) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
     const base = useDrizzle
@@ -529,14 +564,13 @@ function selectTrendRange(ownerId?: string) {
         max: sql<Date>`max(${analysisMonitoring.startedAt})`,
       })
       .from(analysisMonitoring)
-    return ownerId
-      ? base.where(eq(analysisMonitoring.ownerId, ownerId))
-      : base
+    const where = usageWhere(ownerId, filters)
+    return where ? base.where(where) : base
   })
 }
 
 // exported so the SQL it emits can be asserted without a database
-export function selectTrendBuckets(ownerId: string | undefined, gran: TrendGranularity) {
+export function selectTrendBuckets(ownerId: string | undefined, gran: TrendGranularity, filters: UsageFilters = {}) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
     const bucket = utcBucket(gran)
@@ -551,9 +585,8 @@ export function selectTrendBuckets(ownerId: string | undefined, gran: TrendGranu
       })
       .from(analysisMonitoring)
       .groupBy(bucket)
-    return ownerId
-      ? base.where(eq(analysisMonitoring.ownerId, ownerId))
-      : base
+    const where = usageWhere(ownerId, filters)
+    return where ? base.where(where) : base
   })
 }
 
@@ -660,11 +693,11 @@ function buildTrendSeries(
   return points
 }
 
-function trendSeries(ownerId: string | undefined, granularity: TrendGranularity) {
+function trendSeries(ownerId: string | undefined, granularity: TrendGranularity, filters: UsageFilters) {
   return Effect.gen(function* () {
     const [rangeQuery, bucketQuery] = yield* Effect.all([
-      selectTrendRange(ownerId),
-      selectTrendBuckets(ownerId, granularity),
+      selectTrendRange(ownerId, filters),
+      selectTrendBuckets(ownerId, granularity, filters),
     ])
 
     const rangeRows = yield* Effect.tryPromise({
@@ -680,12 +713,12 @@ function trendSeries(ownerId: string | undefined, granularity: TrendGranularity)
   })
 }
 
-export function getTrend(ownerId: string, granularity: TrendGranularity = 'day') {
-  return trendSeries(ownerId, granularity)
+export function getTrend(ownerId: string, granularity: TrendGranularity = 'day', filters: UsageFilters = {}) {
+  return trendSeries(ownerId, granularity, filters)
 }
 
-export function getAllTrend(granularity: TrendGranularity = 'day') {
-  return trendSeries(undefined, granularity)
+export function getAllTrend(granularity: TrendGranularity = 'day', filters: UsageFilters = {}) {
+  return trendSeries(undefined, granularity, filters)
 }
 
 // ============================================================================
@@ -709,12 +742,12 @@ export class GetAnalysisMonitoringStatsError extends Data.TaggedError('GetAnalys
  * surfaced. Runs all three dimensions via `Effect.all` (sequential by default)
  * and maps any constituent failure to `GetAnalysisMonitoringStatsError`.
  */
-export function getAnalysisMonitoringStats(ownerId: string) {
+export function getAnalysisMonitoringStats(ownerId: string, filters: UsageFilters = {}) {
   return Effect.gen(function* () {
     const [counts, perWorkflow, trend] = yield* Effect.all([
-      getAnalysisMonitoringCounts(ownerId),
-      getWorkflowUsage(ownerId),
-      getTrend(ownerId),
+      getAnalysisMonitoringCounts(ownerId, filters),
+      getWorkflowUsage(ownerId, filters),
+      getTrend(ownerId, 'day', filters),
     ]).pipe(
       Effect.mapError(error =>
         new GetAnalysisMonitoringStatsError({ message: `Error assembling monitoring stats: ${error}` }),
@@ -734,12 +767,12 @@ export function getAnalysisMonitoringStats(ownerId: string) {
  * on the RLS admin SELECT policy and emit no `WHERE`. Phase 15 gates this behind
  * an admin role check before invocation; no endpoint exists in this phase.
  */
-export function getAllAnalysisMonitoringStats() {
+export function getAllAnalysisMonitoringStats(filters: UsageFilters = {}) {
   return Effect.gen(function* () {
     const [counts, perWorkflow, trend] = yield* Effect.all([
-      getAllAnalysisMonitoringCounts(),
-      getAllWorkflowUsage(),
-      getAllTrend(),
+      getAllAnalysisMonitoringCounts(filters),
+      getAllWorkflowUsage(filters),
+      getAllTrend('day', filters),
     ]).pipe(
       Effect.mapError(error =>
         new GetAnalysisMonitoringStatsError({ message: `Error assembling monitoring stats: ${error}` }),

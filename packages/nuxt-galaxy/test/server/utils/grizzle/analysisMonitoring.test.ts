@@ -1,5 +1,5 @@
 import type { InvocationJobsSummary } from 'blendtype'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { Effect, Exit } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { analysisMonitoring } from '../../../../src/runtime/server/db/schema/galaxy/analysisMonitoring'
@@ -323,7 +323,7 @@ describe('getAnalysisMonitoringCounts', () => {
     })
     expect(drizzle.mock.select).toHaveBeenCalledTimes(1)
     const whereCall = drizzle.mock.select.mock.results[0]?.value.where.mock.calls[0]?.[0]
-    expect(whereCall).toEqual(eq(analysisMonitoring.ownerId, 'owner-uuid-1'))
+    expect(whereCall).toEqual(and(eq(analysisMonitoring.ownerId, 'owner-uuid-1')))
   })
 })
 
@@ -577,7 +577,7 @@ describe('getWorkflowUsage', () => {
       { workflowId: 2, name: 'Workflow B', version: '2.0', total: 4, success: 2, error: 1, cancelled: 1, pending: 0, successRate: 2 / 3 },
     ])
     const whereCall = drizzle.mock.select.mock.results[0]?.value.where.mock.calls[0]?.[0]
-    expect(whereCall).toEqual(eq(analysisMonitoring.ownerId, 'owner-uuid-1'))
+    expect(whereCall).toEqual(and(eq(analysisMonitoring.ownerId, 'owner-uuid-1')))
   })
 
   it('collapses orphaned workflows into a single unknown bucket with summed counts (D-09)', async () => {
@@ -824,8 +824,8 @@ describe('getTrend', () => {
       selectResult.value.where?.mock?.calls?.map((call: any) => call[0]) ?? [],
     )
     expect(selfWheres).toEqual([
-      eq(analysisMonitoring.ownerId, 'owner-uuid-1'),
-      eq(analysisMonitoring.ownerId, 'owner-uuid-1'),
+      and(eq(analysisMonitoring.ownerId, 'owner-uuid-1')),
+      and(eq(analysisMonitoring.ownerId, 'owner-uuid-1')),
     ])
 
     const admin = createMockDrizzle()
@@ -982,10 +982,10 @@ describe('getAnalysisMonitoringStats', () => {
       selectResult.value.where?.mock?.calls?.map((call: any) => call[0]) ?? [],
     )
     expect(whereCalls).toHaveLength(4)
-    expect(whereCalls[0]).toEqual(eq(analysisMonitoring.ownerId, 'owner-uuid-1'))
-    expect(whereCalls[1]).toEqual(eq(analysisMonitoring.ownerId, 'owner-uuid-1'))
-    expect(whereCalls[2]).toEqual(eq(analysisMonitoring.ownerId, 'owner-uuid-1'))
-    expect(whereCalls[3]).toEqual(eq(analysisMonitoring.ownerId, 'owner-uuid-1'))
+    expect(whereCalls[0]).toEqual(and(eq(analysisMonitoring.ownerId, 'owner-uuid-1')))
+    expect(whereCalls[1]).toEqual(and(eq(analysisMonitoring.ownerId, 'owner-uuid-1')))
+    expect(whereCalls[2]).toEqual(and(eq(analysisMonitoring.ownerId, 'owner-uuid-1')))
+    expect(whereCalls[3]).toEqual(and(eq(analysisMonitoring.ownerId, 'owner-uuid-1')))
   })
 
   it('returns successRate 0 (never null, D-02) when there are no terminal outcomes overall', async () => {
