@@ -2,6 +2,7 @@
 import type { BreadcrumbItem } from '@nuxt/ui'
 import type { Database } from 'nuxt-galaxy'
 import AdminPermissionAlert from '../../components/admin/PermissionAlert.vue'
+import UsageRangeFilter from '../../components/usage/UsageRangeFilter.vue'
 import UsageStatisticsPanel from '../../components/usage/UsageStatisticsPanel.vue'
 
 const props = withDefaults(defineProps<{
@@ -25,15 +26,20 @@ const supabase = useSupabaseClient<Database>()
 const { userRole } = useUserRole(supabase)
 const isAdmin = computed(() => userRole.value === 'admin')
 
+// the URL holds which range is on screen, so the filter control and this query
+// read the same source and a link carries the view it was copied from
+const { range } = useUsageFilters()
+
 // The endpoint answers 403 to anyone else, so asking before the role claim says
 // admin only buys a refusal. The claim is still only a hint: should it disagree
-// with the server, the 403 arrives as an error state below.
+// with the server, the 403 arrives as an error state below. `enabled` is a
+// plain boolean rather than a getter, because options built by a getter are
+// read reactively already and the type drops the ref forms there.
+//
 // refetch, not refresh: refresh honours the stale window, so pressing the
 // button moments after the page loaded would return the cached numbers.
-// a plain boolean, not a getter: options built by a getter are read reactively
-// already, and the type drops the ref forms there
 const { data: stats, isLoading, error, refetch } = useQuery(() => ({
-  ...globalUsageStatisticsQuery(),
+  ...globalUsageStatisticsQuery(range.value),
   enabled: isAdmin.value,
 }))
 
@@ -57,6 +63,10 @@ const pageHeaderProps = {
         :error-message="failureMessage"
         @refresh="refetch"
       >
+        <template #filters>
+          <UsageRangeFilter />
+        </template>
+
         <!-- an administrator reading global usage is not the person who would go and run a workflow, so no invitation to -->
         <template #empty>
           <p data-testid="usage-empty" class="p-8 text-center text-sm text-muted">

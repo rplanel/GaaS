@@ -111,7 +111,12 @@ const perWorkflowColumns: TableColumn<AnalysisMonitoringWorkflowUsage>[] = [
 
 <template>
   <div class="flex flex-col gap-6">
-    <div class="flex items-center justify-end">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <!-- empty by default, and still holding the refresh button to the right -->
+      <div>
+        <slot name="filters" />
+      </div>
+
       <UButton
         data-testid="usage-refresh"
         icon="i-lucide-refresh-cw"

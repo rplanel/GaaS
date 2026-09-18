@@ -14,6 +14,7 @@ import { defu } from 'defu'
 import * as logOptions from './log-options'
 
 const log = logger.withTag('nuxt-galaxy')
+export type { UsageStatisticsRange } from './runtime/app/queries/db/usageStatistics'
 export * from './runtime/app/utils/errors'
 export type { CompositeTypes, Database, Enums, Json, Tables, TablesInsert, TablesUpdate } from './runtime/types/database'
 export * from './runtime/types/nuxt-galaxy'
