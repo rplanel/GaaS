@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import type { AnalysisMonitoringCounts, AnalysisMonitoringStats, AnalysisMonitoringWorkflowUsage } from 'nuxt-galaxy'
-import { formatSuccessRate, workflowUsageLabel } from '../../utils/usageStatistics'
+import { formatSuccessRate, OUTCOME_FIELDS, workflowUsageLabel } from '../../utils/usageStatistics'
 import ColumnTableSort from '../ColumnTableSort.vue'
 import UsageStatTile from './UsageStatTile.vue'
+import UsageTrendChart from './UsageTrendChart.vue'
 
 interface Props {
   /**
@@ -33,16 +34,20 @@ const UBadge = resolveComponent('UBadge')
 const UTooltip = resolveComponent('UTooltip')
 
 /**
- * The counts a user reads, in the order they appear. One list drives both the
- * tiles and the table columns, so a label can never disagree between them.
+ * The counts a reader sees, in the order they appear: the total, then the four
+ * outcomes with the labels and colours the trend chart also uses. One list
+ * drives the tiles and the table columns, so nothing can disagree between
+ * them.
  */
 const COUNT_FIELDS = [
-  { key: 'total', label: 'Total', icon: 'i-lucide-layers' },
-  { key: 'success', label: 'Succeeded', icon: 'i-lucide-circle-check' },
-  { key: 'error', label: 'Failed', icon: 'i-lucide-circle-x' },
-  { key: 'cancelled', label: 'Cancelled', icon: 'i-lucide-ban' },
-  { key: 'pending', label: 'Pending', icon: 'i-lucide-clock' },
-] as const satisfies ReadonlyArray<{ key: keyof AnalysisMonitoringCounts, label: string, icon: string }>
+  { key: 'total', label: 'Total', icon: 'i-lucide-layers', fill: undefined },
+  ...OUTCOME_FIELDS,
+] as const satisfies ReadonlyArray<{
+  key: keyof AnalysisMonitoringCounts
+  label: string
+  icon: string
+  fill: string | undefined
+}>
 
 const countTiles = computed(() => {
   const stats = props.stats
@@ -59,6 +64,8 @@ const countTiles = computed(() => {
 const successRate = computed(() => (props.stats ? formatSuccessRate(props.stats) : undefined))
 
 const perWorkflow = computed(() => props.stats?.perWorkflow ?? [])
+
+const trend = computed(() => props.stats?.trend ?? [])
 
 /**
  * True once statistics have arrived and there is nothing in them. Zero tiles
@@ -156,6 +163,7 @@ const perWorkflowColumns: TableColumn<AnalysisMonitoringWorkflowUsage>[] = [
           :label="countTile.label"
           :value="countTile.value"
           :icon="countTile.icon"
+          :icon-color="countTile.fill"
         />
 
         <UsageStatTile
@@ -166,6 +174,13 @@ const perWorkflowColumns: TableColumn<AnalysisMonitoringWorkflowUsage>[] = [
           :value="successRate.label"
           :tooltip="successRate.tooltip"
         />
+      </div>
+
+      <div v-if="trend.length > 0" data-testid="usage-trend" class="flex flex-col gap-2">
+        <h3 class="text-sm font-semibold">
+          Analyses over time
+        </h3>
+        <UsageTrendChart :trend="trend" />
       </div>
 
       <div v-if="perWorkflow.length > 0" data-testid="usage-per-workflow" class="flex flex-col gap-2">

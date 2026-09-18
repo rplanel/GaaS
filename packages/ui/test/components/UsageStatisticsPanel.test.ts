@@ -71,7 +71,45 @@ function tile(wrapper: Awaited<ReturnType<typeof mountPanel>>, key: string) {
   return wrapper.find(`[data-testid="usage-tile-${key}"]`)
 }
 
+/** The same statistics, with three consecutive days of trend attached. */
+const STATS_WITH_TREND: AnalysisMonitoringStats = {
+  ...STATS,
+  trend: [
+    { bucket: '2026-09-01', total: 4, success: 3, error: 1, cancelled: 0, pending: 0, successRate: 0.75 },
+    { bucket: '2026-09-02', total: 0, success: 0, error: 0, cancelled: 0, pending: 0, successRate: 0 },
+    { bucket: '2026-09-03', total: 5, success: 2, error: 1, cancelled: 1, pending: 1, successRate: 2 / 3 },
+  ],
+}
+
 describe('usageStatisticsPanel', () => {
+  it('shows the trend under the tiles when the response carries one', async () => {
+    const wrapper = await mountPanel(STATS_WITH_TREND)
+    const html = wrapper.html()
+
+    expect(wrapper.find('[data-testid="usage-trend"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="usage-trend"] svg').exists()).toBe(true)
+    expect(html.indexOf('usage-tile-total')).toBeLessThan(html.indexOf('usage-trend'))
+  })
+
+  it('draws a bar in the same colour the matching tile uses', async () => {
+    const wrapper = await mountPanel(STATS_WITH_TREND)
+
+    const tileIconStyle = wrapper.find('[data-testid="usage-tile-success"] [style*="color"]').attributes('style')
+    const barFills = wrapper
+      .findAll('[data-testid="usage-trend"] svg rect')
+      .map(rect => rect.attributes('fill'))
+      .filter((fill): fill is string => Boolean(fill))
+
+    expect(tileIconStyle).toBeTruthy()
+    expect(barFills.some(fill => tileIconStyle?.includes(fill))).toBe(true)
+  })
+
+  it('leaves the trend out when the response carries none', async () => {
+    const wrapper = await mountPanel(STATS)
+
+    expect(wrapper.find('[data-testid="usage-trend"]').exists()).toBe(false)
+  })
+
   it('counts the analyses of every outcome, under the names a user reads', async () => {
     const wrapper = await mountPanel(STATS)
 

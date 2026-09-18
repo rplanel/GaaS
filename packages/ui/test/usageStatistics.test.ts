@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatSuccessRate, workflowUsageLabel } from '../app/utils/usageStatistics'
+import { formatSuccessRate, trendBucketSummary, trendSegments, workflowUsageLabel } from '../app/utils/usageStatistics'
 
 describe('formatSuccessRate', () => {
   it('has no value until an analysis has finished, and says why', () => {
@@ -39,5 +39,73 @@ describe('workflowUsageLabel', () => {
 
   it('falls back to the Unknown workflow name when no name survived', () => {
     expect(workflowUsageLabel({ workflowId: 7, name: null })).toBe('Unknown workflow')
+  })
+})
+
+describe('trendSegments', () => {
+  it('turns a bucket into one segment per outcome that occurred', () => {
+    const segments = trendSegments([
+      { bucket: '2026-09-01', total: 4, success: 3, error: 1, cancelled: 0, pending: 0, successRate: 0.75 },
+    ])
+
+    expect(segments).toEqual([
+      { bucket: '2026-09-01', outcome: 'Succeeded', count: 3, fill: expect.any(String) },
+      { bucket: '2026-09-01', outcome: 'Failed', count: 1, fill: expect.any(String) },
+    ])
+  })
+
+  it('leaves out outcomes that did not occur, so a zero-filled bucket draws no bar', () => {
+    const segments = trendSegments([
+      { bucket: '2026-09-02', total: 0, success: 0, error: 0, cancelled: 0, pending: 0, successRate: 0 },
+    ])
+
+    expect(segments).toEqual([])
+  })
+
+  it('stacks the outcomes in the order the tiles list them', () => {
+    const segments = trendSegments([
+      { bucket: '2026-09-03', total: 4, success: 1, error: 1, cancelled: 1, pending: 1, successRate: 0.5 },
+    ])
+
+    expect(segments.map(segment => segment.outcome)).toEqual(['Succeeded', 'Failed', 'Cancelled', 'Pending'])
+  })
+})
+
+describe('trendBucketSummary', () => {
+  it('summarises the bucket for whoever hovers it', () => {
+    const summary = trendBucketSummary({
+      bucket: '2026-09-01',
+      total: 4,
+      success: 3,
+      error: 1,
+      cancelled: 0,
+      pending: 0,
+      successRate: 0.75,
+    })
+
+    expect(summary).toContain('2026-09-01')
+    expect(summary).toContain('UTC')
+    expect(summary).toContain('3 Succeeded')
+    expect(summary).toContain('1 Failed')
+    expect(summary).toContain('Success rate 75%')
+    // outcomes that did not occur are not worth the reader's attention
+    expect(summary).not.toContain('Cancelled')
+  })
+
+  it('explains a missing rate instead of showing a bare dash', () => {
+    const summary = trendBucketSummary({
+      bucket: '2026-09-02',
+      total: 2,
+      success: 0,
+      error: 0,
+      cancelled: 0,
+      pending: 2,
+      successRate: 0,
+    })
+
+    expect(summary).toContain('2 Pending')
+    // the dash carries the same meaning here as in a tile, and is explained
+    expect(summary).toContain('Success rate —')
+    expect(summary).toContain('No completed analyses yet')
   })
 })
