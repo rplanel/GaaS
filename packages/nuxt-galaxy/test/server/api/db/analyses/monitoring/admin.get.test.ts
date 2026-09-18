@@ -52,7 +52,7 @@ const mockRequireRole = vi.fn<(user: { id: string }, role: string) => Effect.Eff
   () => Effect.void,
 )
 
-const mockGetAllAnalysisMonitoringStats = vi.fn(() => Effect.succeed(ADMIN_STATS))
+const mockGetAllAnalysisMonitoringStats = vi.fn((_filters?: unknown) => Effect.succeed(ADMIN_STATS))
 
 const mockDrizzle = {
   select: vi.fn(),
@@ -179,5 +179,40 @@ describe('get /api/db/analyses/monitoring/admin', () => {
       statusMessage: 'Internal Server Error',
     })
     expect(requestLog.error).toHaveBeenCalledWith('analysis monitoring admin handler failed', expect.objectContaining({ cause: expect.stringContaining('connection lost') }))
+  })
+})
+
+describe('get /api/db/analyses/monitoring/admin, over a range', () => {
+  it('hands the requested range down to the query, the last day included whole', async () => {
+    vi.mocked(useLogger).mockReturnValue(createMockRequestLogger())
+
+    const handler = (await import('../../../../../../src/runtime/server/api/db/analyses/monitoring/admin.get')).default
+    await handler({ path: '/api/db/analyses/monitoring/admin?from=2026-08-01&to=2026-08-31', method: 'GET' } as any)
+
+    expect(mockGetAllAnalysisMonitoringStats).toHaveBeenCalledWith({
+      from: new Date('2026-08-01T00:00:00.000Z'),
+      to: new Date('2026-09-01T00:00:00.000Z'),
+    })
+  })
+
+  it('asks for all time when no range is given', async () => {
+    vi.mocked(useLogger).mockReturnValue(createMockRequestLogger())
+
+    const handler = (await import('../../../../../../src/runtime/server/api/db/analyses/monitoring/admin.get')).default
+    await handler({ path: '/api/db/analyses/monitoring/admin', method: 'GET' } as any)
+
+    expect(mockGetAllAnalysisMonitoringStats).toHaveBeenCalledWith({})
+  })
+
+  it.each([
+    ['malformed', '?to=31-08-2026'],
+    ['reversed', '?from=2026-09-02&to=2026-09-01'],
+  ])('rejects a %s range with 400 and asks the database for nothing', async (_label, query) => {
+    const handler = (await import('../../../../../../src/runtime/server/api/db/analyses/monitoring/admin.get')).default
+
+    await expect(handler({ path: `/api/db/analyses/monitoring/admin${query}`, method: 'GET' } as any))
+      .rejects
+      .toMatchObject({ statusCode: 400 })
+    expect(mockGetAllAnalysisMonitoringStats).not.toHaveBeenCalled()
   })
 })

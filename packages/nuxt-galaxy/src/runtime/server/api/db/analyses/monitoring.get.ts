@@ -6,14 +6,19 @@ import { Drizzle } from '../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../utils/evlog-effect'
 import { getAnalysisMonitoringStats } from '../../../utils/grizzle/analysisMonitoring'
 import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClient } from '../../../utils/grizzle/supabase'
+import { readUsageFilters } from '../../../utils/usageFilters'
 
 export default defineEventHandler(async (event): Promise<AnalysisMonitoringStats> => {
+  // read before any work is done, so a malformed range costs a round trip and
+  // nothing more
+  const filters = readUsageFilters(event)
+
   const program = Effect.gen(function* () {
     const supabaseUser = yield* getSupabaseUser(event)
     if (!supabaseUser || typeof supabaseUser.id !== 'string' || supabaseUser.id.length === 0) {
       return yield* Effect.fail(new GetSupabaseUserError({ message: 'Unauthorized' }))
     }
-    return yield* getAnalysisMonitoringStats(supabaseUser.id)
+    return yield* getAnalysisMonitoringStats(supabaseUser.id, filters)
   })
 
   const result = await runGalaxyEffect(

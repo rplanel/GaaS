@@ -39,7 +39,7 @@ const mockGetSupabaseUser = vi.fn<(event: H3Event) => Effect.Effect<{ id?: strin
   () => Effect.succeed({ id: 'user-id' }),
 )
 
-const mockGetAnalysisMonitoringStats = vi.fn((_ownerId: string) => Effect.succeed(SELF_STATS))
+const mockGetAnalysisMonitoringStats = vi.fn((_ownerId: string, _filters?: unknown) => Effect.succeed(SELF_STATS))
 
 const mockDrizzle = {
   select: vi.fn(),
@@ -97,7 +97,7 @@ describe('get /api/db/analyses/monitoring', () => {
 
     // API-03: ownerId is derived from the server-side session user id, never client input.
     expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledTimes(1)
-    expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledWith('session-owner-id')
+    expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledWith('session-owner-id', {})
 
     expect(useLogger).toHaveBeenCalledWith(expect.anything())
     expect(requestLog.set).toHaveBeenCalledWith({ handler: '/api/db/analyses/monitoring', method: 'GET' })
@@ -150,5 +150,42 @@ describe('get /api/db/analyses/monitoring', () => {
       statusMessage: 'Internal Server Error',
     })
     expect(requestLog.error).toHaveBeenCalledWith('analysis monitoring handler failed', expect.objectContaining({ cause: expect.stringContaining('DB down') }))
+  })
+})
+
+describe('get /api/db/analyses/monitoring, over a range', () => {
+  it('hands the requested range down to the query, the last day included whole', async () => {
+    vi.mocked(useLogger).mockReturnValue(createMockRequestLogger())
+    mockGetSupabaseUser.mockReturnValueOnce(Effect.succeed({ id: 'session-owner-id' }))
+
+    const handler = (await import('../../../../../src/runtime/server/api/db/analyses/monitoring.get')).default
+    await handler({ path: '/api/db/analyses/monitoring?from=2026-08-01&to=2026-08-31', method: 'GET' } as H3Event)
+
+    expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledWith('session-owner-id', {
+      from: new Date('2026-08-01T00:00:00.000Z'),
+      to: new Date('2026-09-01T00:00:00.000Z'),
+    })
+  })
+
+  it('asks for all time when no range is given', async () => {
+    vi.mocked(useLogger).mockReturnValue(createMockRequestLogger())
+    mockGetSupabaseUser.mockReturnValueOnce(Effect.succeed({ id: 'session-owner-id' }))
+
+    const handler = (await import('../../../../../src/runtime/server/api/db/analyses/monitoring.get')).default
+    await handler({ path: '/api/db/analyses/monitoring', method: 'GET' } as H3Event)
+
+    expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledWith('session-owner-id', {})
+  })
+
+  it.each([
+    ['malformed', '?from=yesterday'],
+    ['reversed', '?from=2026-09-02&to=2026-09-01'],
+  ])('rejects a %s range with 400 and asks the database for nothing', async (_label, query) => {
+    const handler = (await import('../../../../../src/runtime/server/api/db/analyses/monitoring.get')).default
+
+    await expect(handler({ path: `/api/db/analyses/monitoring${query}`, method: 'GET' } as H3Event))
+      .rejects
+      .toMatchObject({ statusCode: 400 })
+    expect(mockGetAnalysisMonitoringStats).not.toHaveBeenCalled()
   })
 })
