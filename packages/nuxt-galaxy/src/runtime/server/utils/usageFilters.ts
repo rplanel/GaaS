@@ -3,7 +3,7 @@ import type { TrendGranularity } from '../../types/nuxt-galaxy'
 import type { UsageFilters } from './grizzle/analysisMonitoring'
 import { useLogger } from 'evlog'
 import { createError, getQuery } from 'h3'
-import { DEFAULT_TREND_GRANULARITY, isTrendGranularity, TREND_GRANULARITIES } from '../../types/nuxt-galaxy'
+import { isTrendGranularity, TREND_GRANULARITIES, TREND_GRANULARITY_WHEN_ABSENT } from '../../types/nuxt-galaxy'
 
 /**
  * The only form these parameters take: a calendar day in UTC, which is also
@@ -87,7 +87,7 @@ export function parseTrendGranularity(query: Record<string, unknown>): TrendGran
   const value = query.granularity
 
   if (value === undefined || value === '') {
-    return DEFAULT_TREND_GRANULARITY
+    return TREND_GRANULARITY_WHEN_ABSENT
   }
 
   if (!isTrendGranularity(value)) {
@@ -100,6 +100,12 @@ export function parseTrendGranularity(query: Record<string, unknown>): TrendGran
   return value
 }
 
+/** How a request wants its usage statistics narrowed, and how bucketed. */
+export interface UsageRequest {
+  readonly filters: UsageFilters
+  readonly granularity: TrendGranularity
+}
+
 /**
  * How a request wants its usage statistics narrowed and bucketed, refused with
  * a 400 when either cannot be read.
@@ -108,7 +114,7 @@ export function parseTrendGranularity(query: Record<string, unknown>): TrendGran
  * the parse happens before the request's Effect runs, so without this the wide
  * event would carry a 400 and no reason for it.
  */
-export function readUsageRequest(event: H3Event): { filters: UsageFilters, granularity: TrendGranularity } {
+export function readUsageRequest(event: H3Event): UsageRequest {
   const query = getQuery(event)
   try {
     return { filters: parseUsageFilters(query), granularity: parseTrendGranularity(query) }

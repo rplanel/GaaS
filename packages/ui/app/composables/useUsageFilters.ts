@@ -71,23 +71,32 @@ export function rangeFromSelection(
 }
 
 /**
- * The bucket widths on offer, in the order they are shown, coarsest last.
+ * How each bucket width the endpoint knows is named on screen. A record rather
+ * than a list, so a width added to the shared type is a type error here until
+ * it is given a name: what is offered cannot fall behind what is accepted.
  */
-export const USAGE_GRANULARITIES = [
-  { value: 'day', label: 'Day' },
-  { value: 'week', label: 'Week' },
-  { value: 'month', label: 'Month' },
-] as const satisfies ReadonlyArray<{ value: TrendGranularity, label: string }>
+const GRANULARITY_LABELS = {
+  day: 'Day',
+  week: 'Week',
+  month: 'Month',
+} as const satisfies Record<TrendGranularity, string>
+
+/** The bucket widths on offer, in the order they are shown, coarsest last. */
+export const USAGE_GRANULARITIES: ReadonlyArray<{ value: TrendGranularity, label: string }>
+  = Object.entries(GRANULARITY_LABELS).map(([value, label]) => ({ value: value as TrendGranularity, label }))
 
 function isGranularity(value: unknown): value is TrendGranularity {
-  return USAGE_GRANULARITIES.some(granularity => granularity.value === value)
+  return typeof value === 'string' && Object.hasOwn(GRANULARITY_LABELS, value)
 }
 
 /** The longest span still drawn one bar per day. */
 const MAX_DAILY_DAYS = 90
 
-/** The longest span still drawn one bar per week: two years. */
-const MAX_WEEKLY_DAYS = 730
+/**
+ * The longest span still drawn one bar per week. Two calendar years run to 730
+ * days, or 731 across a leap day, and both should read as two years.
+ */
+const MAX_WEEKLY_DAYS = 731
 
 const ONE_DAY_MS = 86_400_000
 

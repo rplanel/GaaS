@@ -1,5 +1,6 @@
 import type { AnalysisMonitoringStats, TrendGranularity } from '../../../types/nuxt-galaxy'
 import { defineQueryOptions } from '@pinia/colada'
+import { TREND_GRANULARITY_WHEN_ABSENT } from '../../../types/nuxt-galaxy'
 
 /**
  * The range a usage view asks for, in the form the URL and the endpoint both
@@ -28,9 +29,9 @@ export interface UsageStatisticsRequest {
  */
 export const USAGE_STATISTICS_QUERY_KEYS = {
   root: ['usage-statistics'] as const,
-  own: ({ range = {}, granularity = 'day' }: UsageStatisticsRequest = {}) =>
+  own: ({ range = {}, granularity = TREND_GRANULARITY_WHEN_ABSENT }: UsageStatisticsRequest = {}) =>
     [...USAGE_STATISTICS_QUERY_KEYS.root, 'own', range.from ?? 'all', range.to ?? 'all', granularity] as const,
-  global: ({ range = {}, granularity = 'day' }: UsageStatisticsRequest = {}) =>
+  global: ({ range = {}, granularity = TREND_GRANULARITY_WHEN_ABSENT }: UsageStatisticsRequest = {}) =>
     [...USAGE_STATISTICS_QUERY_KEYS.root, 'global', range.from ?? 'all', range.to ?? 'all', granularity] as const,
 }
 
@@ -40,7 +41,7 @@ export const USAGE_STATISTICS_QUERY_KEYS = {
  * width it is drawing should say so rather than rely on the endpoint's default
  * happening to agree.
  */
-function requestParameters({ range = {}, granularity = 'day' }: UsageStatisticsRequest): Record<string, string> {
+function requestParameters({ range = {}, granularity = TREND_GRANULARITY_WHEN_ABSENT }: UsageStatisticsRequest): Record<string, string> {
   const parameters: Record<string, string> = { granularity }
   if (range.from) {
     parameters.from = range.from

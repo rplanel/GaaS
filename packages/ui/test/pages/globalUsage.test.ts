@@ -54,16 +54,25 @@ mockNuxtImport('useSupabaseClient', () => () => ({} as never))
 let respond: () => unknown = () => GLOBAL_STATS
 let timesServed = 0
 
-registerEndpoint('/api/db/analyses/monitoring/admin', () => {
+/** The parameters the page last asked the endpoint for. */
+let lastQuery: Record<string, string> = {}
+
+registerEndpoint('/api/db/analyses/monitoring/admin', (event) => {
   timesServed += 1
+  lastQuery = Object.fromEntries(new URLSearchParams(event.path?.split('?')[1] ?? ''))
   return respond()
 })
 
-async function mountPage() {
+/**
+ * A route may be given to set the filter state the page reads. Mounted at `/`
+ * for the reason the own-usage page's tests are: the test application has no
+ * session, and a protected path redirects with the query discarded.
+ */
+async function mountPage(route?: string) {
   return mountSuspended({
     components: { UApp, GlobalUsagePage },
     template: '<UApp><GlobalUsagePage /></UApp>',
-  })
+  }, route ? { route } : undefined)
 }
 
 describe('global usage page', () => {
@@ -129,5 +138,29 @@ describe('global usage page', () => {
 
     expect(wrapper.find('[data-testid="usage-empty"]').text()).toContain('No analyses have been run yet')
     expect(wrapper.text()).not.toContain('Run a workflow')
+  })
+})
+
+describe('global usage over a range and a granularity', () => {
+  it('narrows and buckets the global view exactly as the own view does', async () => {
+    userRole.value = 'admin'
+    respond = () => GLOBAL_STATS
+
+    await mountPage('/?from=2026-08-01&to=2026-08-31')
+
+    await vi.waitFor(() => {
+      expect(lastQuery).toEqual({ from: '2026-08-01', to: '2026-08-31', granularity: 'day' })
+    })
+  })
+
+  it('forwards an override from the URL', async () => {
+    userRole.value = 'admin'
+    respond = () => GLOBAL_STATS
+
+    await mountPage('/?range=30d&granularity=week')
+
+    await vi.waitFor(() => {
+      expect(lastQuery.granularity).toBe('week')
+    })
   })
 })

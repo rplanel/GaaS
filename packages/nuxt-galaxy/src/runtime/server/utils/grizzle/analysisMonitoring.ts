@@ -497,13 +497,13 @@ export function getAllWorkflowUsage(filters: UsageFilters = {}) {
 // ============================================================================
 
 /**
- * Closed allowlist of supported trend granularities (D-04). The value of this
- * argument is NEVER interpolated into SQL from caller input — it indexes the
- * fixed `TREND_INTERVALS` map and drives a JS flooring helper, so a caller can
- * only ever select a pre-authorized bucket width (T-14-05 mitigation).
+ * Re-exported from the response types, where the closed allowlist (D-04) lives
+ * so that the interface offers exactly what the endpoint validates against.
  *
- * Defined beside the response types rather than here, because the interface
- * offers exactly the list the endpoint validates against.
+ * A granularity is never interpolated into SQL from caller input: it indexes
+ * the fixed `TREND_INTERVALS` and `BUCKET_UNITS` maps and drives a JS flooring
+ * helper, so a caller can only ever select a pre-authorized bucket width
+ * (T-14-05 mitigation).
  */
 export type { TrendGranularity }
 

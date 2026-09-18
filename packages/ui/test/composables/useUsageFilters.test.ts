@@ -69,6 +69,11 @@ describe('automaticGranularity', () => {
     expect(automaticGranularity({ from: '2024-09-18', to: '2026-09-16' }, TODAY)).toBe('week')
   })
 
+  it('stays weekly over two years that happen to include a leap day', () => {
+    // 731 days rather than 730, which is still the two years a reader meant
+    expect(automaticGranularity({ from: '2024-02-28', to: '2026-02-27' }, TODAY)).toBe('week')
+  })
+
   it('moves to months beyond two years', () => {
     expect(automaticGranularity({ from: '2020-01-01', to: '2026-09-16' }, TODAY)).toBe('month')
   })

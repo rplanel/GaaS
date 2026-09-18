@@ -142,8 +142,12 @@ export const TREND_GRANULARITIES = ['day', 'week', 'month'] as const
 /** The bucket width of a trend (Granularity). */
 export type TrendGranularity = typeof TREND_GRANULARITIES[number]
 
-/** The bucket width an absent `granularity` parameter means. */
-export const DEFAULT_TREND_GRANULARITY: TrendGranularity = 'day'
+/**
+ * The bucket width a request that names none is answered at. Not the same
+ * thing as the width the interface works out from a range, which the glossary
+ * calls automatic granularity and which is month for all time.
+ */
+export const TREND_GRANULARITY_WHEN_ABSENT: TrendGranularity = 'day'
 
 export function isTrendGranularity(value: unknown): value is TrendGranularity {
   return (TREND_GRANULARITIES as readonly unknown[]).includes(value)
