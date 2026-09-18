@@ -1108,3 +1108,96 @@ describe('cross-dimension success-rate parity and uniformity (STAT-04)', () => {
     expect(result.trend).toEqual(standaloneTrend)
   })
 })
+
+describe('getTrend over a requested range', () => {
+  // the exclusive bound the endpoint hands down for "8 to 11 August"
+  const FROM = new Date('2026-08-08T00:00:00.000Z')
+  const TO = new Date('2026-08-12T00:00:00.000Z')
+
+  it('spans the range asked for, not the days that happen to carry rows', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.enqueueResult([
+      { min: new Date('2026-08-10T00:00:00Z'), max: new Date('2026-08-10T00:00:00Z') },
+    ])
+    drizzle.enqueueResult([
+      { bucket: '2026-08-10T00:00:00.000Z', total: 2, success: 2, error: 0, cancelled: 0, pending: 0 },
+    ])
+
+    const result = await getTrend('owner-uuid-1', 'day', { from: FROM, to: TO }).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromise,
+    )
+
+    // the last bucket is the 11th: `to` is exclusive
+    expect(result.map(point => point.bucket)).toEqual(['2026-08-08', '2026-08-09', '2026-08-10', '2026-08-11'])
+  })
+
+  it('still sums to the counts total, because the buckets it adds are empty', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.enqueueResult([
+      { min: new Date('2026-08-10T00:00:00Z'), max: new Date('2026-08-10T00:00:00Z') },
+    ])
+    drizzle.enqueueResult([
+      { bucket: '2026-08-10T00:00:00.000Z', total: 2, success: 2, error: 0, cancelled: 0, pending: 0 },
+    ])
+
+    const result = await getTrend('owner-uuid-1', 'day', { from: FROM, to: TO }).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromise,
+    )
+
+    expect(result.reduce((sum, point) => sum + point.total, 0)).toBe(2)
+  })
+
+  it('shows a window with nothing in it as empty buckets rather than as no trend', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.enqueueResult([{ min: null, max: null }])
+    drizzle.enqueueResult([])
+
+    const result = await getTrend('owner-uuid-1', 'day', { from: FROM, to: TO }).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromise,
+    )
+
+    expect(result.map(point => point.bucket)).toEqual(['2026-08-08', '2026-08-09', '2026-08-10', '2026-08-11'])
+    expect(result.every(point => point.total === 0)).toBe(true)
+  })
+
+  it('takes the end from the data when only a start is asked for', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.enqueueResult([
+      { min: new Date('2026-08-09T00:00:00Z'), max: new Date('2026-08-09T00:00:00Z') },
+    ])
+    drizzle.enqueueResult([])
+
+    const result = await getTrend('owner-uuid-1', 'day', { from: FROM }).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromise,
+    )
+
+    expect(result.map(point => point.bucket)).toEqual(['2026-08-08', '2026-08-09'])
+  })
+})
+
+describe('getTrend over buckets as the driver delivers them', () => {
+  it('matches a bucket arriving as canonical text, whatever zone the machine keeps', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.enqueueResult([
+      { min: new Date('2026-08-08T21:35:27Z'), max: new Date('2026-08-09T12:32:08Z') },
+    ])
+    // what the query now returns: text, not a timestamp for the driver to read
+    drizzle.enqueueResult([
+      { bucket: '2026-08-08', total: 1, success: 1, error: 0, cancelled: 0, pending: 0 },
+      { bucket: '2026-08-09', total: 1, success: 1, error: 0, cancelled: 0, pending: 0 },
+    ])
+
+    const result = await getTrend('owner-uuid-1').pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromise,
+    )
+
+    expect(result.map(point => point.bucket)).toEqual(['2026-08-08', '2026-08-09'])
+    // the invariant: every counted analysis lands in a bucket
+    expect(result.reduce((sum, point) => sum + point.total, 0)).toBe(2)
+  })
+})

@@ -552,7 +552,13 @@ const BUCKET_UNITS = Object.freeze({
  * range and the buckets always agree and `sum(trend[].total) === counts.total`.
  */
 function utcBucket(gran: TrendGranularity) {
-  return sql<string>`date_trunc('${sql.raw(BUCKET_UNITS[gran])}', ${analysisMonitoring.startedAt} AT TIME ZONE 'UTC')`
+  // Formatted to text in SQL rather than handed over as a timestamp. date_trunc
+  // yields `timestamp without time zone`, which postgres.js reads in the
+  // machine's local zone: east of Greenwich every bucket then floors onto the
+  // previous UTC day, misses its slot on the axis and drops out of the series,
+  // while in UTC nothing looks wrong at all. Text crosses the wire already
+  // canonical, so no zone is ever guessed.
+  return sql<string>`to_char(date_trunc('${sql.raw(BUCKET_UNITS[gran])}', ${analysisMonitoring.startedAt} AT TIME ZONE 'UTC'), 'YYYY-MM-DD')`
 }
 
 export function selectTrendRange(ownerId?: string, filters: UsageFilters = {}) {
@@ -651,18 +657,43 @@ function canonicalBucketKey(key: string | Date, gran: TrendGranularity): string 
   return floorToGranularity(date, gran).toISOString().slice(0, BUCKET_KEY_LENGTH[gran])
 }
 
-function buildTrendSeries(
+/**
+ * The span a trend covers.
+ *
+ * A requested range keeps its empty buckets, so a quiet fortnight inside "last
+ * 30 days" still shows thirty slots rather than collapsing onto the days that
+ * happen to carry rows. With no range asked for, the data decides its own
+ * extent, which is what an all-time trend means.
+ */
+function coveredSpan(
   range: TrendRangeRow | undefined,
+  filters: UsageFilters,
+): { start: Date, end: Date } | undefined {
+  const start = filters.from ?? (range?.min != null ? new Date(range.min) : undefined)
+  // `to` is exclusive, so the last bucket is the one holding the instant before it
+  const end = filters.to !== undefined
+    ? new Date(filters.to.getTime() - 1)
+    : (range?.max != null ? new Date(range.max) : undefined)
+
+  if (start === undefined || end === undefined) {
+    // STAT-03 empty edge: nothing ran, and no range was asked for either.
+    return undefined
+  }
+
+  return { start, end }
+}
+
+function buildTrendSeries(
+  span: { start: Date, end: Date } | undefined,
   rows: TrendBucketRow[],
   gran: TrendGranularity,
 ): AnalysisMonitoringTrendPoint[] {
-  if (!range || range.min === null || range.max === null) {
-    // STAT-03 empty edge: no rows at all → empty series.
+  if (!span) {
     return []
   }
 
-  const start = floorToGranularity(new Date(range.min), gran)
-  const end = floorToGranularity(new Date(range.max), gran)
+  const start = floorToGranularity(span.start, gran)
+  const end = floorToGranularity(span.end, gran)
   if (end.getTime() < start.getTime()) {
     return []
   }
@@ -709,7 +740,7 @@ function trendSeries(ownerId: string | undefined, granularity: TrendGranularity,
       catch: error => new GetTrendError({ message: `Error getting trend buckets: ${error}` }),
     })
 
-    return buildTrendSeries(rangeRows[0], bucketRows, granularity)
+    return buildTrendSeries(coveredSpan(rangeRows[0], filters), bucketRows, granularity)
   })
 }
 

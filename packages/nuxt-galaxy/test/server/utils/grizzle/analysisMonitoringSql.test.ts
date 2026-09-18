@@ -43,6 +43,14 @@ describe('trend bucket SQL', () => {
     expect(params).toEqual([OWNER])
   })
 
+  it('formats the bucket to canonical text, so no driver has to guess a zone', () => {
+    // date_trunc returns `timestamp without time zone`, which postgres.js reads
+    // in the machine's local zone; formatting in SQL is what keeps a bucket
+    // meaning the same day everywhere.
+    expect(emitted(selectTrendBuckets(OWNER, 'day')).sql).toContain('to_char(date_trunc(\'day\'')
+    expect(emitted(selectTrendBuckets(OWNER, 'day')).sql).toContain('\'YYYY-MM-DD\')')
+  })
+
   it('carries the unit of whichever granularity it is asked for', () => {
     expect(emitted(selectTrendBuckets(OWNER, 'week')).sql).toContain('date_trunc(\'week\'')
     expect(emitted(selectTrendBuckets(OWNER, 'month')).sql).toContain('date_trunc(\'month\'')
