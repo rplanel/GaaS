@@ -49,6 +49,27 @@ export function presetRange(preset: UsagePreset, today: Date = new Date()): Usag
   return { from: utcDay(start), to: utcDay(today) }
 }
 
+/** A day as a calendar hands it back, which prints as YYYY-MM-DD. */
+interface PickedDay {
+  toString: () => string
+}
+
+/**
+ * The range a calendar selection stands for, or nothing while it is only half
+ * made. A range picker reports the first click with no end yet, and half a
+ * range is not a filter: applying it would narrow the page to a single instant
+ * the moment a reader started choosing.
+ */
+export function rangeFromSelection(
+  selection: { start?: PickedDay | null, end?: PickedDay | null } | null | undefined,
+): UsageStatisticsRange | undefined {
+  if (!selection?.start || !selection?.end) {
+    return undefined
+  }
+
+  return { from: String(selection.start), to: String(selection.end) }
+}
+
 export interface UsageFilterControls {
   /** The preset in force, or undefined while a custom range is. */
   preset: ComputedRef<UsagePreset | undefined>

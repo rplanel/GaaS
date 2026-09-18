@@ -44,6 +44,7 @@ catalog:
   '@iconify-json/svg-spinners': ^1.2.4
   '@iconify-json/tabler': ^1.2.23
   '@iconify-json/vscode-icons': ^1.2.36
+  '@internationalized/date': ^3.12.2
   '@types/node': ^24.1.0
   '@types/tus-js-client': ^2.1.0
   '@unocss/eslint-plugin': ^66.5.10

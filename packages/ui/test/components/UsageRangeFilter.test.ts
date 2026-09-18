@@ -17,10 +17,21 @@ async function mountFilter(route: string) {
   }, { route })
 }
 
-/** The rendered input, whether the test id landed on it or on its wrapper. */
-function dateInput(wrapper: VueWrapper, testId: string) {
-  const found = wrapper.find(`[data-testid="${testId}"]`)
-  return found.element.tagName === 'INPUT' ? found : wrapper.find(`[data-testid="${testId}"] input`)
+/**
+ * The days the calendar offers, in the order it renders them. The popover is
+ * teleported, so it is reached through the document rather than the wrapper.
+ * Days outside the visible month, and days the calendar refuses, are left out.
+ */
+function selectableDays(): HTMLElement[] {
+  return [...document.querySelectorAll<HTMLElement>('[data-reka-calendar-cell-trigger][data-value]')]
+    .filter(cell => !cell.hasAttribute('data-disabled') && !cell.hasAttribute('data-outside-view'))
+}
+
+async function openCalendar(wrapper: VueWrapper) {
+  await wrapper.find('[data-testid="usage-preset-custom"]').trigger('click')
+  await vi.waitFor(() => {
+    expect(selectableDays().length).toBeGreaterThan(0)
+  })
 }
 
 function query(wrapper: VueWrapper) {
@@ -50,23 +61,31 @@ describe('usage range filter', () => {
     expect(wrapper.find('[data-testid="usage-preset-custom"]').text()).toContain('Custom')
   })
 
-  it('names a custom range as absolute dates, and drops the preset token', async () => {
+  // Picking days is not driven from here: reka-ui's calendar does not advance
+  // its selection under synthetic events in happy-dom, so a click-through would
+  // assert the harness rather than the component. What the click resolves to is
+  // `rangeFromSelection`, unit-tested beside the composable; what the calendar
+  // offers is asserted below.
+
+  it('offers no day in the future, because usage cannot have happened yet', async () => {
     const wrapper = await mountFilter('/?range=7d')
+    await openCalendar(wrapper)
 
-    await wrapper.find('[data-testid="usage-preset-custom"]').trigger('click')
-    await dateInput(wrapper, 'usage-custom-from').setValue('2026-08-01')
-    await dateInput(wrapper, 'usage-custom-to').setValue('2026-08-31')
-    await wrapper.find('[data-testid="usage-custom-apply"]').trigger('click')
+    const todayUtc = new Date().toISOString().slice(0, 10)
+    const future = [...document.querySelectorAll<HTMLElement>('[data-reka-calendar-cell-trigger][data-value]')]
+      .filter(cell => cell.dataset.value! > todayUtc)
 
-    await vi.waitFor(() => {
-      expect(query(wrapper)).toEqual({ from: '2026-08-01', to: '2026-08-31' })
-    })
+    expect(future.length).toBeGreaterThan(0)
+    expect(future.every(cell => cell.hasAttribute('data-disabled'))).toBe(true)
   })
 
-  it('shows the dates it was given rather than the word Custom', async () => {
+  it('names the range it was given in words rather than as stamps', async () => {
     const wrapper = await mountFilter('/?from=2026-08-01&to=2026-08-31')
 
-    expect(wrapper.find('[data-testid="usage-preset-custom"]').text()).toContain('2026-08-01 to 2026-08-31')
+    const label = wrapper.find('[data-testid="usage-preset-custom"]').text()
+    // read as the days they are in UTC, which is what the buckets count
+    expect(label).toContain('1 Aug 2026')
+    expect(label).toContain('31 Aug 2026')
   })
 
   it('treats an empty bound in the URL as no range at all', async () => {
@@ -76,13 +95,11 @@ describe('usage range filter', () => {
     expect(wrapper.find('[data-testid="usage-preset-custom"]').text()).toContain('Custom')
   })
 
-  it('refuses to apply a range that reads backwards', async () => {
-    const wrapper = await mountFilter('/')
+  it('says which range is in force, for a reader who cannot see the colour', async () => {
+    const wrapper = await mountFilter('/?range=all')
 
-    await wrapper.find('[data-testid="usage-preset-custom"]').trigger('click')
-    await dateInput(wrapper, 'usage-custom-from').setValue('2026-09-02')
-    await dateInput(wrapper, 'usage-custom-to').setValue('2026-09-01')
-
-    expect(wrapper.find('[data-testid="usage-custom-apply"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid="usage-preset-all"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.find('[data-testid="usage-preset-7d"]').attributes('aria-pressed')).toBe('false')
+    expect(wrapper.find('[data-testid="usage-preset-custom"]').attributes('aria-pressed')).toBe('false')
   })
 })

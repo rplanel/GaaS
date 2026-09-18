@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { presetRange } from '../../app/composables/useUsageFilters'
+import { presetRange, rangeFromSelection } from '../../app/composables/useUsageFilters'
 
 /** A Wednesday, well inside a month, so nothing hinges on a boundary. */
 const TODAY = new Date('2026-09-16T18:30:00.000Z')
@@ -25,5 +25,24 @@ describe('presetRange', () => {
     // late evening in UTC+2 is still the same UTC day; a local reading would
     // roll this to the 17th and shift every bucket
     expect(presetRange('7d', new Date('2026-09-16T23:30:00.000Z')).to).toBe('2026-09-16')
+  })
+})
+
+describe('rangeFromSelection', () => {
+  /** A day as the calendar hands it back. */
+  const day = (iso: string) => ({ toString: () => iso })
+
+  it('is nothing while a reader has picked only the first end', () => {
+    expect(rangeFromSelection({ start: day('2026-08-01'), end: undefined })).toBeUndefined()
+  })
+
+  it('is nothing when the calendar reports no selection at all', () => {
+    expect(rangeFromSelection(undefined)).toBeUndefined()
+    expect(rangeFromSelection({ start: null, end: null })).toBeUndefined()
+  })
+
+  it('is the two days once both ends are known', () => {
+    expect(rangeFromSelection({ start: day('2026-08-01'), end: day('2026-08-31') }))
+      .toEqual({ from: '2026-08-01', to: '2026-08-31' })
   })
 })
