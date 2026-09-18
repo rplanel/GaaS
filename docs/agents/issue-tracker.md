@@ -44,3 +44,7 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 - **Frontier query**: `glab issue list -F json` scoped to the map's children, drop any with an open blocker: a native `blocked_by` link to an open issue (`glab api projects/:id/issues/:iid/links`), or an open issue in the `Blocked by` line, or an assignee; first in map order wins.
 - **Claim**: `glab issue update <n> --assignee @me`, the session's first write.
 - **Resolve**: `glab issue note <n> --message "<answer>"`, then `glab issue close <n>`, then append a context pointer (gist + link) to the map's Decisions-so-far.
+
+## Tier facts for gitlab.pasteur.fr
+
+Verified 2026-09-18 while publishing the v2.0 tickets: this instance rejects `blocks` / `is_blocked_by` link types (`link_type does not have a valid value`), so it is on the Free tier and native blocking links are unavailable. Express blocking edges as the `## Blocked by` section in each issue's description, and add `relates_to` links so the issues are navigable from the "Linked items" panel; the direction lives only in the description text. Issue URLs come back as `/-/work_items/<iid>`; the number is the issue iid and `glab issue view <iid>` works on it. Labels and milestones can be created through `glab label create` and the milestones API; the project has the `ready-for-agent` label and the "v2.0 Usage Statistics UI" milestone.

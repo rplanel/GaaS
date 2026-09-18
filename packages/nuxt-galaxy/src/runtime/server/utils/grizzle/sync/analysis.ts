@@ -8,7 +8,7 @@ import { syncJobEffect } from './job'
 import { acquireSyncLock, releaseSyncLock } from './lock'
 import { syncOutputDatasetEffect } from './output'
 
-// Sync trace fields: see .planning/LOGGING-SPEC.md ## Sync trace field allowlist
+// Sync trace fields: see docs/LOGGING-SPEC.md ## Sync trace field allowlist
 
 export class SyncAnalysisError extends Data.TaggedError('SyncAnalysisError')<{
   readonly message: string
