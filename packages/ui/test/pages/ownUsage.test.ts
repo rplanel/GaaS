@@ -87,7 +87,7 @@ describe('own usage over a range', () => {
     await mountPage('/?from=2026-08-01&to=2026-08-31')
 
     await vi.waitFor(() => {
-      expect(lastQuery).toEqual({ from: '2026-08-01', to: '2026-08-31' })
+      expect(lastQuery).toEqual({ from: '2026-08-01', to: '2026-08-31', granularity: 'day' })
     })
   })
 
@@ -95,8 +95,38 @@ describe('own usage over a range', () => {
     await mountPage('/?range=all')
 
     await vi.waitFor(() => {
-      expect(lastQuery).toEqual({})
+      // a bucket width is always named, even where it agrees with the
+      // endpoint's own default, so the page never relies on that agreement
+      expect(lastQuery).toEqual({ granularity: 'month' })
     })
+  })
+})
+
+describe('own usage at a granularity', () => {
+  it('asks for daily buckets over a range short enough to read one by one', async () => {
+    await mountPage('/?range=90d')
+
+    await vi.waitFor(() => {
+      expect(lastQuery.granularity).toBe('day')
+    })
+  })
+
+  it('asks for weekly buckets over a range too long for daily ones', async () => {
+    await mountPage('/?from=2025-01-01&to=2026-09-16')
+
+    await vi.waitFor(() => {
+      expect(lastQuery.granularity).toBe('week')
+    })
+  })
+
+  it('asks for the width a reader overrode, not the one the range implies', async () => {
+    await mountPage('/?range=30d&granularity=month')
+
+    await vi.waitFor(() => {
+      expect(lastQuery.granularity).toBe('month')
+    })
+    // and still over the thirty days the preset names
+    expect(daysApart(lastQuery.from!, lastQuery.to!)).toBe(29)
   })
 })
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { presetRange, rangeFromSelection } from '../../app/composables/useUsageFilters'
+import { automaticGranularity, presetRange, rangeFromSelection } from '../../app/composables/useUsageFilters'
 
 /** A Wednesday, well inside a month, so nothing hinges on a boundary. */
 const TODAY = new Date('2026-09-16T18:30:00.000Z')
@@ -44,5 +44,50 @@ describe('rangeFromSelection', () => {
   it('is the two days once both ends are known', () => {
     expect(rangeFromSelection({ start: day('2026-08-01'), end: day('2026-08-31') }))
       .toEqual({ from: '2026-08-01', to: '2026-08-31' })
+  })
+})
+
+describe('automaticGranularity', () => {
+  it.each([
+    ['7d' as const, 'day'],
+    ['30d' as const, 'day'],
+    ['90d' as const, 'day'],
+  ])('draws %s by day, which is the span a daily bar is legible over', (preset, expected) => {
+    expect(automaticGranularity(presetRange(preset, TODAY), TODAY)).toBe(expected)
+  })
+
+  it('stays daily right up to ninety days', () => {
+    expect(automaticGranularity({ from: '2026-06-19', to: '2026-09-16' }, TODAY)).toBe('day')
+  })
+
+  it('moves to weeks the day after that', () => {
+    // ninety-one days is ninety-one bars, which is past reading a date off one
+    expect(automaticGranularity({ from: '2026-06-18', to: '2026-09-16' }, TODAY)).toBe('week')
+  })
+
+  it('stays weekly up to two years', () => {
+    expect(automaticGranularity({ from: '2024-09-18', to: '2026-09-16' }, TODAY)).toBe('week')
+  })
+
+  it('moves to months beyond two years', () => {
+    expect(automaticGranularity({ from: '2020-01-01', to: '2026-09-16' }, TODAY)).toBe('month')
+  })
+
+  it('counts an open-ended range up to today', () => {
+    // "since a week ago" is a week's worth of days, not an unbounded span
+    expect(automaticGranularity({ from: '2026-09-10' }, TODAY)).toBe('day')
+  })
+
+  it('buckets all time by month, because its span is only known to the server', () => {
+    // a daily all-time trend on a long-running deployment is thousands of bars
+    expect(automaticGranularity({}, TODAY)).toBe('month')
+  })
+
+  it('buckets by month when only an end is named, for the same reason', () => {
+    expect(automaticGranularity({ to: '2026-09-16' }, TODAY)).toBe('month')
+  })
+
+  it('buckets by month rather than guessing when a bound cannot be read', () => {
+    expect(automaticGranularity({ from: 'yesterday', to: '2026-09-16' }, TODAY)).toBe('month')
   })
 })
