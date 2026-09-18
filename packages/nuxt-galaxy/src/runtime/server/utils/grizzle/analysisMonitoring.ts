@@ -281,16 +281,17 @@ export class GetAnalysisMonitoringCountsError extends Data.TaggedError('GetAnaly
   readonly message: string
 }> {}
 
-function selectCounts(ownerId?: string) {
+// exported so the SQL it emits can be asserted without a database
+export function selectCounts(ownerId?: string) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
     const baseQuery = useDrizzle
       .select({
-        total: sql<number>`count(*)`,
-        success: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'success')`,
-        error: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'error')`,
-        cancelled: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'cancelled')`,
-        pending: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'pending')`,
+        total: sql<number>`count(*)::int`,
+        success: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'success')::int`,
+        error: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'error')::int`,
+        cancelled: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'cancelled')::int`,
+        pending: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'pending')::int`,
       })
       .from(analysisMonitoring)
     return ownerId
@@ -364,7 +365,8 @@ interface WorkflowUsageRow {
   pending: number
 }
 
-function selectWorkflowUsage(ownerId?: string) {
+// exported so the SQL it emits can be asserted without a database
+export function selectWorkflowUsage(ownerId?: string) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
     const base = useDrizzle
@@ -372,11 +374,11 @@ function selectWorkflowUsage(ownerId?: string) {
         workflowId: analysisMonitoring.workflowId,
         name: sql<string | null>`max(${analysisMonitoring.workflowName})`,
         version: sql<string | null>`max(${analysisMonitoring.workflowVersion})`,
-        total: sql<number>`count(*)`,
-        success: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'success')`,
-        error: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'error')`,
-        cancelled: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'cancelled')`,
-        pending: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'pending')`,
+        total: sql<number>`count(*)::int`,
+        success: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'success')::int`,
+        error: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'error')::int`,
+        cancelled: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'cancelled')::int`,
+        pending: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'pending')::int`,
       })
       .from(analysisMonitoring)
       .groupBy(analysisMonitoring.workflowId)
@@ -493,13 +495,29 @@ interface TrendBucketRow {
 }
 
 /**
- * The single `date_trunc(gran, started_at AT TIME ZONE 'UTC')` bucket
+ * The unit each granularity names in SQL (D-04 allowlist). Written into the
+ * query as a literal rather than bound as a parameter: Postgres matches a
+ * GROUP BY entry against the select list by expression, and Drizzle emits a
+ * bound value as a fresh placeholder in each position it appears -- $1 in the
+ * select list, $3 in the GROUP BY -- which makes the two expressions unequal
+ * and leaves started_at ungrouped, so Postgres rejects the query. Caller input
+ * still only ever indexes this frozen map and never reaches the SQL text, so
+ * the allowlist property (T-14-05) holds.
+ */
+const BUCKET_UNITS = Object.freeze({
+  day: 'day',
+  week: 'week',
+  month: 'month',
+} as const satisfies Record<TrendGranularity, string>)
+
+/**
+ * The single `date_trunc(unit, started_at AT TIME ZONE 'UTC')` bucket
  * expression used in the bucket GROUP BY (D-07). The covered range is floored
  * with the identical UTC truncation semantics on the JS side (D-06), so the
  * range and the buckets always agree and `sum(trend[].total) === counts.total`.
  */
 function utcBucket(gran: TrendGranularity) {
-  return sql<string>`date_trunc(${gran}, ${analysisMonitoring.startedAt} AT TIME ZONE 'UTC')`
+  return sql<string>`date_trunc('${sql.raw(BUCKET_UNITS[gran])}', ${analysisMonitoring.startedAt} AT TIME ZONE 'UTC')`
 }
 
 function selectTrendRange(ownerId?: string) {
@@ -517,18 +535,19 @@ function selectTrendRange(ownerId?: string) {
   })
 }
 
-function selectTrendBuckets(ownerId: string | undefined, gran: TrendGranularity) {
+// exported so the SQL it emits can be asserted without a database
+export function selectTrendBuckets(ownerId: string | undefined, gran: TrendGranularity) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
     const bucket = utcBucket(gran)
     const base = useDrizzle
       .select({
         bucket,
-        total: sql<number>`count(*)`,
-        success: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'success')`,
-        error: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'error')`,
-        cancelled: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'cancelled')`,
-        pending: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'pending')`,
+        total: sql<number>`count(*)::int`,
+        success: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'success')::int`,
+        error: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'error')::int`,
+        cancelled: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'cancelled')::int`,
+        pending: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'pending')::int`,
       })
       .from(analysisMonitoring)
       .groupBy(bucket)
