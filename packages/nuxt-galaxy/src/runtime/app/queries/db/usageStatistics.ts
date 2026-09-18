@@ -1,4 +1,4 @@
-import type { AnalysisMonitoringStats } from '../../../types/nuxt-galaxy'
+import type { AnalysisMonitoringStats, TrendGranularity } from '../../../types/nuxt-galaxy'
 import { defineQueryOptions } from '@pinia/colada'
 
 /**
@@ -12,20 +12,36 @@ export interface UsageStatisticsRange {
 }
 
 /**
- * Each range caches on its own, so switching back to a range already looked at
- * shows its numbers at once instead of fetching them again.
+ * What a usage view asks its endpoint for: which analyses to cover, and how
+ * wide to make the trend's buckets. The two are separate because they answer
+ * separate questions — the range decides which analyses are counted, the
+ * granularity only how the trend groups them.
+ */
+export interface UsageStatisticsRequest {
+  readonly range?: UsageStatisticsRange | undefined
+  readonly granularity?: TrendGranularity | undefined
+}
+
+/**
+ * Each range and bucket width caches on its own, so switching back to a view
+ * already looked at shows its numbers at once instead of fetching them again.
  */
 export const USAGE_STATISTICS_QUERY_KEYS = {
   root: ['usage-statistics'] as const,
-  own: (range: UsageStatisticsRange = {}) =>
-    [...USAGE_STATISTICS_QUERY_KEYS.root, 'own', range.from ?? 'all', range.to ?? 'all'] as const,
-  global: (range: UsageStatisticsRange = {}) =>
-    [...USAGE_STATISTICS_QUERY_KEYS.root, 'global', range.from ?? 'all', range.to ?? 'all'] as const,
+  own: ({ range = {}, granularity = 'day' }: UsageStatisticsRequest = {}) =>
+    [...USAGE_STATISTICS_QUERY_KEYS.root, 'own', range.from ?? 'all', range.to ?? 'all', granularity] as const,
+  global: ({ range = {}, granularity = 'day' }: UsageStatisticsRequest = {}) =>
+    [...USAGE_STATISTICS_QUERY_KEYS.root, 'global', range.from ?? 'all', range.to ?? 'all', granularity] as const,
 }
 
-/** Only the bounds that are set, so all time sends no parameters at all. */
-function rangeParameters(range: UsageStatisticsRange): Record<string, string> {
-  const parameters: Record<string, string> = {}
+/**
+ * Only the bounds that are set, so all time sends no parameters at all. The
+ * granularity is always sent, because a view that has worked out which bucket
+ * width it is drawing should say so rather than rely on the endpoint's default
+ * happening to agree.
+ */
+function requestParameters({ range = {}, granularity = 'day' }: UsageStatisticsRequest): Record<string, string> {
+  const parameters: Record<string, string> = { granularity }
   if (range.from) {
     parameters.from = range.from
   }
@@ -41,9 +57,9 @@ function rangeParameters(range: UsageStatisticsRange): Record<string, string> {
  * Every number comes from the server, including the success rate, so that one
  * formula is the only one in play.
  */
-export const ownUsageStatisticsQuery = defineQueryOptions((range: UsageStatisticsRange = {}) => ({
-  key: USAGE_STATISTICS_QUERY_KEYS.own(range),
-  query: () => $fetch<AnalysisMonitoringStats>('/api/db/analyses/monitoring', { query: rangeParameters(range) }),
+export const ownUsageStatisticsQuery = defineQueryOptions((request: UsageStatisticsRequest = {}) => ({
+  key: USAGE_STATISTICS_QUERY_KEYS.own(request),
+  query: () => $fetch<AnalysisMonitoringStats>('/api/db/analyses/monitoring', { query: requestParameters(request) }),
 }))
 
 /**
@@ -53,7 +69,7 @@ export const ownUsageStatisticsQuery = defineQueryOptions((range: UsageStatistic
  * own key, because the two cover different analyses and must never share a
  * cache entry. The endpoint answers 403 to anyone who is not an administrator.
  */
-export const globalUsageStatisticsQuery = defineQueryOptions((range: UsageStatisticsRange = {}) => ({
-  key: USAGE_STATISTICS_QUERY_KEYS.global(range),
-  query: () => $fetch<AnalysisMonitoringStats>('/api/db/analyses/monitoring/admin', { query: rangeParameters(range) }),
+export const globalUsageStatisticsQuery = defineQueryOptions((request: UsageStatisticsRequest = {}) => ({
+  key: USAGE_STATISTICS_QUERY_KEYS.global(request),
+  query: () => $fetch<AnalysisMonitoringStats>('/api/db/analyses/monitoring/admin', { query: requestParameters(request) }),
 }))

@@ -1,7 +1,9 @@
 import type { H3Event } from 'h3'
+import type { TrendGranularity } from '../../types/nuxt-galaxy'
 import type { UsageFilters } from './grizzle/analysisMonitoring'
 import { useLogger } from 'evlog'
 import { createError, getQuery } from 'h3'
+import { DEFAULT_TREND_GRANULARITY, isTrendGranularity, TREND_GRANULARITIES } from '../../types/nuxt-galaxy'
 
 /**
  * The only form these parameters take: a calendar day in UTC, which is also
@@ -72,19 +74,48 @@ export function parseUsageFilters(query: Record<string, unknown>): UsageFilters 
 }
 
 /**
- * The range a request asks for, refused with a 400 when it cannot be read.
+ * The bucket width a usage request asks its trend for, read from its query
+ * parameters.
+ *
+ * A closed allowlist, because the value reaches a `date_trunc` unit: anything
+ * outside it is refused rather than quietly falling back to a day, so a
+ * misspelt parameter is a mistake a caller is told about instead of silently
+ * getting a chart they did not ask for. Absent means the day the endpoints
+ * have always bucketed by.
+ */
+export function parseTrendGranularity(query: Record<string, unknown>): TrendGranularity {
+  const value = query.granularity
+
+  if (value === undefined || value === '') {
+    return DEFAULT_TREND_GRANULARITY
+  }
+
+  if (!isTrendGranularity(value)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `\`granularity\` must be one of ${TREND_GRANULARITIES.join(', ')}`,
+    })
+  }
+
+  return value
+}
+
+/**
+ * How a request wants its usage statistics narrowed and bucketed, refused with
+ * a 400 when either cannot be read.
  *
  * A rejection is logged at warn, where LOGGING-SPEC puts invalid filter state:
  * the parse happens before the request's Effect runs, so without this the wide
  * event would carry a 400 and no reason for it.
  */
-export function readUsageFilters(event: H3Event): UsageFilters {
+export function readUsageRequest(event: H3Event): { filters: UsageFilters, granularity: TrendGranularity } {
+  const query = getQuery(event)
   try {
-    return parseUsageFilters(getQuery(event))
+    return { filters: parseUsageFilters(query), granularity: parseTrendGranularity(query) }
   }
   catch (error) {
     const reason = (error as { statusMessage?: string }).statusMessage
-    useLogger(event).warn('usage statistics range rejected', { reason })
+    useLogger(event).warn('usage statistics request rejected', { reason })
     throw error
   }
 }

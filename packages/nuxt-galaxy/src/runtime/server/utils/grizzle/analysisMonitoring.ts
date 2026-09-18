@@ -1,6 +1,6 @@
 import type { InvocationJobsSummary, InvocationState, InvocationTerminalState, JobState } from 'blendtype'
 import type { SQL } from 'drizzle-orm'
-import type { AnalysisMonitoringTrendPoint, AnalysisMonitoringWorkflowUsage } from '../../../types/nuxt-galaxy'
+import type { AnalysisMonitoringTrendPoint, AnalysisMonitoringWorkflowUsage, TrendGranularity } from '../../../types/nuxt-galaxy'
 import type { useDrizzle } from '../drizzle'
 import { InvocationTerminalStates, JobStates } from 'blendtype'
 import { and, eq, gte, lt, sql } from 'drizzle-orm'
@@ -501,8 +501,11 @@ export function getAllWorkflowUsage(filters: UsageFilters = {}) {
  * argument is NEVER interpolated into SQL from caller input — it indexes the
  * fixed `TREND_INTERVALS` map and drives a JS flooring helper, so a caller can
  * only ever select a pre-authorized bucket width (T-14-05 mitigation).
+ *
+ * Defined beside the response types rather than here, because the interface
+ * offers exactly the list the endpoint validates against.
  */
-export type TrendGranularity = 'day' | 'week' | 'month'
+export type { TrendGranularity }
 
 /** Fixed interval literals ($interval in `date_trunc($text, ...)`) for each granularity (D-04 allowlist). */
 export const TREND_INTERVALS: Record<TrendGranularity, string> = {
@@ -780,13 +783,21 @@ export class GetAnalysisMonitoringStatsError extends Data.TaggedError('GetAnalys
  * of which adds a server-side `WHERE owner_id`, so no other user's rows can be
  * surfaced. Runs all three dimensions via `Effect.all` (sequential by default)
  * and maps any constituent failure to `GetAnalysisMonitoringStatsError`.
+ *
+ * The granularity reaches the trend alone: it is how the same analyses are
+ * grouped, not which ones are counted, so the counts and the per-workflow
+ * table are the same at every bucket width and the trend still sums to them.
  */
-export function getAnalysisMonitoringStats(ownerId: string, filters: UsageFilters = {}) {
+export function getAnalysisMonitoringStats(
+  ownerId: string,
+  filters: UsageFilters = {},
+  granularity: TrendGranularity = 'day',
+) {
   return Effect.gen(function* () {
     const [counts, perWorkflow, trend] = yield* Effect.all([
       getAnalysisMonitoringCounts(ownerId, filters),
       getWorkflowUsage(ownerId, filters),
-      getTrend(ownerId, 'day', filters),
+      getTrend(ownerId, granularity, filters),
     ]).pipe(
       Effect.mapError(error =>
         new GetAnalysisMonitoringStatsError({ message: `Error assembling monitoring stats: ${error}` }),
@@ -806,12 +817,15 @@ export function getAnalysisMonitoringStats(ownerId: string, filters: UsageFilter
  * on the RLS admin SELECT policy and emit no `WHERE`. Phase 15 gates this behind
  * an admin role check before invocation; no endpoint exists in this phase.
  */
-export function getAllAnalysisMonitoringStats(filters: UsageFilters = {}) {
+export function getAllAnalysisMonitoringStats(
+  filters: UsageFilters = {},
+  granularity: TrendGranularity = 'day',
+) {
   return Effect.gen(function* () {
     const [counts, perWorkflow, trend] = yield* Effect.all([
       getAllAnalysisMonitoringCounts(filters),
       getAllWorkflowUsage(filters),
-      getAllTrend('day', filters),
+      getAllTrend(granularity, filters),
     ]).pipe(
       Effect.mapError(error =>
         new GetAnalysisMonitoringStatsError({ message: `Error assembling monitoring stats: ${error}` }),
