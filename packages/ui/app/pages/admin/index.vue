@@ -3,6 +3,7 @@
 import type { BreadcrumbItem } from '@nuxt/ui'
 
 import type { Database } from 'nuxt-galaxy'
+import AdminPermissionAlert from '../../components/admin/PermissionAlert.vue'
 
 // type Database = SupabaseTypes.Database
 
@@ -31,6 +32,13 @@ const adminItems = ref([
     description: 'Manage users of your application',
     to: '/admin/users',
   },
+  {
+    title: 'Usage',
+    icon: 'i-lucide:chart-column',
+    id: 'usage',
+    description: 'Usage statistics over every user\'s analyses',
+    to: '/admin/usage',
+  },
 ])
 
 const pageHeaderProps = computed(() => {
@@ -50,12 +58,7 @@ const pageHeaderProps = computed(() => {
           <UPageCard v-for="(item, index) in adminItems" :key="index" v-bind="item" />
         </UPageGrid>
       </div>
-      <div v-else class="my-5">
-        <UAlert
-          variant="subtle" color="error" title="Admin section"
-          description="You don't have the admin permission"
-        />
-      </div>
+      <AdminPermissionAlert v-else />
     </UPageBody>
   </div>
 </template>

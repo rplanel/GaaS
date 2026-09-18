@@ -46,6 +46,13 @@ export default defineAppConfig({
             to: '/admin/users',
             order: 2,
           },
+          {
+            label: 'Usage',
+            icon: 'i-lucide:chart-column',
+            description: 'Usage statistics over every user\'s analyses',
+            to: '/admin/usage',
+            order: 3,
+          },
         ],
       },
 
