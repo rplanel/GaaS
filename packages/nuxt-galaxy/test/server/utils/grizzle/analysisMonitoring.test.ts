@@ -1163,19 +1163,20 @@ describe('getTrend over a requested range', () => {
     expect(result.every(point => point.total === 0)).toBe(true)
   })
 
-  it('takes the end from the data when only a start is asked for', async () => {
+  it('takes the start from the data when only an end is asked for', async () => {
     const drizzle = createMockDrizzle()
     drizzle.enqueueResult([
-      { min: new Date('2026-08-09T00:00:00Z'), max: new Date('2026-08-09T00:00:00Z') },
+      { min: new Date('2026-08-10T00:00:00Z'), max: new Date('2026-08-14T00:00:00Z') },
     ])
     drizzle.enqueueResult([])
 
-    const result = await getTrend('owner-uuid-1', 'day', { from: FROM }).pipe(
+    const result = await getTrend('owner-uuid-1', 'day', { to: new Date('2026-08-12T00:00:00.000Z') }).pipe(
       Effect.provide(drizzle.layer),
       Effect.runPromise,
     )
 
-    expect(result.map(point => point.bucket)).toEqual(['2026-08-08', '2026-08-09'])
+    // the earliest analysis to the day before the exclusive bound
+    expect(result.map(point => point.bucket)).toEqual(['2026-08-10', '2026-08-11'])
   })
 })
 
@@ -1199,5 +1200,54 @@ describe('getTrend over buckets as the driver delivers them', () => {
     expect(result.map(point => point.bucket)).toEqual(['2026-08-08', '2026-08-09'])
     // the invariant: every counted analysis lands in a bucket
     expect(result.reduce((sum, point) => sum + point.total, 0)).toBe(2)
+  })
+})
+
+describe('getTrend over a one-sided range', () => {
+  /** Midnight UTC, so many days back from today. */
+  function daysAgo(days: number) {
+    const today = new Date()
+    return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - days))
+  }
+
+  it('runs an open-ended range up to today, keeping the empty buckets it asks for', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.enqueueResult([{ min: null, max: null }])
+    drizzle.enqueueResult([])
+
+    const result = await getTrend('owner-uuid-1', 'day', { from: daysAgo(2) }).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromise,
+    )
+
+    // "since Tuesday" means up to now, so the window is drawn even though
+    // nothing in it ran
+    expect(result).toHaveLength(3)
+    expect(result.every(point => point.total === 0)).toBe(true)
+  })
+})
+
+describe('admin usage over a range', () => {
+  it('narrows every dimension for the admin variant too', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.enqueueResult([{ total: 4, success: 2, error: 2, cancelled: 0, pending: 0 }])
+    drizzle.enqueueResult([{ workflowId: 1, name: 'A', version: '1.0', total: 4, success: 2, error: 2, cancelled: 0, pending: 0 }])
+    drizzle.enqueueResult([{ min: new Date('2026-08-10T00:00:00Z'), max: new Date('2026-08-11T00:00:00Z') }])
+    drizzle.enqueueResult([
+      { bucket: '2026-08-10', total: 3, success: 2, error: 1, cancelled: 0, pending: 0 },
+      { bucket: '2026-08-11', total: 1, success: 0, error: 1, cancelled: 0, pending: 0 },
+    ])
+
+    const stats = await getAllAnalysisMonitoringStats({
+      from: new Date('2026-08-10T00:00:00.000Z'),
+      to: new Date('2026-08-12T00:00:00.000Z'),
+    }).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromise,
+    )
+
+    // the invariant the ticket asks for, at the level the endpoint returns
+    expect(stats.trend.reduce((sum, point) => sum + point.total, 0)).toBe(stats.total)
+    expect(stats.successRate).toBe(computeSuccessRate(stats.success, stats.error))
   })
 })

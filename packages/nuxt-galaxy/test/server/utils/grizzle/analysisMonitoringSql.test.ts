@@ -124,6 +124,20 @@ describe('usage filters', () => {
     expect(params).toEqual([FROM_PARAM, TO_PARAM])
   })
 
+  it('narrows the admin variant of every dimension, which binds no owner', () => {
+    for (const query of [
+      selectWorkflowUsage(undefined, { from: FROM, to: TO }),
+      selectTrendBuckets(undefined, 'day', { from: FROM, to: TO }),
+      selectTrendRange(undefined, { from: FROM, to: TO }),
+    ]) {
+      const { sql, params } = emitted(query)
+
+      expect(sql).toMatch(/"started_at" >= \$\d/)
+      expect(sql).toMatch(/"started_at" < \$\d/)
+      expect(params).toEqual([FROM_PARAM, TO_PARAM])
+    }
+  })
+
   it('takes one bound without the other', () => {
     expect(emitted(selectCounts(OWNER, { from: FROM })).params).toEqual([OWNER, FROM_PARAM])
     expect(emitted(selectCounts(OWNER, { to: TO })).params).toEqual([OWNER, TO_PARAM])

@@ -53,6 +53,18 @@ _Avoid_: Period, bin, slot
 The bucket width of a trend: day, week or month.
 _Avoid_: Interval, resolution, step
 
+**Time range**:
+The window usage statistics cover, named by the first and last day it
+includes. It filters on when an analysis started, so one that ran for days
+belongs to the day it began. Absent, it means all time.
+_Avoid_: Date filter, window, timeframe
+
+**Preset**:
+A time range a reader picks by name rather than by date: the last 7, 30 or 90
+days, or all time. A link carries the name, not the days it stood for when the
+link was made, so it keeps meaning the same thing later.
+_Avoid_: Quick filter, shortcut, canned range
+
 ## Scope
 
 **Own usage**:

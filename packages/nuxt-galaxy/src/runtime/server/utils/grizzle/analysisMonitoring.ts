@@ -561,6 +561,7 @@ function utcBucket(gran: TrendGranularity) {
   return sql<string>`to_char(date_trunc('${sql.raw(BUCKET_UNITS[gran])}', ${analysisMonitoring.startedAt} AT TIME ZONE 'UTC'), 'YYYY-MM-DD')`
 }
 
+// exported so the SQL it emits can be asserted without a database
 export function selectTrendRange(ownerId?: string, filters: UsageFilters = {}) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
@@ -665,15 +666,22 @@ function canonicalBucketKey(key: string | Date, gran: TrendGranularity): string 
  * happen to carry rows. With no range asked for, the data decides its own
  * extent, which is what an all-time trend means.
  */
+interface TrendSpan {
+  readonly start: Date
+  readonly end: Date
+}
+
 function coveredSpan(
   range: TrendRangeRow | undefined,
   filters: UsageFilters,
-): { start: Date, end: Date } | undefined {
+): TrendSpan | undefined {
   const start = filters.from ?? (range?.min != null ? new Date(range.min) : undefined)
-  // `to` is exclusive, so the last bucket is the one holding the instant before it
+  // `to` is exclusive, so the last bucket is the one holding the instant before
+  // it. An open-ended range runs to now rather than to the last analysis, so
+  // "since Tuesday" still draws the quiet days at the end of it.
   const end = filters.to !== undefined
     ? new Date(filters.to.getTime() - 1)
-    : (range?.max != null ? new Date(range.max) : undefined)
+    : (filters.from !== undefined ? new Date() : (range?.max != null ? new Date(range.max) : undefined))
 
   if (start === undefined || end === undefined) {
     // STAT-03 empty edge: nothing ran, and no range was asked for either.
@@ -684,7 +692,7 @@ function coveredSpan(
 }
 
 function buildTrendSeries(
-  span: { start: Date, end: Date } | undefined,
+  span: TrendSpan | undefined,
   rows: TrendBucketRow[],
   gran: TrendGranularity,
 ): AnalysisMonitoringTrendPoint[] {

@@ -49,7 +49,7 @@ export function presetRange(preset: UsagePreset, today: Date = new Date()): Usag
   return { from: utcDay(start), to: utcDay(today) }
 }
 
-export interface UsageFilters {
+export interface UsageFilterControls {
   /** The preset in force, or undefined while a custom range is. */
   preset: ComputedRef<UsagePreset | undefined>
   /** True when the reader named their own dates. */
@@ -69,12 +69,14 @@ export interface UsageFilters {
  * the dates it resolved to that day, so a bookmarked "last 30 days" still
  * means the last 30 days a month later (Q17).
  */
-export function useUsageFilters(): UsageFilters {
+export function useUsageFilters(): UsageFilterControls {
   const route = useRoute()
   const router = useRouter()
 
-  const customFrom = computed(() => (typeof route.query.from === 'string' ? route.query.from : undefined))
-  const customTo = computed(() => (typeof route.query.to === 'string' ? route.query.to : undefined))
+  // an empty bound is no bound: `?from=` would otherwise claim a custom range
+  // on screen while the query it produces asks for all time
+  const customFrom = computed(() => (typeof route.query.from === 'string' && route.query.from !== '' ? route.query.from : undefined))
+  const customTo = computed(() => (typeof route.query.to === 'string' && route.query.to !== '' ? route.query.to : undefined))
   const isCustom = computed(() => customFrom.value !== undefined || customTo.value !== undefined)
 
   const preset = computed<UsagePreset | undefined>(() => {

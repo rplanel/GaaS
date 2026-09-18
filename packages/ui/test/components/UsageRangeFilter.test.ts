@@ -69,6 +69,13 @@ describe('usage range filter', () => {
     expect(wrapper.find('[data-testid="usage-preset-custom"]').text()).toContain('2026-08-01 to 2026-08-31')
   })
 
+  it('treats an empty bound in the URL as no range at all', async () => {
+    const wrapper = await mountFilter('/?from=')
+
+    // otherwise the view claims a custom range while the query asks for all time
+    expect(wrapper.find('[data-testid="usage-preset-custom"]').text()).toContain('Custom')
+  })
+
   it('refuses to apply a range that reads backwards', async () => {
     const wrapper = await mountFilter('/')
 

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { USAGE_PRESETS, useUsageFilters } from '../../composables/useUsageFilters'
-
 /**
  * Reads and writes the URL directly rather than taking props, so this control
  * and the page whose statistics it narrows share one source of truth and
@@ -8,16 +6,16 @@ import { USAGE_PRESETS, useUsageFilters } from '../../composables/useUsageFilter
  */
 const { preset, isCustom, range, selectPreset, selectCustomRange } = useUsageFilters()
 
-const isNaming = ref(false)
+const isChoosingDates = ref(false)
 
 /** Named dates start from whatever is on screen, so neither field starts blank. */
 const draftFrom = ref('')
 const draftTo = ref('')
 
-function startNaming() {
+function chooseDates() {
   draftFrom.value = range.value.from ?? ''
   draftTo.value = range.value.to ?? ''
-  isNaming.value = true
+  isChoosingDates.value = true
 }
 
 /** A range must have both ends and read forwards; the server refuses the rest. */
@@ -25,9 +23,9 @@ const canApply = computed(() =>
   draftFrom.value !== '' && draftTo.value !== '' && draftFrom.value <= draftTo.value,
 )
 
-function apply() {
+function applyDates() {
   selectCustomRange({ from: draftFrom.value, to: draftTo.value })
-  isNaming.value = false
+  isChoosingDates.value = false
 }
 
 const customLabel = computed(() =>
@@ -56,11 +54,11 @@ const customLabel = computed(() =>
         size="sm"
         :variant="isCustom ? 'subtle' : 'ghost'"
         :color="isCustom ? 'primary' : 'neutral'"
-        @click="startNaming"
+        @click="chooseDates"
       />
     </div>
 
-    <div v-if="isNaming" data-testid="usage-custom-range" class="flex flex-wrap items-end gap-2">
+    <div v-if="isChoosingDates" data-testid="usage-custom-range" class="flex flex-wrap items-end gap-2">
       <UFormField label="From" size="sm">
         <UInput v-model="draftFrom" data-testid="usage-custom-from" type="date" size="sm" />
       </UFormField>
@@ -72,7 +70,7 @@ const customLabel = computed(() =>
         label="Apply"
         size="sm"
         :disabled="!canApply"
-        @click="apply"
+        @click="applyDates"
       />
     </div>
   </div>

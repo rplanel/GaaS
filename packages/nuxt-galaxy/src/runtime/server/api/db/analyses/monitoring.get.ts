@@ -1,17 +1,17 @@
 import type { AnalysisMonitoringStats } from '../../../../types/nuxt-galaxy'
 import { Cause, Effect, Either, Layer } from 'effect'
 import { useLogger } from 'evlog'
-import { createError, defineEventHandler, getQuery } from 'h3'
+import { createError, defineEventHandler } from 'h3'
 import { Drizzle } from '../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../utils/evlog-effect'
 import { getAnalysisMonitoringStats } from '../../../utils/grizzle/analysisMonitoring'
 import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClient } from '../../../utils/grizzle/supabase'
-import { parseUsageFilters } from '../../../utils/usageFilters'
+import { readUsageFilters } from '../../../utils/usageFilters'
 
 export default defineEventHandler(async (event): Promise<AnalysisMonitoringStats> => {
   // read before any work is done, so a malformed range costs a round trip and
   // nothing more
-  const filters = parseUsageFilters(getQuery(event))
+  const filters = readUsageFilters(event)
 
   const program = Effect.gen(function* () {
     const supabaseUser = yield* getSupabaseUser(event)

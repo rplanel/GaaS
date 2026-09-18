@@ -57,32 +57,13 @@ async function mountPage(route?: string) {
   return wrapper
 }
 
-describe('own usage page', () => {
-  it('shows the signed-in user the usage statistics of their own analyses', async () => {
-    const wrapper = await mountPage()
-
-    expect(wrapper.find('[data-testid="usage-tile-total"]').text()).toContain('42')
-    expect(wrapper.find('[data-testid="usage-tile-successRate"]').text()).toContain('83%')
-    expect(wrapper.find('[data-testid="usage-per-workflow"]').text()).toContain('Variant calling')
-  })
-
-  it('fetches again when refresh is pressed, however recently the page loaded', async () => {
-    const wrapper = await mountPage()
-    const servedBeforeRefresh = timesServed
-
-    await wrapper.find('[data-testid="usage-refresh"]').trigger('click')
-
-    await vi.waitFor(() => {
-      expect(timesServed).toBe(servedBeforeRefresh + 1)
-    })
-  })
-})
-
 /** Whole days from one calendar day to another. */
 function daysApart(from: string, to: string) {
   return (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000
 }
 
+// first in the file, so the default range meets a cold query cache and this
+// really observes a request rather than a mount served from an earlier one
 describe('own usage over a range', () => {
   it('asks for the last 30 days when the reader has chosen nothing', async () => {
     await mountPage()
@@ -115,6 +96,27 @@ describe('own usage over a range', () => {
 
     await vi.waitFor(() => {
       expect(lastQuery).toEqual({})
+    })
+  })
+})
+
+describe('own usage page', () => {
+  it('shows the signed-in user the usage statistics of their own analyses', async () => {
+    const wrapper = await mountPage()
+
+    expect(wrapper.find('[data-testid="usage-tile-total"]').text()).toContain('42')
+    expect(wrapper.find('[data-testid="usage-tile-successRate"]').text()).toContain('83%')
+    expect(wrapper.find('[data-testid="usage-per-workflow"]').text()).toContain('Variant calling')
+  })
+
+  it('fetches again when refresh is pressed, however recently the page loaded', async () => {
+    const wrapper = await mountPage()
+    const servedBeforeRefresh = timesServed
+
+    await wrapper.find('[data-testid="usage-refresh"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(timesServed).toBe(servedBeforeRefresh + 1)
     })
   })
 })

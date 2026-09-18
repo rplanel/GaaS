@@ -33,6 +33,17 @@ describe('parseUsageFilters', () => {
     expect(() => parseUsageFilters({ from: value })).toThrowError(expect.objectContaining({ statusCode: 400 }))
   })
 
+  it('rejects a range longer than anything worth drawing, with 400', () => {
+    // unbounded, the trend would generate a point per day between these two
+    expect(() => parseUsageFilters({ from: '0001-01-01', to: '9999-12-31' }))
+      .toThrowError(expect.objectContaining({ statusCode: 400 }))
+  })
+
+  it('accepts a long but sane range', () => {
+    expect(parseUsageFilters({ from: '2020-01-01', to: '2026-01-01' }).from)
+      .toEqual(new Date('2020-01-01T00:00:00.000Z'))
+  })
+
   it('rejects a reversed range with 400', () => {
     expect(() => parseUsageFilters({ from: '2026-09-02', to: '2026-09-01' }))
       .toThrowError(expect.objectContaining({ statusCode: 400 }))
