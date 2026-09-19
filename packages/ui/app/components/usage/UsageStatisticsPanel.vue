@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import type { TableColumn, TableRow } from '@nuxt/ui'
-import type { AnalysisMonitoringCounts, AnalysisMonitoringStats, AnalysisMonitoringWorkflowUsage, WorkflowSelection } from 'nuxt-galaxy'
-import { formatSuccessRate, OUTCOME_FIELDS, UNKNOWN_WORKFLOW, UNKNOWN_WORKFLOW_LABEL, workflowUsageLabel } from '../../utils/usageStatistics'
-import ColumnTableSort from '../ColumnTableSort.vue'
+import type { AnalysisMonitoringCounts, AnalysisMonitoringStats } from 'nuxt-galaxy'
+import { formatSuccessRate, OUTCOME_FIELDS } from '../../utils/usageStatistics'
 import UsageGranularityFilter from './UsageGranularityFilter.vue'
-import UsageOutcomeBar from './UsageOutcomeBar.vue'
 import UsageRangeFilter from './UsageRangeFilter.vue'
 import UsageStatTile from './UsageStatTile.vue'
 import UsageTrendChart from './UsageTrendChart.vue'
+import UsageWorkflowTable from './UsageWorkflowTable.vue'
 
 interface Props {
   /**
@@ -32,9 +30,6 @@ const props = withDefaults(defineProps<Props>(), {
  * needs a way to ask for current numbers.
  */
 const emit = defineEmits<{ refresh: [] }>()
-
-const UBadge = resolveComponent('UBadge')
-const UTooltip = resolveComponent('UTooltip')
 
 /**
  * The counts a reader sees, in the order they appear: the total, then the four
@@ -98,172 +93,11 @@ const hasNothingYet = computed(() => (
   && workflowSelection.value === undefined
 ))
 
-/** Most-used workflow first, which is what a reader looks for. */
-const sorting = ref([{ id: 'total', desc: true }])
-
-/**
- * How a row names itself, in the same tokens the URL carries. The Unknown
- * workflow arrives with a null id, having none of its own.
- */
-function workflowKey(usage: AnalysisMonitoringWorkflowUsage): string {
-  return usage.workflowId === null ? UNKNOWN_WORKFLOW : String(usage.workflowId)
-}
-
-/**
- * Keying rows by those tokens is what lets the URL drive the highlight: the
- * table renders `data-selected` from this, and nothing else has to be kept in
- * step with it.
- */
-const rowSelection = computed(() => (
-  workflowSelection.value === undefined ? {} : { [String(workflowSelection.value)]: true }
-))
-
-/** Picks a workflow, or clears it when it was already the one selected. */
-function toggleSelection(clicked: WorkflowSelection) {
-  selectWorkflow(clicked === workflowSelection.value ? undefined : clicked)
-}
-
-// clicking the selected row again clears it, which is the other half of the
-// clear control the chip provides
-function toggleWorkflow(_event: Event, row: TableRow<AnalysisMonitoringWorkflowUsage>) {
-  toggleSelection(row.original.workflowId ?? UNKNOWN_WORKFLOW)
-}
-
-/**
- * Enter and Space on a focused row, which the table does not handle itself.
- *
- * It gives every row `role="button"` and `tabindex="0"` but binds only a
- * click, so without this a keyboard reader tabs onto something announced as a
- * button and finds it dead -- worse than a row that was never focusable.
- * Delegated from the wrapper because the table offers no per-row event hook;
- * the row is located from the event and named by the key its first cell
- * carries, so sorting cannot put the wrong workflow under a keystroke.
- */
-function selectFromKeyboard(event: KeyboardEvent) {
-  if (event.key !== 'Enter' && event.key !== ' ') {
-    return
-  }
-  const target = event.target as HTMLElement | null
-  // the table bails out of a click that landed on a button or a link, and a
-  // keystroke reaching one should not both press it and move the selection
-  if (target?.closest?.('button, a')) {
-    return
-  }
-  const row = target?.closest?.('tr[role="button"]')
-  const key = row?.querySelector<HTMLElement>('[data-workflow-key]')?.dataset.workflowKey
-  if (key === undefined) {
-    return
-  }
-  // Space would otherwise scroll the page out from under the reader
-  event.preventDefault()
-  const selection = workflowSelectionFromToken(key)
-  if (selection !== undefined) {
-    toggleSelection(selection)
-  }
-}
-
-/**
- * Every workflow name this panel has been told about, kept across responses.
- *
- * A selection outlives a range that holds nothing of it, and the names come
- * from the response, so without this the chip would have nothing to call the
- * very workflow whose absence it is reporting. The URL carries the identifier
- * alone: a name there would go stale on a rename, which is the mistake the
- * preset tokens already avoid.
- */
-const knownWorkflowLabels = ref<Record<string, string>>({})
-
-watch(perWorkflow, (entries) => {
-  const next = { ...knownWorkflowLabels.value }
-  for (const entry of entries) {
-    const name = workflowUsageLabel(entry)
-    next[workflowKey(entry)] = entry.version ? `${name} ${entry.version}` : name
-  }
-  knownWorkflowLabels.value = next
-}, { immediate: true })
-
-/**
- * The busiest workflow on screen, which sets the scale every bar is drawn
- * against. Taken from the rows rather than from the totals, because the totals
- * are narrowed by a selection and these rows are not.
- */
-const maxWorkflowTotal = computed(() => Math.max(0, ...perWorkflow.value.map(entry => entry.total)))
-
 /** What the tiles are counting, whenever that is not simply everything. */
-const selectedWorkflowLabel = computed(() => {
-  const selection = workflowSelection.value
-  if (selection === undefined) {
-    return undefined
-  }
-  // a cold load of a link into a range holding nothing of it has no name to
-  // show, and the identifier is a truer answer than a guess
-  const fallback = selection === UNKNOWN_WORKFLOW ? UNKNOWN_WORKFLOW_LABEL : `Workflow ${selection}`
-  return knownWorkflowLabels.value[String(selection)] ?? fallback
-})
-
-function countColumn(key: keyof AnalysisMonitoringCounts, label: string): TableColumn<AnalysisMonitoringWorkflowUsage> {
-  return {
-    accessorKey: key,
-    header: ({ column }) => h(ColumnTableSort, { column, label }),
-    cell: ({ row }) => h('span', { class: 'tabular-nums' }, String(row.original[key])),
-  }
-}
-
-/**
- * Computed rather than fixed. A plain array works too -- the cell closure reads
- * the selection while the table renders, so the table's own effect tracks it --
- * but that leaves the marking depending on where someone else chooses to invoke
- * our renderer. This keeps the dependency one we hold.
- */
-const perWorkflowColumns = computed<TableColumn<AnalysisMonitoringWorkflowUsage>[]>(() => [
-  {
-    accessorKey: 'name',
-    header: ({ column }) => h(ColumnTableSort, { column, label: 'Workflow' }),
-    cell: ({ row }) => {
-      const selected = (row.original.workflowId ?? UNKNOWN_WORKFLOW) === workflowSelection.value
-      return h('div', {
-        'class': 'flex items-center gap-2',
-        // how the delegated key handler below finds which row was activated.
-        // On the cell's root rather than on anything decorative inside it,
-        // which could be restyled away without anyone noticing the keyboard
-        // had stopped working.
-        'data-workflow-key': workflowKey(row.original),
-      }, [
-        // a bar down the left edge, so the tint is not the only thing saying
-        // which row is selected. Always rendered, transparent when it is not,
-        // which keeps every name on the same left edge.
-        h('span', {
-          'class': ['w-0.5 shrink-0 self-stretch rounded-full', selected ? 'bg-primary' : 'bg-transparent'],
-          'aria-hidden': 'true',
-          'data-testid': selected ? 'usage-workflow-selected-bar' : undefined,
-        }),
-        h('span', { class: 'truncate' }, workflowUsageLabel(row.original)),
-        row.original.version
-          ? h(UBadge, { label: row.original.version, size: 'sm', variant: 'subtle', color: 'neutral' })
-          : null,
-        // the table offers no per-row aria hook, and a colour says nothing to
-        // a reader who cannot see it, so the state is spelt out in the cell
-        selected ? h('span', { class: 'sr-only' }, 'Selected') : null,
-      ])
-    },
-  },
-  {
-    id: 'outcomes',
-    // not sortable: the shape is the point, and Total already orders by size
-    header: () => h('span', { class: 'text-sm' }, 'Outcomes'),
-    cell: ({ row }) => h(UsageOutcomeBar, { usage: row.original, maxTotal: maxWorkflowTotal.value }),
-  },
-  ...COUNT_FIELDS.map(field => countColumn(field.key, field.label)),
-  {
-    accessorKey: 'successRate',
-    header: ({ column }) => h(ColumnTableSort, { column, label: 'Success rate' }),
-    cell: ({ row }) => {
-      const rate = formatSuccessRate(row.original)
-      const value = h('span', { class: rate.hasValue ? 'tabular-nums' : 'tabular-nums text-dimmed' }, rate.label)
-      return rate.tooltip ? h(UTooltip, { text: rate.tooltip }, () => value) : value
-    },
-  },
-])
+const { labelFor } = useWorkflowLabels(perWorkflow)
+const selectedWorkflowLabel = computed(() => (
+  workflowSelection.value === undefined ? undefined : labelFor(workflowSelection.value)
+))
 </script>
 
 <template>
@@ -371,33 +205,7 @@ const perWorkflowColumns = computed<TableColumn<AnalysisMonitoringWorkflowUsage>
         <UsageTrendChart :trend="trend" :granularity="granularity" />
       </div>
 
-      <div
-        v-if="perWorkflow.length > 0"
-        data-testid="usage-per-workflow"
-        class="flex flex-col gap-2"
-        @keydown="selectFromKeyboard"
-      >
-        <h3 class="text-sm font-semibold">
-          Usage by workflow
-        </h3>
-        <!--
-          A hover tint reaches nobody on a touch screen, and neither it nor a
-          cursor says what a click would do. This does both, and says which
-          part of the page answers to it.
-        -->
-        <p data-testid="usage-per-workflow-hint" class="text-xs text-muted">
-          Select a workflow to narrow the tiles and the trend above.
-        </p>
-        <UTable
-          v-model:sorting="sorting"
-          :data="perWorkflow"
-          :columns="perWorkflowColumns"
-          :row-selection="rowSelection"
-          :get-row-id="workflowKey"
-          :ui="{ tr: 'data-[selectable=true]:cursor-pointer data-[selected=true]:bg-elevated' }"
-          @select="toggleWorkflow"
-        />
-      </div>
+      <UsageWorkflowTable v-if="perWorkflow.length > 0" :per-workflow="perWorkflow" />
     </template>
   </div>
 </template>
