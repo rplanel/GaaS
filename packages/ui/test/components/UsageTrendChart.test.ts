@@ -13,8 +13,11 @@ const TREND: AnalysisMonitoringTrendPoint[] = [
   { bucket: '2026-09-03', total: 2, success: 0, error: 0, cancelled: 0, pending: 2, successRate: 0 },
 ]
 
-async function mountTrend(trend: AnalysisMonitoringTrendPoint[]) {
-  return mountSuspended(UsageTrendChart, { props: { trend } })
+async function mountTrend(
+  trend: AnalysisMonitoringTrendPoint[],
+  granularity: 'day' | 'week' | 'month' = 'day',
+) {
+  return mountSuspended(UsageTrendChart, { props: { trend, granularity } })
 }
 
 /** The drawn bars, told apart from hover targets by carrying an outcome colour. */
@@ -80,5 +83,33 @@ describe('usageTrendChart', () => {
     const wrapper = await mountTrend([])
 
     expect(outcomeBars(wrapper)).toHaveLength(0)
+  })
+})
+
+describe('what the trend says a bucket covers', () => {
+  /** Two ISO weeks, whose keys are dates like any other. */
+  const WEEKS: AnalysisMonitoringTrendPoint[] = [
+    { bucket: '2026-08-24', total: 12, success: 12, error: 0, cancelled: 0, pending: 0, successRate: 1 },
+    { bucket: '2026-08-31', total: 3, success: 2, error: 1, cancelled: 0, pending: 0, successRate: 2 / 3 },
+  ]
+
+  it('names the axis after the width it is drawn at', async () => {
+    expect((await mountTrend(TREND, 'day')).text()).toContain('Day (UTC)')
+    expect((await mountTrend(WEEKS, 'week')).text()).toContain('Week starting (UTC)')
+    expect((await mountTrend([{ ...WEEKS[0]!, bucket: '2026-08' }], 'month')).text()).toContain('Month (UTC)')
+  })
+
+  it('says a weekly bar is a week where a reader hovers it', async () => {
+    // otherwise twelve analyses over seven days read as twelve in one day
+    const wrapper = await mountTrend(WEEKS, 'week')
+
+    expect(wrapper.html()).toContain('Week of 2026-08-24')
+  })
+
+  it('leaves a daily bar naming its day', async () => {
+    const wrapper = await mountTrend(TREND, 'day')
+
+    expect(wrapper.html()).not.toContain('Week of')
+    expect(wrapper.html()).toContain('2026-09-01')
   })
 })
