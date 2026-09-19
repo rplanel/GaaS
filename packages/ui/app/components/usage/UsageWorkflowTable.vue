@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { AnalysisMonitoringCounts, AnalysisMonitoringWorkflowUsage, WorkflowSelection } from 'nuxt-galaxy'
-import { formatSuccessRate, OUTCOME_FIELDS, UNKNOWN_WORKFLOW, workflowUsageLabel } from '../../utils/usageStatistics'
+import { COUNT_FIELDS, formatSuccessRate, UNKNOWN_WORKFLOW, workflowKey, workflowUsageLabel } from '../../utils/usageStatistics'
 import ColumnTableSort from '../ColumnTableSort.vue'
 import UsageOutcomeBar from './UsageOutcomeBar.vue'
 
@@ -28,23 +28,6 @@ const { workflowSelection, selectWorkflow } = useUsageFilters()
 
 /** Most-used workflow first, which is what a reader looks for. */
 const sorting = ref([{ id: 'total', desc: true }])
-
-/**
- * The counts a row carries, in the order they appear: the total, then the four
- * outcomes with the labels the tiles and the trend chart also use.
- */
-const COUNT_FIELDS = [
-  { key: 'total', label: 'Total' },
-  ...OUTCOME_FIELDS.map(field => ({ key: field.key, label: field.label })),
-] as const satisfies ReadonlyArray<{ key: keyof AnalysisMonitoringCounts, label: string }>
-
-/**
- * How a row names itself, in the same tokens the URL carries. The Unknown
- * workflow arrives with a null id, having none of its own.
- */
-function workflowKey(usage: AnalysisMonitoringWorkflowUsage): string {
-  return usage.workflowId === null ? UNKNOWN_WORKFLOW : String(usage.workflowId)
-}
 
 /**
  * Keying rows by those tokens is what lets the URL drive the highlight: the

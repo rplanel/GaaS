@@ -1,6 +1,6 @@
 import type { AnalysisMonitoringWorkflowUsage, WorkflowSelection } from 'nuxt-galaxy'
 import type { ComputedRef, Ref } from 'vue'
-import { UNKNOWN_WORKFLOW, UNKNOWN_WORKFLOW_LABEL, workflowUsageLabel } from '../utils/usageStatistics'
+import { UNKNOWN_WORKFLOW, UNKNOWN_WORKFLOW_LABEL, workflowKey, workflowUsageLabel } from '../utils/usageStatistics'
 
 /**
  * What to call a workflow, including one the latest response no longer lists.
@@ -21,8 +21,7 @@ export function useWorkflowLabels(
     const next = { ...known.value }
     for (const entry of entries) {
       const name = workflowUsageLabel(entry)
-      const key = entry.workflowId === null ? UNKNOWN_WORKFLOW : String(entry.workflowId)
-      next[key] = entry.version ? `${name} ${entry.version}` : name
+      next[workflowKey(entry)] = entry.version ? `${name} ${entry.version}` : name
     }
     known.value = next
   }, { immediate: true })

@@ -4,6 +4,7 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it, vi } from 'vitest'
 import { shallowRef } from 'vue'
 import UsageStatisticsPanel from '../../app/components/usage/UsageStatisticsPanel.vue'
+import { COUNT_FIELDS } from '../../app/utils/usageStatistics'
 
 /** Nine analyses: five Succeeded, two Failed, one Cancelled, one still Pending. */
 const STATS: AnalysisMonitoringStats = {
@@ -553,5 +554,20 @@ describe('what the tiles are counting', () => {
     const wrapper = await mountPanel({ ...STATS, perWorkflow: [] }, {}, '/?workflowId=42')
 
     expect(wrapper.find('[data-testid="usage-workflow-chip"]').text()).toContain('Workflow 42')
+  })
+})
+
+describe('one vocabulary across the panel', () => {
+  it('calls a count the same thing in its tile and in its column', async () => {
+    // the tiles and the table used to read one list, and a split put a second
+    // one behind the columns: rename an outcome in either and the page would
+    // have gone on looking consistent while saying two different things
+    const wrapper = await mountPanel(STATS, {}, '/')
+    const headers = wrapper.findAll('thead th').map(header => header.text())
+
+    for (const field of COUNT_FIELDS) {
+      expect(tile(wrapper, field.key).text()).toContain(field.label)
+      expect(headers.some(header => header.includes(field.label))).toBe(true)
+    }
   })
 })
