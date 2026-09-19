@@ -39,7 +39,10 @@ Among analyses with a definitive outcome, the share that Succeeded: Succeeded di
 _Avoid_: Reliability, pass rate
 
 **Unknown workflow**:
-The single bucket collecting analyses whose workflow could not be identified because it was deleted before its name was recorded.
+The single bucket collecting analyses whose workflow could not be identified
+because it was deleted before its name was recorded. It is selectable like any
+other workflow, and travels as the word `unknown`, having no identifier of its
+own.
 _Avoid_: Orphan, null workflow, deleted workflow
 
 **Trend**:
@@ -71,6 +74,19 @@ A time range a reader picks by name rather than by date: the last 7, 30 or 90
 days, or all time. A link carries the name, not the days it stood for when the
 link was made, so it keeps meaning the same thing later.
 _Avoid_: Quick filter, shortcut, canned range
+
+**Workflow selection**:
+One workflow version, picked out of the per-workflow table, that the counts and
+the trend are narrowed to. Per-workflow usage is never narrowed by it: it is
+the list the selection is made from, so it goes on showing every workflow in
+range. Absent, it means all workflows.
+
+A selection rather than a filter, and deliberately not the word the design
+brief used. The name has to carry why the table is exempt: a selection is made
+*from* the table, so of course the table keeps showing what is selectable,
+where a filter sitting beside the time range and the granularity would imply it
+narrows everything they do.
+_Avoid_: Workflow filter, workflow picker, workflow scope
 
 ## Scope
 

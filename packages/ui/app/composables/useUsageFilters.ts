@@ -1,4 +1,4 @@
-import type { TrendGranularity, UsageStatisticsRange } from 'nuxt-galaxy'
+import type { TrendGranularity, UsageStatisticsRange, WorkflowSelection } from 'nuxt-galaxy'
 import type { ComputedRef } from 'vue'
 
 /** The ranges offered without asking anyone to name a date. */
@@ -141,6 +141,30 @@ export function automaticGranularity(
   return 'month'
 }
 
+/** An identifier as a URL carries one: plain digits, and at least one. */
+const WORKFLOW_ID = /^\d+$/
+
+/**
+ * The workflow a URL selects, or nothing.
+ *
+ * Anything unreadable means nothing selected rather than an error. The server
+ * refuses the same value with a 400, and the asymmetry is deliberate: an API
+ * caller sending nonsense should hear about it, while a reader who lands on a
+ * mangled link should still get their page, exactly as an unreadable preset or
+ * bucket width already gives them the default.
+ */
+export function workflowSelectionFromToken(token: unknown): WorkflowSelection | undefined {
+  if (token === UNKNOWN_WORKFLOW) {
+    return UNKNOWN_WORKFLOW
+  }
+  if (typeof token !== 'string' || !WORKFLOW_ID.test(token)) {
+    return undefined
+  }
+  // identifiers are `serial`, so they start at 1
+  const id = Number(token)
+  return id > 0 ? id : undefined
+}
+
 export interface UsageFilterControls {
   /** The preset in force, or undefined while a custom range is. */
   preset: ComputedRef<UsagePreset | undefined>
@@ -156,6 +180,10 @@ export interface UsageFilterControls {
   selectCustomRange: (range: UsageStatisticsRange) => void
   /** Chooses a width, or undefined to hand the choice back to the range. */
   selectGranularity: (granularity: TrendGranularity | undefined) => void
+  /** The workflow the counts and the trend are narrowed to, if any. */
+  workflowSelection: ComputedRef<WorkflowSelection | undefined>
+  /** Selects one workflow, or undefined to go back to all of them. */
+  selectWorkflow: (selection: WorkflowSelection | undefined) => void
 }
 
 /**
@@ -203,6 +231,8 @@ export function useUsageFilters(): UsageFilterControls {
     granularityOverride.value ?? automaticGranularity(range.value),
   )
 
+  const workflowSelection = computed(() => workflowSelectionFromToken(route.query.workflowId))
+
   // replace rather than push: a filter is a way of looking at one page, not a
   // place of its own, so Back should leave the page rather than undo a click
   function selectPreset(next: UsagePreset) {
@@ -228,14 +258,23 @@ export function useUsageFilters(): UsageFilterControls {
     router.replace({ query: { ...rest, ...(next ? { granularity: next } : {}) } })
   }
 
+  // the range and the bucket width are left alone: the three are independent,
+  // and a reader picking a workflow has not asked to see a different period
+  function selectWorkflow(next: WorkflowSelection | undefined) {
+    const { workflowId: _workflowId, ...rest } = route.query
+    router.replace({ query: { ...rest, ...(next === undefined ? {} : { workflowId: String(next) }) } })
+  }
+
   return {
     preset,
     isCustom,
     range,
     granularity,
     granularityOverride,
+    workflowSelection,
     selectPreset,
     selectCustomRange,
     selectGranularity,
+    selectWorkflow,
   }
 }

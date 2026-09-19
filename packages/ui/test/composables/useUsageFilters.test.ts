@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { automaticGranularity, presetRange, rangeFromSelection } from '../../app/composables/useUsageFilters'
+import { automaticGranularity, presetRange, rangeFromSelection, workflowSelectionFromToken } from '../../app/composables/useUsageFilters'
 
 /** A Wednesday, well inside a month, so nothing hinges on a boundary. */
 const TODAY = new Date('2026-09-16T18:30:00.000Z')
@@ -94,5 +94,41 @@ describe('automaticGranularity', () => {
 
   it('buckets by month rather than guessing when a bound cannot be read', () => {
     expect(automaticGranularity({ from: 'yesterday', to: '2026-09-16' }, TODAY)).toBe('month')
+  })
+})
+
+describe('workflowSelectionFromToken', () => {
+  it('reads an identifier as the number it is', () => {
+    expect(workflowSelectionFromToken('3')).toBe(3)
+    expect(workflowSelectionFromToken('42')).toBe(42)
+  })
+
+  it('reads the Unknown workflow token', () => {
+    expect(workflowSelectionFromToken('unknown')).toBe('unknown')
+  })
+
+  it('is nothing selected when the URL says nothing', () => {
+    expect(workflowSelectionFromToken(undefined)).toBeUndefined()
+    expect(workflowSelectionFromToken('')).toBeUndefined()
+  })
+
+  it.each([
+    ['abc'],
+    ['Unknown'],
+    ['-1'],
+    ['0'],
+    ['1.5'],
+    ['0x10'],
+    ['1e3'],
+    [' 3'],
+  ])('reads %s as nothing selected rather than as an error', (token) => {
+    // the server refuses these with a 400, but a reader who lands on a
+    // mangled link should see the page rather than an error, exactly as an
+    // unreadable preset or bucket width already gives them the default
+    expect(workflowSelectionFromToken(token)).toBeUndefined()
+  })
+
+  it('is nothing selected when the parameter is repeated', () => {
+    expect(workflowSelectionFromToken(['3', '4'])).toBeUndefined()
   })
 })

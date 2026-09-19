@@ -150,3 +150,45 @@ describe('own usage page', () => {
     })
   })
 })
+
+describe('own usage narrowed to one workflow', () => {
+  it('asks the endpoint for the workflow the URL names', async () => {
+    await mountPage('/?range=7d&workflowId=3')
+
+    await vi.waitFor(() => {
+      expect(lastQuery.workflowId).toBe('3')
+    })
+    // alongside the range and the width, which it does not disturb
+    expect(daysApart(lastQuery.from!, lastQuery.to!)).toBe(6)
+    expect(lastQuery.granularity).toBe('day')
+  })
+
+  it('asks for the Unknown workflow by the word it travels under', async () => {
+    await mountPage('/?range=7d&workflowId=unknown')
+
+    await vi.waitFor(() => {
+      expect(lastQuery.workflowId).toBe('unknown')
+    })
+  })
+
+  // Each of these needs a range no earlier test has fetched: one query cache
+  // backs every mount in this file, so a repeated key is served from it, the
+  // endpoint is never called, and `lastQuery` still holds the last request. The
+  // whole query is asserted for the same reason -- a stale one cannot pass.
+  it('asks for every workflow when none is named', async () => {
+    await mountPage('/?from=2026-07-01&to=2026-07-10')
+
+    await vi.waitFor(() => {
+      expect(lastQuery).toEqual({ from: '2026-07-01', to: '2026-07-10', granularity: 'day' })
+    })
+  })
+
+  it('asks for every workflow when the URL names one it cannot read', async () => {
+    // the server would refuse `abc` with a 400; the page never sends it
+    await mountPage('/?from=2026-06-01&to=2026-06-10&workflowId=abc')
+
+    await vi.waitFor(() => {
+      expect(lastQuery).toEqual({ from: '2026-06-01', to: '2026-06-10', granularity: 'day' })
+    })
+  })
+})

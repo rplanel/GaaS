@@ -143,3 +143,86 @@ describe('usage filters', () => {
     expect(emitted(selectCounts(OWNER, { to: TO })).params).toEqual([OWNER, TO_PARAM])
   })
 })
+
+describe('workflow selection SQL', () => {
+  /** The dimensions a selection narrows: counts, and both halves of the trend. */
+  const narrowed = (selection: number | 'unknown') => [
+    selectCounts(OWNER, { workflowSelection: selection }),
+    selectTrendBuckets(OWNER, 'day', { workflowSelection: selection }),
+    selectTrendRange(OWNER, { workflowSelection: selection }),
+  ]
+
+  it('narrows counts and both halves of the trend to one identifier', () => {
+    for (const query of narrowed(3)) {
+      const { sql, params } = emitted(query)
+
+      expect(sql).toMatch(/"workflow_id" = \$\d/)
+      expect(params).toEqual([OWNER, 3])
+    }
+  })
+
+  it('narrows the trend span too, so an all-time trend spans that workflow and not the deployment', () => {
+    // the span query decides how far the axis reaches when no range is asked
+    // for; unnarrowed it would draw one bar in an axis spanning every analysis
+    expect(emitted(selectTrendRange(OWNER, { workflowSelection: 3 })).sql).toMatch(/"workflow_id" = \$\d/)
+  })
+
+  it('selects the Unknown workflow as a workflow that carried no name, not as a nameless row', () => {
+    for (const query of narrowed('unknown')) {
+      const { sql } = emitted(query)
+
+      // a workflow deleted halfway through its life keeps its name and its
+      // nameless rows sit inside its named row, so a bare `workflow_name is
+      // null` would select rows that appear under a named workflow
+      expect(sql).toContain('not exists')
+      expect(sql).toContain('"workflow_name" is not null')
+      expect(sql).not.toMatch(/"analysis_monitoring"\."workflow_name" is null/)
+    }
+  })
+
+  it('correlates the Unknown subquery on the workflow, so it asks about that workflow alone', () => {
+    const { sql } = emitted(selectCounts(OWNER, { workflowSelection: 'unknown' }))
+
+    expect(sql).toMatch(/"named"\."workflow_id" = "galaxy"\."analysis_monitoring"\."workflow_id"/)
+  })
+
+  it('judges namelessness over the same owner and range the table itself shows', () => {
+    const { sql, params } = emitted(selectCounts(OWNER, { from: FROM, to: TO, workflowSelection: 'unknown' }))
+
+    // otherwise `unknown` selects something other than the Unknown row on
+    // screen, and the picker stops agreeing with what it picked
+    const subquery = sql.slice(sql.indexOf('not exists'))
+    expect(subquery).toMatch(/"named"\."owner_id" = \$\d/)
+    expect(subquery).toMatch(/"named"\."started_at" >= \$\d/)
+    expect(subquery).toMatch(/"named"\."started_at" < \$\d/)
+    // owner and range bound once for the outer query and once for the subquery
+    expect(params).toEqual([OWNER, FROM_PARAM, TO_PARAM, OWNER, FROM_PARAM, TO_PARAM])
+  })
+
+  it('binds no owner in the Unknown subquery for the admin endpoint', () => {
+    const { params } = emitted(selectCounts(undefined, { from: FROM, to: TO, workflowSelection: 'unknown' }))
+
+    expect(params).toEqual([FROM_PARAM, TO_PARAM, FROM_PARAM, TO_PARAM])
+  })
+})
+
+describe('per-workflow usage ignores the workflow selection', () => {
+  // The invariant this whole dimension rests on: the table is the list a
+  // reader picks from, so it must go on showing every workflow in range. It is
+  // a discipline rather than a type, because a narrow parameter type does not
+  // survive TypeScript's structural typing -- the wider object still carries
+  // the field at runtime. This test is what stands in for the compiler.
+  it.each([
+    ['an identifier', 3 as const],
+    ['the Unknown workflow', 'unknown' as const],
+  ])('emits no workflow predicate when %s is selected', (_label, selection) => {
+    const { sql, params } = emitted(selectWorkflowUsage(OWNER, { from: FROM, to: TO, workflowSelection: selection }))
+
+    // grouping by workflow_id is this dimension's own doing, so what must be
+    // absent is a comparison against it, not the column
+    expect(sql).not.toMatch(/"workflow_id" = \$\d/)
+    expect(sql).not.toContain('not exists')
+    // and the range it does honour is still there, bound exactly once
+    expect(params).toEqual([OWNER, FROM_PARAM, TO_PARAM])
+  })
+})

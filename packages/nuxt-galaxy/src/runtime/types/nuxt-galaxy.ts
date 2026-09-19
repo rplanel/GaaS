@@ -153,6 +153,25 @@ export function isTrendGranularity(value: unknown): value is TrendGranularity {
   return (TREND_GRANULARITIES as readonly unknown[]).includes(value)
 }
 
+/**
+ * The token standing for the Unknown workflow bucket wherever a workflow is
+ * named by its identifier. The bucket has no identifier of its own -- every
+ * monitoring row carries a workflow id, and what makes one unknown is a
+ * workflow name that was never recorded -- so it travels as a word instead.
+ */
+export const UNKNOWN_WORKFLOW_SELECTION = 'unknown'
+
+/**
+ * The one workflow version that counts and trend are narrowed to, named by its
+ * local identifier or by the Unknown workflow token.
+ *
+ * A selection rather than a filter: it is picked out of the per-workflow
+ * table, which is never narrowed by it, because a list that hid the options a
+ * reader did not pick could not be the thing they pick from. Absent means all
+ * workflows.
+ */
+export type WorkflowSelection = number | typeof UNKNOWN_WORKFLOW_SELECTION
+
 export interface AnalysisMonitoringStats extends AnalysisMonitoringCounts {
   perWorkflow: AnalysisMonitoringWorkflowUsage[]
   trend: AnalysisMonitoringTrendPoint[]

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseTrendGranularity, parseUsageFilters } from '../../../src/runtime/server/utils/usageFilters'
+import { parseTrendGranularity, parseUsageFilters, parseWorkflowSelection } from '../../../src/runtime/server/utils/usageFilters'
 
 describe('parseUsageFilters', () => {
   it('asks for nothing when neither bound is given', () => {
@@ -76,6 +76,61 @@ describe('parseTrendGranularity', () => {
 
   it('rejects a repeated parameter with 400 rather than picking one of them', () => {
     expect(() => parseTrendGranularity({ granularity: ['day', 'month'] }))
+      .toThrowError(expect.objectContaining({ statusCode: 400 }))
+  })
+})
+
+describe('parseWorkflowSelection', () => {
+  it('selects every workflow when nothing is asked for', () => {
+    expect(parseWorkflowSelection({})).toBeUndefined()
+  })
+
+  it('selects every workflow when the parameter is present but empty', () => {
+    // `?workflowId=` is a parameter nobody chose, as `?from=` and
+    // `?granularity=` already are
+    expect(parseWorkflowSelection({ workflowId: '' })).toBeUndefined()
+  })
+
+  it('reads an identifier as the number it is', () => {
+    expect(parseWorkflowSelection({ workflowId: '3' })).toBe(3)
+    expect(parseWorkflowSelection({ workflowId: '42' })).toBe(42)
+  })
+
+  it('reads the Unknown workflow token', () => {
+    // the bucket has no identifier of its own, so it travels as a word
+    expect(parseWorkflowSelection({ workflowId: 'unknown' })).toBe('unknown')
+  })
+
+  it.each([
+    ['abc'],
+    ['Unknown'],
+    ['-1'],
+    ['1.5'],
+    ['3,4'],
+    ['+3'],
+    [' 3'],
+  ])('rejects %s with 400', (value) => {
+    expect(() => parseWorkflowSelection({ workflowId: value }))
+      .toThrowError(expect.objectContaining({ statusCode: 400 }))
+  })
+
+  it('rejects zero with 400, because identifiers start at one', () => {
+    expect(() => parseWorkflowSelection({ workflowId: '0' }))
+      .toThrowError(expect.objectContaining({ statusCode: 400 }))
+  })
+
+  it.each([
+    ['0x10'],
+    ['1e3'],
+  ])('rejects %s rather than reading it as a number some other way', (value) => {
+    // Number() would take these for 16 and 1000; an identifier in a URL is
+    // written in plain digits or it is a mistake
+    expect(() => parseWorkflowSelection({ workflowId: value }))
+      .toThrowError(expect.objectContaining({ statusCode: 400 }))
+  })
+
+  it('rejects a repeated parameter with 400 rather than picking one of them', () => {
+    expect(() => parseWorkflowSelection({ workflowId: ['3', '4'] }))
       .toThrowError(expect.objectContaining({ statusCode: 400 }))
   })
 })
