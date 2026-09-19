@@ -21,15 +21,19 @@ const computedBreadcrumbsItems = computed(() => {
   ]
 })
 
-// the URL holds which range and bucket width are on screen, so the filter
-// controls and this query read the same source and a link carries the view it
-// was copied from
-const { range, granularity } = useUsageFilters()
+// the URL holds which range, bucket width and workflow are on screen, so the
+// filter controls, the picker inside the panel and this query all read the
+// same source and a link carries the view it was copied from
+const { range, granularity, workflowSelection } = useUsageFilters()
 
 // refetch, not refresh: refresh honours the stale window, so pressing the
 // button moments after the page loaded would return the cached numbers.
 const { data: stats, isLoading, error, refetch } = useQuery(() =>
-  ownUsageStatisticsQuery({ range: range.value, granularity: granularity.value }),
+  ownUsageStatisticsQuery({
+    range: range.value,
+    granularity: granularity.value,
+    workflowSelection: workflowSelection.value,
+  }),
 )
 
 const { errorMessage } = useErrorMessage(error)

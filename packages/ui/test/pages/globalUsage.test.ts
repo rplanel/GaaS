@@ -164,3 +164,16 @@ describe('global usage over a range and a granularity', () => {
     })
   })
 })
+
+describe('global usage narrowed to one workflow', () => {
+  it('narrows the global view to one workflow too', async () => {
+    userRole.value = 'admin'
+    respond = () => GLOBAL_STATS
+
+    await mountPage('/?range=7d&workflowId=5')
+
+    await vi.waitFor(() => {
+      expect(lastQuery.workflowId).toBe('5')
+    })
+  })
+})

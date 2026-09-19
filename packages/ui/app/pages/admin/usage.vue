@@ -27,10 +27,10 @@ const supabase = useSupabaseClient<Database>()
 const { userRole } = useUserRole(supabase)
 const isAdmin = computed(() => userRole.value === 'admin')
 
-// the URL holds which range and bucket width are on screen, so the filter
-// controls and this query read the same source and a link carries the view it
-// was copied from
-const { range, granularity } = useUsageFilters()
+// the URL holds which range, bucket width and workflow are on screen, so the
+// filter controls, the picker inside the panel and this query all read the
+// same source and a link carries the view it was copied from
+const { range, granularity, workflowSelection } = useUsageFilters()
 
 // The endpoint answers 403 to anyone else, so asking before the role claim says
 // admin only buys a refusal. The claim is still only a hint: should it disagree
@@ -41,7 +41,11 @@ const { range, granularity } = useUsageFilters()
 // refetch, not refresh: refresh honours the stale window, so pressing the
 // button moments after the page loaded would return the cached numbers.
 const { data: stats, isLoading, error, refetch } = useQuery(() => ({
-  ...globalUsageStatisticsQuery({ range: range.value, granularity: granularity.value }),
+  ...globalUsageStatisticsQuery({
+    range: range.value,
+    granularity: granularity.value,
+    workflowSelection: workflowSelection.value,
+  }),
   enabled: isAdmin.value,
 }))
 

@@ -1,7 +1,8 @@
 import type { AnalysisMonitoringStats } from 'nuxt-galaxy'
 import { UApp } from '#components'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { shallowRef } from 'vue'
 import UsageStatisticsPanel from '../../app/components/usage/UsageStatisticsPanel.vue'
 
 /** Nine analyses: five Succeeded, two Failed, one Cancelled, one still Pending. */
@@ -59,12 +60,13 @@ const STATS: AnalysisMonitoringStats = {
 async function mountPanel(
   stats: AnalysisMonitoringStats | undefined,
   extraProps: Record<string, unknown> = {},
+  route?: string,
 ) {
   return mountSuspended({
     components: { UApp, UsageStatisticsPanel },
     setup: () => ({ panelProps: { stats, ...extraProps } }),
     template: '<UApp><UsageStatisticsPanel v-bind="panelProps" /></UApp>',
-  })
+  }, route ? { route } : undefined)
 }
 
 function tile(wrapper: Awaited<ReturnType<typeof mountPanel>>, key: string) {
@@ -247,5 +249,268 @@ describe('usageStatisticsPanel', () => {
     expect(wrapper.text()).toContain('Could not load usage statistics')
     expect(wrapper.text()).toContain('Service unavailable')
     expect(wrapper.find('[data-testid="usage-loading"]').exists()).toBe(false)
+  })
+})
+
+/** The row for one workflow, found by the name it renders. */
+function row(wrapper: Awaited<ReturnType<typeof mountPanel>>, name: string) {
+  return wrapper.findAll('tbody tr').find(candidate => candidate.text().includes(name))
+}
+
+function query(wrapper: Awaited<ReturnType<typeof mountPanel>>) {
+  return (wrapper.vm.$router as unknown as { currentRoute: { value: { query: Record<string, string> } } })
+    .currentRoute
+    .value
+    .query
+}
+
+describe('the per-workflow table as the workflow picker', () => {
+  it('selects the workflow whose row is clicked, in the URL', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/')
+
+    await row(wrapper, 'Bacterial assembly')!.trigger('click')
+
+    await vi.waitFor(() => {
+      expect(query(wrapper).workflowId).toBe('7')
+    })
+  })
+
+  it('selects the Unknown workflow, which is a row like any other', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/')
+
+    await row(wrapper, 'Unknown workflow')!.trigger('click')
+
+    // it has no identifier of its own, so it travels as a word
+    await vi.waitFor(() => {
+      expect(query(wrapper).workflowId).toBe('unknown')
+    })
+  })
+
+  it('clears the selection when the selected row is clicked again', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/?workflowId=7')
+
+    await row(wrapper, 'Bacterial assembly')!.trigger('click')
+
+    await vi.waitFor(() => {
+      expect(query(wrapper).workflowId).toBeUndefined()
+    })
+  })
+
+  it('highlights the selected row, and only that one', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/?workflowId=9')
+
+    expect(row(wrapper, 'Read quality control')!.attributes('data-selected')).toBe('true')
+    expect(row(wrapper, 'Bacterial assembly')!.attributes('data-selected')).toBe('false')
+  })
+
+  it('marks the selected row by more than its colour', async () => {
+    // a tint alone says nothing to a reader who cannot see it, and nothing at
+    // all to one who cannot distinguish it
+    const wrapper = await mountPanel(STATS, {}, '/?workflowId=9')
+
+    const selected = row(wrapper, 'Read quality control')!
+    expect(selected.find('[data-testid="usage-workflow-selected-bar"]').exists()).toBe(true)
+    expect(selected.find('.sr-only').text()).toBe('Selected')
+  })
+
+  it('says the rows can be clicked, and what clicking one does', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/')
+
+    // the hover tint reaches nobody on a touch screen, and no amount of
+    // styling explains which part of the page a click would change
+    expect(wrapper.find('[data-testid="usage-per-workflow-hint"]').text())
+      .toContain('narrow the tiles and the trend')
+  })
+
+  it('gives a clickable row the cursor that says so', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/')
+
+    expect(row(wrapper, 'Bacterial assembly')!.classes().join(' ')).toContain('cursor-pointer')
+  })
+
+  it('makes every row reachable from the keyboard', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/')
+    const target = row(wrapper, 'Bacterial assembly')!
+
+    expect(target.attributes('tabindex')).toBe('0')
+    expect(target.attributes('role')).toBe('button')
+  })
+
+  it.each([
+    ['Enter'],
+    [' '],
+  ])('selects the focused row on %s, which the table itself does not handle', async (key) => {
+    // it announces every row as a button and gives it a tab stop, but binds
+    // only a click: a reader would tab onto a button that does nothing
+    const wrapper = await mountPanel(STATS, {}, '/')
+
+    await row(wrapper, 'Bacterial assembly')!.trigger('keydown', { key })
+
+    await vi.waitFor(() => {
+      expect(query(wrapper).workflowId).toBe('7')
+    })
+  })
+
+  it('clears the selection when the selected row is activated again from the keyboard', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/?workflowId=7')
+
+    await row(wrapper, 'Bacterial assembly')!.trigger('keydown', { key: 'Enter' })
+
+    await vi.waitFor(() => {
+      expect(query(wrapper).workflowId).toBeUndefined()
+    })
+  })
+
+  it('leaves other keys alone, so the page still scrolls and sorts', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/')
+
+    await row(wrapper, 'Bacterial assembly')!.trigger('keydown', { key: 'ArrowDown' })
+    await row(wrapper, 'Bacterial assembly')!.trigger('keydown', { key: 'Tab' })
+
+    expect(query(wrapper).workflowId).toBeUndefined()
+  })
+
+  it('marks no row when every workflow is counted', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/')
+
+    expect(wrapper.find('[data-testid="usage-workflow-selected-bar"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="usage-per-workflow"] .sr-only').exists()).toBe(false)
+  })
+
+  it('moves the mark when the selection moves', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/?workflowId=9')
+
+    await row(wrapper, 'Bacterial assembly')!.trigger('click')
+
+    await vi.waitFor(() => {
+      expect(query(wrapper).workflowId).toBe('7')
+    })
+    await vi.waitFor(() => {
+      expect(row(wrapper, 'Bacterial assembly')!.find('[data-testid="usage-workflow-selected-bar"]').exists()).toBe(true)
+    })
+    expect(row(wrapper, 'Read quality control')!.find('[data-testid="usage-workflow-selected-bar"]').exists()).toBe(false)
+  })
+
+  it('goes on listing every workflow while one is selected, because it is the picker', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/?workflowId=7')
+
+    // the response is unnarrowed by design; a table that hid the rest would
+    // leave a reader nothing to pick next
+    expect(wrapper.find('[data-testid="usage-per-workflow"]').text()).toContain('Read quality control')
+    expect(wrapper.find('[data-testid="usage-per-workflow"]').text()).toContain('Unknown workflow')
+  })
+
+  it('leaves the range and the bucket width alone when a workflow is picked', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/?range=7d&granularity=week')
+
+    await row(wrapper, 'Bacterial assembly')!.trigger('click')
+
+    await vi.waitFor(() => {
+      expect(query(wrapper).workflowId).toBe('7')
+    })
+    expect(query(wrapper).range).toBe('7d')
+    expect(query(wrapper).granularity).toBe('week')
+  })
+})
+
+describe('what the tiles are counting', () => {
+  it('says nothing while every workflow is counted', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/')
+
+    expect(wrapper.find('[data-testid="usage-workflow-chip"]').exists()).toBe(false)
+  })
+
+  it('names the selected workflow and its version above the tiles', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/?workflowId=7')
+    const html = wrapper.html()
+
+    expect(wrapper.find('[data-testid="usage-workflow-chip"]').text()).toContain('Bacterial assembly 1.2')
+    // above them, because it explains them
+    expect(html.indexOf('usage-workflow-chip')).toBeLessThan(html.indexOf('usage-tile-total'))
+  })
+
+  it('names the Unknown workflow in the glossary\'s words, not the raw value', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/?workflowId=unknown')
+
+    expect(wrapper.find('[data-testid="usage-workflow-chip"]').text()).toContain('Unknown workflow')
+  })
+
+  it('clears the selection when its × is pressed', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/?workflowId=7')
+
+    await wrapper.find('[data-testid="usage-workflow-clear"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(query(wrapper).workflowId).toBeUndefined()
+    })
+  })
+
+  it('keeps naming a workflow the response has stopped listing', async () => {
+    // mounted against a source the test can change, because the panel reads
+    // `stats` as a prop and a new response is what this is about
+    const stats = shallowRef<AnalysisMonitoringStats>(STATS)
+    const wrapper = await mountSuspended({
+      components: { UApp, UsageStatisticsPanel },
+      setup: () => ({ stats }),
+      template: '<UApp><UsageStatisticsPanel :stats="stats" /></UApp>',
+    }, { route: '/?workflowId=7' })
+
+    expect(wrapper.find('[data-testid="usage-workflow-chip"]').text()).toContain('Bacterial assembly')
+
+    // the range moved to a window holding nothing of this workflow, though
+    // other workflows still ran in it: the tiles read zero, and the chip must
+    // still say what the zero is about
+    stats.value = {
+      ...STATS,
+      total: 0,
+      success: 0,
+      error: 0,
+      cancelled: 0,
+      pending: 0,
+      perWorkflow: [{ ...STATS.perWorkflow[2]! }],
+    }
+
+    // wait on the numbers, not on the chip: waiting on the thing under test
+    // passes against the DOM as it was before Vue re-rendered
+    await vi.waitFor(() => {
+      expect(tile(wrapper, 'total').text()).toContain('0')
+    })
+    expect(wrapper.find('[data-testid="usage-workflow-chip"]').text()).toContain('Bacterial assembly')
+  })
+
+  it('shows zeroes and a way back when the selected workflow ran nothing in range', async () => {
+    // "no analyses yet" would be false -- the account is not empty, this
+    // workflow is -- and it would take away the chip and the table with it
+    const emptyForSelection: AnalysisMonitoringStats = {
+      ...STATS,
+      total: 0,
+      success: 0,
+      error: 0,
+      cancelled: 0,
+      pending: 0,
+    }
+    const wrapper = await mountPanel(emptyForSelection, {}, '/?workflowId=7')
+
+    expect(wrapper.text()).not.toContain('No analyses yet')
+    expect(tile(wrapper, 'total').text()).toContain('0')
+    expect(wrapper.find('[data-testid="usage-workflow-clear"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="usage-per-workflow"]').exists()).toBe(true)
+  })
+
+  it('still says there is nothing yet when there genuinely is not', async () => {
+    const wrapper = await mountPanel(
+      { ...STATS, total: 0, success: 0, error: 0, cancelled: 0, pending: 0, perWorkflow: [] },
+      {},
+      '/',
+    )
+
+    expect(wrapper.text()).toContain('No analyses yet')
+  })
+
+  it('falls back to the identifier on a cold load of a link into an empty range', async () => {
+    // nothing has ever told this panel what workflow 42 is called
+    const wrapper = await mountPanel({ ...STATS, perWorkflow: [] }, {}, '/?workflowId=42')
+
+    expect(wrapper.find('[data-testid="usage-workflow-chip"]').text()).toContain('Workflow 42')
   })
 })
