@@ -58,11 +58,21 @@ export function parseUsageFilters(query: Record<string, unknown>): UsageFilters 
   const lastDay = parseDay(query.to, 'to')
   const to = lastDay === undefined ? undefined : new Date(lastDay.getTime() + ONE_DAY_MS)
 
-  if (from !== undefined && to !== undefined) {
-    if (from.getTime() >= to.getTime()) {
-      throw createError({ statusCode: 400, statusMessage: '`from` must not come after `to`' })
-    }
-    if ((to.getTime() - from.getTime()) / ONE_DAY_MS > MAX_RANGE_DAYS) {
+  if (from !== undefined && to !== undefined && from.getTime() >= to.getTime()) {
+    throw createError({ statusCode: 400, statusMessage: '`from` must not come after `to`' })
+  }
+
+  // Measured against today when no end is named, because that is where the
+  // trend stops: an open-ended range means "since then", so `from` alone spans
+  // just as far as both ends do and has to be bounded just as hard. Capping
+  // only the two-ended case left `?from=0001-01-01` building a bucket per day
+  // since year one, which is the very thing the cap exists to refuse.
+  //
+  // An end alone needs no cap: the span then starts at the earliest analysis,
+  // so the data bounds it, as it did before any range could be asked for.
+  if (from !== undefined) {
+    const end = to ?? new Date()
+    if ((end.getTime() - from.getTime()) / ONE_DAY_MS > MAX_RANGE_DAYS) {
       throw createError({
         statusCode: 400,
         statusMessage: `a range may cover at most ${MAX_RANGE_DAYS} days`,
@@ -101,12 +111,24 @@ export function parseTrendGranularity(query: Record<string, unknown>): TrendGran
 }
 
 /**
- * A workflow identifier as a URL carries one: plain digits and nothing else.
+ * A workflow identifier as a URL carries one: plain digits, no leading zero.
  * `Number()` would take `0x10` for 16 and `1e3` for a thousand, and would read
  * ` 3` through its whitespace; an identifier written any of those ways is a
- * mistake rather than a request.
+ * mistake rather than a request, and `007` is a second spelling of a number
+ * that already has one.
+ *
+ * The leading digit also refuses `0` on its own: identifiers are `serial`, so
+ * they start at 1.
  */
-const WORKFLOW_ID = /^\d+$/
+const WORKFLOW_ID = /^[1-9]\d*$/
+
+/**
+ * The largest identifier the column can hold, `workflow_id` being `integer`.
+ * Past it Postgres refuses the bound parameter and the request dies as a 500,
+ * which is the wrong answer to input a reader typed: it is malformed, not
+ * broken, so it is refused here with the rest of the malformed values.
+ */
+const MAX_WORKFLOW_ID = 2_147_483_647
 
 /**
  * The one workflow a usage request narrows its counts and trend to, read from
@@ -128,8 +150,7 @@ export function parseWorkflowSelection(query: Record<string, unknown>): Workflow
     return UNKNOWN_WORKFLOW_SELECTION
   }
 
-  // zero is refused with the rest: identifiers are `serial`, so they start at 1
-  if (typeof value !== 'string' || !WORKFLOW_ID.test(value) || Number(value) === 0) {
+  if (typeof value !== 'string' || !WORKFLOW_ID.test(value) || Number(value) > MAX_WORKFLOW_ID) {
     throw createError({
       statusCode: 400,
       statusMessage: `\`workflowId\` must be a workflow identifier or \`${UNKNOWN_WORKFLOW_SELECTION}\``,

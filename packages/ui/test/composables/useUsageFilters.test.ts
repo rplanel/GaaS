@@ -128,6 +128,20 @@ describe('workflowSelectionFromToken', () => {
     expect(workflowSelectionFromToken(token)).toBeUndefined()
   })
 
+  it('reads the largest identifier the column can hold', () => {
+    expect(workflowSelectionFromToken('2147483647')).toBe(2_147_483_647)
+  })
+
+  it.each([
+    ['2147483648'],
+    ['99999999999999999999'],
+    ['007'],
+  ])('reads %s as nothing selected, the endpoint refusing it', (token) => {
+    // sending it would buy a 400 and an error banner where a URL nobody can
+    // read should simply show every workflow
+    expect(workflowSelectionFromToken(token)).toBeUndefined()
+  })
+
   it('is nothing selected when the parameter is repeated', () => {
     expect(workflowSelectionFromToken(['3', '4'])).toBeUndefined()
   })
