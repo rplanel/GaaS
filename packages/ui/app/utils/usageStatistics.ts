@@ -1,4 +1,4 @@
-import type { AnalysisMonitoringTrendPoint } from 'nuxt-galaxy'
+import type { AnalysisMonitoringTrendPoint, TrendGranularity } from 'nuxt-galaxy'
 
 /** Stands in for a success rate that has no value yet. */
 export const NO_SUCCESS_RATE_LABEL = '—'
@@ -125,12 +125,34 @@ export function trendSegments(trend: readonly AnalysisMonitoringTrendPoint[]): T
 }
 
 /**
- * What a reader sees on hovering one bucket: when it starts, how much ran, how
- * it turned out, and the rate. Only outcomes that occurred are listed. A rate
- * with no value is explained rather than shown as a bare dash, which carries
- * no meaning away from the tile that defines it.
+ * How wide a bucket is, in the words a reader hovering one needs.
+ *
+ * A month key names a month plainly and a day key names a day, but a week key
+ * is a date like any other: seven days of analyses under a label that reads as
+ * one. Saying so is the difference between a bar understood and a bar misread
+ * by a factor of seven.
  */
-export function trendBucketSummary(point: AnalysisMonitoringTrendPoint): string {
+export function trendBucketLabel(bucket: string, granularity: TrendGranularity): string {
+  return granularity === 'week' ? `Week of ${bucket}` : bucket
+}
+
+/** What the trend's axis is counting along, which the bucket width decides. */
+export const TREND_AXIS_LABELS = {
+  day: 'Day (UTC)',
+  week: 'Week starting (UTC)',
+  month: 'Month (UTC)',
+} as const satisfies Record<TrendGranularity, string>
+
+/**
+ * What a reader sees on hovering one bucket: which interval it is, how much
+ * ran, how it turned out, and the rate. Only outcomes that occurred are
+ * listed. A rate with no value is explained rather than shown as a bare dash,
+ * which carries no meaning away from the tile that defines it.
+ */
+export function trendBucketSummary(
+  point: AnalysisMonitoringTrendPoint,
+  granularity: TrendGranularity,
+): string {
   const breakdown = OUTCOME_FIELDS
     .filter(field => point[field.key] > 0)
     .map(field => `${point[field.key]} ${field.label}`)
@@ -138,7 +160,7 @@ export function trendBucketSummary(point: AnalysisMonitoringTrendPoint): string 
   const rate = formatSuccessRate(point)
 
   return [
-    `${point.bucket} (UTC)`,
+    `${trendBucketLabel(point.bucket, granularity)} (UTC)`,
     `${point.total} analyses`,
     ...(breakdown.length > 0 ? [breakdown.join(', ')] : []),
     `Success rate ${rate.label}${rate.tooltip ? ` (${rate.tooltip})` : ''}`,

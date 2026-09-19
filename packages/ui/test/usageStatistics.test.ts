@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatSuccessRate, trendBucketSummary, trendSegments, workflowUsageLabel } from '../app/utils/usageStatistics'
+import { formatSuccessRate, trendBucketLabel, trendBucketSummary, trendSegments, workflowUsageLabel } from '../app/utils/usageStatistics'
 
 describe('formatSuccessRate', () => {
   it('has no value until an analysis has finished, and says why', () => {
@@ -81,7 +81,7 @@ describe('trendBucketSummary', () => {
       cancelled: 0,
       pending: 0,
       successRate: 0.75,
-    })
+    }, 'day')
 
     expect(summary).toContain('2026-09-01')
     expect(summary).toContain('UTC')
@@ -101,11 +101,41 @@ describe('trendBucketSummary', () => {
       cancelled: 0,
       pending: 2,
       successRate: 0,
-    })
+    }, 'day')
 
     expect(summary).toContain('2 Pending')
     // the dash carries the same meaning here as in a tile, and is explained
     expect(summary).toContain('Success rate —')
     expect(summary).toContain('No completed analyses yet')
+  })
+})
+
+describe('trendBucketLabel', () => {
+  it('leaves a day as the date it is', () => {
+    expect(trendBucketLabel('2026-09-01', 'day')).toBe('2026-09-01')
+  })
+
+  it('leaves a month as the month it plainly is', () => {
+    expect(trendBucketLabel('2026-09', 'month')).toBe('2026-09')
+  })
+
+  it('says a week is a week, its key being a date like any other', () => {
+    // seven days of analyses under a label that otherwise reads as one day,
+    // which is a bar misread by a factor of seven
+    expect(trendBucketLabel('2026-08-24', 'week')).toBe('Week of 2026-08-24')
+  })
+
+  it('carries that into what a reader sees on hovering the bar', () => {
+    const summary = trendBucketSummary({
+      bucket: '2026-08-24',
+      total: 12,
+      success: 12,
+      error: 0,
+      cancelled: 0,
+      pending: 0,
+      successRate: 1,
+    }, 'week')
+
+    expect(summary).toContain('Week of 2026-08-24 (UTC)')
   })
 })

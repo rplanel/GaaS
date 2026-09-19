@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { AnalysisMonitoringTrendPoint } from 'nuxt-galaxy'
+import type { AnalysisMonitoringTrendPoint, TrendGranularity } from 'nuxt-galaxy'
 import { ObservablePlotRender } from '#components'
 import * as Plot from '@observablehq/plot'
 import { useElementSize } from '@vueuse/core'
-import { OUTCOME_FIELDS, trendBucketSummary, trendSegments } from '../../utils/usageStatistics'
+import { OUTCOME_FIELDS, TREND_AXIS_LABELS, trendBucketSummary, trendSegments } from '../../utils/usageStatistics'
 
 interface Props {
   /**
@@ -11,6 +11,11 @@ interface Props {
    * granularity the response carries is what gets drawn.
    */
   trend: AnalysisMonitoringTrendPoint[]
+  /**
+   * How wide each of those buckets is. Not inferable from the points: a day
+   * key and a week key are both a date, and one bucket could be either.
+   */
+  granularity: TrendGranularity
 }
 
 const props = defineProps<Props>()
@@ -44,7 +49,7 @@ const hoverTargets = computed(() => {
   return props.trend.map(point => ({
     bucket: point.bucket,
     extent: tallest,
-    summary: trendBucketSummary(point),
+    summary: trendBucketSummary(point, props.granularity),
   }))
 })
 
@@ -57,7 +62,7 @@ const plotOptions = computed(() => ({
     // band, because a bucket is a labelled interval rather than an instant
     type: 'band' as const,
     domain: buckets.value,
-    label: 'Bucket start (UTC)',
+    label: TREND_AXIS_LABELS[props.granularity],
     tickRotate: -35,
   },
   y: {

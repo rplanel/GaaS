@@ -74,7 +74,7 @@ const trend = computed(() => props.stats?.trend ?? [])
  * carries the view it was copied from. Read here rather than passed in,
  * because the table this panel owns is the thing a reader picks from.
  */
-const { workflowSelection, selectWorkflow } = useUsageFilters()
+const { granularity, workflowSelection, selectWorkflow } = useUsageFilters()
 
 /**
  * True once statistics have arrived and there is nothing in them at all. Zero
@@ -360,7 +360,7 @@ const perWorkflowColumns = computed<TableColumn<AnalysisMonitoringWorkflowUsage>
         <h3 class="text-sm font-semibold">
           Analyses over time
         </h3>
-        <UsageTrendChart :trend="trend" />
+        <UsageTrendChart :trend="trend" :granularity="granularity" />
       </div>
 
       <div
