@@ -404,7 +404,20 @@ describe('the per-workflow table as the workflow picker', () => {
     expect(row(wrapper, 'Read quality control')!.find('[data-testid="usage-workflow-selected-bar"]').exists()).toBe(false)
   })
 
-  it('goes on listing every workflow while one is selected, because it is the picker', async () => {
+  it('keeps a deleted workflow selectable, the rows coming from the response', async () => {
+    // nothing here consults the live workflows table, so a workflow that no
+    // longer exists is picked exactly like one that does
+    const deleted = { ...STATS.perWorkflow[0]!, workflowId: 404, name: 'Retired assembly', version: '0.9' }
+    const wrapper = await mountPanel({ ...STATS, perWorkflow: [deleted] }, {}, '/')
+
+    await row(wrapper, 'Retired assembly')!.trigger('click')
+
+    await vi.waitFor(() => {
+      expect(query(wrapper).workflowId).toBe('404')
+    })
+  })
+
+  it('goes on listing every workflow while one is selected, because it is the list picked from', async () => {
     const wrapper = await mountPanel(STATS, {}, '/?workflowId=7')
 
     // the response is unnarrowed by design; a table that hid the rest would
@@ -508,6 +521,21 @@ describe('what the tiles are counting', () => {
     expect(tile(wrapper, 'total').text()).toContain('0')
     expect(wrapper.find('[data-testid="usage-workflow-clear"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="usage-per-workflow"]').exists()).toBe(true)
+  })
+
+  it('leaves a way back when the whole range is empty and a workflow is selected', async () => {
+    // the narrower fix above covered only the case where other workflows ran:
+    // here nothing ran at all, so the counts and the rows both read empty
+    // while a selection is still in force, and "no analyses yet" would strand
+    // the reader on the URL again
+    const wrapper = await mountPanel(
+      { ...STATS, total: 0, success: 0, error: 0, cancelled: 0, pending: 0, perWorkflow: [] },
+      {},
+      '/?workflowId=7',
+    )
+
+    expect(wrapper.text()).not.toContain('No analyses yet')
+    expect(wrapper.find('[data-testid="usage-workflow-clear"]').exists()).toBe(true)
   })
 
   it('still says there is nothing yet when there genuinely is not', async () => {

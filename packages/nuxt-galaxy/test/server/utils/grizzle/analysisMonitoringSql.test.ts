@@ -218,8 +218,9 @@ describe('per-workflow usage ignores the workflow selection', () => {
   ])('emits no workflow predicate when %s is selected', (_label, selection) => {
     const { sql, params } = emitted(selectWorkflowUsage(OWNER, { from: FROM, to: TO, workflowSelection: selection }))
 
-    // grouping by workflow_id is the dimension's own doing, not a narrowing
-    expect(sql.slice(sql.indexOf('where'), sql.indexOf('group by'))).not.toContain('workflow_id')
+    // grouping by workflow_id is this dimension's own doing, so what must be
+    // absent is a comparison against it, not the column
+    expect(sql).not.toMatch(/"workflow_id" = \$\d/)
     expect(sql).not.toContain('not exists')
     // and the range it does honour is still there, bound exactly once
     expect(params).toEqual([OWNER, FROM_PARAM, TO_PARAM])

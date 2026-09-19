@@ -141,9 +141,6 @@ export function automaticGranularity(
   return 'month'
 }
 
-/** The word the Unknown workflow bucket travels under, having no identifier. */
-const UNKNOWN_WORKFLOW = 'unknown'
-
 /** An identifier as a URL carries one: plain digits, and at least one. */
 const WORKFLOW_ID = /^\d+$/
 

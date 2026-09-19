@@ -172,18 +172,6 @@ export const UNKNOWN_WORKFLOW_SELECTION = 'unknown'
  */
 export type WorkflowSelection = number | typeof UNKNOWN_WORKFLOW_SELECTION
 
-/**
- * Whether a value is one a workflow selection can take. Identifiers are
- * `serial`, so they start at 1: zero and below are as malformed as a word that
- * is not the token.
- */
-export function isWorkflowSelection(value: unknown): value is WorkflowSelection {
-  if (value === UNKNOWN_WORKFLOW_SELECTION) {
-    return true
-  }
-  return typeof value === 'number' && Number.isInteger(value) && value > 0
-}
-
 export interface AnalysisMonitoringStats extends AnalysisMonitoringCounts {
   perWorkflow: AnalysisMonitoringWorkflowUsage[]
   trend: AnalysisMonitoringTrendPoint[]

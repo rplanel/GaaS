@@ -28,8 +28,8 @@ const { userRole } = useUserRole(supabase)
 const isAdmin = computed(() => userRole.value === 'admin')
 
 // the URL holds which range, bucket width and workflow are on screen, so the
-// filter controls, the picker inside the panel and this query all read the
-// same source and a link carries the view it was copied from
+// filter controls, the per-workflow table inside the panel and this query all
+// read the same source and a link carries the view it was copied from
 const { range, granularity, workflowSelection } = useUsageFilters()
 
 // The endpoint answers 403 to anyone else, so asking before the role claim says

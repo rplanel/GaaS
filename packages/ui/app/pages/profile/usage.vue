@@ -22,8 +22,8 @@ const computedBreadcrumbsItems = computed(() => {
 })
 
 // the URL holds which range, bucket width and workflow are on screen, so the
-// filter controls, the picker inside the panel and this query all read the
-// same source and a link carries the view it was copied from
+// filter controls, the per-workflow table inside the panel and this query all
+// read the same source and a link carries the view it was copied from
 const { range, granularity, workflowSelection } = useUsageFilters()
 
 // refetch, not refresh: refresh honours the stale window, so pressing the

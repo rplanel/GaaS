@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { AnalysisMonitoringCounts, AnalysisMonitoringStats, AnalysisMonitoringWorkflowUsage, WorkflowSelection } from 'nuxt-galaxy'
-import { formatSuccessRate, OUTCOME_FIELDS, UNKNOWN_WORKFLOW_LABEL, workflowUsageLabel } from '../../utils/usageStatistics'
+import { formatSuccessRate, OUTCOME_FIELDS, UNKNOWN_WORKFLOW, UNKNOWN_WORKFLOW_LABEL, workflowUsageLabel } from '../../utils/usageStatistics'
 import ColumnTableSort from '../ColumnTableSort.vue'
 import UsageOutcomeBar from './UsageOutcomeBar.vue'
 import UsageStatTile from './UsageStatTile.vue'
@@ -69,23 +69,6 @@ const perWorkflow = computed(() => props.stats?.perWorkflow ?? [])
 const trend = computed(() => props.stats?.trend ?? [])
 
 /**
- * True once statistics have arrived and there is nothing in them at all. Zero
- * tiles would read as a broken page, so the panel invites the user to start an
- * analysis instead.
- *
- * Per-workflow usage is the test rather than the total, because the total is
- * narrowed by a workflow selection and per-workflow usage never is: a selected
- * workflow that ran nothing in this range brings the total to zero while the
- * account is not empty at all. Telling that reader "no analyses yet" would be
- * false, and would take away the chip and the table they need to get back.
- * With nothing selected the two agree, so this is the same page as before.
- */
-const hasNothingYet = computed(() => props.stats?.total === 0 && perWorkflow.value.length === 0)
-
-/** Most-used workflow first, which is what a reader looks for. */
-const sorting = ref([{ id: 'total', desc: true }])
-
-/**
  * The selection lives in the URL, as the range and the bucket width do, so
  * this panel and the filter controls beside it read one source and a link
  * carries the view it was copied from. Read here rather than passed in,
@@ -94,11 +77,34 @@ const sorting = ref([{ id: 'total', desc: true }])
 const { workflowSelection, selectWorkflow } = useUsageFilters()
 
 /**
+ * True once statistics have arrived and there is nothing in them at all. Zero
+ * tiles would read as a broken page, so the panel invites the user to start an
+ * analysis instead.
+ *
+ * Neither the total nor the rows decide it alone. The total is narrowed by a
+ * workflow selection and the rows never are, so a selected workflow that ran
+ * nothing brings the total to zero while the account is not empty; and when
+ * the range holds nothing at all, both read empty while a selection is still
+ * in force and the chip that clears it lives in the other branch. Either way
+ * the reader would be told "no analyses yet", which is false, and left with no
+ * way back but the URL. So this is the page for someone who has selected
+ * nothing and has nothing -- which is the page it has always been.
+ */
+const hasNothingYet = computed(() => (
+  props.stats?.total === 0
+  && perWorkflow.value.length === 0
+  && workflowSelection.value === undefined
+))
+
+/** Most-used workflow first, which is what a reader looks for. */
+const sorting = ref([{ id: 'total', desc: true }])
+
+/**
  * How a row names itself, in the same tokens the URL carries. The Unknown
  * workflow arrives with a null id, having none of its own.
  */
 function workflowKey(usage: AnalysisMonitoringWorkflowUsage): string {
-  return usage.workflowId === null ? 'unknown' : String(usage.workflowId)
+  return usage.workflowId === null ? UNKNOWN_WORKFLOW : String(usage.workflowId)
 }
 
 /**
@@ -118,7 +124,7 @@ function toggleSelection(clicked: WorkflowSelection) {
 // clicking the selected row again clears it, which is the other half of the
 // clear control the chip provides
 function toggleWorkflow(_event: Event, row: TableRow<AnalysisMonitoringWorkflowUsage>) {
-  toggleSelection(row.original.workflowId ?? 'unknown')
+  toggleSelection(row.original.workflowId ?? UNKNOWN_WORKFLOW)
 }
 
 /**
@@ -135,14 +141,23 @@ function selectFromKeyboard(event: KeyboardEvent) {
   if (event.key !== 'Enter' && event.key !== ' ') {
     return
   }
-  const row = (event.target as HTMLElement | null)?.closest?.('tr[role="button"]')
+  const target = event.target as HTMLElement | null
+  // the table bails out of a click that landed on a button or a link, and a
+  // keystroke reaching one should not both press it and move the selection
+  if (target?.closest?.('button, a')) {
+    return
+  }
+  const row = target?.closest?.('tr[role="button"]')
   const key = row?.querySelector<HTMLElement>('[data-workflow-key]')?.dataset.workflowKey
   if (key === undefined) {
     return
   }
   // Space would otherwise scroll the page out from under the reader
   event.preventDefault()
-  toggleSelection(key === 'unknown' ? 'unknown' : Number(key))
+  const selection = workflowSelectionFromToken(key)
+  if (selection !== undefined) {
+    toggleSelection(selection)
+  }
 }
 
 /**
@@ -180,7 +195,7 @@ const selectedWorkflowLabel = computed(() => {
   }
   // a cold load of a link into a range holding nothing of it has no name to
   // show, and the identifier is a truer answer than a guess
-  const fallback = selection === 'unknown' ? UNKNOWN_WORKFLOW_LABEL : `Workflow ${selection}`
+  const fallback = selection === UNKNOWN_WORKFLOW ? UNKNOWN_WORKFLOW_LABEL : `Workflow ${selection}`
   return knownWorkflowLabels.value[String(selection)] ?? fallback
 })
 
@@ -203,8 +218,15 @@ const perWorkflowColumns = computed<TableColumn<AnalysisMonitoringWorkflowUsage>
     accessorKey: 'name',
     header: ({ column }) => h(ColumnTableSort, { column, label: 'Workflow' }),
     cell: ({ row }) => {
-      const selected = (row.original.workflowId ?? 'unknown') === workflowSelection.value
-      return h('div', { class: 'flex items-center gap-2' }, [
+      const selected = (row.original.workflowId ?? UNKNOWN_WORKFLOW) === workflowSelection.value
+      return h('div', {
+        'class': 'flex items-center gap-2',
+        // how the delegated key handler below finds which row was activated.
+        // On the cell's root rather than on anything decorative inside it,
+        // which could be restyled away without anyone noticing the keyboard
+        // had stopped working.
+        'data-workflow-key': workflowKey(row.original),
+      }, [
         // a bar down the left edge, so the tint is not the only thing saying
         // which row is selected. Always rendered, transparent when it is not,
         // which keeps every name on the same left edge.
@@ -212,8 +234,6 @@ const perWorkflowColumns = computed<TableColumn<AnalysisMonitoringWorkflowUsage>
           'class': ['w-0.5 shrink-0 self-stretch rounded-full', selected ? 'bg-primary' : 'bg-transparent'],
           'aria-hidden': 'true',
           'data-testid': selected ? 'usage-workflow-selected-bar' : undefined,
-          // how the delegated key handler below finds which row was activated
-          'data-workflow-key': workflowKey(row.original),
         }),
         h('span', { class: 'truncate' }, workflowUsageLabel(row.original)),
         row.original.version

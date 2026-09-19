@@ -1,6 +1,5 @@
 import type { InvocationJobsSummary, InvocationState, InvocationTerminalState, JobState } from 'blendtype'
 import type { SQL } from 'drizzle-orm'
-import type { PgColumn } from 'drizzle-orm/pg-core'
 import type { AnalysisMonitoringTrendPoint, AnalysisMonitoringWorkflowUsage, TrendGranularity, WorkflowSelection } from '../../../types/nuxt-galaxy'
 import type { useDrizzle } from '../drizzle'
 import { InvocationTerminalStates, JobStates } from 'blendtype'
@@ -317,7 +316,7 @@ export type UsageRange = Pick<UsageFilters, 'from' | 'to'>
  * `Date` to interpret (D-12).
  */
 function scopeConditions(
-  table: Pick<typeof analysisMonitoring, 'ownerId' | 'startedAt'> | { ownerId: PgColumn, startedAt: PgColumn },
+  table: typeof analysisMonitoring | ReturnType<typeof alias<typeof analysisMonitoring, string>>,
   ownerId: string | undefined,
   range: UsageRange,
 ): SQL[] {
@@ -341,23 +340,25 @@ function scopeConditions(
  * `max(workflow_name)`, which is null only when every row in the group is
  * nameless -- so a workflow deleted halfway through its life keeps its name,
  * and its later nameless rows are displayed inside its named row. Selecting on
- * the row's own name would pick those up, and the picker would then show
- * numbers belonging to no row on screen.
+ * the row's own name would pick those up, and selecting the Unknown workflow
+ * would then show numbers belonging to no row on screen.
  *
  * So: rows whose workflow carried no name anywhere in the same owner and
  * range the table itself is computed over (D-05). Judged in that scope rather
  * than globally, because the table is the authority on what is selectable, and
- * the table only ever sees the range in force.
+ * it only ever sees the range in force.
  */
+const NAMED_RUN_ALIAS = 'named'
+
 function unknownWorkflowCondition(ownerId: string | undefined, range: UsageRange): SQL {
-  const named = alias(analysisMonitoring, 'named')
+  const named = alias(analysisMonitoring, NAMED_RUN_ALIAS)
   const carriedAName = and(
     eq(named.workflowId, analysisMonitoring.workflowId),
     isNotNull(named.workflowName),
     ...scopeConditions(named, ownerId, range),
   )
 
-  return sql`not exists (select 1 from ${analysisMonitoring} as "named" where ${carriedAName})`
+  return sql`not exists (select 1 from ${analysisMonitoring} as ${sql.identifier(NAMED_RUN_ALIAS)} where ${carriedAName})`
 }
 
 /**
@@ -369,19 +370,17 @@ function unknownWorkflowCondition(ownerId: string | undefined, range: UsageRange
  * (D-06), never on when it finished, so a long-running analysis belongs to the
  * bucket it began in.
  *
- * The workflow selection is deliberately NOT part of that shared scope: it
- * narrows counts and trend, and never per-workflow usage, which is the list a
- * reader makes the selection from. A caller opts in by passing it. Undefined
- * when nothing narrows the query at all, which is the admin view over all time.
+ * A workflow selection narrows counts and trend, and never per-workflow usage,
+ * which is the list a reader makes the selection from. That dimension opts out
+ * by handing over a range alone, so there is no selection here to apply.
+ * Undefined when nothing narrows the query at all, which is the admin view
+ * over all time.
  */
-function usageWhere(
-  ownerId: string | undefined,
-  range: UsageRange,
-  workflowSelection?: WorkflowSelection,
-): SQL | undefined {
-  const conditions = scopeConditions(analysisMonitoring, ownerId, range)
+function usageWhere(ownerId: string | undefined, filters: UsageFilters): SQL | undefined {
+  const conditions = scopeConditions(analysisMonitoring, ownerId, filters)
+  const { workflowSelection } = filters
   if (workflowSelection === UNKNOWN_WORKFLOW_SELECTION) {
-    conditions.push(unknownWorkflowCondition(ownerId, range))
+    conditions.push(unknownWorkflowCondition(ownerId, filters))
   }
   else if (workflowSelection !== undefined) {
     conditions.push(eq(analysisMonitoring.workflowId, workflowSelection))
@@ -406,7 +405,7 @@ export function selectCounts(ownerId?: string, filters: UsageFilters = {}) {
         pending: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'pending')::int`,
       })
       .from(analysisMonitoring)
-    const where = usageWhere(ownerId, filters, filters.workflowSelection)
+    const where = usageWhere(ownerId, filters)
     return where ? baseQuery.where(where) : baseQuery
   })
 }
@@ -654,7 +653,7 @@ export function selectTrendRange(ownerId?: string, filters: UsageFilters = {}) {
         max: sql<Date>`max(${analysisMonitoring.startedAt})`,
       })
       .from(analysisMonitoring)
-    const where = usageWhere(ownerId, filters, filters.workflowSelection)
+    const where = usageWhere(ownerId, filters)
     return where ? base.where(where) : base
   })
 }
@@ -675,7 +674,7 @@ export function selectTrendBuckets(ownerId: string | undefined, gran: TrendGranu
       })
       .from(analysisMonitoring)
       .groupBy(bucket)
-    const where = usageWhere(ownerId, filters, filters.workflowSelection)
+    const where = usageWhere(ownerId, filters)
     return where ? base.where(where) : base
   })
 }
