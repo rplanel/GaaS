@@ -2,8 +2,6 @@
 import type { BreadcrumbItem } from '@nuxt/ui'
 import type { Database } from 'nuxt-galaxy'
 import AdminPermissionAlert from '../../components/admin/PermissionAlert.vue'
-import UsageGranularityFilter from '../../components/usage/UsageGranularityFilter.vue'
-import UsageRangeFilter from '../../components/usage/UsageRangeFilter.vue'
 import UsageStatisticsPanel from '../../components/usage/UsageStatisticsPanel.vue'
 
 const props = withDefaults(defineProps<{
@@ -69,11 +67,6 @@ const pageHeaderProps = {
         :error-message="failureMessage"
         @refresh="refetch"
       >
-        <template #filters>
-          <UsageRangeFilter />
-          <UsageGranularityFilter />
-        </template>
-
         <!-- an administrator reading global usage is not the person who would go and run a workflow, so no invitation to -->
         <template #empty>
           <p data-testid="usage-empty" class="p-8 text-center text-sm text-muted">

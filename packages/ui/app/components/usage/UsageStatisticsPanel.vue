@@ -3,7 +3,9 @@ import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { AnalysisMonitoringCounts, AnalysisMonitoringStats, AnalysisMonitoringWorkflowUsage, WorkflowSelection } from 'nuxt-galaxy'
 import { formatSuccessRate, OUTCOME_FIELDS, UNKNOWN_WORKFLOW, UNKNOWN_WORKFLOW_LABEL, workflowUsageLabel } from '../../utils/usageStatistics'
 import ColumnTableSort from '../ColumnTableSort.vue'
+import UsageGranularityFilter from './UsageGranularityFilter.vue'
 import UsageOutcomeBar from './UsageOutcomeBar.vue'
+import UsageRangeFilter from './UsageRangeFilter.vue'
 import UsageStatTile from './UsageStatTile.vue'
 import UsageTrendChart from './UsageTrendChart.vue'
 
@@ -267,9 +269,15 @@ const perWorkflowColumns = computed<TableColumn<AnalysisMonitoringWorkflowUsage>
 <template>
   <div class="flex flex-col gap-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <!-- empty by default, and still holding the refresh button to the right -->
+      <!--
+        The range and the bucket width by default, both pages wanting both.
+        Overridable, so a page that should offer something else still can.
+      -->
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <slot name="filters" />
+        <slot name="filters">
+          <UsageRangeFilter />
+          <UsageGranularityFilter />
+        </slot>
       </div>
 
       <UButton

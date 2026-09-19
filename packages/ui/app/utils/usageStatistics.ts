@@ -166,3 +166,18 @@ export function trendBucketSummary(
     `Success rate ${rate.label}${rate.tooltip ? ` (${rate.tooltip})` : ''}`,
   ].join('\n')
 }
+
+/**
+ * How a filter button looks when it is the one in force.
+ *
+ * The three properties always move together -- a reader who cannot see the
+ * colour needs `aria-pressed`, and one who can needs the fill to agree with it
+ * -- so they are decided once rather than spelt out at each button.
+ */
+export function pressedButtonProps(pressed: boolean) {
+  return {
+    'aria-pressed': pressed,
+    'variant': pressed ? 'subtle' as const : 'ghost' as const,
+    'color': pressed ? 'primary' as const : 'neutral' as const,
+  }
+}

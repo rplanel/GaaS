@@ -410,13 +410,15 @@ export function selectCounts(ownerId?: string, filters: UsageFilters = {}) {
   })
 }
 
-export function getAnalysisMonitoringCounts(ownerId: string, filters: UsageFilters = {}) {
+function monitoringCounts(ownerId: string | undefined, filters: UsageFilters) {
   return Effect.gen(function* () {
     const query = yield* selectCounts(ownerId, filters)
     const row = yield* Effect.tryPromise({
       try: () => query.then(takeUniqueOrThrow),
       catch: error => new GetAnalysisMonitoringCountsError({ message: `Error getting monitoring counts: ${error}` }),
     })
+    // spelt out rather than spread over a zeroed default: a count that arrives
+    // undefined should read as none, and a spread would carry the undefined
     return {
       total: row?.total ?? 0,
       success: row?.success ?? 0,
@@ -427,21 +429,12 @@ export function getAnalysisMonitoringCounts(ownerId: string, filters: UsageFilte
   })
 }
 
+export function getAnalysisMonitoringCounts(ownerId: string, filters: UsageFilters = {}) {
+  return monitoringCounts(ownerId, filters)
+}
+
 export function getAllAnalysisMonitoringCounts(filters: UsageFilters = {}) {
-  return Effect.gen(function* () {
-    const query = yield* selectCounts(undefined, filters)
-    const row = yield* Effect.tryPromise({
-      try: () => query.then(takeUniqueOrThrow),
-      catch: error => new GetAnalysisMonitoringCountsError({ message: `Error getting monitoring counts: ${error}` }),
-    })
-    return {
-      total: row?.total ?? 0,
-      success: row?.success ?? 0,
-      error: row?.error ?? 0,
-      cancelled: row?.cancelled ?? 0,
-      pending: row?.pending ?? 0,
-    }
-  })
+  return monitoringCounts(undefined, filters)
 }
 
 /**
@@ -549,7 +542,7 @@ function shapeWorkflowUsage(rows: WorkflowUsageRow[]): AnalysisMonitoringWorkflo
   return entries
 }
 
-export function getWorkflowUsage(ownerId: string, filters: UsageFilters = {}) {
+function workflowUsage(ownerId: string | undefined, filters: UsageFilters) {
   return Effect.gen(function* () {
     const query = yield* selectWorkflowUsage(ownerId, filters)
     const rows = yield* Effect.tryPromise({
@@ -560,15 +553,12 @@ export function getWorkflowUsage(ownerId: string, filters: UsageFilters = {}) {
   })
 }
 
+export function getWorkflowUsage(ownerId: string, filters: UsageFilters = {}) {
+  return workflowUsage(ownerId, filters)
+}
+
 export function getAllWorkflowUsage(filters: UsageFilters = {}) {
-  return Effect.gen(function* () {
-    const query = yield* selectWorkflowUsage(undefined, filters)
-    const rows = yield* Effect.tryPromise({
-      try: () => query.then(rows => rows as WorkflowUsageRow[], (reason) => { throw reason }),
-      catch: error => new GetWorkflowUsageError({ message: `Error getting workflow usage: ${error}` }),
-    })
-    return shapeWorkflowUsage(rows)
-  })
+  return workflowUsage(undefined, filters)
 }
 
 // ============================================================================
@@ -580,18 +570,11 @@ export function getAllWorkflowUsage(filters: UsageFilters = {}) {
  * so that the interface offers exactly what the endpoint validates against.
  *
  * A granularity is never interpolated into SQL from caller input: it indexes
- * the fixed `TREND_INTERVALS` and `BUCKET_UNITS` maps and drives a JS flooring
+ * the fixed `BUCKET_UNITS` map and drives a JS flooring
  * helper, so a caller can only ever select a pre-authorized bucket width
  * (T-14-05 mitigation).
  */
 export type { TrendGranularity }
-
-/** Fixed interval literals ($interval in `date_trunc($text, ...)`) for each granularity (D-04 allowlist). */
-export const TREND_INTERVALS: Record<TrendGranularity, string> = {
-  day: '1 day',
-  week: '1 week',
-  month: '1 month',
-}
 
 export class GetTrendError extends Data.TaggedError('GetTrendError')<{
   readonly message: string
@@ -858,25 +841,29 @@ export class GetAnalysisMonitoringStatsError extends Data.TaggedError('GetAnalys
  * formula (STAT-04 / D-01..D-03), so every successRate on every path is
  * produced by the same single documented formula.
  *
- * Self variant (T-14-09): only ever composes the ownerId-scoped helpers, each
- * of which adds a server-side `WHERE owner_id`, so no other user's rows can be
- * surfaced. Runs all three dimensions via `Effect.all` (sequential by default)
- * and maps any constituent failure to `GetAnalysisMonitoringStatsError`.
+ * Runs all three dimensions via `Effect.all` (sequential by default) and maps
+ * any constituent failure to `GetAnalysisMonitoringStatsError`.
  *
  * The granularity reaches the trend alone: it is how the same analyses are
  * grouped, not which ones are counted, so the counts and the per-workflow
  * table are the same at every bucket width and the trend still sums to them.
+ *
+ * An `ownerId` of `undefined` is the admin view (T-14-10), which emits no
+ * `WHERE owner_id` and relies on the RLS admin SELECT policy. The two exported
+ * wrappers below are what keep that deliberate: the self variant's signature
+ * demands an owner, so no caller can reach the all-rows query by forgetting
+ * one (T-14-09).
  */
-export function getAnalysisMonitoringStats(
-  ownerId: string,
-  filters: UsageFilters = {},
-  granularity: TrendGranularity = 'day',
+function monitoringStats(
+  ownerId: string | undefined,
+  filters: UsageFilters,
+  granularity: TrendGranularity,
 ) {
   return Effect.gen(function* () {
     const [counts, perWorkflow, trend] = yield* Effect.all([
-      getAnalysisMonitoringCounts(ownerId, filters),
-      getWorkflowUsage(ownerId, filters),
-      getTrend(ownerId, granularity, filters),
+      monitoringCounts(ownerId, filters),
+      workflowUsage(ownerId, filters),
+      trendSeries(ownerId, granularity, filters),
     ]).pipe(
       Effect.mapError(error =>
         new GetAnalysisMonitoringStatsError({ message: `Error assembling monitoring stats: ${error}` }),
@@ -891,30 +878,19 @@ export function getAnalysisMonitoringStats(
   })
 }
 
-/**
- * Admin variant (T-14-10): composes the all-rows helpers (`GetAll*`), which rely
- * on the RLS admin SELECT policy and emit no `WHERE`. Phase 15 gates this behind
- * an admin role check before invocation; no endpoint exists in this phase.
- */
+/** Usage statistics over the analyses one user owns. */
+export function getAnalysisMonitoringStats(
+  ownerId: string,
+  filters: UsageFilters = {},
+  granularity: TrendGranularity = 'day',
+) {
+  return monitoringStats(ownerId, filters, granularity)
+}
+
+/** Usage statistics over every user's analyses, which Phase 15 gates on admin. */
 export function getAllAnalysisMonitoringStats(
   filters: UsageFilters = {},
   granularity: TrendGranularity = 'day',
 ) {
-  return Effect.gen(function* () {
-    const [counts, perWorkflow, trend] = yield* Effect.all([
-      getAllAnalysisMonitoringCounts(filters),
-      getAllWorkflowUsage(filters),
-      getAllTrend(granularity, filters),
-    ]).pipe(
-      Effect.mapError(error =>
-        new GetAnalysisMonitoringStatsError({ message: `Error assembling monitoring stats: ${error}` }),
-      ),
-    )
-    return {
-      ...counts,
-      successRate: computeSuccessRate(counts.success, counts.error),
-      perWorkflow,
-      trend,
-    }
-  })
+  return monitoringStats(undefined, filters, granularity)
 }
