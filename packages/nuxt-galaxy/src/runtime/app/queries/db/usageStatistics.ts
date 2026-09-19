@@ -1,4 +1,4 @@
-import type { AnalysisMonitoringStats, TrendGranularity } from '../../../types/nuxt-galaxy'
+import type { AnalysisMonitoringStats, TrendGranularity, WorkflowSelection } from '../../../types/nuxt-galaxy'
 import { defineQueryOptions } from '@pinia/colada'
 import { TREND_GRANULARITY_WHEN_ABSENT } from '../../../types/nuxt-galaxy'
 
@@ -21,18 +21,37 @@ export interface UsageStatisticsRange {
 export interface UsageStatisticsRequest {
   readonly range?: UsageStatisticsRange | undefined
   readonly granularity?: TrendGranularity | undefined
+  /**
+   * The one workflow the counts and the trend are narrowed to. Absent means
+   * every workflow. Per-workflow usage is never narrowed by it, so the same
+   * response carries both the narrowed numbers and the whole list to pick
+   * from.
+   */
+  readonly workflowSelection?: WorkflowSelection | undefined
 }
 
 /**
- * Each range and bucket width caches on its own, so switching back to a view
- * already looked at shows its numbers at once instead of fetching them again.
+ * Each range, bucket width and workflow selection caches on its own, so
+ * switching back to a view already looked at shows its numbers at once instead
+ * of fetching them again. `all` stands for an absent bound or an unnarrowed
+ * view; it cannot be mistaken for a selection, since a workflow is named by a
+ * number or by `unknown`.
  */
 export const USAGE_STATISTICS_QUERY_KEYS = {
   root: ['usage-statistics'] as const,
-  own: ({ range = {}, granularity = TREND_GRANULARITY_WHEN_ABSENT }: UsageStatisticsRequest = {}) =>
-    [...USAGE_STATISTICS_QUERY_KEYS.root, 'own', range.from ?? 'all', range.to ?? 'all', granularity] as const,
-  global: ({ range = {}, granularity = TREND_GRANULARITY_WHEN_ABSENT }: UsageStatisticsRequest = {}) =>
-    [...USAGE_STATISTICS_QUERY_KEYS.root, 'global', range.from ?? 'all', range.to ?? 'all', granularity] as const,
+  own: (request: UsageStatisticsRequest = {}) =>
+    [...USAGE_STATISTICS_QUERY_KEYS.root, 'own', ...requestKey(request)] as const,
+  global: (request: UsageStatisticsRequest = {}) =>
+    [...USAGE_STATISTICS_QUERY_KEYS.root, 'global', ...requestKey(request)] as const,
+}
+
+/** What makes one view's statistics different from another's. */
+function requestKey({
+  range = {},
+  granularity = TREND_GRANULARITY_WHEN_ABSENT,
+  workflowSelection,
+}: UsageStatisticsRequest) {
+  return [range.from ?? 'all', range.to ?? 'all', granularity, workflowSelection ?? 'all'] as const
 }
 
 /**
@@ -41,13 +60,22 @@ export const USAGE_STATISTICS_QUERY_KEYS = {
  * width it is drawing should say so rather than rely on the endpoint's default
  * happening to agree.
  */
-function requestParameters({ range = {}, granularity = TREND_GRANULARITY_WHEN_ABSENT }: UsageStatisticsRequest): Record<string, string> {
+function requestParameters({
+  range = {},
+  granularity = TREND_GRANULARITY_WHEN_ABSENT,
+  workflowSelection,
+}: UsageStatisticsRequest): Record<string, string> {
   const parameters: Record<string, string> = { granularity }
   if (range.from) {
     parameters.from = range.from
   }
   if (range.to) {
     parameters.to = range.to
+  }
+  // unlike the bucket width, there is nothing to work out here: no selection
+  // means every workflow, which is what sending nothing has always meant
+  if (workflowSelection !== undefined) {
+    parameters.workflowId = String(workflowSelection)
   }
   return parameters
 }

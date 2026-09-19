@@ -1,10 +1,13 @@
 import type { InvocationJobsSummary, InvocationState, InvocationTerminalState, JobState } from 'blendtype'
 import type { SQL } from 'drizzle-orm'
-import type { AnalysisMonitoringTrendPoint, AnalysisMonitoringWorkflowUsage, TrendGranularity } from '../../../types/nuxt-galaxy'
+import type { PgColumn } from 'drizzle-orm/pg-core'
+import type { AnalysisMonitoringTrendPoint, AnalysisMonitoringWorkflowUsage, TrendGranularity, WorkflowSelection } from '../../../types/nuxt-galaxy'
 import type { useDrizzle } from '../drizzle'
 import { InvocationTerminalStates, JobStates } from 'blendtype'
-import { and, eq, gte, lt, sql } from 'drizzle-orm'
+import { and, eq, gte, isNotNull, lt, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { Data, Effect } from 'effect'
+import { UNKNOWN_WORKFLOW_SELECTION } from '../../../types/nuxt-galaxy'
 import { analysisMonitoring } from '../../db/schema/galaxy/analysisMonitoring'
 import { Drizzle } from '../drizzle'
 import { takeUniqueOrThrow } from './helper'
@@ -280,7 +283,7 @@ export function finalizeAnalysisMonitoringEffect(
 
 /**
  * What narrows usage statistics. Every field absent means what an absent
- * request parameter has always meant: all time.
+ * request parameter has always meant: all time, and every workflow.
  */
 export interface UsageFilters {
   /** Analyses started at or after this instant. */
@@ -290,26 +293,98 @@ export interface UsageFilters {
    *  inclusive calendar day a reader picks into this exclusive bound.
    */
   readonly to?: Date | undefined
+  /**
+   * The one workflow counts and trend are narrowed to. Per-workflow usage is
+   * never narrowed by it: it is the list the selection is made from.
+   */
+  readonly workflowSelection?: WorkflowSelection | undefined
 }
 
 /**
- * The WHERE every usage dimension shares, so counts, per-workflow usage and
- * trend always cover exactly the same analyses and cannot disagree. Undefined
- * when nothing narrows the query, which is the admin view over all time.
- *
- * The range filters on when an analysis started (D-06), never on when it
- * finished, so a long-running analysis belongs to the bucket it began in.
+ * The part of the filters that narrows every dimension alike. The shared WHERE
+ * builder reads only this, so it cannot apply a selection it was not handed.
  */
-function usageWhere(ownerId: string | undefined, filters: UsageFilters): SQL | undefined {
+export type UsageRange = Pick<UsageFilters, 'from' | 'to'>
+
+/**
+ * The scope every usage dimension shares: whose analyses, and over what range.
+ * Kept apart from the workflow selection, which only some dimensions apply.
+ *
+ * Takes the table it reads, because the Unknown workflow subquery asks the
+ * same question of an alias of this table and must ask it the same way. Going
+ * through the columns rather than writing the comparison by hand is what binds
+ * an instant the way the column is declared, instead of handing the driver a
+ * `Date` to interpret (D-12).
+ */
+function scopeConditions(
+  table: Pick<typeof analysisMonitoring, 'ownerId' | 'startedAt'> | { ownerId: PgColumn, startedAt: PgColumn },
+  ownerId: string | undefined,
+  range: UsageRange,
+): SQL[] {
   const conditions: SQL[] = []
   if (ownerId !== undefined) {
-    conditions.push(eq(analysisMonitoring.ownerId, ownerId))
+    conditions.push(eq(table.ownerId, ownerId))
   }
-  if (filters.from !== undefined) {
-    conditions.push(gte(analysisMonitoring.startedAt, filters.from))
+  if (range.from !== undefined) {
+    conditions.push(gte(table.startedAt, range.from))
   }
-  if (filters.to !== undefined) {
-    conditions.push(lt(analysisMonitoring.startedAt, filters.to))
+  if (range.to !== undefined) {
+    conditions.push(lt(table.startedAt, range.to))
+  }
+  return conditions
+}
+
+/**
+ * The Unknown workflow bucket, as a condition.
+ *
+ * Not `workflow_name is null`. Per-workflow usage groups by workflow and takes
+ * `max(workflow_name)`, which is null only when every row in the group is
+ * nameless -- so a workflow deleted halfway through its life keeps its name,
+ * and its later nameless rows are displayed inside its named row. Selecting on
+ * the row's own name would pick those up, and the picker would then show
+ * numbers belonging to no row on screen.
+ *
+ * So: rows whose workflow carried no name anywhere in the same owner and
+ * range the table itself is computed over (D-05). Judged in that scope rather
+ * than globally, because the table is the authority on what is selectable, and
+ * the table only ever sees the range in force.
+ */
+function unknownWorkflowCondition(ownerId: string | undefined, range: UsageRange): SQL {
+  const named = alias(analysisMonitoring, 'named')
+  const carriedAName = and(
+    eq(named.workflowId, analysisMonitoring.workflowId),
+    isNotNull(named.workflowName),
+    ...scopeConditions(named, ownerId, range),
+  )
+
+  return sql`not exists (select 1 from ${analysisMonitoring} as "named" where ${carriedAName})`
+}
+
+/**
+ * The WHERE a usage dimension applies.
+ *
+ * `scope` -- the owner and the range -- is shared by every dimension, so
+ * counts, per-workflow usage and trend always cover the same analyses and
+ * cannot disagree about which. The range filters on when an analysis started
+ * (D-06), never on when it finished, so a long-running analysis belongs to the
+ * bucket it began in.
+ *
+ * The workflow selection is deliberately NOT part of that shared scope: it
+ * narrows counts and trend, and never per-workflow usage, which is the list a
+ * reader makes the selection from. A caller opts in by passing it. Undefined
+ * when nothing narrows the query at all, which is the admin view over all time.
+ */
+function usageWhere(
+  ownerId: string | undefined,
+  range: UsageRange,
+  workflowSelection?: WorkflowSelection,
+): SQL | undefined {
+  const conditions = scopeConditions(analysisMonitoring, ownerId, range)
+  if (workflowSelection === UNKNOWN_WORKFLOW_SELECTION) {
+    conditions.push(unknownWorkflowCondition(ownerId, range))
+  }
+  else if (workflowSelection !== undefined) {
+    conditions.push(eq(analysisMonitoring.workflowId, workflowSelection))
   }
   return and(...conditions)
 }
@@ -331,7 +406,7 @@ export function selectCounts(ownerId?: string, filters: UsageFilters = {}) {
         pending: sql<number>`count(*) filter (where ${analysisMonitoring.outcome} = 'pending')::int`,
       })
       .from(analysisMonitoring)
-    const where = usageWhere(ownerId, filters)
+    const where = usageWhere(ownerId, filters, filters.workflowSelection)
     return where ? baseQuery.where(where) : baseQuery
   })
 }
@@ -418,7 +493,12 @@ export function selectWorkflowUsage(ownerId?: string, filters: UsageFilters = {}
       })
       .from(analysisMonitoring)
       .groupBy(analysisMonitoring.workflowId)
-    const where = usageWhere(ownerId, filters)
+    // The range and nothing else. This dimension is the list a reader makes a
+    // workflow selection FROM, so narrowing it by that selection would leave
+    // them nothing to pick next -- it must go on showing every workflow in
+    // range. Handing over only the range is what keeps that true: `usageWhere`
+    // cannot apply a selection it was not given.
+    const where = usageWhere(ownerId, { from: filters.from, to: filters.to })
     return where ? base.where(where) : base
   })
 }
@@ -574,7 +654,7 @@ export function selectTrendRange(ownerId?: string, filters: UsageFilters = {}) {
         max: sql<Date>`max(${analysisMonitoring.startedAt})`,
       })
       .from(analysisMonitoring)
-    const where = usageWhere(ownerId, filters)
+    const where = usageWhere(ownerId, filters, filters.workflowSelection)
     return where ? base.where(where) : base
   })
 }
@@ -595,7 +675,7 @@ export function selectTrendBuckets(ownerId: string | undefined, gran: TrendGranu
       })
       .from(analysisMonitoring)
       .groupBy(bucket)
-    const where = usageWhere(ownerId, filters)
+    const where = usageWhere(ownerId, filters, filters.workflowSelection)
     return where ? base.where(where) : base
   })
 }

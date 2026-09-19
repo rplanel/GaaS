@@ -1,9 +1,9 @@
 import type { H3Event } from 'h3'
-import type { TrendGranularity } from '../../types/nuxt-galaxy'
+import type { TrendGranularity, WorkflowSelection } from '../../types/nuxt-galaxy'
 import type { UsageFilters } from './grizzle/analysisMonitoring'
 import { useLogger } from 'evlog'
 import { createError, getQuery } from 'h3'
-import { isTrendGranularity, TREND_GRANULARITIES, TREND_GRANULARITY_WHEN_ABSENT } from '../../types/nuxt-galaxy'
+import { isTrendGranularity, TREND_GRANULARITIES, TREND_GRANULARITY_WHEN_ABSENT, UNKNOWN_WORKFLOW_SELECTION } from '../../types/nuxt-galaxy'
 
 /**
  * The only form these parameters take: a calendar day in UTC, which is also
@@ -100,6 +100,45 @@ export function parseTrendGranularity(query: Record<string, unknown>): TrendGran
   return value
 }
 
+/**
+ * A workflow identifier as a URL carries one: plain digits and nothing else.
+ * `Number()` would take `0x10` for 16 and `1e3` for a thousand, and would read
+ * ` 3` through its whitespace; an identifier written any of those ways is a
+ * mistake rather than a request.
+ */
+const WORKFLOW_ID = /^\d+$/
+
+/**
+ * The one workflow a usage request narrows its counts and trend to, read from
+ * its query parameters. Absent means every workflow, which is what these
+ * endpoints have always answered.
+ *
+ * The Unknown workflow bucket is selectable like any other, and travels as a
+ * word because it has no identifier of its own: every monitoring row carries a
+ * workflow id, and what makes one unknown is a name that was never recorded.
+ */
+export function parseWorkflowSelection(query: Record<string, unknown>): WorkflowSelection | undefined {
+  const value = query.workflowId
+
+  if (value === undefined || value === '') {
+    return undefined
+  }
+
+  if (value === UNKNOWN_WORKFLOW_SELECTION) {
+    return UNKNOWN_WORKFLOW_SELECTION
+  }
+
+  // zero is refused with the rest: identifiers are `serial`, so they start at 1
+  if (typeof value !== 'string' || !WORKFLOW_ID.test(value) || Number(value) === 0) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `\`workflowId\` must be a workflow identifier or \`${UNKNOWN_WORKFLOW_SELECTION}\``,
+    })
+  }
+
+  return Number(value)
+}
+
 /** How a request wants its usage statistics narrowed, and how bucketed. */
 export interface UsageRequest {
   readonly filters: UsageFilters
@@ -117,7 +156,10 @@ export interface UsageRequest {
 export function readUsageRequest(event: H3Event): UsageRequest {
   const query = getQuery(event)
   try {
-    return { filters: parseUsageFilters(query), granularity: parseTrendGranularity(query) }
+    return {
+      filters: { ...parseUsageFilters(query), workflowSelection: parseWorkflowSelection(query) },
+      granularity: parseTrendGranularity(query),
+    }
   }
   catch (error) {
     const reason = (error as { statusMessage?: string }).statusMessage
