@@ -3,6 +3,7 @@ import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { AnalysisMonitoringCounts, AnalysisMonitoringStats, AnalysisMonitoringWorkflowUsage, WorkflowSelection } from 'nuxt-galaxy'
 import { formatSuccessRate, OUTCOME_FIELDS, UNKNOWN_WORKFLOW_LABEL, workflowUsageLabel } from '../../utils/usageStatistics'
 import ColumnTableSort from '../ColumnTableSort.vue'
+import UsageOutcomeBar from './UsageOutcomeBar.vue'
 import UsageStatTile from './UsageStatTile.vue'
 import UsageTrendChart from './UsageTrendChart.vue'
 
@@ -164,6 +165,13 @@ watch(perWorkflow, (entries) => {
   knownWorkflowLabels.value = next
 }, { immediate: true })
 
+/**
+ * The busiest workflow on screen, which sets the scale every bar is drawn
+ * against. Taken from the rows rather than from the totals, because the totals
+ * are narrowed by a selection and these rows are not.
+ */
+const maxWorkflowTotal = computed(() => Math.max(0, ...perWorkflow.value.map(entry => entry.total)))
+
 /** What the tiles are counting, whenever that is not simply everything. */
 const selectedWorkflowLabel = computed(() => {
   const selection = workflowSelection.value
@@ -216,6 +224,12 @@ const perWorkflowColumns = computed<TableColumn<AnalysisMonitoringWorkflowUsage>
         selected ? h('span', { class: 'sr-only' }, 'Selected') : null,
       ])
     },
+  },
+  {
+    id: 'outcomes',
+    // not sortable: the shape is the point, and Total already orders by size
+    header: () => h('span', { class: 'text-sm' }, 'Outcomes'),
+    cell: ({ row }) => h(UsageOutcomeBar, { usage: row.original, maxTotal: maxWorkflowTotal.value }),
   },
   ...COUNT_FIELDS.map(field => countColumn(field.key, field.label)),
   {

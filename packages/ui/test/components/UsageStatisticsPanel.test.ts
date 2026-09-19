@@ -313,6 +313,19 @@ describe('the per-workflow table as the workflow picker', () => {
     expect(selected.find('.sr-only').text()).toBe('Selected')
   })
 
+  it('scales every bar against the busiest workflow, so length means volume', async () => {
+    const wrapper = await mountPanel(STATS, {}, '/')
+
+    // Bacterial assembly ran 7 of the 9, so it sets the scale; the other two
+    // ran one each and must read as much smaller
+    const bars = wrapper.findAll('[data-testid="usage-outcome-bar"] > div')
+    const widths = bars.map(bar => Number(/width:\s*([\d.]+)%/.exec(bar.attributes('style') ?? '')?.[1]))
+
+    expect(bars).toHaveLength(3)
+    expect(Math.max(...widths)).toBe(100)
+    expect(Math.min(...widths)).toBeCloseTo(100 / 7, 1)
+  })
+
   it('says the rows can be clicked, and what clicking one does', async () => {
     const wrapper = await mountPanel(STATS, {}, '/')
 
