@@ -1251,3 +1251,124 @@ describe('admin usage over a range', () => {
     expect(stats.successRate).toBe(computeSuccessRate(stats.success, stats.error))
   })
 })
+
+describe('usage statistics at each granularity', () => {
+  /**
+   * What the endpoint hands down for "1 August to 31 August": from inclusive,
+   * to exclusive.
+   */
+  const AUGUST = {
+    from: new Date('2026-08-01T00:00:00.000Z'),
+    to: new Date('2026-09-01T00:00:00.000Z'),
+  }
+
+  /** Counts, per-workflow, trend range, trend buckets — in the order they run. */
+  function enqueueStats(drizzle: ReturnType<typeof createMockDrizzle>, buckets: Array<Record<string, unknown>>) {
+    const total = buckets.reduce((sum, bucket) => sum + (bucket.total as number), 0)
+    const success = buckets.reduce((sum, bucket) => sum + (bucket.success as number), 0)
+    const error = buckets.reduce((sum, bucket) => sum + (bucket.error as number), 0)
+    drizzle.enqueueResult([{ total, success, error, cancelled: 0, pending: 0 }])
+    drizzle.enqueueResult([{ workflowId: 1, name: 'A', version: '1.0', total, success, error, cancelled: 0, pending: 0 }])
+    drizzle.enqueueResult([{ min: new Date('2026-08-04T09:00:00Z'), max: new Date('2026-08-27T09:00:00Z') }])
+    drizzle.enqueueResult(buckets)
+  }
+
+  it('buckets a month by ISO week, starting each one on a Monday', async () => {
+    const drizzle = createMockDrizzle()
+    // Mondays: 27 July, then every seventh day. 1 August is a Saturday, so the
+    // week holding it starts before the range does.
+    enqueueStats(drizzle, [
+      { bucket: '2026-08-03', total: 4, success: 3, error: 1, cancelled: 0, pending: 0 },
+      { bucket: '2026-08-24', total: 2, success: 1, error: 1, cancelled: 0, pending: 0 },
+    ])
+
+    const stats = await getAnalysisMonitoringStats('owner-uuid-1', AUGUST, 'week').pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromise,
+    )
+
+    expect(stats.trend.map(point => point.bucket)).toEqual([
+      '2026-07-27',
+      '2026-08-03',
+      '2026-08-10',
+      '2026-08-17',
+      '2026-08-24',
+      '2026-08-31',
+    ])
+    // zero-fill survives the coarser bucket
+    expect(stats.trend.filter(point => point.total === 0)).toHaveLength(4)
+    expect(stats.trend.reduce((sum, point) => sum + point.total, 0)).toBe(stats.total)
+  })
+
+  it('buckets a quarter by calendar month', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.enqueueResult([{ total: 9, success: 6, error: 3, cancelled: 0, pending: 0 }])
+    drizzle.enqueueResult([{ workflowId: 1, name: 'A', version: '1.0', total: 9, success: 6, error: 3, cancelled: 0, pending: 0 }])
+    drizzle.enqueueResult([{ min: new Date('2026-06-14T09:00:00Z'), max: new Date('2026-08-27T09:00:00Z') }])
+    drizzle.enqueueResult([
+      { bucket: '2026-06-01', total: 5, success: 4, error: 1, cancelled: 0, pending: 0 },
+      { bucket: '2026-08-01', total: 4, success: 2, error: 2, cancelled: 0, pending: 0 },
+    ])
+
+    const stats = await getAnalysisMonitoringStats('owner-uuid-1', {
+      from: new Date('2026-06-01T00:00:00.000Z'),
+      to: new Date('2026-09-01T00:00:00.000Z'),
+    }, 'month').pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromise,
+    )
+
+    expect(stats.trend.map(point => point.bucket)).toEqual(['2026-06', '2026-07', '2026-08'])
+    expect(stats.trend[1].total).toBe(0)
+    expect(stats.trend.reduce((sum, point) => sum + point.total, 0)).toBe(stats.total)
+  })
+
+  it.each(['day', 'week', 'month'] as const)('sums its trend to the counts total at %s', async (granularity) => {
+    const drizzle = createMockDrizzle()
+    // whatever the bucket width, the same analyses are counted: one row from
+    // the SQL side at each width, holding everything in range
+    enqueueStats(drizzle, [
+      { bucket: granularity === 'month' ? '2026-08-01' : '2026-08-03', total: 6, success: 4, error: 2, cancelled: 0, pending: 0 },
+    ])
+
+    const stats = await getAnalysisMonitoringStats('owner-uuid-1', AUGUST, granularity).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromise,
+    )
+
+    expect(stats.total).toBe(6)
+    expect(stats.trend.reduce((sum, point) => sum + point.total, 0)).toBe(stats.total)
+    expect(stats.successRate).toBe(computeSuccessRate(stats.success, stats.error))
+  })
+
+  it('buckets by day when no granularity is asked for, as it always has', async () => {
+    const drizzle = createMockDrizzle()
+    enqueueStats(drizzle, [
+      { bucket: '2026-08-30', total: 1, success: 1, error: 0, cancelled: 0, pending: 0 },
+      { bucket: '2026-08-31', total: 1, success: 1, error: 0, cancelled: 0, pending: 0 },
+    ])
+
+    const stats = await getAnalysisMonitoringStats('owner-uuid-1', AUGUST).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromise,
+    )
+
+    expect(stats.trend).toHaveLength(31)
+  })
+
+  it('carries the granularity through the admin variant too', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.enqueueResult([{ total: 3, success: 3, error: 0, cancelled: 0, pending: 0 }])
+    drizzle.enqueueResult([{ workflowId: 1, name: 'A', version: '1.0', total: 3, success: 3, error: 0, cancelled: 0, pending: 0 }])
+    drizzle.enqueueResult([{ min: new Date('2026-08-04T09:00:00Z'), max: new Date('2026-08-27T09:00:00Z') }])
+    drizzle.enqueueResult([{ bucket: '2026-08-01', total: 3, success: 3, error: 0, cancelled: 0, pending: 0 }])
+
+    const stats = await getAllAnalysisMonitoringStats(AUGUST, 'month').pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromise,
+    )
+
+    expect(stats.trend.map(point => point.bucket)).toEqual(['2026-08'])
+    expect(stats.trend.reduce((sum, point) => sum + point.total, 0)).toBe(stats.total)
+  })
+})

@@ -53,6 +53,13 @@ _Avoid_: Period, bin, slot
 The bucket width of a trend: day, week or month.
 _Avoid_: Interval, resolution, step
 
+**Automatic granularity**:
+The bucket width a trend takes when nobody has chosen one, worked out from how
+long the time range is: day up to 90 days, week up to two years, month beyond,
+and month for all time, whose span only the server has seen. A reader can
+override it; the absence of an override is what automatic means.
+_Avoid_: Default granularity, smart buckets, adaptive
+
 **Time range**:
 The window usage statistics cover, named by the first and last day it
 includes. It filters on when an analysis started, so one that ran for days

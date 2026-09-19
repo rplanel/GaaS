@@ -192,7 +192,7 @@ describe('get /api/db/analyses/monitoring/admin, over a range', () => {
     expect(mockGetAllAnalysisMonitoringStats).toHaveBeenCalledWith({
       from: new Date('2026-08-01T00:00:00.000Z'),
       to: new Date('2026-09-01T00:00:00.000Z'),
-    })
+    }, 'day')
   })
 
   it('asks for all time when no range is given', async () => {
@@ -201,7 +201,7 @@ describe('get /api/db/analyses/monitoring/admin, over a range', () => {
     const handler = (await import('../../../../../../src/runtime/server/api/db/analyses/monitoring/admin.get')).default
     await handler({ path: '/api/db/analyses/monitoring/admin', method: 'GET' } as any)
 
-    expect(mockGetAllAnalysisMonitoringStats).toHaveBeenCalledWith({})
+    expect(mockGetAllAnalysisMonitoringStats).toHaveBeenCalledWith({}, 'day')
   })
 
   it.each([
@@ -213,6 +213,41 @@ describe('get /api/db/analyses/monitoring/admin, over a range', () => {
     await expect(handler({ path: `/api/db/analyses/monitoring/admin${query}`, method: 'GET' } as any))
       .rejects
       .toMatchObject({ statusCode: 400 })
+    expect(mockGetAllAnalysisMonitoringStats).not.toHaveBeenCalled()
+  })
+})
+
+describe('get /api/db/analyses/monitoring/admin, at a granularity', () => {
+  it.each(['day', 'week', 'month'] as const)('buckets by %s when asked to', async (granularity) => {
+    vi.mocked(useLogger).mockReturnValue(createMockRequestLogger())
+
+    const handler = (await import('../../../../../../src/runtime/server/api/db/analyses/monitoring/admin.get')).default
+    await handler({ path: `/api/db/analyses/monitoring/admin?granularity=${granularity}`, method: 'GET' } as any)
+
+    expect(mockGetAllAnalysisMonitoringStats).toHaveBeenCalledWith({}, granularity)
+  })
+
+  it('buckets by day when no granularity is given', async () => {
+    vi.mocked(useLogger).mockReturnValue(createMockRequestLogger())
+
+    const handler = (await import('../../../../../../src/runtime/server/api/db/analyses/monitoring/admin.get')).default
+    await handler({ path: '/api/db/analyses/monitoring/admin?to=2026-08-31', method: 'GET' } as any)
+
+    expect(mockGetAllAnalysisMonitoringStats).toHaveBeenCalledWith(
+      { to: new Date('2026-09-01T00:00:00.000Z') },
+      'day',
+    )
+  })
+
+  it('rejects an unknown granularity with 400, before the admin gate and the database', async () => {
+    vi.mocked(useLogger).mockReturnValue(createMockRequestLogger())
+
+    const handler = (await import('../../../../../../src/runtime/server/api/db/analyses/monitoring/admin.get')).default
+
+    await expect(handler({ path: '/api/db/analyses/monitoring/admin?granularity=fortnight', method: 'GET' } as any))
+      .rejects
+      .toMatchObject({ statusCode: 400 })
+    expect(mockRequireRole).not.toHaveBeenCalled()
     expect(mockGetAllAnalysisMonitoringStats).not.toHaveBeenCalled()
   })
 })

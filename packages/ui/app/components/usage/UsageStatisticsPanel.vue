@@ -113,7 +113,7 @@ const perWorkflowColumns: TableColumn<AnalysisMonitoringWorkflowUsage>[] = [
   <div class="flex flex-col gap-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <!-- empty by default, and still holding the refresh button to the right -->
-      <div>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
         <slot name="filters" />
       </div>
 

@@ -97,7 +97,7 @@ describe('get /api/db/analyses/monitoring', () => {
 
     // API-03: ownerId is derived from the server-side session user id, never client input.
     expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledTimes(1)
-    expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledWith('session-owner-id', {})
+    expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledWith('session-owner-id', {}, 'day')
 
     expect(useLogger).toHaveBeenCalledWith(expect.anything())
     expect(requestLog.set).toHaveBeenCalledWith({ handler: '/api/db/analyses/monitoring', method: 'GET' })
@@ -164,7 +164,7 @@ describe('get /api/db/analyses/monitoring, over a range', () => {
     expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledWith('session-owner-id', {
       from: new Date('2026-08-01T00:00:00.000Z'),
       to: new Date('2026-09-01T00:00:00.000Z'),
-    })
+    }, 'day')
   })
 
   it('asks for all time when no range is given', async () => {
@@ -174,7 +174,7 @@ describe('get /api/db/analyses/monitoring, over a range', () => {
     const handler = (await import('../../../../../src/runtime/server/api/db/analyses/monitoring.get')).default
     await handler({ path: '/api/db/analyses/monitoring', method: 'GET' } as H3Event)
 
-    expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledWith('session-owner-id', {})
+    expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledWith('session-owner-id', {}, 'day')
   })
 
   it.each([
@@ -187,5 +187,57 @@ describe('get /api/db/analyses/monitoring, over a range', () => {
       .rejects
       .toMatchObject({ statusCode: 400 })
     expect(mockGetAnalysisMonitoringStats).not.toHaveBeenCalled()
+  })
+})
+
+describe('get /api/db/analyses/monitoring, at a granularity', () => {
+  it.each(['day', 'week', 'month'] as const)('buckets by %s when asked to', async (granularity) => {
+    vi.mocked(useLogger).mockReturnValue(createMockRequestLogger())
+    mockGetSupabaseUser.mockReturnValueOnce(Effect.succeed({ id: 'session-owner-id' }))
+
+    const handler = (await import('../../../../../src/runtime/server/api/db/analyses/monitoring.get')).default
+    await handler({ path: `/api/db/analyses/monitoring?granularity=${granularity}`, method: 'GET' } as H3Event)
+
+    expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledWith('session-owner-id', {}, granularity)
+  })
+
+  it('buckets by day when no granularity is given', async () => {
+    vi.mocked(useLogger).mockReturnValue(createMockRequestLogger())
+    mockGetSupabaseUser.mockReturnValueOnce(Effect.succeed({ id: 'session-owner-id' }))
+
+    const handler = (await import('../../../../../src/runtime/server/api/db/analyses/monitoring.get')).default
+    await handler({ path: '/api/db/analyses/monitoring?from=2026-08-01', method: 'GET' } as H3Event)
+
+    expect(mockGetAnalysisMonitoringStats).toHaveBeenCalledWith(
+      'session-owner-id',
+      { from: new Date('2026-08-01T00:00:00.000Z') },
+      'day',
+    )
+  })
+
+  it('rejects an unknown granularity with 400 and asks the database for nothing', async () => {
+    vi.mocked(useLogger).mockReturnValue(createMockRequestLogger())
+
+    const handler = (await import('../../../../../src/runtime/server/api/db/analyses/monitoring.get')).default
+
+    await expect(handler({ path: '/api/db/analyses/monitoring?granularity=hour', method: 'GET' } as H3Event))
+      .rejects
+      .toMatchObject({ statusCode: 400 })
+    expect(mockGetAnalysisMonitoringStats).not.toHaveBeenCalled()
+  })
+
+  it('says why a request was refused, so the wide event carries more than a 400', async () => {
+    const requestLog = createMockRequestLogger()
+    vi.mocked(useLogger).mockReturnValue(requestLog)
+
+    const handler = (await import('../../../../../src/runtime/server/api/db/analyses/monitoring.get')).default
+
+    await expect(handler({ path: '/api/db/analyses/monitoring?granularity=hour', method: 'GET' } as H3Event))
+      .rejects
+      .toMatchObject({ statusCode: 400 })
+    expect(requestLog.warn).toHaveBeenCalledWith(
+      'usage statistics request rejected',
+      { reason: expect.stringContaining('granularity') },
+    )
   })
 })

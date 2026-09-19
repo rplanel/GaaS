@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseUsageFilters } from '../../../src/runtime/server/utils/usageFilters'
+import { parseTrendGranularity, parseUsageFilters } from '../../../src/runtime/server/utils/usageFilters'
 
 describe('parseUsageFilters', () => {
   it('asks for nothing when neither bound is given', () => {
@@ -46,6 +46,36 @@ describe('parseUsageFilters', () => {
 
   it('rejects a reversed range with 400', () => {
     expect(() => parseUsageFilters({ from: '2026-09-02', to: '2026-09-01' }))
+      .toThrowError(expect.objectContaining({ statusCode: 400 }))
+  })
+})
+
+describe('parseTrendGranularity', () => {
+  it.each(['day', 'week', 'month'] as const)('reads %s, which is a bucket width the trend knows', (granularity) => {
+    expect(parseTrendGranularity({ granularity })).toBe(granularity)
+  })
+
+  it('buckets by day when nothing is asked for', () => {
+    expect(parseTrendGranularity({})).toBe('day')
+  })
+
+  it('buckets by day when the parameter is present but empty', () => {
+    // `?granularity=` is a parameter nobody chose, the same as leaving it out
+    expect(parseTrendGranularity({ granularity: '' })).toBe('day')
+  })
+
+  it.each([
+    ['hour'],
+    ['Day'],
+    ['1 week'],
+    ['year'],
+  ])('rejects %s with 400', (value) => {
+    expect(() => parseTrendGranularity({ granularity: value }))
+      .toThrowError(expect.objectContaining({ statusCode: 400 }))
+  })
+
+  it('rejects a repeated parameter with 400 rather than picking one of them', () => {
+    expect(() => parseTrendGranularity({ granularity: ['day', 'month'] }))
       .toThrowError(expect.objectContaining({ statusCode: 400 }))
   })
 })

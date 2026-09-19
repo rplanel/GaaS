@@ -12,7 +12,10 @@ const user = useSupabaseUser()
 const { diskUsage } = useDiskUsage()
 const storageUsed = computed(() => getHumanSize(toValue(diskUsage)))
 
-const { data: stats, error } = useQuery(() => ownUsageStatisticsQuery())
+// These two tiles need no trend, and all time is what the usage page draws by
+// month, so asking for the same width means the hub and `/profile/usage?range=all`
+// share one cache entry rather than fetching the same numbers twice.
+const { data: stats, error } = useQuery(() => ownUsageStatisticsQuery({ granularity: automaticGranularity({}) }))
 
 const successRate = computed(() => (stats.value ? formatSuccessRate(stats.value) : undefined))
 

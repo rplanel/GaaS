@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { BreadcrumbItem } from '@nuxt/ui'
+import UsageGranularityFilter from '../../components/usage/UsageGranularityFilter.vue'
 import UsageRangeFilter from '../../components/usage/UsageRangeFilter.vue'
 import UsageStatisticsPanel from '../../components/usage/UsageStatisticsPanel.vue'
 
@@ -20,13 +21,16 @@ const computedBreadcrumbsItems = computed(() => {
   ]
 })
 
-// the URL holds which range is on screen, so the filter control and this query
-// read the same source and a link carries the view it was copied from
-const { range } = useUsageFilters()
+// the URL holds which range and bucket width are on screen, so the filter
+// controls and this query read the same source and a link carries the view it
+// was copied from
+const { range, granularity } = useUsageFilters()
 
 // refetch, not refresh: refresh honours the stale window, so pressing the
 // button moments after the page loaded would return the cached numbers.
-const { data: stats, isLoading, error, refetch } = useQuery(() => ownUsageStatisticsQuery(range.value))
+const { data: stats, isLoading, error, refetch } = useQuery(() =>
+  ownUsageStatisticsQuery({ range: range.value, granularity: granularity.value }),
+)
 
 const { errorMessage } = useErrorMessage(error)
 const failureMessage = computed(() => (error.value ? errorMessage.value : undefined))
@@ -49,6 +53,7 @@ const pageHeaderProps = {
       >
         <template #filters>
           <UsageRangeFilter />
+          <UsageGranularityFilter />
         </template>
       </UsageStatisticsPanel>
     </UPageBody>

@@ -2,6 +2,7 @@
 import type { BreadcrumbItem } from '@nuxt/ui'
 import type { Database } from 'nuxt-galaxy'
 import AdminPermissionAlert from '../../components/admin/PermissionAlert.vue'
+import UsageGranularityFilter from '../../components/usage/UsageGranularityFilter.vue'
 import UsageRangeFilter from '../../components/usage/UsageRangeFilter.vue'
 import UsageStatisticsPanel from '../../components/usage/UsageStatisticsPanel.vue'
 
@@ -26,9 +27,10 @@ const supabase = useSupabaseClient<Database>()
 const { userRole } = useUserRole(supabase)
 const isAdmin = computed(() => userRole.value === 'admin')
 
-// the URL holds which range is on screen, so the filter control and this query
-// read the same source and a link carries the view it was copied from
-const { range } = useUsageFilters()
+// the URL holds which range and bucket width are on screen, so the filter
+// controls and this query read the same source and a link carries the view it
+// was copied from
+const { range, granularity } = useUsageFilters()
 
 // The endpoint answers 403 to anyone else, so asking before the role claim says
 // admin only buys a refusal. The claim is still only a hint: should it disagree
@@ -39,7 +41,7 @@ const { range } = useUsageFilters()
 // refetch, not refresh: refresh honours the stale window, so pressing the
 // button moments after the page loaded would return the cached numbers.
 const { data: stats, isLoading, error, refetch } = useQuery(() => ({
-  ...globalUsageStatisticsQuery(range.value),
+  ...globalUsageStatisticsQuery({ range: range.value, granularity: granularity.value }),
   enabled: isAdmin.value,
 }))
 
@@ -65,6 +67,7 @@ const pageHeaderProps = {
       >
         <template #filters>
           <UsageRangeFilter />
+          <UsageGranularityFilter />
         </template>
 
         <!-- an administrator reading global usage is not the person who would go and run a workflow, so no invitation to -->

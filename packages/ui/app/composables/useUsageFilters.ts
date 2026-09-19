@@ -1,4 +1,4 @@
-import type { UsageStatisticsRange } from 'nuxt-galaxy'
+import type { TrendGranularity, UsageStatisticsRange } from 'nuxt-galaxy'
 import type { ComputedRef } from 'vue'
 
 /** The ranges offered without asking anyone to name a date. */
@@ -70,6 +70,77 @@ export function rangeFromSelection(
   return { from: String(selection.start), to: String(selection.end) }
 }
 
+/**
+ * How each bucket width the endpoint knows is named on screen. A record rather
+ * than a list, so a width added to the shared type is a type error here until
+ * it is given a name: what is offered cannot fall behind what is accepted.
+ */
+const GRANULARITY_LABELS = {
+  day: 'Day',
+  week: 'Week',
+  month: 'Month',
+} as const satisfies Record<TrendGranularity, string>
+
+/** The bucket widths on offer, in the order they are shown, coarsest last. */
+export const USAGE_GRANULARITIES: ReadonlyArray<{ value: TrendGranularity, label: string }>
+  = Object.entries(GRANULARITY_LABELS).map(([value, label]) => ({ value: value as TrendGranularity, label }))
+
+function isGranularity(value: unknown): value is TrendGranularity {
+  return typeof value === 'string' && Object.hasOwn(GRANULARITY_LABELS, value)
+}
+
+/** The longest span still drawn one bar per day. */
+const MAX_DAILY_DAYS = 90
+
+/**
+ * The longest span still drawn one bar per week. Two calendar years run to 730
+ * days, or 731 across a leap day, and both should read as two years.
+ */
+const MAX_WEEKLY_DAYS = 731
+
+const ONE_DAY_MS = 86_400_000
+
+/** The days a range covers, counting both ends, or nothing if it has no start. */
+function spanInDays(range: UsageStatisticsRange, today: Date): number | undefined {
+  if (!range.from) {
+    // With no start the span belongs to the data, which only the server has
+    // seen. An all-time trend is treated as the long one it may well be.
+    return undefined
+  }
+
+  const from = Date.parse(`${range.from}T00:00:00.000Z`)
+  const to = range.to ? Date.parse(`${range.to}T00:00:00.000Z`) : Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  if (Number.isNaN(from) || Number.isNaN(to)) {
+    return undefined
+  }
+
+  return (to - from) / ONE_DAY_MS + 1
+}
+
+/**
+ * The bucket width a range is drawn at when nobody has chosen one (Q9).
+ *
+ * It follows from how many bars the range would produce: a quarter of daily
+ * bars can still be read one by one, two years of weekly ones can, and beyond
+ * that only months stay legible. A reader who wants otherwise overrides it.
+ */
+export function automaticGranularity(
+  range: UsageStatisticsRange,
+  today: Date = new Date(),
+): TrendGranularity {
+  const days = spanInDays(range, today)
+  if (days === undefined) {
+    return 'month'
+  }
+  if (days <= MAX_DAILY_DAYS) {
+    return 'day'
+  }
+  if (days <= MAX_WEEKLY_DAYS) {
+    return 'week'
+  }
+  return 'month'
+}
+
 export interface UsageFilterControls {
   /** The preset in force, or undefined while a custom range is. */
   preset: ComputedRef<UsagePreset | undefined>
@@ -77,8 +148,14 @@ export interface UsageFilterControls {
   isCustom: ComputedRef<boolean>
   /** The range to ask the endpoint for, whichever way it was chosen. */
   range: ComputedRef<UsageStatisticsRange>
+  /** The bucket width the trend is drawn at, overridden or worked out. */
+  granularity: ComputedRef<TrendGranularity>
+  /** The width a reader chose, or undefined while the range decides it. */
+  granularityOverride: ComputedRef<TrendGranularity | undefined>
   selectPreset: (preset: UsagePreset) => void
   selectCustomRange: (range: UsageStatisticsRange) => void
+  /** Chooses a width, or undefined to hand the choice back to the range. */
+  selectGranularity: (granularity: TrendGranularity | undefined) => void
 }
 
 /**
@@ -116,6 +193,16 @@ export function useUsageFilters(): UsageFilterControls {
     return presetRange(preset.value ?? DEFAULT_USAGE_PRESET)
   })
 
+  // absent means automatic, so an unreadable token reads as nothing chosen
+  // rather than as an error, exactly as an unreadable preset token does
+  const granularityOverride = computed<TrendGranularity | undefined>(() =>
+    isGranularity(route.query.granularity) ? route.query.granularity : undefined,
+  )
+
+  const granularity = computed<TrendGranularity>(() =>
+    granularityOverride.value ?? automaticGranularity(range.value),
+  )
+
   // replace rather than push: a filter is a way of looking at one page, not a
   // place of its own, so Back should leave the page rather than undo a click
   function selectPreset(next: UsagePreset) {
@@ -134,5 +221,21 @@ export function useUsageFilters(): UsageFilterControls {
     })
   }
 
-  return { preset, isCustom, range, selectPreset, selectCustomRange }
+  // the override outlives a change of range on purpose: a reader who asked for
+  // weeks meant weeks, and the automatic setting is one click away
+  function selectGranularity(next: TrendGranularity | undefined) {
+    const { granularity: _granularity, ...rest } = route.query
+    router.replace({ query: { ...rest, ...(next ? { granularity: next } : {}) } })
+  }
+
+  return {
+    preset,
+    isCustom,
+    range,
+    granularity,
+    granularityOverride,
+    selectPreset,
+    selectCustomRange,
+    selectGranularity,
+  }
 }
