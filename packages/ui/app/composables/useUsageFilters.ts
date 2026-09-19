@@ -141,8 +141,16 @@ export function automaticGranularity(
   return 'month'
 }
 
-/** An identifier as a URL carries one: plain digits, and at least one. */
-const WORKFLOW_ID = /^\d+$/
+/** An identifier as a URL carries one: plain digits, no leading zero. */
+const WORKFLOW_ID = /^[1-9]\d*$/
+
+/**
+ * The largest identifier the column behind the endpoint can hold. Mirrors the
+ * bound in `parseWorkflowSelection`, which refuses anything past it: sending
+ * one would buy a 400 and an error banner, where a URL nobody can read should
+ * simply mean nothing is selected.
+ */
+const MAX_WORKFLOW_ID = 2_147_483_647
 
 /**
  * The workflow a URL selects, or nothing.
@@ -160,9 +168,8 @@ export function workflowSelectionFromToken(token: unknown): WorkflowSelection | 
   if (typeof token !== 'string' || !WORKFLOW_ID.test(token)) {
     return undefined
   }
-  // identifiers are `serial`, so they start at 1
   const id = Number(token)
-  return id > 0 ? id : undefined
+  return id <= MAX_WORKFLOW_ID ? id : undefined
 }
 
 export interface UsageFilterControls {

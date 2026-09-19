@@ -44,6 +44,25 @@ describe('parseUsageFilters', () => {
       .toEqual(new Date('2020-01-01T00:00:00.000Z'))
   })
 
+  it('caps a range with no end, which runs to today', () => {
+    // the trend draws a bucket per day between the ends, and an open-ended
+    // range ends at today -- so this asked for one per day since year one
+    expect(() => parseUsageFilters({ from: '0001-01-01' }))
+      .toThrowError(expect.objectContaining({ statusCode: 400 }))
+  })
+
+  it('accepts a recent range with no end', () => {
+    expect(parseUsageFilters({ from: '2026-08-01' }).from)
+      .toEqual(new Date('2026-08-01T00:00:00.000Z'))
+  })
+
+  it('leaves a range with no start uncapped, the data bounding it', () => {
+    // the span then begins at the earliest analysis, as it did before a range
+    // could be asked for at all
+    expect(parseUsageFilters({ to: '2026-08-31' }).to)
+      .toEqual(new Date('2026-09-01T00:00:00.000Z'))
+  })
+
   it('rejects a reversed range with 400', () => {
     expect(() => parseUsageFilters({ from: '2026-09-02', to: '2026-09-01' }))
       .toThrowError(expect.objectContaining({ statusCode: 400 }))
@@ -116,6 +135,25 @@ describe('parseWorkflowSelection', () => {
 
   it('rejects zero with 400, because identifiers start at one', () => {
     expect(() => parseWorkflowSelection({ workflowId: '0' }))
+      .toThrowError(expect.objectContaining({ statusCode: 400 }))
+  })
+
+  it('accepts the largest identifier the column can hold', () => {
+    expect(parseWorkflowSelection({ workflowId: '2147483647' })).toBe(2_147_483_647)
+  })
+
+  it.each([
+    ['2147483648'],
+    ['99999999999999999999'],
+  ])('rejects %s with 400 rather than letting postgres answer it with a 500', (value) => {
+    // `workflow_id` is `integer`; bound past its range the query fails, and a
+    // reader's typo should not read as the server being broken
+    expect(() => parseWorkflowSelection({ workflowId: value }))
+      .toThrowError(expect.objectContaining({ statusCode: 400 }))
+  })
+
+  it('rejects a leading zero, one identifier having one spelling', () => {
+    expect(() => parseWorkflowSelection({ workflowId: '007' }))
       .toThrowError(expect.objectContaining({ statusCode: 400 }))
   })
 
