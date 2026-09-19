@@ -30,9 +30,7 @@ const automaticLabel = computed(() => {
       data-testid="usage-granularity-auto"
       :label="automaticLabel"
       size="sm"
-      :aria-pressed="isAutomatic"
-      :variant="isAutomatic ? 'subtle' : 'ghost'"
-      :color="isAutomatic ? 'primary' : 'neutral'"
+      v-bind="pressedButtonProps(isAutomatic)"
       @click="selectGranularity(undefined)"
     />
 
@@ -42,9 +40,7 @@ const automaticLabel = computed(() => {
       :data-testid="`usage-granularity-${option.value}`"
       :label="option.label"
       size="sm"
-      :aria-pressed="granularityOverride === option.value"
-      :variant="granularityOverride === option.value ? 'subtle' : 'ghost'"
-      :color="granularityOverride === option.value ? 'primary' : 'neutral'"
+      v-bind="pressedButtonProps(granularityOverride === option.value)"
       @click="selectGranularity(option.value)"
     />
   </div>

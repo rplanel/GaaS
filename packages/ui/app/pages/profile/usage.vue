@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import type { BreadcrumbItem } from '@nuxt/ui'
-import UsageGranularityFilter from '../../components/usage/UsageGranularityFilter.vue'
-import UsageRangeFilter from '../../components/usage/UsageRangeFilter.vue'
 import UsageStatisticsPanel from '../../components/usage/UsageStatisticsPanel.vue'
 
 const props = withDefaults(defineProps<{
@@ -54,12 +52,7 @@ const pageHeaderProps = {
         :is-loading="isLoading"
         :error-message="failureMessage"
         @refresh="refetch"
-      >
-        <template #filters>
-          <UsageRangeFilter />
-          <UsageGranularityFilter />
-        </template>
-      </UsageStatisticsPanel>
+      />
     </UPageBody>
   </div>
 </template>

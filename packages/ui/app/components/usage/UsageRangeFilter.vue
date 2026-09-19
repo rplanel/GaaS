@@ -92,9 +92,7 @@ const customLabel = computed(() => {
       :data-testid="`usage-preset-${option.value}`"
       :label="option.label"
       size="sm"
-      :aria-pressed="!isCustom && preset === option.value"
-      :variant="!isCustom && preset === option.value ? 'subtle' : 'ghost'"
-      :color="!isCustom && preset === option.value ? 'primary' : 'neutral'"
+      v-bind="pressedButtonProps(!isCustom && preset === option.value)"
       @click="selectPreset(option.value)"
     />
 
@@ -104,9 +102,7 @@ const customLabel = computed(() => {
         :label="customLabel"
         icon="i-lucide-calendar"
         size="sm"
-        :aria-pressed="isCustom"
-        :variant="isCustom ? 'subtle' : 'ghost'"
-        :color="isCustom ? 'primary' : 'neutral'"
+        v-bind="pressedButtonProps(isCustom)"
       />
 
       <template #content>

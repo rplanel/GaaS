@@ -240,36 +240,49 @@ export function useUsageFilters(): UsageFilterControls {
 
   const workflowSelection = computed(() => workflowSelectionFromToken(route.query.workflowId))
 
-  // replace rather than push: a filter is a way of looking at one page, not a
-  // place of its own, so Back should leave the page rather than undo a click
+  /**
+   * Rewrites part of the filter state, leaving the rest of the URL alone.
+   *
+   * Replace rather than push, and in one place: a filter is a way of looking
+   * at one page, not a place of its own, so Back should leave the page rather
+   * than undo a click. `drop` names what this change supersedes; anything in
+   * `set` with no value is left out, absence being how every one of these
+   * says "nothing chosen".
+   */
+  function replaceQuery(drop: readonly string[], set: Record<string, string | undefined>) {
+    const query = { ...route.query }
+    for (const key of drop) {
+      delete query[key]
+    }
+    for (const [key, value] of Object.entries(set)) {
+      if (value === undefined) {
+        delete query[key]
+      }
+      else {
+        query[key] = value
+      }
+    }
+    router.replace({ query })
+  }
+
   function selectPreset(next: UsagePreset) {
-    const { from: _from, to: _to, ...rest } = route.query
-    router.replace({ query: { ...rest, range: next } })
+    replaceQuery(['from', 'to'], { range: next })
   }
 
   function selectCustomRange(next: UsageStatisticsRange) {
-    const { range: _range, from: _from, to: _to, ...rest } = route.query
-    router.replace({
-      query: {
-        ...rest,
-        ...(next.from ? { from: next.from } : {}),
-        ...(next.to ? { to: next.to } : {}),
-      },
-    })
+    replaceQuery(['range', 'from', 'to'], { from: next.from, to: next.to })
   }
 
   // the override outlives a change of range on purpose: a reader who asked for
   // weeks meant weeks, and the automatic setting is one click away
   function selectGranularity(next: TrendGranularity | undefined) {
-    const { granularity: _granularity, ...rest } = route.query
-    router.replace({ query: { ...rest, ...(next ? { granularity: next } : {}) } })
+    replaceQuery([], { granularity: next })
   }
 
   // the range and the bucket width are left alone: the three are independent,
   // and a reader picking a workflow has not asked to see a different period
   function selectWorkflow(next: WorkflowSelection | undefined) {
-    const { workflowId: _workflowId, ...rest } = route.query
-    router.replace({ query: { ...rest, ...(next === undefined ? {} : { workflowId: String(next) }) } })
+    replaceQuery([], { workflowId: next === undefined ? undefined : String(next) })
   }
 
   return {

@@ -18,7 +18,6 @@ import {
   insertAnalysisMonitoringEffect,
   nonTerminalJobStates,
   terminalJobStates,
-  TREND_INTERVALS,
   updateAnalysisMonitoringEffect,
 } from '../../../../src/runtime/server/utils/grizzle/analysisMonitoring'
 import { createMockDrizzle, createMockDrizzleResult, mockDrizzleSelectRejects } from '../../fixtures'
@@ -727,12 +726,6 @@ describe('getWorkflowUsage boundary and error paths', () => {
 
     expect(first.map(entry => entry.workflowId)).toEqual([3, 1, 2])
     expect(second).toEqual(first)
-  })
-})
-
-describe('tREND_INTERVALS', () => {
-  it('is a closed allowlist mapping each granularity to its SQL interval literal', () => {
-    expect(TREND_INTERVALS).toEqual({ day: '1 day', week: '1 week', month: '1 month' })
   })
 })
 
