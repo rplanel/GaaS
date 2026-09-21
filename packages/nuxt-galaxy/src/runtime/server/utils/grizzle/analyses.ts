@@ -1,4 +1,4 @@
-import type { Datamap, GalaxyInvocation, GalaxyInvocationIO, GalaxyWorkflowInput, GalaxyWorkflowParameters } from 'blendtype'
+import type { Datamap, GalaxyInvocation, GalaxyWorkflowInput, GalaxyWorkflowParameters } from 'blendtype'
 import type { Context } from 'effect'
 import type { NewAnalysis } from '../../../types/nuxt-galaxy'
 import type { WorkflowSnapshot } from './analysisMonitoring'
@@ -164,35 +164,6 @@ export function insertAnalysis(analysis: NewAnalysis, workflowSnapshot?: Workflo
       }),
       catch: error => new InsertAnalysisError({ message: `Error inserting analysis: ${error}` }),
     })
-  })
-}
-export function getInvocationOutputs(analysisId: number, ownerId: string) {
-  return Effect.gen(function* () {
-    const invocationDb = yield* getAnalysis(analysisId, ownerId)
-    if (!invocationDb) {
-      return
-    }
-    const analysisInvocationDb = invocationDb.invocation as GalaxyInvocation
-    if (analysisInvocationDb?.outputs) {
-      const outputDatasetsExpected = Object.values(analysisInvocationDb.outputs) as GalaxyInvocationIO[]
-      const stepToJob = new Map(analysisInvocationDb.steps.map(s => ([s.workflow_step_id, { jobId: s.job_id, stepId: s.order_index }])))
-      const jobsWithOutputs = outputDatasetsExpected.reduce((acc, curr) => {
-        const jobInfo = stepToJob.get(curr.workflow_step_id)
-        if (jobInfo?.jobId) {
-          const { jobId, stepId } = jobInfo
-          if (!acc?.[jobId]) {
-            acc[jobId] = { galaxyDatasetIds: [curr.id], galaxyJobId: jobId, stepId }
-          }
-          else {
-            const jobIdFromAcc = acc?.[jobId]
-            if (jobIdFromAcc !== undefined)
-              jobIdFromAcc.galaxyDatasetIds.push(curr.id)
-          }
-        }
-        return acc
-      }, {} as Record<string, { galaxyDatasetIds: string[], galaxyJobId: string, stepId: number }>)
-      return jobsWithOutputs
-    }
   })
 }
 
