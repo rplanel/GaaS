@@ -1,7 +1,7 @@
 import { Effect } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { getCurrentUserEffect, GetCurrentUserError } from '../../../../src/runtime/server/utils/grizzle/user'
-import { createMockDrizzle, expectFailure, mockDbUser } from '../../fixtures'
+import { createMockDrizzle, expectFailure, mockDbUser, mockDrizzleSelectRejects } from '../../fixtures'
 
 describe('getCurrentUserEffect', () => {
   it('should return the user when found', async () => {
@@ -32,15 +32,9 @@ describe('getCurrentUserEffect', () => {
 
   it('should fail with GetCurrentUserError when database operation fails', async () => {
     const drizzle = createMockDrizzle()
-    drizzle.mock.select.mockImplementation(() => {
-      const chain: Record<string, unknown> = {}
-      chain.from = () => chain
-      chain.innerJoin = () => chain
-      chain.where = () => chain
-      chain.then = (_resolve: unknown, reject: (e: Error) => void) =>
-        Promise.reject(new Error('Connection refused')).catch(reject)
-      return chain
-    })
+    drizzle.mock.select.mockImplementation(
+      mockDrizzleSelectRejects(['from', 'innerJoin', 'where'], new Error('Connection refused')),
+    )
 
     const exit = await getCurrentUserEffect('https://galaxy.example.com', 'admin@example.org').pipe(
       Effect.provide(drizzle.layer),

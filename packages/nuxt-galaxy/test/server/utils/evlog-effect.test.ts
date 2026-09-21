@@ -82,7 +82,7 @@ describe('evlogEffectLogger', () => {
       spans,
     } as any)
 
-    const context = mockLog.info.mock.calls[0][0] as Record<string, unknown>
+    const context = mockLog.info.mock.calls[0]![0] as Record<string, unknown>
     expect(() => JSON.stringify(context)).not.toThrow()
     expect(context.effectAnnotations).toEqual({
       analysisId: '1',

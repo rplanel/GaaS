@@ -39,7 +39,10 @@ const mockGetSupabaseUser = vi.fn<(event: H3Event) => Effect.Effect<{ id?: strin
   () => Effect.succeed({ id: 'user-id' }),
 )
 
-const mockGetAnalysisMonitoringStats = vi.fn((_ownerId: string, _filters?: unknown) => Effect.succeed(SELF_STATS))
+const mockGetAnalysisMonitoringStats = vi.fn<
+  (ownerId: string, filters?: unknown, granularity?: unknown) =>
+  Effect.Effect<typeof SELF_STATS, GetAnalysisMonitoringStatsError, never>
+>(() => Effect.succeed(SELF_STATS))
 
 const mockDrizzle = {
   select: vi.fn(),

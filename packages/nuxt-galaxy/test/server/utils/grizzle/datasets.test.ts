@@ -1,4 +1,4 @@
-import { BlendTypeConfig } from 'blendtype'
+import { BlendTypeConfig, HistoryError, HttpError } from 'blendtype'
 import { Effect, Layer } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { createFailureLayer, createSuccessLayer } from '../../../../../blendtype/test/fixtures'
@@ -12,11 +12,13 @@ import {
   uploadDatasetsEffect,
   uploadSingleDatasetEffect,
 } from '../../../../src/runtime/server/utils/grizzle/datasets'
+import { CreateSignedUrlError } from '../../../../src/runtime/server/utils/grizzle/supabase'
 import {
   createMockDrizzle,
   createMockEvent,
   createMockServerSupabaseClientLayer,
   expectFailure,
+  expectFailureOf,
 } from '../../fixtures'
 
 // ============================================================================
@@ -157,8 +159,7 @@ describe('uploadSingleDatasetEffect', () => {
       Effect.runPromiseExit,
     )
 
-    expectFailure(exit, (error) => {
-      expect(error).toBeInstanceOf(MissingStorageObjectIdError)
+    expectFailureOf(exit, MissingStorageObjectIdError, (error) => {
       expect(error.message).toContain('has no storage_object_id')
     })
   })
@@ -184,8 +185,7 @@ describe('uploadSingleDatasetEffect', () => {
       Effect.runPromiseExit,
     )
 
-    expectFailure(exit, (error) => {
-      expect(error).toBeInstanceOf(GetStorageObjectError)
+    expectFailureOf(exit, GetStorageObjectError, (error) => {
       expect(error.message).toContain('has no name')
     })
   })
@@ -213,7 +213,7 @@ describe('uploadSingleDatasetEffect', () => {
       Effect.runPromiseExit,
     )
 
-    expectFailure(exit, (error) => {
+    expectFailureOf(exit, CreateSignedUrlError, (error) => {
       expect(error.message).toContain('signed URL')
     })
   })
@@ -239,8 +239,7 @@ describe('uploadSingleDatasetEffect', () => {
       Effect.runPromiseExit,
     )
 
-    expectFailure(exit, (error) => {
-      expect(error).toBeInstanceOf(Error)
+    expectFailureOf(exit, HttpError, (error) => {
       expect(error.message).toContain('is empty')
     })
   })
@@ -266,8 +265,7 @@ describe('uploadSingleDatasetEffect', () => {
       Effect.runPromiseExit,
     )
 
-    expectFailure(exit, (error) => {
-      expect(error).toBeInstanceOf(UnexpectedUploadResultError)
+    expectFailureOf(exit, UnexpectedUploadResultError, (error) => {
       expect(error.message).toContain('returned 0 outputs')
     })
   })
@@ -298,8 +296,7 @@ describe('uploadSingleDatasetEffect', () => {
       Effect.runPromiseExit,
     )
 
-    expectFailure(exit, (error) => {
-      expect(error).toBeInstanceOf(UnexpectedUploadResultError)
+    expectFailureOf(exit, UnexpectedUploadResultError, (error) => {
       expect(error.message).toContain('returned 2 outputs')
     })
   })
@@ -327,8 +324,9 @@ describe('uploadSingleDatasetEffect', () => {
       Effect.runPromiseExit,
     )
 
-    expectFailure(exit, (error) => {
-      // The error gets wrapped by deleteHistoryEffect which also uses GalaxyFetch
+    // The upload failure reaches the caller wrapped by deleteHistoryEffect,
+    // which also goes through GalaxyFetch.
+    expectFailureOf(exit, HistoryError, (error) => {
       expect(error.message).toContain('Upload failed')
     })
   })

@@ -40,7 +40,7 @@ describe('acquireSyncLock', () => {
     const result = await Effect.runPromise(acquireSyncLock(supabase, 1, 900))
     expect(result).toBe(true)
     expect(supabase.schema).toHaveBeenCalledWith('galaxy')
-    const schemaChain = supabase.schema.mock.results[0].value
+    const schemaChain = supabase.schema.mock.results[0]!.value
     expect(schemaChain.rpc).toHaveBeenCalledWith('acquire_sync_lock', { p_analysis_id: 1, p_ttl_seconds: 900 })
     expect(schemaChain.rpc).toHaveBeenCalledTimes(1)
   })
@@ -49,7 +49,7 @@ describe('acquireSyncLock', () => {
     const supabase = createMockSupabase({ rpcResult: { data: false, error: null } })
     const result = await Effect.runPromise(acquireSyncLock(supabase, 2, 300))
     expect(result).toBe(false)
-    const schemaChain = supabase.schema.mock.results[0].value
+    const schemaChain = supabase.schema.mock.results[0]!.value
     expect(schemaChain.rpc).toHaveBeenCalledWith('acquire_sync_lock', { p_analysis_id: 2, p_ttl_seconds: 300 })
   })
 
@@ -62,7 +62,7 @@ describe('acquireSyncLock', () => {
   it('fails with SyncLockError when RPC returns an error', async () => {
     const supabase = createMockSupabase({ rpcResult: { data: null, error: { message: 'rpc failed' } } })
     await expect(Effect.runPromise(acquireSyncLock(supabase, 4, 900))).rejects.toThrow('Failed to acquire sync lock')
-    const schemaChain = supabase.schema.mock.results[0].value
+    const schemaChain = supabase.schema.mock.results[0]!.value
     expect(schemaChain.rpc).toHaveBeenCalledWith('acquire_sync_lock', { p_analysis_id: 4, p_ttl_seconds: 900 })
   })
 
@@ -121,7 +121,7 @@ describe('releaseSyncLock', () => {
     const supabase = createMockSupabase({ deleteResult: { data: null, error: null } })
     await Effect.runPromise(releaseSyncLock(supabase, 1))
     expect(supabase.schema).toHaveBeenCalledWith('galaxy')
-    const schemaChain = supabase.schema.mock.results[0].value
+    const schemaChain = supabase.schema.mock.results[0]!.value
     expect(schemaChain.from).toHaveBeenCalledWith('sync_locks')
     const fromChain = schemaChain.from.mock.results[0].value
     expect(fromChain.delete).toHaveBeenCalled()

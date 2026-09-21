@@ -23,6 +23,9 @@ vi.mock('evlog', () => ({
 
 const plugin = (await import('../../../src/runtime/server/plugins/migrations.server')).default
 
+// The plugin ignores its NitroApp argument, but the signature still demands one.
+const nitroApp = {} as Parameters<typeof plugin>[0]
+
 describe('migrations.server plugin', () => {
   beforeEach(() => {
     mockUseRuntimeConfig.mockClear().mockReturnValue({
@@ -40,7 +43,7 @@ describe('migrations.server plugin', () => {
     const log = createMockRequestLogger()
     mockCreateRequestLogger.mockReturnValue(log)
 
-    await plugin()
+    await plugin(nitroApp)
     expect(mockCreateRequestLogger).toHaveBeenCalledWith(expect.objectContaining({ requestId: expect.any(String) }))
     expect(log.set).toHaveBeenCalledWith({ operation: 'migrations' })
   })
@@ -49,7 +52,7 @@ describe('migrations.server plugin', () => {
     const log = createMockRequestLogger()
     mockCreateRequestLogger.mockReturnValue(log)
 
-    await plugin()
+    await plugin(nitroApp)
 
     expect(log.info).toHaveBeenCalledWith('Running database migrations on startup')
     expect(log.info).toHaveBeenCalledWith('Database migrations applied successfully')
@@ -61,7 +64,7 @@ describe('migrations.server plugin', () => {
     const log = createMockRequestLogger()
     mockCreateRequestLogger.mockReturnValue(log)
 
-    await plugin()
+    await plugin(nitroApp)
 
     expect(mockRunMigrations).not.toHaveBeenCalled()
     expect(log.warn).toHaveBeenCalledWith(
@@ -75,7 +78,7 @@ describe('migrations.server plugin', () => {
     const log = createMockRequestLogger()
     mockCreateRequestLogger.mockReturnValue(log)
 
-    await plugin()
+    await plugin(nitroApp)
 
     expect(log.error).toHaveBeenCalledWith(
       'Migration failed on startup',

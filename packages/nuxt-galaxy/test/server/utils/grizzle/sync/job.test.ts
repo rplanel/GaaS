@@ -12,6 +12,12 @@ interface MockSupabaseConfig {
   updateResult?: { data: unknown, error: unknown }
 }
 
+/**
+ * One shared chain for every table: `schema()` and `from()` ignore their
+ * arguments and hand back the same spies, so `schema('galaxy').from('jobs')`
+ * in an assertion is how a test reaches those spies, not a filter on them.
+ * The names match what the code under test passes.
+ */
 function createMockSupabase(config: MockSupabaseConfig = {}): SupabaseClient<Database> {
   const terminal = (result?: { data: unknown, error: unknown }) =>
     Promise.resolve(result ?? { data: null, error: null })
@@ -76,7 +82,7 @@ describe('syncJobEffect', () => {
     const result = await Effect.runPromise(syncJobEffect('gjid', 1, 1, 'owner', supabase, layer))
 
     expect(result).toBe(42)
-    expect(supabase.schema().from().insert).toHaveBeenCalledWith(expectedPayload('gjid', mockGalaxyJob, true))
+    expect(supabase.schema('galaxy').from('jobs').insert).toHaveBeenCalledWith(expectedPayload('gjid', mockGalaxyJob, true))
   })
 
   it('updates an existing job and returns its id', async () => {
@@ -88,7 +94,7 @@ describe('syncJobEffect', () => {
     const result = await Effect.runPromise(syncJobEffect('gjid', 1, 1, 'owner', supabase, layer))
 
     expect(result).toBe(7)
-    expect(supabase.schema().from().update).toHaveBeenCalledWith(expectedPayload('gjid', mockGalaxyJob, true))
+    expect(supabase.schema('galaxy').from('jobs').update).toHaveBeenCalledWith(expectedPayload('gjid', mockGalaxyJob, true))
   })
 
   it('sets is_sync to false for non-terminal Galaxy states', async () => {
@@ -102,7 +108,7 @@ describe('syncJobEffect', () => {
     const result = await Effect.runPromise(syncJobEffect('gjid-running', 1, 1, 'owner', supabase, runningLayer))
 
     expect(result).toBe(43)
-    expect(supabase.schema().from().insert).toHaveBeenCalledWith(expectedPayload('gjid-running', runningJob, false))
+    expect(supabase.schema('galaxy').from('jobs').insert).toHaveBeenCalledWith(expectedPayload('gjid-running', runningJob, false))
   })
 
   it('fails with SyncJobError when insert returns an error', async () => {

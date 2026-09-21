@@ -246,8 +246,8 @@ describe('sync-flow integration', () => {
     const task = await loadTask()
     const result = await task.run({ name: 'galaxy:sync-analyses', payload: { analysisId: 1 }, context: {} })
 
-    expect(result.result.failed).toBe(0)
-    expect(result.result.synced).toBe(1)
+    expect(result.result!.failed).toBe(0)
+    expect(result.result!.synced).toBe(1)
 
     // Verify the full sync flow touched the expected tables
     expect(calls.from).toContainEqual(['datasets'])

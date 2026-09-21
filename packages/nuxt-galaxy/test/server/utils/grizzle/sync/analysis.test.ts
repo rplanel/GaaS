@@ -36,16 +36,28 @@ interface MockSupabaseConfig {
   updateResult?: { data: unknown, error: unknown }
 }
 
-function createMockSupabase(config: MockSupabaseConfig = {}): SupabaseClient<Database> {
-  const calls: Record<string, unknown[]> = {}
+/** Arguments of every call the Supabase double saw, keyed by chain method. */
+type RecordedCalls = Record<string, unknown[][]>
+
+/**
+ * The argument lists recorded for `method`. Throws rather than letting an
+ * absent method surface as `undefined.find is not a function`.
+ */
+function callsTo(calls: RecordedCalls, method: string): unknown[][] {
+  const recorded = calls[method]
+  if (!recorded)
+    throw new Error(`the Supabase double recorded no \`${method}\` call`)
+  return recorded
+}
+
+function createMockSupabase(config: MockSupabaseConfig = {}): SupabaseClient<Database> & { __calls: RecordedCalls } {
+  const calls: RecordedCalls = {}
   let currentTable: string | null = null
   let currentAction: 'select' | 'update' | 'insert' | null = null
   let chain: Record<string, unknown>
 
   const recordCall = (method: string, ...args: unknown[]) => {
-    if (!calls[method])
-      calls[method] = []
-    calls[method].push(args)
+    (calls[method] ??= []).push(args)
     return chain
   }
 
@@ -100,7 +112,7 @@ function createMockSupabase(config: MockSupabaseConfig = {}): SupabaseClient<Dat
       })),
     },
     __calls: calls,
-  } as unknown as SupabaseClient<Database>
+  } as unknown as SupabaseClient<Database> & { __calls: RecordedCalls }
 }
 
 const ownerId = 'owner-uuid-1'
@@ -196,7 +208,7 @@ describe('syncAnalysisEffect', () => {
 
     expect(acquireSyncLock).toHaveBeenCalledWith(supabase, analysisId, 900)
     expect(releaseSyncLock).not.toHaveBeenCalled()
-    expect((supabase as any).__calls.from).toBeUndefined()
+    expect(supabase.__calls.from).toBeUndefined()
   })
 
   it('updates analysis state from Galaxy invocation', async () => {
@@ -207,7 +219,7 @@ describe('syncAnalysisEffect', () => {
 
     await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
 
-    const calls = (supabase as any).__calls as Record<string, unknown[]>
+    const { __calls: calls } = supabase
     expect(calls.from).toContainEqual(['analyses'])
     expect(calls.select).toContainEqual(['id, state, galaxy_id, history_id, owner_id, sync_attempts'])
     expect(calls.update).toContainEqual([
@@ -225,7 +237,7 @@ describe('syncAnalysisEffect', () => {
 
     // history updated to running while invocation is non-terminal
     expect(calls.from).toContainEqual(['histories'])
-    const historyUpdateCall = calls.update.find((call) => {
+    const historyUpdateCall = callsTo(calls, 'update').find((call) => {
       const payload = call[0] as Record<string, unknown>
       return payload && payload.state === 'running'
     })
@@ -286,7 +298,7 @@ describe('syncAnalysisEffect', () => {
     expect(syncOutputDatasetEffect).toHaveBeenCalledWith('dataset-1', analysisId, historyId, 100, ownerId, supabase, layer)
     expect(syncOutputDatasetEffect).toHaveBeenCalledWith('dataset-2', analysisId, historyId, 101, ownerId, supabase, layer)
 
-    const calls = (supabase as any).__calls as Record<string, unknown[]>
+    const { __calls: calls } = supabase
     expect(calls.update).toContainEqual([{
       state: 'completed',
       invocation: completedInvocation,
@@ -297,7 +309,7 @@ describe('syncAnalysisEffect', () => {
       next_sync_at: null,
     }])
     expect(calls.from).toContainEqual(['histories'])
-    const historyUpdateCall = calls.update.find((call) => {
+    const historyUpdateCall = callsTo(calls, 'update').find((call) => {
       const payload = call[0] as Record<string, unknown>
       return payload && payload.state === 'ok'
     })
@@ -317,9 +329,9 @@ describe('syncAnalysisEffect', () => {
 
     await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
 
-    const calls = (supabase as any).__calls as Record<string, unknown[]>
+    const { __calls: calls } = supabase
     expect(calls.from).toContainEqual(['analysis_monitoring'])
-    const monitoringUpdateCall = calls.update.find((call) => {
+    const monitoringUpdateCall = callsTo(calls, 'update').find((call) => {
       const payload = call[0] as Record<string, unknown>
       return payload && payload.outcome !== undefined
     })
@@ -330,7 +342,7 @@ describe('syncAnalysisEffect', () => {
         error_message: null,
       },
     ])
-    const monitoringEqCalls = calls.eq.filter(call => call[0] === 'galaxy_invocation_id' || call[0] === 'owner_id' || call[0] === 'outcome')
+    const monitoringEqCalls = callsTo(calls, 'eq').filter(call => call[0] === 'galaxy_invocation_id' || call[0] === 'owner_id' || call[0] === 'outcome')
     expect(monitoringEqCalls).toContainEqual(['galaxy_invocation_id', galaxyInvocationId])
     expect(monitoringEqCalls).toContainEqual(['owner_id', ownerId])
     expect(monitoringEqCalls).toContainEqual(['outcome', 'pending'])
@@ -350,7 +362,7 @@ describe('syncAnalysisEffect', () => {
 
     await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
 
-    const calls = (supabase as any).__calls as Record<string, unknown[]>
+    const { __calls: calls } = supabase
     expect(calls.update).toContainEqual([
       {
         state: 'failed',
@@ -362,7 +374,7 @@ describe('syncAnalysisEffect', () => {
         next_sync_at: null,
       },
     ])
-    const monitoringUpdateCall = calls.update.find((call) => {
+    const monitoringUpdateCall = callsTo(calls, 'update').find((call) => {
       const payload = call[0] as Record<string, unknown>
       return payload && payload.outcome === 'error'
     })
@@ -409,8 +421,8 @@ describe('syncAnalysisEffect', () => {
 
     await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
 
-    const calls = (supabase as any).__calls as Record<string, unknown[]>
-    const analysisUpdateCall = calls.update.find((call) => {
+    const { __calls: calls } = supabase
+    const analysisUpdateCall = callsTo(calls, 'update').find((call) => {
       const payload = call[0] as Record<string, unknown>
       return payload && Object.prototype.hasOwnProperty.call(payload, 'is_sync')
     })
@@ -426,14 +438,14 @@ describe('syncAnalysisEffect', () => {
       },
     ])
 
-    const historyUpdateCall = calls.update.find((call) => {
+    const historyUpdateCall = callsTo(calls, 'update').find((call) => {
       const payload = call[0] as Record<string, unknown>
       return payload && payload.state === 'ok'
     })
     expect(historyUpdateCall).toEqual([{ state: 'ok', is_sync: true }])
 
     expect(calls.from).toContainEqual(['analysis_monitoring'])
-    const monitoringUpdateCall = calls.update.find((call) => {
+    const monitoringUpdateCall = callsTo(calls, 'update').find((call) => {
       const payload = call[0] as Record<string, unknown>
       return payload && Object.prototype.hasOwnProperty.call(payload, 'outcome')
     })
@@ -465,7 +477,7 @@ describe('syncAnalysisEffect', () => {
 
     await expect(Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))).rejects.toThrow('Ownership mismatch')
 
-    const calls = (supabase as any).__calls as Record<string, unknown[]>
+    const { __calls: calls } = supabase
     expect(calls.update).toBeUndefined()
     expect(releaseSyncLock).toHaveBeenCalledWith(supabase, analysisId)
   })
@@ -496,7 +508,7 @@ describe('syncAnalysisEffect', () => {
 
     await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
 
-    const calls = (supabase as any).__calls as Record<string, unknown[]>
+    const { __calls: calls } = supabase
     expect(calls.update).toContainEqual([
       {
         state: 'completed',
@@ -534,7 +546,7 @@ describe('syncAnalysisEffect', () => {
     await expect(Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))).rejects.toThrow('Analysis 1 not found')
 
     expect(getCount()).toBe(0)
-    const calls = (supabase as any).__calls as Record<string, unknown[]>
+    const { __calls: calls } = supabase
     expect(calls.from?.filter(call => call[0] === 'analyses').length).toBe(1)
     expect(calls.update).toBeUndefined()
     expect(releaseSyncLock).toHaveBeenCalledWith(supabase, analysisId)
@@ -548,7 +560,7 @@ describe('syncAnalysisEffect', () => {
 
     await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
 
-    const calls = (supabase as any).__calls as Record<string, unknown[]>
+    const { __calls: calls } = supabase
     expect(calls.update).toContainEqual([
       {
         state: 'scheduled',
@@ -572,8 +584,8 @@ describe('syncAnalysisEffect', () => {
 
     await expect(Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))).rejects.toThrow('Galaxy service is unavailable')
 
-    const calls = (supabase as any).__calls as Record<string, unknown[]>
-    const attemptUpdate = calls.update.find((call) => {
+    const { __calls: calls } = supabase
+    const attemptUpdate = callsTo(calls, 'update').find((call) => {
       const payload = call[0] as Record<string, unknown>
       return payload && Object.prototype.hasOwnProperty.call(payload, 'sync_attempts') && payload.sync_attempts === 3
     })
@@ -596,7 +608,7 @@ describe('syncAnalysisEffect', () => {
 
     await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
 
-    const calls = (supabase as any).__calls as Record<string, unknown[]>
+    const { __calls: calls } = supabase
     expect(calls.update).toBeUndefined()
   })
 
@@ -608,8 +620,8 @@ describe('syncAnalysisEffect', () => {
 
     await expect(Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))).rejects.toThrow('Galaxy service is unavailable')
 
-    const calls = (supabase as any).__calls as Record<string, unknown[]>
-    const attemptUpdate = calls.update.find((call) => {
+    const { __calls: calls } = supabase
+    const attemptUpdate = callsTo(calls, 'update').find((call) => {
       const payload = call[0] as Record<string, unknown>
       return payload && Object.prototype.hasOwnProperty.call(payload, 'sync_attempts')
     })

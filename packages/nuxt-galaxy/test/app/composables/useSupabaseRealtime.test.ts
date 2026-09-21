@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { useSupabaseRealtime } from '../../../src/runtime/app/composables/useSupabaseRealtime'
 
-interface MockChannel extends RealtimeChannel {
+type MockChannel = Omit<RealtimeChannel, 'on' | 'subscribe'> & {
   on: ReturnType<typeof vi.fn>
   subscribe: ReturnType<typeof vi.fn>
   _triggerEvent: () => void

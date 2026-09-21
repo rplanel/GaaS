@@ -10,9 +10,9 @@ function sqlToString(sql: any): string {
   }
   if (typeof sql.toQuery === 'function') {
     return sql.toQuery({
-      escapeName: name => `"${name}"`,
-      escapeParam: num => `$${num}`,
-      escapeString: str => `'${str}'`,
+      escapeName: (name: string) => `"${name}"`,
+      escapeParam: (num: number) => `$${num}`,
+      escapeString: (str: string) => `'${str}'`,
     }).sql
   }
   return String(sql)

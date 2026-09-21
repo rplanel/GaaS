@@ -208,7 +208,7 @@ describe('post /api/db/analyses', () => {
     const handler = await loadHandler()
     await handler(event)
 
-    const callArgs = mocks.runAnalysis.mock.calls[0]
+    const callArgs = mocks.runAnalysis.mock.calls[0]!
     // runAnalysis(name, galaxyHistoryId, galaxyWorkflowId, historyId, workflowId,
     //             ownerId, inputs, parameters, datamap, workflowSnapshot)
     const workflowSnapshot = callArgs[9]

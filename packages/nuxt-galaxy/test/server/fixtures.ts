@@ -1,9 +1,10 @@
 import type { GalaxyDataset, GalaxyHistoryDetailed, GalaxyInvocation, GalaxyVersion, GalaxyWorkflow, GalaxyWorkflowExport, InvocationJobsSummary, ShowFullJobResponse } from 'blendtype'
 import type { Context } from 'effect'
 import type { EventHandlerRequest, H3Event } from 'h3'
+import type { Mock } from 'vitest'
 import { GalaxyApiError, GalaxyFetch } from 'blendtype'
 import { Effect, Exit, Layer } from 'effect'
-import { vi } from 'vitest'
+import { expect, vi } from 'vitest'
 import { Drizzle } from '../../src/runtime/server/utils/drizzle'
 import { ServerSupabaseClaims, ServerSupabaseClient } from '../../src/runtime/server/utils/grizzle/supabase'
 
@@ -372,28 +373,32 @@ export function create503GalaxyLayer(
  * Creates a mock Drizzle query builder chain.
  * Each method returns `this` for chaining, and terminal methods return the configured result.
  */
-export function createMockDrizzleResult(result: unknown) {
-  const chainable: Record<string, unknown> = {}
-  const chainMethods = [
-    'select',
-    'from',
-    'where',
-    'innerJoin',
-    'leftJoin',
-    'insert',
-    'values',
-    'returning',
-    'onConflictDoUpdate',
-    'onConflictDoNothing',
-    'update',
-    'set',
-    'delete',
-    'limit',
-    'orderBy',
-    'groupBy',
-  ]
+const drizzleChainMethods = [
+  'select',
+  'from',
+  'where',
+  'innerJoin',
+  'leftJoin',
+  'insert',
+  'values',
+  'returning',
+  'onConflictDoUpdate',
+  'onConflictDoNothing',
+  'update',
+  'set',
+  'delete',
+  'limit',
+  'orderBy',
+  'groupBy',
+] as const
 
-  for (const method of chainMethods) {
+/** A mocked Drizzle query chain: every builder method is a spy returning the chain. */
+export type MockDrizzleChain = Record<typeof drizzleChainMethods[number] | 'then', Mock>
+
+export function createMockDrizzleResult(result: unknown): MockDrizzleChain {
+  const chainable = {} as MockDrizzleChain
+
+  for (const method of drizzleChainMethods) {
     chainable[method] = vi.fn(() => chainable)
   }
 
@@ -410,16 +415,25 @@ type DrizzleInsertMethod = 'values' | 'onConflictDoUpdate' | 'onConflictDoNothin
 type DrizzleUpdateMethod = 'set' | 'where' | 'returning'
 type DrizzleDeleteMethod = 'where' | 'returning'
 
-function createDrizzleRejectChain(methods: string[], error: Error) {
-  const chain: Record<string, unknown> = {}
+/**
+ * A chain that rejects. Only the named methods are stubbed, so a query that
+ * reaches for anything else fails loudly instead of quietly chaining.
+ */
+function createDrizzleRejectChain(methods: readonly (keyof MockDrizzleChain)[], error: Error): MockDrizzleChain {
+  const chain = {} as MockDrizzleChain
   for (const method of methods) {
     if (method === 'then') {
       throw new Error(`Cannot overwrite '.then' on a Drizzle reject chain; 'then' is reserved for the terminal thenable.`)
     }
     chain[method] = vi.fn(() => chain)
   }
-  chain.then = vi.fn((_resolve: unknown, reject: (e: Error) => unknown) => {
-    reject(error)
+  // A query that `await`s the chain supplies both callbacks; one that ends in
+  // `.then(fn)` supplies only the first, so fall back to a rejected promise
+  // instead of calling an undefined `reject`.
+  chain.then = vi.fn((_resolve: unknown, reject?: (e: Error) => unknown) => {
+    if (!reject)
+      return Promise.reject(error)
+    return reject(error)
   })
   return chain
 }
@@ -440,6 +454,9 @@ export function mockDrizzleDeleteRejects(methods: [DrizzleDeleteMethod, ...Drizz
   return vi.fn(() => createDrizzleRejectChain(methods, error))
 }
 
+/** The query methods a `createMockDrizzle` client answers to, root or transaction. */
+export type MockDrizzleQueries = Record<'select' | 'insert' | 'update' | 'delete', Mock<() => MockDrizzleChain>>
+
 /**
  * Creates a mock Drizzle instance that returns configurable results.
  * Use `setResult()` to change the returned data between test cases, or
@@ -456,15 +473,19 @@ export function createMockDrizzle() {
   const shiftResult = () =>
     resultQueue.length > 0 ? resultQueue.shift()! : currentResult
 
-  const mock = {
+  const queries = {
     select: vi.fn(() => createMockDrizzleResult(shiftResult())),
     insert: vi.fn(() => createMockDrizzleResult(shiftResult())),
     update: vi.fn(() => createMockDrizzleResult(shiftResult())),
     delete: vi.fn(() => createMockDrizzleResult(shiftResult())),
   }
 
-  Object.assign(mock, {
-    transaction: vi.fn((cb: (client: typeof mock) => Promise<unknown>) => cb(mock)),
+  // Taking `Object.assign`'s return value is what puts `transaction` on the
+  // type; assigning onto `queries` as a statement would hide it from callers.
+  // The callback receives the same client, so writes inside a transaction land
+  // on the same spies unless a test replaces the implementation.
+  const mock = Object.assign(queries, {
+    transaction: vi.fn((cb: (client: MockDrizzleQueries) => Promise<unknown>) => cb(queries)),
   })
 
   return {
@@ -611,6 +632,23 @@ export function expectFailure<E, A>(
   else {
     throw new Error(`Unexpected cause: ${exit.cause._tag}`)
   }
+}
+
+/**
+ * Asserts the failure is an instance of `errorType`, then hands it to
+ * `assertionFn` narrowed to that class so its own fields can be read.
+ */
+export function expectFailureOf<A, E, T>(
+  exit: Exit.Exit<A, E>,
+  errorType: abstract new (...args: never[]) => T,
+  assertionFn: (error: E & T) => void,
+): void {
+  expectFailure(exit, (error) => {
+    expect(error).toBeInstanceOf(errorType)
+    // `toBeInstanceOf` has already thrown if it is not one; this narrows.
+    if (error instanceof errorType)
+      assertionFn(error)
+  })
 }
 
 /**

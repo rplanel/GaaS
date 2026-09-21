@@ -46,6 +46,10 @@ describe('analysis monitoring stats survive workflow deletion (D-07)', () => {
     // distinct tx client so the finalize UPDATE lands on the tx, not the root
     // mock (copies analyses.test.ts distinct-tx pattern L503-527).
     const tx = {
+      // A transaction client exposes the whole query surface; this test only
+      // drives update and delete through it.
+      select: vi.fn(() => createMockDrizzleResult([])),
+      insert: vi.fn(() => createMockDrizzleResult([])),
       update: vi.fn(() => createMockDrizzleResult([{ updatedId: 5 }])),
       delete: vi.fn(() => createMockDrizzleResult([{ id: 1 }])),
     }
@@ -105,6 +109,6 @@ describe('analysis monitoring stats survive workflow deletion (D-07)', () => {
       cancelled: 1,
     })
     // D-14 / STAT-04 zero-denominator edge: no terminal outcomes => 0, not null.
-    expect(usage[0].successRate).toBe(0)
+    expect(usage[0]!.successRate).toBe(0)
   })
 })

@@ -633,10 +633,10 @@ describe('getWorkflowUsage', () => {
     )
 
     expect(result).toHaveLength(2)
-    expect(result[0].workflowId).toBe(1)
-    expect(result[0].version).toBe('1.0')
-    expect(result[1].workflowId).toBe(2)
-    expect(result[1].version).toBe('2.0')
+    expect(result[0]!.workflowId).toBe(1)
+    expect(result[0]!.version).toBe('1.0')
+    expect(result[1]!.workflowId).toBe(2)
+    expect(result[1]!.version).toBe('2.0')
   })
 })
 
@@ -684,7 +684,7 @@ describe('getWorkflowUsage boundary and error paths', () => {
     )
 
     expect(result).toHaveLength(1)
-    expect(result[0].successRate).toBe(0)
+    expect(result[0]!.successRate).toBe(0)
   })
 
   it('surfaces GetWorkflowUsageError with the underlying message when the query rejects', async () => {
@@ -820,7 +820,7 @@ describe('getTrend', () => {
     )
 
     expect(result.map(point => point.bucket)).toEqual(['2026-01', '2026-02', '2026-03'])
-    expect(result[1].total).toBe(1)
+    expect(result[1]!.total).toBe(1)
   })
 
   it('emits WHERE eq(ownerId) on both queries while getAllTrend emits none', async () => {
@@ -949,8 +949,8 @@ describe('getTrend boundary and consistency invariants', () => {
     )
 
     expect(result).toHaveLength(1)
-    expect(result[0].bucket).toBe('2026-08-10')
-    expect(result[0].total).toBe(1)
+    expect(result[0]!.bucket).toBe('2026-08-10')
+    expect(result[0]!.total).toBe(1)
   })
 })
 
@@ -1075,10 +1075,10 @@ describe('cross-dimension success-rate parity and uniformity (STAT-04)', () => {
     // Every successRate-bearing entry is produced by computeSuccessRate —
     // recomputing the formula from that entry's (success, error) must agree.
     expect(result.successRate).toBe(computeSuccessRate(4, 5))
-    expect(result.perWorkflow[0].successRate).toBe(computeSuccessRate(3, 2))
-    expect(result.perWorkflow[1].successRate).toBe(computeSuccessRate(1, 3))
-    expect(result.trend[0].successRate).toBe(computeSuccessRate(1, 0))
-    expect(result.trend[1].successRate).toBe(computeSuccessRate(3, 5))
+    expect(result.perWorkflow[0]!.successRate).toBe(computeSuccessRate(3, 2))
+    expect(result.perWorkflow[1]!.successRate).toBe(computeSuccessRate(1, 3))
+    expect(result.trend[0]!.successRate).toBe(computeSuccessRate(1, 0))
+    expect(result.trend[1]!.successRate).toBe(computeSuccessRate(3, 5))
   })
 
   it('passes perWorkflow and trend through unchanged from the underlying helpers (no re-shaping)', async () => {
@@ -1334,7 +1334,7 @@ describe('usage statistics at each granularity', () => {
     )
 
     expect(stats.trend.map(point => point.bucket)).toEqual(['2026-06', '2026-07', '2026-08'])
-    expect(stats.trend[1].total).toBe(0)
+    expect(stats.trend[1]!.total).toBe(0)
     expect(stats.trend.reduce((sum, point) => sum + point.total, 0)).toBe(stats.total)
   })
 

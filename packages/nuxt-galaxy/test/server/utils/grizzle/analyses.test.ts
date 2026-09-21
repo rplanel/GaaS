@@ -529,6 +529,10 @@ describe('deleteAnalysis', () => {
   it('runs the finalize on the transaction client, not the root mock (distinct tx, D-04/D-07)', async () => {
     const drizzle = createMockDrizzle()
     const tx = {
+      // A transaction client exposes the whole query surface; this test only
+      // drives update and delete through it.
+      select: vi.fn(() => createMockDrizzleResult([])),
+      insert: vi.fn(() => createMockDrizzleResult([])),
       update: vi.fn(() => createMockDrizzleResult([{ updatedId: 5 }])),
       delete: vi.fn(() => createMockDrizzleResult([{ id: 1 }])),
     }
