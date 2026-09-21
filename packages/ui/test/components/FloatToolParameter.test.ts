@@ -30,7 +30,7 @@ describe('floatToolParameter', () => {
       },
     })
 
-    expect(component.vm.step).toBe(0.001)
+    expect(component.html()).toContain('step="0.001"')
     expect(component.html()).toContain(`min="${min}"`)
     expect(component.html()).toContain(`max="${max}"`)
     expect(component.html()).toContain(`value="${floatValue}"`)

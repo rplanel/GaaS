@@ -1,7 +1,7 @@
 import { Effect } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { insertTags, InsertTagsError } from '../../../../src/runtime/server/utils/grizzle/tags'
-import { createMockDrizzle, expectFailure, mockDbTag } from '../../fixtures'
+import { createMockDrizzle, expectFailure, mockDbTag, mockDrizzleInsertRejects } from '../../fixtures'
 
 describe('insertTags', () => {
   it('should insert tags and return the inserted rows', async () => {
@@ -47,16 +47,9 @@ describe('insertTags', () => {
 
   it('should fail with InsertTagsError when database operation fails', async () => {
     const drizzle = createMockDrizzle()
-    // Override insert to reject
-    drizzle.mock.insert.mockImplementation(() => {
-      const chain: Record<string, unknown> = {}
-      chain.values = () => chain
-      chain.onConflictDoUpdate = () => chain
-      chain.returning = () => chain
-      chain.then = (_resolve: unknown, reject: (e: Error) => void) =>
-        Promise.reject(new Error('DB connection failed')).catch(reject)
-      return chain
-    })
+    drizzle.mock.insert.mockImplementation(
+      mockDrizzleInsertRejects(['values', 'onConflictDoUpdate', 'returning'], new Error('DB connection failed')),
+    )
 
     const exit = await insertTags(['tag1']).pipe(
       Effect.provide(drizzle.layer),

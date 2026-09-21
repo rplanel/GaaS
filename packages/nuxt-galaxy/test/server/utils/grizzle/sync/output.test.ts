@@ -145,17 +145,22 @@ function createMockStream(chunks: Uint8Array[] = []): ReadableStream<Uint8Array>
   })
 }
 
-function createGalaxyLayer(dataset: bt.GalaxyDataset, stream: ReadableStream<Uint8Array> | NodeJS.ReadableStream | null) {
+/**
+ * Routes the two Galaxy reads for one dataset. `datasetId` is the id the code
+ * under test is called with, not a field of the dataset: `GalaxyDataset` has
+ * no `id`, and production builds these URLs from its own argument.
+ */
+function createGalaxyLayer(datasetId: string, dataset: bt.GalaxyDataset, stream: ReadableStream<Uint8Array> | NodeJS.ReadableStream | null) {
   return createRoutedGalaxyLayer({
-    [`contents/${dataset.id}/display`]: stream,
-    [`contents/${dataset.id}`]: dataset,
+    [`contents/${datasetId}/display`]: stream,
+    [`contents/${datasetId}`]: dataset,
   })
 }
 
 describe('syncOutputDatasetEffect', () => {
   it('inserts output metadata without download for non-terminal dataset', async () => {
-    const nonTerminalDataset = { ...mockGalaxyDataset, state: 'running' as bt.DatasetState, id: 'gdid' }
-    const layer = createGalaxyLayer(nonTerminalDataset, null)
+    const nonTerminalDataset = { ...mockGalaxyDataset, state: 'running' as bt.DatasetState }
+    const layer = createGalaxyLayer('gdid', nonTerminalDataset, null)
     const supabase = createMockSupabase({
       existingOutputResult: { data: null, error: null },
       historyResult: { data: { galaxy_id: mockHistoryGalaxyId }, error: null },
@@ -166,14 +171,16 @@ describe('syncOutputDatasetEffect', () => {
     await Effect.runPromise(syncOutputDatasetEffect('gdid', 1, 1, 42, 'owner-uuid-1', supabase, layer))
 
     expect(mockStorageUpload).not.toHaveBeenCalled()
-    expect(supabase.schema().from).toHaveBeenCalledWith('analysis_outputs')
-    expect(supabase.schema().from).toHaveBeenCalledWith('histories')
-    expect(supabase.schema().from).toHaveBeenCalledWith('datasets')
+    // `schema()` ignores its argument and returns the one shared chain; the
+    // assertion is on `from`, which does record the table it was given.
+    expect(supabase.schema('galaxy').from).toHaveBeenCalledWith('analysis_outputs')
+    expect(supabase.schema('galaxy').from).toHaveBeenCalledWith('histories')
+    expect(supabase.schema('galaxy').from).toHaveBeenCalledWith('datasets')
   })
 
   it('skips download and upload when existing output dataset is unchanged', async () => {
-    const terminalDataset = { ...mockGalaxyDataset, state: 'ok' as bt.DatasetState, id: 'gdid', name: 'terminal.txt' }
-    const layer = createGalaxyLayer(terminalDataset, createMockStream())
+    const terminalDataset = { ...mockGalaxyDataset, state: 'ok' as bt.DatasetState, name: 'terminal.txt' }
+    const layer = createGalaxyLayer('gdid', terminalDataset, createMockStream())
     mockStorageUpload.mockReturnValue(Effect.succeed({ id: 'storage-id', path: 'uuid/terminal.txt' }))
     const supabase = createMockSupabase({
       existingOutputResult: {
@@ -201,8 +208,8 @@ describe('syncOutputDatasetEffect', () => {
 
   it('streams terminal-ok dataset to storage', async () => {
     const chunks = [new TextEncoder().encode('hello'), new TextEncoder().encode(' world')]
-    const terminalDataset = { ...mockGalaxyDataset, state: 'ok' as bt.DatasetState, id: 'gdid', name: 'terminal.txt' }
-    const layer = createGalaxyLayer(terminalDataset, createMockStream(chunks))
+    const terminalDataset = { ...mockGalaxyDataset, state: 'ok' as bt.DatasetState, name: 'terminal.txt' }
+    const layer = createGalaxyLayer('gdid', terminalDataset, createMockStream(chunks))
     mockStorageUpload.mockReturnValue(Effect.succeed({ id: 'storage-id', path: 'uuid/terminal.txt' }))
     const supabase = createMockSupabase({
       existingOutputResult: { data: null, error: null },
@@ -218,7 +225,7 @@ describe('syncOutputDatasetEffect', () => {
 
     expect(mockStorageUpload).toHaveBeenCalled()
 
-    const wrappedStream = mockStorageUpload.mock.calls[0][2] as ReadableStream<Uint8Array>
+    const wrappedStream = mockStorageUpload.mock.calls[0]![2] as ReadableStream<Uint8Array>
     const reader = wrappedStream.getReader()
     let totalBytes = 0
 
@@ -255,8 +262,8 @@ describe('syncOutputDatasetEffect', () => {
   })
 
   it('updates an existing output dataset when state differs', async () => {
-    const terminalDataset = { ...mockGalaxyDataset, state: 'ok' as bt.DatasetState, id: 'gdid' }
-    const layer = createGalaxyLayer(terminalDataset, createMockStream())
+    const terminalDataset = { ...mockGalaxyDataset, state: 'ok' as bt.DatasetState }
+    const layer = createGalaxyLayer('gdid', terminalDataset, createMockStream())
     mockStorageUpload.mockReturnValue(Effect.succeed({ id: 'storage-id', path: 'uuid/terminal.txt' }))
     const supabase = createMockSupabase({
       existingOutputResult: {
@@ -276,8 +283,8 @@ describe('syncOutputDatasetEffect', () => {
     await Effect.runPromise(syncOutputDatasetEffect('gdid', 1, 1, 42, 'owner-uuid-1', supabase, layer))
 
     expect(mockStorageUpload).toHaveBeenCalled()
-    expect(supabase.schema().from).toHaveBeenCalledWith('datasets')
-    expect(supabase.schema().from).toHaveBeenCalledWith('analysis_outputs')
+    expect(supabase.schema('galaxy').from).toHaveBeenCalledWith('datasets')
+    expect(supabase.schema('galaxy').from).toHaveBeenCalledWith('analysis_outputs')
 
     const calls = (supabase as any).__calls
     expect(calls.insert).toBeUndefined()
@@ -306,8 +313,8 @@ describe('syncOutputDatasetEffect', () => {
   })
 
   it('clears stale storage references when re-syncing an existing non-terminal dataset', async () => {
-    const updatedDataset = { ...mockGalaxyDataset, state: 'running' as bt.DatasetState, id: 'gdid', name: 'renamed.txt', metadata_data_lines: 200, misc_blurb: '200 lines', peek: 'updated peek' }
-    const layer = createGalaxyLayer(updatedDataset, null)
+    const updatedDataset = { ...mockGalaxyDataset, state: 'running' as bt.DatasetState, name: 'renamed.txt', metadata_data_lines: 200, misc_blurb: '200 lines', peek: 'updated peek' }
+    const layer = createGalaxyLayer('gdid', updatedDataset, null)
     const supabase = createMockSupabase({
       existingOutputResult: { data: { id: 5, dataset_id: 9, state: 'running' }, error: null },
       historyResult: { data: { galaxy_id: mockHistoryGalaxyId }, error: null },
@@ -342,8 +349,8 @@ describe('syncOutputDatasetEffect', () => {
 
   it('streams terminal-ok dataset to storage from Node ReadableStream', async () => {
     const chunks = [Buffer.from('hello'), Buffer.from(' world')]
-    const terminalDataset = { ...mockGalaxyDataset, state: 'ok' as bt.DatasetState, id: 'gdid', name: 'terminal.txt' }
-    const layer = createGalaxyLayer(terminalDataset, Readable.from(chunks))
+    const terminalDataset = { ...mockGalaxyDataset, state: 'ok' as bt.DatasetState, name: 'terminal.txt' }
+    const layer = createGalaxyLayer('gdid', terminalDataset, Readable.from(chunks))
     mockStorageUpload.mockReturnValue(Effect.succeed({ id: 'storage-id', path: 'uuid/terminal.txt' }))
     const supabase = createMockSupabase({
       existingOutputResult: { data: null, error: null },
@@ -359,7 +366,7 @@ describe('syncOutputDatasetEffect', () => {
 
     expect(mockStorageUpload).toHaveBeenCalled()
 
-    const nodeStream = mockStorageUpload.mock.calls[0][2] as NodeJS.ReadableStream
+    const nodeStream = mockStorageUpload.mock.calls[0]![2] as NodeJS.ReadableStream
     const received: Buffer[] = []
     await new Promise<void>((resolve, reject) => {
       nodeStream.on('data', chunk => received.push(chunk as Buffer))
@@ -389,8 +396,8 @@ describe('syncOutputDatasetEffect', () => {
   })
 
   it('fails with SyncOutputError when dataset insert returns an error', async () => {
-    const terminalDataset = { ...mockGalaxyDataset, state: 'ok' as bt.DatasetState, id: 'gdid' }
-    const layer = createGalaxyLayer(terminalDataset, createMockStream())
+    const terminalDataset = { ...mockGalaxyDataset, state: 'ok' as bt.DatasetState }
+    const layer = createGalaxyLayer('gdid', terminalDataset, createMockStream())
     mockStorageUpload.mockReturnValue(Effect.succeed({ id: 'storage-id', path: 'uuid/terminal.txt' }))
     const supabase = createMockSupabase({
       existingOutputResult: { data: null, error: null },
@@ -407,8 +414,8 @@ describe('syncOutputDatasetEffect', () => {
   })
 
   it('fails with SyncOutputError when analysis_outputs insert returns an error', async () => {
-    const terminalDataset = { ...mockGalaxyDataset, state: 'ok' as bt.DatasetState, id: 'gdid' }
-    const layer = createGalaxyLayer(terminalDataset, createMockStream())
+    const terminalDataset = { ...mockGalaxyDataset, state: 'ok' as bt.DatasetState }
+    const layer = createGalaxyLayer('gdid', terminalDataset, createMockStream())
     mockStorageUpload.mockReturnValue(Effect.succeed({ id: 'storage-id', path: 'uuid/terminal.txt' }))
     const supabase = createMockSupabase({
       existingOutputResult: { data: null, error: null },
@@ -475,7 +482,7 @@ describe('logStreamBytes', () => {
     const runtime = createLogCaptureRuntime(logs)
     const error = new Error('node read failed')
     const source = new Readable({ read() {} })
-    const wrapped = logStreamBytes(source, runtime, 'history-id', 'dataset-id') as NodeJS.ReadableStream
+    const wrapped = logStreamBytes(source, runtime, 'history-id', 'dataset-id') as Readable
 
     const received: Buffer[] = []
     const endPromise = new Promise<void>((resolve, reject) => {

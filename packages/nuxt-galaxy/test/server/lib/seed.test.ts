@@ -39,10 +39,10 @@ describe('runSeed', () => {
   it('logs seeding progress via evlog', async () => {
     mockLog.info.mockClear()
 
-    const config = {
+    const config: Parameters<typeof runSeed>[0] = {
       instances: [{ url: 'https://galaxy.example.com', name: 'test' }],
       users: [{ email: 'user@example.com', instanceUrl: 'https://galaxy.example.com' }],
-      rolePermissions: [{ roleName: 'admin', permissions: ['read', 'write'] }],
+      rolePermissions: [{ roleName: 'admin', permissions: ['workflows.select', 'workflows.insert'] }],
     }
 
     await runSeed(config, 'postgres://localhost/db')

@@ -1,3 +1,4 @@
+import type { Context } from 'effect'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { Effect, Layer } from 'effect'
 import { describe, expect, it } from 'vitest'
@@ -18,7 +19,7 @@ import {
  * driver behind it: SQL is generated, nothing is executed, and the suite stays
  * DB-free.
  */
-const driverless = Layer.succeed(Drizzle, drizzle.mock() as unknown as Parameters<typeof Layer.succeed<typeof Drizzle>>[1])
+const driverless = Layer.succeed(Drizzle, drizzle.mock() as unknown as Context.Tag.Service<typeof Drizzle>)
 
 const OWNER = '00000000-0000-0000-0000-0000000000aa'
 

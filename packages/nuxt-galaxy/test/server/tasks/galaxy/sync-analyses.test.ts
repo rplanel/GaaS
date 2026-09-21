@@ -126,7 +126,7 @@ describe('galaxy:sync-analyses task', () => {
     await task.run({ name: 'galaxy:sync-analyses', payload: {}, context: {} })
 
     expect(createRequestLogger).toHaveBeenCalledWith({ operation: 'galaxy:sync-analyses', requestId: expect.any(String) })
-    expect(mockCreateRequestLogger.mock.results[0].value.emit).toHaveBeenCalledWith({
+    expect(mockCreateRequestLogger.mock.results[0]!.value.emit).toHaveBeenCalledWith({
       status: 200,
       synced: 0,
       failed: 0,

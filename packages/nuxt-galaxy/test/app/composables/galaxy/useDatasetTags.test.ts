@@ -6,7 +6,7 @@ describe('useDatasetTags', () => {
   it('logs a warning when tags cannot be stringified', () => {
     const datasetName = 'unknown-result-file'
     const dataset = {
-      tags: [{ label: 'unexpected-tag' }],
+      tags: [{ id: 1, label: 'unexpected-tag' }],
       datasets: { dataset_name: datasetName },
     }
 

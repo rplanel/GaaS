@@ -1,15 +1,28 @@
+import type { AuditableLogger } from 'evlog'
 import { vi } from 'vitest'
 
+/**
+ * Stand-in for the request logger handed to server handlers.
+ *
+ * `debug` is deliberately not part of `RequestLogger`; it is here only so tests
+ * can assert the request logger is *not* used for debug output.
+ */
 export function createMockRequestLogger() {
-  return {
+  const audit = Object.assign(vi.fn(), { deny: vi.fn() })
+  const logger = {
     set: vi.fn(),
+    setLevel: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
     debug: vi.fn(),
     emit: vi.fn(() => null),
     getContext: vi.fn(() => ({})),
+    audit,
   }
+  // Pin the double to the real interface here, so a new required member on
+  // `RequestLogger` is one error at the fixture rather than one per call site.
+  return logger satisfies AuditableLogger<object>
 }
 
 vi.mock('evlog', () => ({

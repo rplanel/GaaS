@@ -21,7 +21,7 @@ export interface WorkflowResultResolver {
   /**
    * The resolved Vue component, or `'WorkflowResultGeneric'` string as fallback.
    */
-  component: object | string
+  component: Ref<object | string>
   /**
    * The full component name that was looked up (e.g. `'WorkflowResultNfCoreEpitopeprediction'`).
    */
