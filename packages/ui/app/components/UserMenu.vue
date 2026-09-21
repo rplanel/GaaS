@@ -3,8 +3,6 @@ import type { AvatarProps, DropdownMenuItem } from '@nuxt/ui'
 // import type { Database } from '../types'
 import type { Database } from 'nuxt-galaxy'
 
-import * as bt from 'blendtype'
-
 interface Props {
   collapsed?: boolean
   isAdmin?: boolean
@@ -37,7 +35,9 @@ const user = computed<{ name: string, avatar: AvatarProps }>(() => {
 async function logout() {
   const { error } = await supabase.auth.signOut()
   if (error) {
-    throw createError({ statusMessage: bt.getErrorMessage(error), statusCode: bt.getStatusCode(error) })
+    const { errorMessage } = useErrorMessage(error)
+    const { errorStatus } = useErrorStatus(error)
+    throw createError({ statusMessage: toValue(errorMessage), statusCode: toValue(errorStatus) })
   }
 
   await navigateTo('/login')

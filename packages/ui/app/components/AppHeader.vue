@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { Database } from 'nuxt-galaxy'
 // import type { Database } from '../types'
-import * as bt from 'blendtype'
 import { useNavigationMenuItems } from '../composables/useNavigationMenuItems'
 
 const supabase = useSupabaseClient<Database>()
@@ -14,7 +13,9 @@ const { navigationMenuItems } = useNavigationMenuItems({ navigationMenuItems: na
 async function logout() {
   const { error } = await supabase.auth.signOut()
   if (error) {
-    throw createError({ statusMessage: bt.getErrorMessage(error), statusCode: bt.getStatusCode(error) })
+    const { errorMessage } = useErrorMessage(error)
+    const { errorStatus } = useErrorStatus(error)
+    throw createError({ statusMessage: toValue(errorMessage), statusCode: toValue(errorStatus) })
   }
 
   await navigateTo('/login')

@@ -2,7 +2,6 @@
 import type { Database } from 'nuxt-galaxy'
 
 import type { GalaxyWorkflowExportSchema, SanitizedWorkflowDbItem } from '../types'
-import * as bt from 'blendtype'
 import { galaxyWorkflowExportSchema } from 'blendtype'
 import * as z from 'zod'
 import { fromError } from 'zod-validation-error'
@@ -26,9 +25,11 @@ const sanitizedDbWorkflows = computed<SanitizedWorkflowDbItem[] | null>(() => {
           const sanitizedErr = fromError(err)
           throw createError({ statusMessage: sanitizedErr.message, cause: sanitizedErr.cause, stack: sanitizedErr.stack, name: sanitizedErr.name })
         }
+        const { errorStatus } = useErrorStatus(err)
+        const { errorMessage } = useErrorMessage(err)
         throw createError({
-          statusCode: bt.getStatusCode(err),
-          statusMessage: bt.getErrorMessage(err),
+          statusCode: toValue(errorStatus),
+          statusMessage: toValue(errorMessage),
         })
       }
     })
