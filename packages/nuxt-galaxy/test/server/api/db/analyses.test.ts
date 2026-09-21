@@ -225,7 +225,15 @@ describe('post /api/db/analyses', () => {
     mocks.getSupabaseUser.mockReturnValue(Effect.succeed(null))
     const handler = await loadHandler()
 
-    await expect(handler(event)).rejects.toMatchObject({ statusCode: 401 })
+    // the body is asserted, not just the status: this handler's own
+    // `GetSupabaseUserError` says 'No user found', so a 401 that passed the
+    // error's message through would fail here. Every other handler's fixture
+    // happens to carry 'Unauthorized' already, which makes the same assertion
+    // unable to tell the two apart.
+    await expect(handler(event)).rejects.toMatchObject({
+      statusCode: 401,
+      statusMessage: 'Unauthorized',
+    })
     expect(mocks.addHistoryEffect).not.toHaveBeenCalled()
   })
 
