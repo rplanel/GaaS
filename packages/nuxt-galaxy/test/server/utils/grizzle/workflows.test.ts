@@ -67,6 +67,23 @@ describe('getWorkflowEffect', () => {
       expect(error).toBeInstanceOf(GetWorkflowError)
     })
   })
+
+  it('says why when the uniqueness assumption the query was built on does not hold', async () => {
+    // this catch was the one of 32 that dropped its cause, so a broken
+    // uniqueness assumption arrived as a bare "Error getting workflow" and
+    // the real reason reached nobody
+    const drizzle = createMockDrizzle()
+    drizzle.setResult([mockDbWorkflow, mockDbWorkflow])
+
+    const exit = await getWorkflowEffect(1).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect((error as GetWorkflowError).message).toContain('Found non unique')
+    })
+  })
 })
 
 describe('insertWorkflow', () => {

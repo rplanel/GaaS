@@ -20,9 +20,31 @@ import {
   terminalJobStates,
   updateAnalysisMonitoringEffect,
 } from '../../../../src/runtime/server/utils/grizzle/analysisMonitoring'
-import { createMockDrizzle, createMockDrizzleResult, mockDrizzleSelectRejects } from '../../fixtures'
+import { createMockDrizzle, createMockDrizzleResult, expectFailure, mockDrizzleSelectRejects } from '../../fixtures'
 
 describe('insertAnalysisMonitoringEffect', () => {
+  it('refuses an insert that returned no row', async () => {
+    // the row was just written, so none coming back means the database broke
+    // a promise rather than that anything was legitimately absent
+    const drizzle = createMockDrizzle()
+    drizzle.setResult([])
+
+    const exit = await insertAnalysisMonitoringEffect(
+      1,
+      'owner-uuid-1',
+      2,
+      'Test Analysis',
+      'galaxy-invocation-1',
+    ).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect((error as { message: string }).message).toContain('Expected exactly one row')
+    })
+  })
+
   it('should insert a monitoring row with pending outcome', async () => {
     const drizzle = createMockDrizzle()
     drizzle.setResult([{ id: 1 }])

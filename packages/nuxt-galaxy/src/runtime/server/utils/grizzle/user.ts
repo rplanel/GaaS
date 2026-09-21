@@ -3,13 +3,13 @@ import { Data, Effect } from 'effect'
 import { instances } from '../../db/schema/galaxy/instances'
 import { users } from '../../db/schema/galaxy/users'
 import { Drizzle, useDrizzle } from '../drizzle'
-import { takeUniqueOrThrow } from './helper'
+import { takeUniqueOrNull } from './helper'
 
 export async function getCurrentUser(url: string, email: string) {
   return useDrizzle().select().from(users).innerJoin(instances, eq(users.instanceId, instances.id)).where(and(
     eq(users.email, email),
     eq(instances.url, url),
-  )).then(takeUniqueOrThrow)
+  )).then(takeUniqueOrNull)
 }
 
 export class GetCurrentUserError extends Data.TaggedError('GetCurrentUserError')<{
@@ -29,7 +29,7 @@ export function getCurrentUserEffect(url: string, email: string) {
           eq(users.email, email),
           eq(instances.url, url),
         ))
-        .then(takeUniqueOrThrow),
+        .then(takeUniqueOrNull),
       catch: error => new GetCurrentUserError({ message: `Error getting current user: ${error}` }),
     })
   })

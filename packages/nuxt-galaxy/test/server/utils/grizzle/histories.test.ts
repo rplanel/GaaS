@@ -145,6 +145,28 @@ describe('insertHistory', () => {
     expect(drizzle.mock.insert).toHaveBeenCalled()
   })
 
+  it('refuses an insert that returned no row', async () => {
+    // the row was just written, so none coming back means the database broke
+    // a promise rather than that anything was legitimately absent
+    const drizzle = createMockDrizzle()
+    drizzle.setResult([])
+
+    const exit = await insertHistory({
+      name: 'Test History',
+      ownerId: 'owner-uuid-1',
+      userId: 1,
+      galaxyId: 'galaxy-history-1',
+      state: 'new',
+    }).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect((error as { message: string }).message).toContain('Expected exactly one row')
+    })
+  })
+
   it('should fail with InsertHistoryError on database error', async () => {
     const drizzle = createMockDrizzle()
     drizzle.mock.insert.mockImplementation(mockDrizzleInsertRejects(['values', 'returning'], new Error('Insert failed')))

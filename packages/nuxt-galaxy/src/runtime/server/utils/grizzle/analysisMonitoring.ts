@@ -9,7 +9,7 @@ import { Data, Effect } from 'effect'
 import { UNKNOWN_WORKFLOW_SELECTION } from '../../../types/nuxt-galaxy'
 import { analysisMonitoring } from '../../db/schema/galaxy/analysisMonitoring'
 import { Drizzle } from '../drizzle'
-import { takeUniqueOrThrow } from './helper'
+import { takeExactlyOne, takeUniqueOrNull } from './helper'
 
 /**
  * Immutable snapshot of the workflow an analysis was created against,
@@ -186,7 +186,7 @@ export function insertAnalysisMonitoringEffect(
           workflowVersion: workflowSnapshot?.workflowVersion ?? null,
         })
         .returning({ insertedId: analysisMonitoring.id })
-        .then(takeUniqueOrThrow),
+        .then(takeExactlyOne),
       catch: error => new InsertAnalysisMonitoringError({ message: `Error inserting analysis monitoring: ${error}` }),
     })
   })
@@ -227,7 +227,7 @@ export function updateAnalysisMonitoringEffect(
           ),
         )
         .returning({ updatedId: analysisMonitoring.id })
-        .then(takeUniqueOrThrow)
+        .then(takeUniqueOrNull)
         .then((row) => {
           if (row === null) {
             return undefined
@@ -274,7 +274,7 @@ export function finalizeAnalysisMonitoringEffect(
         ),
       )
       .returning({ updatedId: analysisMonitoring.id })
-      .then(takeUniqueOrThrow)
+      .then(takeUniqueOrNull)
       .then(row => row === null ? undefined : row),
     catch: error => new FinalizeAnalysisMonitoringError({ message: `Error finalizing analysis monitoring: ${error}` }),
   })
@@ -414,7 +414,7 @@ function monitoringCounts(ownerId: string | undefined, filters: UsageFilters) {
   return Effect.gen(function* () {
     const query = yield* selectCounts(ownerId, filters)
     const row = yield* Effect.tryPromise({
-      try: () => query.then(takeUniqueOrThrow),
+      try: () => query.then(takeUniqueOrNull),
       catch: error => new GetAnalysisMonitoringCountsError({ message: `Error getting monitoring counts: ${error}` }),
     })
     // spelt out rather than spread over a zeroed default: a count that arrives

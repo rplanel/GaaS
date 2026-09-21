@@ -7,7 +7,7 @@ import { analysisInputs } from '../../../db/schema/galaxy/analysisInputs'
 import { datasets } from '../../../db/schema/galaxy/datasets'
 import { Drizzle } from '../../drizzle'
 import { insertDatasetEffect, isDatasetTerminalState, UpdateDatasetError } from '../datasets'
-import { takeUniqueOrThrow } from '../helper'
+import { takeUniqueOrNull } from '../helper'
 import { getHistoryDb } from '../histories'
 import { uploadFileToStorage } from '../supabase'
 
@@ -46,7 +46,7 @@ export function getAnalysisInputDataset(galaxyDatasetId: string, historyId: numb
           eq(datasets.historyId, historyId),
           eq(datasets.ownerId, ownerId),
         ))
-        .then(takeUniqueOrThrow),
+        .then(takeUniqueOrNull),
       catch: error => new GetAnalysisInputError({ message: `Error getting dataset:  ${error}` }),
     },
     )
@@ -116,7 +116,7 @@ export function insertAnalysisInputEffect(analysisId: number, datasetId: number,
         })
         .returning()
         .onConflictDoNothing()
-        .then(takeUniqueOrThrow),
+        .then(takeUniqueOrNull),
       catch: error => new InsertAnalysisInputError({ message: `Error inserting analysis input: ${error}` }),
     })
   })
@@ -156,7 +156,7 @@ export function updateDatasetBlurbEffect(datasetDbId: number, miscBlurb: string)
             updatedId: datasets.id,
             galaxyMetadata: datasets.galaxyMetadata,
           })
-          .then(takeUniqueOrThrow)
+          .then(takeUniqueOrNull)
       },
       catch: (error) => {
         return new UpdateDatasetError({ message: `Error updating dataset misc_blurb: ${error}` })
@@ -184,7 +184,7 @@ export function updateAnalysisInputStateEffect(dataset: bt.GalaxyDataset, inputD
           ),
         )
         .returning({ updatedId: analysisInputs.id, state: analysisInputs.state })
-        .then(takeUniqueOrThrow),
+        .then(takeUniqueOrNull),
       catch: (error) => {
         return new UpdateAnalysisInputStateError({ message: `Error updating dataset: ${error}` })
       },

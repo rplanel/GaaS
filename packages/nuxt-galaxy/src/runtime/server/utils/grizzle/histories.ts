@@ -8,7 +8,7 @@ import { Data, Effect } from 'effect'
 import { analyses } from '../../db/schema/galaxy/analyses'
 import { histories } from '../../db/schema/galaxy/histories'
 import { Drizzle } from '../drizzle'
-import { takeUniqueOrThrow } from './helper.js'
+import { takeExactlyOne, takeUniqueOrNull } from './helper.js'
 import { getCurrentUserEffect } from './user'
 
 // const supabase = useSupabaseClient();
@@ -32,7 +32,7 @@ export function getHistoryDb(historyId: number, ownerId: string) {
           eq(histories.id, historyId),
           eq(histories.ownerId, ownerId),
         ))
-        .then(takeUniqueOrThrow),
+        .then(takeUniqueOrNull),
       catch: error => new GetHistoryError({ message: `Error getting history: ${error}` }),
     })
   })
@@ -50,7 +50,7 @@ export function getAnalysisHistory(historyId: number, ownerId: string) {
           eq(histories.id, historyId),
           eq(histories.ownerId, ownerId),
         ))
-        .then(takeUniqueOrThrow),
+        .then(takeUniqueOrNull),
       catch: error => new GetHistoryError({ message: `Error getting history analysis: ${error}` }),
     })
   })
@@ -120,7 +120,7 @@ export function insertHistory(history: NewHistory) {
           id: histories.id,
           galaxyId: histories.galaxyId,
         })
-        .then(takeUniqueOrThrow),
+        .then(takeExactlyOne),
       catch: error => new InsertHistoryError({ message: `Error inserting history: ${error}` }),
     })
   })
@@ -155,7 +155,7 @@ export function updateHistoryState(historyId: number, state: HistoryState) {
         .set({ state })
         .where(eq(histories.id, historyId))
         .returning({ historyId: histories.id, state: histories.state })
-        .then(takeUniqueOrThrow),
+        .then(takeUniqueOrNull),
       catch: error => new UpdateHistoryState({ message: `Error updating history state: ${error}` }),
     })
   })

@@ -1,30 +1,56 @@
 import { describe, expect, it } from 'vitest'
-import { takeUniqueOrThrow } from '../../../../src/runtime/server/utils/grizzle/helper'
+import { takeExactlyOne, takeUniqueOrNull } from '../../../../src/runtime/server/utils/grizzle/helper'
 
-describe('takeUniqueOrThrow', () => {
-  it('should return null for an empty array', () => {
-    const result = takeUniqueOrThrow([])
-    expect(result).toBeNull()
+describe('takeUniqueOrNull', () => {
+  it('hands back null for no rows, which is a real answer', () => {
+    // a row that does not exist, or does not belong to this caller: the
+    // caller decides what that means, so it is not thrown
+    expect(takeUniqueOrNull([])).toBeNull()
   })
 
-  it('should return the single element for a one-element array', () => {
-    const result = takeUniqueOrThrow([{ id: 1, name: 'test' }])
-    expect(result).toEqual({ id: 1, name: 'test' })
+  it('hands back the row for one row', () => {
+    expect(takeUniqueOrNull([{ id: 1, name: 'test' }])).toEqual({ id: 1, name: 'test' })
   })
 
-  it('should throw for a multi-element array', () => {
-    expect(() => takeUniqueOrThrow([{ id: 1 }, { id: 2 }])).toThrow('Found non unique')
+  it('refuses several rows', () => {
+    expect(() => takeUniqueOrNull([{ id: 1 }, { id: 2 }])).toThrow('Found non unique')
   })
 
-  it('should work with primitive arrays', () => {
-    expect(takeUniqueOrThrow(['hello'])).toBe('hello')
-    expect(takeUniqueOrThrow([42])).toBe(42)
-    expect(takeUniqueOrThrow([true])).toBe(true)
+  it('works with primitives', () => {
+    expect(takeUniqueOrNull(['hello'])).toBe('hello')
+    expect(takeUniqueOrNull([42])).toBe(42)
+    expect(takeUniqueOrNull([true])).toBe(true)
   })
 
-  it('should preserve the exact type of the element', () => {
+  it('preserves the exact element, not a copy of it', () => {
     const complexObject = { nested: { value: [1, 2, 3] }, flag: true }
-    const result = takeUniqueOrThrow([complexObject])
-    expect(result).toBe(complexObject) // same reference
+    expect(takeUniqueOrNull([complexObject])).toBe(complexObject)
+  })
+})
+
+describe('takeExactlyOne', () => {
+  it('hands back the row for one row', () => {
+    expect(takeExactlyOne([{ insertedId: 7 }])).toEqual({ insertedId: 7 })
+  })
+
+  it('refuses no rows, where absence means the query premise was wrong', () => {
+    // for an `insert ... returning()` asking back for what it just wrote,
+    // none means the database broke a promise
+    expect(() => takeExactlyOne([])).toThrow(/exactly one/i)
+  })
+
+  it('refuses several rows', () => {
+    expect(() => takeExactlyOne([{ id: 1 }, { id: 2 }])).toThrow('Found non unique')
+  })
+})
+
+describe('a non-unique result', () => {
+  it.each([
+    ['takeUniqueOrNull', 'takeUniqueOrNull'],
+    ['takeExactlyOne', 'takeExactlyOne'],
+  ])('is refused by %s with a reason a caller can read', (_label, name) => {
+    const take = name === 'takeUniqueOrNull' ? takeUniqueOrNull : takeExactlyOne
+
+    expect(() => take([{ id: 1 }, { id: 2 }])).toThrow('Found non unique')
   })
 })

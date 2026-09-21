@@ -10,7 +10,7 @@ import { histories } from '../../db/schema/galaxy/histories'
 import { Drizzle } from '../drizzle'
 import { finalizeAnalysisMonitoringEffect, insertAnalysisMonitoringEffect } from './analysisMonitoring'
 import { insertAnalysisInputEffect } from './datasets/input'
-import { takeUniqueOrThrow } from './helper'
+import { takeExactlyOne, takeUniqueOrNull } from './helper'
 
 export { isInvocationTerminalState } from './analysisMonitoring'
 
@@ -141,10 +141,7 @@ export function insertAnalysis(analysis: NewAnalysis, workflowSnapshot?: Workflo
           .insert(analyses)
           .values(analysis)
           .returning({ insertedId: analyses.id })
-          .then(takeUniqueOrThrow)
-        if (!inserted) {
-          throw new Error('Analysis insert returned no row')
-        }
+          .then(takeExactlyOne)
         // Delegate the monitoring insert to the canonical helper, running it on
         // the passed `tx` (D-03/D-04). The helper is an Effect that yields
         // `Drizzle`; provide that service with the same `tx` client so it never
@@ -211,7 +208,7 @@ export function getAnalysis(analysisId: number, ownerId: string) {
         .select()
         .from(analyses)
         .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
-        .then(takeUniqueOrThrow),
+        .then(takeUniqueOrNull),
       catch: error => new GetAnalysisError({ message: `Error getting analysis: ${error}` }),
     })
   })
@@ -248,7 +245,7 @@ export function updateAnalysisIsSync(isSync: boolean, analysisId: number, ownerI
         .set({ isSync })
         .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
         .returning({ updatedState: analyses.state })
-        .then(takeUniqueOrThrow),
+        .then(takeUniqueOrNull),
       catch: error => new UpdateAnalysisIsSyncError({ message: `Error updating analysis state: ${error}` }),
     })
   })
@@ -305,7 +302,7 @@ export function getHistoryAnalysis(analysisId: number, ownerId: string) {
             eq(analyses.ownerId, ownerId),
           ),
         )
-        .then(takeUniqueOrThrow),
+        .then(takeUniqueOrNull),
       catch: error => new GetHistoryAnalysisError({ message: `Error getting history analysis: ${error}` }),
     })
   })
