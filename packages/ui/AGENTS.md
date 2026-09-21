@@ -16,6 +16,8 @@
 - `nuxt-galaxy`: workspace:* (auto-registered)
 - `@nuxt/ui`: ^4.6.1 (extends base)
 - `@pinia/nuxt`: ^0.11.3 (state management)
+- `blendtype`: workspace:* (Galaxy types and pure helpers)
+- `evlog`: catalog: (client logging, required by `docs/LOGGING-SPEC.md` §3)
 
 ## Section 2: Executable Commands With Full Flags
 
@@ -187,14 +189,19 @@ describe('MyComponent', () => {
 - **DO**: Create reusable UI components using @nuxt/ui
 - **DO**: Create composables that wrap nuxt-galaxy functionality
 - **DO**: Define data visualization utilities with Mosaic/D3
-- **DON'T**: Import blendtype directly (go through nuxt-galaxy)
+- **DON'T**: Call the Galaxy API from this layer — go through nuxt-galaxy's
+  composables and server endpoints. Importing `blendtype` *types*, and its
+  pure helpers such as `getWorkflowTagName`, is fine: both are declared
+  dependencies of this package. What must not live here is Galaxy access.
 - **DON'T**: Define pages or content (that's for wiki/docs)
 - **DON'T**: Access database directly (use API endpoints)
 
 ### Dependency Direction
 ```
 Depends on:
-  ↓ nuxt-galaxy (server logic)
+  ↓ nuxt-galaxy (server logic, Galaxy access)
+  ↓ blendtype (Galaxy types and pure helpers — no API calls from here)
+  ↓ evlog (client logging)
   ↓ @nuxt/ui (base components)
   ↓ Mosaic/D3 (visualization)
 

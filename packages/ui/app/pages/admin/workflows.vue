@@ -5,7 +5,7 @@ import type { BreadcrumbItem, TableColumn } from '@nuxt/ui'
 import type { GalaxyWorkflowsItem } from 'blendtype'
 import type { Database } from 'nuxt-galaxy'
 import { USwitch } from '#components'
-import * as bt from 'blendtype'
+import { getWorkflowTagName, getWorkflowTagVersion } from 'blendtype'
 // type Database = SupabaseTypes.Database
 
 interface ComputedGalaxyWorklowItem extends GalaxyWorkflowsItem {
@@ -112,9 +112,11 @@ async function addToDb(workflow: { id: string }) {
     router.push('/workflows')
   }
   catch (error) {
+    const { errorStatus } = useErrorStatus(error)
+    const { errorMessage } = useErrorMessage(error)
     showError({
-      statusCode: bt.getStatusCode(error),
-      statusMessage: bt.getErrorMessage(error),
+      statusCode: toValue(errorStatus),
+      statusMessage: toValue(errorMessage),
     })
   }
 }
@@ -172,8 +174,8 @@ const computedWorkflows = computed<ComputedGalaxyWorklowItem[]>(() => {
 
   return (allWorkflowsVal as GalaxyWorkflowsItem[])
     .map((workflow) => {
-      const version = bt.getWorkflowTagVersion(workflow.tags)
-      const tagName = bt.getWorkflowTagName(workflow.tags)
+      const version = getWorkflowTagVersion(workflow.tags)
+      const tagName = getWorkflowTagName(workflow.tags)
       return {
         ...workflow,
         version,
