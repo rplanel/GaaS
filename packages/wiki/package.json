@@ -26,8 +26,12 @@
     "@gaas/ui": "workspace:^",
     "@nuxt/content": "catalog:nuxt",
     "@nuxt/eslint": "catalog:nuxt",
+    "@nuxt/kit": "catalog:nuxt",
     "@nuxt/ui": "catalog:nuxt",
+    "@vueuse/core": "catalog:",
     "better-sqlite3": "catalog:",
+    "evlog": "catalog:",
+    "nuxt-galaxy": "workspace:*",
     "nuxt-studio": "catalog:nuxt",
     "zod": "catalog:",
     "zod-validation-error": "catalog:"

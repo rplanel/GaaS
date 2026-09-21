@@ -25,6 +25,14 @@ nuxt-galaxy (Galaxy integration)
 - `@gaas/ui`: workspace:^ (inherits all UI components)
 - `@nuxt/content`: ^3.11.2 (collections, queries)
 - `zod-validation-error`: ^5.0.0 (error formatting)
+- `nuxt-galaxy`: workspace:* (the `Database` type; Galaxy access stays in that layer)
+- `evlog`: catalog: (the `evlog/nuxt` module this layer registers)
+- `@nuxt/kit`: catalog:nuxt (`logger` in `nuxt.config.ts`)
+- `@vueuse/core`: catalog: (used by `BibliographySection.vue`)
+
+Each of these is imported by name from this package, so it is declared here
+rather than left to resolve through whatever `@gaas/ui` or `nuxt-galaxy`
+happens to hoist.
 
 ## Section 2: Executable Commands With Full Flags
 
