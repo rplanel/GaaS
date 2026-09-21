@@ -1,6 +1,6 @@
 <!-- eslint-disable ts/no-use-before-define -->
 <script setup lang="ts">
-import type { AccordionItem } from '@nuxt/ui'
+import type { AccordionItem, FormSubmitEvent } from '@nuxt/ui'
 
 import type {
   GalaxyTool,
@@ -9,6 +9,7 @@ import type {
 // import type { SupabaseTypes } from '#build/types/database'
 import type { Database } from 'nuxt-galaxy'
 import type { Props as WorkflowStepProps } from '../../../components/galaxy/workflow/Step.vue'
+import type { EncodedGalaxyWorkflowParameter } from '../../../composables/galaxy/types'
 import type { GalaxyToolInputComponent } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 import type { AnalysesListProvide } from '../../../layouts/default.vue'
 import type { StartAnalysisFailure } from '../../../utils/startAnalysisFailure'
@@ -52,18 +53,29 @@ const analysisId = toRef(() => props.analysisId)
 const startingAnalysis = ref<boolean>(false)
 /** Why the last submission was refused, or `null` if none was. */
 const submitError = ref<StartAnalysisFailure | null>(null)
-const workflowInputDatasetsModel = ref<
-  Record<string, UploadedDatasetDb> | undefined
->({})
+/** An unselected input is an absent key, never an absent map. */
+const workflowInputDatasetsModel = ref<Record<string, UploadedDatasetDb>>({})
 const invokeWorkflowParameterModel = ref<Record<string, WorkflowToolParameters>>({})
 const supabase = useSupabaseClient<Database>()
 
 const analysesListInjected = inject<AnalysesListProvide>('analysesList')
 const { refreshAnalysesList } = analysesListInjected || {}
 
-const schema = z.object({
-  analysisName: z.string().max(256, 'Must be less than 256'),
+/**
+ * Both ways of arriving at an empty name, kept in one place: zod does not
+ * cascade a schema-level `error` into `.min()`, so the two have to be written
+ * separately and must not drift.
+ */
+const REQUIRED = 'Required'
 
+const schema = z.object({
+  // `min(1)` is what makes the `required` marker on the field mean something:
+  // plain `z.string()` rejects the untouched `undefined` but accepts the `''`
+  // a reader leaves behind by typing a name and clearing it again.
+  analysisName: z
+    .string({ error: REQUIRED })
+    .min(1, REQUIRED)
+    .max(256, 'Must be less than 256 characters'),
 })
 
 type Schema = z.output<typeof schema>
@@ -181,66 +193,69 @@ function rememberThisPage() {
   redirectInfo.path.value = route.fullPath
 }
 
-async function runAnalysis() {
+/**
+ * `UForm` hands the submit event the schema's *output*, so the name arrives
+ * already validated as a non-empty string. Reading it from `event.data`
+ * rather than from `state` is what stops an empty name being a falsy value
+ * this function has to guard against: there is no branch left to fall
+ * through, because there is no `undefined` to fall through on.
+ */
+async function runAnalysis(event: FormSubmitEvent<Schema>) {
   const workflowInputsModelVal = toValue(workflowInputDatasetsModel)
-  const analysesNameVal = state.analysisName
+  const analysesNameVal = event.data.analysisName
   const workflowIdVal = toValue(props.workflowId)
   const workflowParametersModelVal = toValue(invokeWorkflowParameterModel)
-  if (workflowParametersModelVal) {
-    const { encodedParameters } = useGalaxyEncodeParameters(
-      workflowParametersModelVal,
-    )
-    const parameters = toValue(encodedParameters)
-    if (workflowInputsModelVal && analysesNameVal && workflowIdVal) {
-      const payload = {
-        name: analysesNameVal,
-        datamap: workflowInputsModelVal,
-        parameters,
-        workflowId: workflowIdVal,
-      }
-      startingAnalysis.value = true
-      submitError.value = null
-      // Only the request is guarded, so a failed submission is the only thing
-      // this handler can claim.
-      const created = await $fetch('/api/db/analyses', {
-        method: 'POST',
-        body: payload,
-      }).catch((error: unknown) => {
-        // Shown rather than thrown: every status this endpoint refuses with is
-        // one the reader may be able to act on, and a fatal page would cost
-        // them the form they just filled in. The reader gets the status turned
-        // into words; the cause itself is only ever worth a log.
-        const { errorStatus } = useErrorStatus(error)
-        log.error({
-          action: 'analysis:start_failed',
-          tag: 'InvokeForm',
-          status: toValue(errorStatus),
-          error: String(error),
-        })
-        submitError.value = describeStartAnalysisFailure(toValue(errorStatus))
-        return null
-      })
-      startingAnalysis.value = false
-      if (!created) {
-        // Either the request was refused above and is already described, or it
-        // answered 200 with no analysis to navigate to. ADR 0002 and #25 took
-        // that empty body out of the server; if it returns, the reader is told
-        // rather than left with a stopped spinner and nothing else.
-        if (submitError.value === null) {
-          log.error({ action: 'analysis:start_returned_no_analysis', tag: 'InvokeForm' })
-          submitError.value = unexplainedStartAnalysisFailure
-        }
-        return
-      }
-      // A missing provide is this application's mistake rather than a refused
-      // submission, so it is left to surface as the programming error it is.
-      if (!refreshAnalysesList) {
-        throw createError('refreshAnalysesList not provided')
-      }
-      refreshAnalysesList()
-      router.push(`/analyses/${created.id}`)
-    }
+  const { encodedParameters } = useGalaxyEncodeParameters(
+    workflowParametersModelVal,
+  )
+  const parameters = toValue(encodedParameters)
+  const payload = {
+    name: analysesNameVal,
+    datamap: workflowInputsModelVal,
+    parameters,
+    workflowId: workflowIdVal,
   }
+  startingAnalysis.value = true
+  submitError.value = null
+  // Only the request is guarded, so a failed submission is the only thing
+  // this handler can claim.
+  const created = await $fetch('/api/db/analyses', {
+    method: 'POST',
+    body: payload,
+  }).catch((error: unknown) => {
+    // Shown rather than thrown: every status this endpoint refuses with is
+    // one the reader may be able to act on, and a fatal page would cost
+    // them the form they just filled in. The reader gets the status turned
+    // into words; the cause itself is only ever worth a log.
+    const { errorStatus } = useErrorStatus(error)
+    log.error({
+      action: 'analysis:start_failed',
+      tag: 'InvokeForm',
+      status: toValue(errorStatus),
+      error: String(error),
+    })
+    submitError.value = describeStartAnalysisFailure(toValue(errorStatus))
+    return null
+  })
+  startingAnalysis.value = false
+  if (!created) {
+    // Either the request was refused above and is already described, or it
+    // answered 200 with no analysis to navigate to. ADR 0002 and #25 took
+    // that empty body out of the server; if it returns, the reader is told
+    // rather than left with a stopped spinner and nothing else.
+    if (submitError.value === null) {
+      log.error({ action: 'analysis:start_returned_no_analysis', tag: 'InvokeForm' })
+      submitError.value = unexplainedStartAnalysisFailure
+    }
+    return
+  }
+  // A missing provide is this application's mistake rather than a refused
+  // submission, so it is left to surface as the programming error it is.
+  if (!refreshAnalysesList) {
+    throw createError('refreshAnalysesList not provided')
+  }
+  refreshAnalysesList()
+  router.push(`/analyses/${created.id}`)
 }
 
 const { data: dbWorkflow } = useQuery(() => workflowByIdQuery({ id: toValue(workflowId), supabase }))
@@ -272,7 +287,14 @@ const {
 const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
 
 watchEffect(() => {
-  const dbAnalysisVal = toValue(dbAnalysis) as Record<string, any>
+  // Named rather than `Record<string, any>`: `datamap` is a nullable `Json`
+  // column, and only a type that says so makes the `?? {}` below something
+  // the compiler enforces instead of something a comment promises.
+  const dbAnalysisVal = toValue(dbAnalysis) as {
+    name: string
+    parameters: EncodedGalaxyWorkflowParameter
+    datamap: Record<string, UploadedDatasetDb> | null
+  } | null | undefined
 
   if (props.analysisId && dbAnalysisVal) {
     state.analysisName = `Copy of ${dbAnalysisVal.name}`
@@ -280,7 +302,10 @@ watchEffect(() => {
       dbAnalysisVal.parameters,
     )
     invokeWorkflowParameterModel.value = decodedParameters.value
-    workflowInputDatasetsModel.value = dbAnalysisVal.datamap
+    // A stored analysis with no datamap re-runs as an empty selection, which
+    // the server answers for, rather than as a submission that does nothing.
+    // Dropping the `?? {}` is a type error, not a silent regression.
+    workflowInputDatasetsModel.value = dbAnalysisVal.datamap ?? {}
   }
   else {
     invokeWorkflowParameterModel.value = workflowParametersModel.value
@@ -301,7 +326,7 @@ watchEffect(() => {
             icon="i-lucide-files"
             class="mt-5 mb-3"
           /> -->
-      <div v-if="datasets && workflowInputDatasetsModel" class="mt-5">
+      <div v-if="datasets" class="mt-5">
         <h3 class="font-bold text-lg ">
           <template v-if="Object.values(workflowInputs).length > 1">
             Select workflow inputs

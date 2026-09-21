@@ -1,3 +1,4 @@
+import type { IncomingMessage } from 'node:http'
 import { UApp } from '#components'
 import { mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
 
@@ -9,6 +10,25 @@ let refuseWith: number | null = null
 /** Whether it answers 200 with nothing in the body, as it did before #25. */
 let serveEmptyBody = false
 
+/** How many times the form actually asked the server to start an analysis. */
+let requestsMade = 0
+/** The body of the last submission that reached the endpoint. */
+let lastBody: Record<string, unknown> | null = null
+
+/**
+ * The submitted JSON. `readBody` would mean importing `h3`, which is not a
+ * declared dependency of this package — the same reason the refusals below
+ * set the status on the response directly. The harness has already buffered
+ * the body onto the request by the time the handler runs, which is the same
+ * place `readBody` would reach for it last.
+ */
+function submittedBody(req: IncomingMessage): Record<string, unknown> {
+  const { body } = req as IncomingMessage & { body?: string }
+  if (body === undefined)
+    throw new Error('the harness did not buffer the request body onto req.body')
+  return JSON.parse(body)
+}
+
 /**
  * The real endpoint's refusals, as `toHttpError` sends them: a status and
  * nothing the reader is expected to read. The status is set on the Node
@@ -18,6 +38,8 @@ let serveEmptyBody = false
 registerEndpoint('/api/db/analyses', {
   method: 'POST',
   handler: (event) => {
+    requestsMade += 1
+    lastBody = submittedBody(event.node.req)
     if (refuseWith !== null) {
       event.node.res.statusCode = refuseWith
       return { statusCode: refuseWith, statusMessage: 'Refused' }
@@ -45,12 +67,55 @@ async function submit(wrapper: Awaited<ReturnType<typeof mountForm>>) {
 beforeEach(() => {
   refuseWith = null
   serveEmptyBody = false
+  requestsMade = 0
+  lastBody = null
 })
 
 describe('invokeForm component', () => {
   it('can mount component', async () => {
     const component = await mountForm()
     expect(component.text()).toContain('Select workflow parameters')
+  })
+
+  // #36: `z.string().max(256)` accepts `''`, so a name that was typed and then
+  // cleared validated, `UForm` emitted submit, and `runAnalysis`' own falsy
+  // guard dropped it without a word. Nothing reached the server and nothing
+  // reached the reader.
+  it('refuses a name the reader typed and then cleared', async () => {
+    const form = await mountForm()
+
+    await form.find('input[name="name"]').setValue('My analysis')
+    await form.find('input[name="name"]').setValue('')
+    await form.find('form').trigger('submit')
+
+    await vi.waitFor(() => {
+      expect(form.text()).toContain('Required')
+    })
+    expect(requestsMade).toBe(0)
+  })
+
+  // An untouched name is `undefined`, which plain `z.string()` already
+  // rejected. Pinned so the `min(1)` above cannot be traded for it.
+  it('refuses a name the reader never entered', async () => {
+    const form = await mountForm()
+
+    await form.find('form').trigger('submit')
+
+    await vi.waitFor(() => {
+      expect(form.text()).toContain('Required')
+    })
+    expect(requestsMade).toBe(0)
+  })
+
+  it('sends the name the reader entered', async () => {
+    const form = await mountForm()
+
+    await submit(form)
+
+    await vi.waitFor(() => {
+      expect(requestsMade).toBe(1)
+    })
+    expect(lastBody).toMatchObject({ name: 'My analysis', workflowId: 1 })
   })
 
   it('tells the reader when Galaxy refuses the submission', async () => {
