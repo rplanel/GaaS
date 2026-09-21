@@ -15,10 +15,10 @@ export class NotFoundError extends Data.TaggedError('NotFoundError')<{
 
 export default defineEventHandler(async (event) => {
   const analysisId = getRouterParam(event, 'id')
-  if (!analysisId)
-    return undefined
-
-  const parsedAnalysisId = Number.parseInt(analysisId, 10)
+  // No guard for an absent or empty id: `Number.parseInt` turns both into
+  // `NaN`, which the check below already answers with a 404. Returning
+  // `undefined` here only hid that answer behind an empty 200.
+  const parsedAnalysisId = Number.parseInt(analysisId ?? '', 10)
   if (Number.isNaN(parsedAnalysisId)) {
     throw createError({ statusCode: 404, statusMessage: 'Analysis not found' })
   }

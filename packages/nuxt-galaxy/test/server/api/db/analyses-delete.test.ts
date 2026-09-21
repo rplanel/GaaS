@@ -97,18 +97,25 @@ describe('delete /api/db/analyses/:analysisId', () => {
     expect(requestLog.set).toHaveBeenCalledWith({ handler: '/api/db/analyses/1', method: 'DELETE' })
   })
 
-  it('should return undefined when analysisId is missing', async () => {
+  // `analysisId` is the final segment, so an empty one never matches the
+  // route. A non-numeric one does, and used to reach `deleteAnalysis(NaN, …)`
+  // and put the `NaN` in front of the database.
+  it('refuses an analysisId that is not a number, before doing any work', async () => {
     const requestLog = createMockRequestLogger()
     vi.mocked(useLogger).mockReturnValue(requestLog)
 
     const h3 = await import('h3')
     const getRouterParamSpy = h3.getRouterParam as ReturnType<typeof vi.fn>
-    getRouterParamSpy.mockReturnValue(undefined)
+    getRouterParamSpy.mockReturnValue('abc')
 
+    const analyses = await import('../../../../src/runtime/server/utils/grizzle/analyses')
     const handler = (await import('../../../../src/runtime/server/api/db/analyses/[analysisId].delete')).default
-    const result = await handler({} as any)
 
-    expect(result).toBeUndefined()
+    await expect(handler({} as any)).rejects.toMatchObject({
+      statusCode: 404,
+      statusMessage: 'Analysis not found',
+    })
+    expect(analyses.deleteAnalysis).not.toHaveBeenCalled()
     expect(useLogger).not.toHaveBeenCalled()
 
     // Restore

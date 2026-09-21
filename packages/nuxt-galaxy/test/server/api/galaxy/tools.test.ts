@@ -52,21 +52,26 @@ describe('gET /api/galaxy/tools/:toolId/:toolVersion', () => {
     expect(result).toEqual(mockTool)
   })
 
-  it('should return undefined when toolId is missing', async () => {
+  // `/api/galaxy/tools//1.0` matches this route with an empty `toolId`: an
+  // empty path segment satisfies any parameter that is not the final one.
+  // The handler used to fall off its `if` and answer 200 with no body.
+  it('refuses an empty toolId with 404 rather than an empty 200', async () => {
     const h3 = await import('h3')
     const getRouterParamSpy = h3.getRouterParam as ReturnType<typeof vi.fn>
     getRouterParamSpy.mockImplementation((_event: unknown, param: string) => {
       if (param === 'toolId')
-        return undefined
+        return ''
       if (param === 'toolVersion')
         return '1.0.0'
       return undefined
     })
 
     const handler = (await import('../../../../src/runtime/server/api/galaxy/tools/[toolId]/[toolVersion].get')).default
-    const result = await handler({} as any)
 
-    expect(result).toBeUndefined()
+    await expect(handler({} as any)).rejects.toMatchObject({
+      statusCode: 404,
+      statusMessage: 'Tool not found',
+    })
 
     // Restore
     getRouterParamSpy.mockImplementation((_event: unknown, param: string) => {
