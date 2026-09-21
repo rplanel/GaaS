@@ -168,7 +168,36 @@ describe('insertWorkflow', () => {
     )
 
     expectFailure(exit, (error) => {
-      expect((error as Error).message).toContain('Permission denied')
+      expect(error).toMatchObject({ _tag: 'ForbiddenError', message: 'Permission denied' })
     })
+  })
+
+  it('refuses a caller with no claims rather than resolving with nothing', async () => {
+    // the body used to sit in an `if (supabaseClaims)` with no `else`, so this
+    // fell off the end of the generator and resolved as a success carrying
+    // undefined -- which the endpoint answered with 200 and an empty body
+    const galaxyLayer = createMockGalaxyLayer(mockGalaxyWorkflowExport)
+    const drizzle = createMockDrizzle()
+    drizzle.setResult([mockDbUser])
+
+    const { layer: supabaseClientLayer, mockClient } = createMockServerSupabaseClientLayer({
+      queryResult: { data: null, error: null },
+    })
+    const supabaseClaimsLayer = createMockServerSupabaseClaimsLayer(null)
+    const event = createMockEvent()
+
+    const exit = await insertWorkflow('galaxy-workflow-1', 'https://galaxy.example.com', 'admin@example.org', event).pipe(
+      Effect.provide(galaxyLayer),
+      Effect.provide(drizzle.layer),
+      Effect.provide(supabaseClientLayer),
+      Effect.provide(supabaseClaimsLayer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect(error).toMatchObject({ _tag: 'GetSupabaseUserError' })
+    })
+    // the insert path opens with .schema('galaxy'), so this proves it was never walked
+    expect(mockClient.schema).not.toHaveBeenCalled()
   })
 })
