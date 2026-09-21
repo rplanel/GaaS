@@ -1,9 +1,11 @@
 import { Effect } from 'effect'
 import { describe, expect, it, vi } from 'vitest'
+import { GalaxyUserNotFoundError } from '../../../../src/runtime/server/utils/grizzle/user'
 import {
   getWorkflowEffect,
   GetWorkflowError,
   insertWorkflow,
+  WorkflowNotFoundError,
 } from '../../../../src/runtime/server/utils/grizzle/workflows'
 import {
   createMockDrizzle,
@@ -19,8 +21,10 @@ import {
   mockSupabaseUser,
 } from '../../fixtures'
 
-// Mock getCurrentUserEffect
-vi.mock('../../../../src/runtime/server/utils/grizzle/user', () => ({
+// Mock getCurrentUserEffect. The module's error classes are kept real so
+// `toBeInstanceOf` below compares against the class production throws.
+vi.mock('../../../../src/runtime/server/utils/grizzle/user', async importOriginal => ({
+  ...await importOriginal<typeof import('../../../../src/runtime/server/utils/grizzle/user')>(),
   getCurrentUserEffect: vi.fn(() =>
     Effect.succeed({
       user: { id: 1, email: 'admin@example.org', instanceId: 1, createdAt: new Date('2024-01-01') },
@@ -42,16 +46,39 @@ describe('getWorkflowEffect', () => {
     expect(result).toEqual(mockDbWorkflow)
   })
 
-  it('should return null when no workflow is found', async () => {
+  it('fails with a cause a caller can act on when no workflow is found', async () => {
+    // `null` used to come back here as a success, and the one caller answered
+    // it with 200 and an empty body. A missing workflow is the only cause on
+    // this path the caller can do anything about, so it gets its own tag.
     const drizzle = createMockDrizzle()
     drizzle.setResult([])
 
-    const result = await getWorkflowEffect(999).pipe(
+    const exit = await getWorkflowEffect(999).pipe(
       Effect.provide(drizzle.layer),
-      Effect.runPromise,
+      Effect.runPromiseExit,
     )
 
-    expect(result).toBeNull()
+    expectFailure(exit, (error) => {
+      expect(error).toBeInstanceOf(WorkflowNotFoundError)
+    })
+  })
+
+  it('fails rather than resolving with undefined when there is no Galaxy user row', async () => {
+    const userModule = await import('../../../../src/runtime/server/utils/grizzle/user')
+    const getCurrentUserEffectSpy = userModule.getCurrentUserEffect as ReturnType<typeof vi.fn>
+    getCurrentUserEffectSpy.mockReturnValueOnce(Effect.succeed(null))
+
+    const drizzle = createMockDrizzle()
+    drizzle.setResult([mockDbWorkflow])
+
+    const exit = await getWorkflowEffect(1).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect(error).toBeInstanceOf(GalaxyUserNotFoundError)
+    })
   })
 
   it('should fail with GetWorkflowError on database error', async () => {
