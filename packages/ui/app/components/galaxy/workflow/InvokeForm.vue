@@ -11,10 +11,11 @@ import type { Database } from 'nuxt-galaxy'
 import type { Props as WorkflowStepProps } from '../../../components/galaxy/workflow/Step.vue'
 import type { GalaxyToolInputComponent } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 import type { AnalysesListProvide } from '../../../layouts/default.vue'
+import type { StartAnalysisFailure } from '../../../utils/startAnalysisFailure'
 import { NuxtErrorBoundary } from '#components'
 import { computed, ref, toValue } from '#imports'
 
-import * as bt from 'blendtype'
+import { log } from 'evlog/client'
 import * as z from 'zod'
 import { useGalaxyDecodeParameters } from '../../../composables/galaxy/useGalaxyDecodeParameters'
 import { useGalaxyEncodeParameters } from '../../../composables/galaxy/useGalaxyEncodeParameters'
@@ -22,6 +23,7 @@ import {
 
   useGalaxyToolInputComponent,
 } from '../../../composables/galaxy/useGalaxyToolInputComponent'
+import { describeStartAnalysisFailure, unexplainedStartAnalysisFailure } from '../../../utils/startAnalysisFailure'
 
 // type Database = SupabaseTypes.Database
 export type UploadedDatasetDb = Database['galaxy']['Views']['uploaded_datasets_with_storage_path']['Row']
@@ -42,10 +44,14 @@ interface WorkflowParameterConditionalValue {
 
 const props = withDefaults(defineProps<Props>(), {})
 const router = useRouter()
+const route = useRoute()
+const redirectInfo = useSupabaseCookieRedirect()
 
 const workflowId = toRef(() => props.workflowId)
 const analysisId = toRef(() => props.analysisId)
 const startingAnalysis = ref<boolean>(false)
+/** Why the last submission was refused, or `null` if none was. */
+const submitError = ref<StartAnalysisFailure | null>(null)
 const workflowInputDatasetsModel = ref<
   Record<string, UploadedDatasetDb> | undefined
 >({})
@@ -165,6 +171,16 @@ const galaxyWorkflowStepProps = computed(
   },
 )
 
+/**
+ * Where `login.vue` sends the reader once they are back in: it navigates to
+ * whatever this cookie holds and falls back to the default page. Leaving it
+ * unset would drop them somewhere other than the workflow they were starting,
+ * which is most of what showing the refusal in place was meant to avoid.
+ */
+function rememberThisPage() {
+  redirectInfo.path.value = route.fullPath
+}
+
 async function runAnalysis() {
   const workflowInputsModelVal = toValue(workflowInputDatasetsModel)
   const analysesNameVal = state.analysisName
@@ -183,24 +199,46 @@ async function runAnalysis() {
         workflowId: workflowIdVal,
       }
       startingAnalysis.value = true
-      try {
-        const { id: newAnalysisId } = await $fetch('/api/db/analyses', {
-          method: 'POST',
-          body: payload,
+      submitError.value = null
+      // Only the request is guarded, so a failed submission is the only thing
+      // this handler can claim.
+      const created = await $fetch('/api/db/analyses', {
+        method: 'POST',
+        body: payload,
+      }).catch((error: unknown) => {
+        // Shown rather than thrown: every status this endpoint refuses with is
+        // one the reader may be able to act on, and a fatal page would cost
+        // them the form they just filled in. The reader gets the status turned
+        // into words; the cause itself is only ever worth a log.
+        const { errorStatus } = useErrorStatus(error)
+        log.error({
+          action: 'analysis:start_failed',
+          tag: 'InvokeForm',
+          status: toValue(errorStatus),
+          error: String(error),
         })
-        if (!refreshAnalysesList) {
-          throw createError('refreshAnalysesList not provided')
+        submitError.value = describeStartAnalysisFailure(toValue(errorStatus))
+        return null
+      })
+      startingAnalysis.value = false
+      if (!created) {
+        // Either the request was refused above and is already described, or it
+        // answered 200 with no analysis to navigate to. ADR 0002 and #25 took
+        // that empty body out of the server; if it returns, the reader is told
+        // rather than left with a stopped spinner and nothing else.
+        if (submitError.value === null) {
+          log.error({ action: 'analysis:start_returned_no_analysis', tag: 'InvokeForm' })
+          submitError.value = unexplainedStartAnalysisFailure
         }
-        refreshAnalysesList()
-
-        router.push(`/analyses/${newAnalysisId}`)
+        return
       }
-      catch (error) {
-        createError({ statusCode: bt.getStatusCode(error), statusMessage: bt.getErrorMessage(error) })
+      // A missing provide is this application's mistake rather than a refused
+      // submission, so it is left to surface as the programming error it is.
+      if (!refreshAnalysesList) {
+        throw createError('refreshAnalysesList not provided')
       }
-      finally {
-        startingAnalysis.value = false
-      }
+      refreshAnalysesList()
+      router.push(`/analyses/${created.id}`)
     }
   }
 }
@@ -331,6 +369,29 @@ watchEffect(() => {
         <USeparator class="mt-5 mb-3" />
       </div>
 
+      <UAlert
+        v-if="submitError"
+        role="alert"
+        variant="subtle"
+        color="error"
+        icon="i-lucide:alert-octagon"
+        :title="submitError.title"
+        :description="submitError.description"
+        class="mb-3"
+      >
+        <template v-if="submitError.signIn" #actions>
+          <UButton
+            data-testid="start-analysis-failure-sign-in"
+            color="error"
+            variant="outline"
+            size="xs"
+            to="/login"
+            @click="rememberThisPage"
+          >
+            Sign in
+          </UButton>
+        </template>
+      </UAlert>
       <UButton type="submit" :loading="startingAnalysis">
         Run
       </UButton>
