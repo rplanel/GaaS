@@ -9,9 +9,49 @@ variables:
   UV_PUBLISH_USERNAME: gitlab-ci-token
   UV_PUBLISH_PASSWORD: '${CI_JOB_TOKEN}'
 
+# `deploy` sits after `test` deliberately: a `main` that fails its own lint,
+# typecheck or tests should not publish documentation from itself. Decouple
+# with `needs: []` on `deploy:docs` if that ever costs more than it buys.
 stages:
+  - test
   - publish
   - deploy
+
+# Nothing ran on a merge request before this job, so lint, typecheck and test
+# only ever gated a release (`pnpm release` runs all three). One job rather
+# than three: the install and the generated Nuxt types dominate the runtime,
+# and splitting would pay for them once per job.
+test:packages:
+  stage: test
+  image: node:22.16.0-bookworm
+  # A new push supersedes the run it interrupts.
+  interruptible: true
+  variables:
+    # Corepack otherwise asks before fetching the pinned pnpm, and waits.
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+  before_script:
+    - npm install --global corepack@latest
+    - corepack enable
+    - pnpm config set store-dir .pnpm-store
+  script:
+    # `blendtype` has to be built before anything that imports it typechecks,
+    # and `dev:prepare` generates the `.nuxt` tsconfigs `ui` and `wiki` are
+    # checked against — neither has a `prepack`, so `build` alone misses them.
+    - pnpm install --frozen-lockfile
+    - pnpm build
+    - pnpm dev:prepare
+    - pnpm lint
+    - pnpm typecheck
+    - pnpm test
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+    paths:
+      - .pnpm-store
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
 
 publish:gaas-cli:
   stage: publish
