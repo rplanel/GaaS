@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatSuccessRate, trendBucketLabel, trendBucketSummary, trendSegments, workflowUsageLabel } from '../app/utils/usageStatistics'
+import { formatSuccessRate, trendBucketLabel, trendBucketSummary, trendSegments, workflowKey, workflowUsageLabel } from '../app/utils/usageStatistics'
 
 describe('formatSuccessRate', () => {
   it('has no value until an analysis has finished, and says why', () => {
@@ -137,5 +137,18 @@ describe('trendBucketLabel', () => {
     }, 'week')
 
     expect(summary).toContain('Week of 2026-08-24 (UTC)')
+  })
+})
+
+describe('workflowKey', () => {
+  it('names a workflow by its identifier', () => {
+    expect(workflowKey({ workflowId: 7 })).toBe('7')
+  })
+
+  it('names the Unknown workflow by the word it travels under', () => {
+    // the table writes these keys and the label memory reads them back, so a
+    // second spelling would leave the chip looking up a name under a key
+    // nothing ever stored
+    expect(workflowKey({ workflowId: null })).toBe('unknown')
   })
 })

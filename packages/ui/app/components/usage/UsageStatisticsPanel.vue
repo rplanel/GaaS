@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { AnalysisMonitoringCounts, AnalysisMonitoringStats } from 'nuxt-galaxy'
-import { formatSuccessRate, OUTCOME_FIELDS } from '../../utils/usageStatistics'
+import type { AnalysisMonitoringStats } from 'nuxt-galaxy'
+import { COUNT_FIELDS, formatSuccessRate } from '../../utils/usageStatistics'
 import UsageGranularityFilter from './UsageGranularityFilter.vue'
 import UsageRangeFilter from './UsageRangeFilter.vue'
 import UsageStatTile from './UsageStatTile.vue'
@@ -30,22 +30,6 @@ const props = withDefaults(defineProps<Props>(), {
  * needs a way to ask for current numbers.
  */
 const emit = defineEmits<{ refresh: [] }>()
-
-/**
- * The counts a reader sees, in the order they appear: the total, then the four
- * outcomes with the labels and colours the trend chart also uses. One list
- * drives the tiles and the table columns, so nothing can disagree between
- * them.
- */
-const COUNT_FIELDS = [
-  { key: 'total', label: 'Total', icon: 'i-lucide-layers', fill: undefined },
-  ...OUTCOME_FIELDS,
-] as const satisfies ReadonlyArray<{
-  key: keyof AnalysisMonitoringCounts
-  label: string
-  icon: string
-  fill: string | undefined
-}>
 
 const countTiles = computed(() => {
   const stats = props.stats

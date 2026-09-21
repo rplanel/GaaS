@@ -245,9 +245,12 @@ export function useUsageFilters(): UsageFilterControls {
    *
    * Replace rather than push, and in one place: a filter is a way of looking
    * at one page, not a place of its own, so Back should leave the page rather
-   * than undo a click. `drop` names what this change supersedes; anything in
-   * `set` with no value is left out, absence being how every one of these
-   * says "nothing chosen".
+   * than undo a click. `drop` names what this change supersedes.
+   *
+   * A value that is absent *or empty* leaves its parameter out. Everything
+   * reading this URL treats `?from=` as no bound at all, so writing one would
+   * be putting on screen a state the same file calls meaningless; deciding it
+   * here means no caller can forget.
    */
   function replaceQuery(drop: readonly string[], set: Record<string, string | undefined>) {
     const query = { ...route.query }
@@ -255,7 +258,7 @@ export function useUsageFilters(): UsageFilterControls {
       delete query[key]
     }
     for (const [key, value] of Object.entries(set)) {
-      if (value === undefined) {
+      if (value === undefined || value === '') {
         delete query[key]
       }
       else {

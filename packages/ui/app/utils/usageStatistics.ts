@@ -1,4 +1,4 @@
-import type { AnalysisMonitoringTrendPoint, TrendGranularity } from 'nuxt-galaxy'
+import type { AnalysisMonitoringCounts, AnalysisMonitoringTrendPoint, AnalysisMonitoringWorkflowUsage, TrendGranularity } from 'nuxt-galaxy'
 
 /** Stands in for a success rate that has no value yet. */
 export const NO_SUCCESS_RATE_LABEL = '—'
@@ -95,6 +95,36 @@ export const OUTCOME_FIELDS = [
   icon: string
   fill: string
 }>
+
+/**
+ * The counts a reader sees, in the order they appear: the total, then the four
+ * outcomes with the labels and colours the trend chart also uses.
+ *
+ * One list, read by the tiles and by the table's columns alike, so a label
+ * cannot come to mean one thing in a tile and another in a column. It lives
+ * here rather than in either of them because both need it and neither owns it.
+ */
+export const COUNT_FIELDS = [
+  { key: 'total', label: 'Total', icon: 'i-lucide-layers', fill: undefined },
+  ...OUTCOME_FIELDS,
+] as const satisfies ReadonlyArray<{
+  key: keyof AnalysisMonitoringCounts
+  label: string
+  icon: string
+  fill: string | undefined
+}>
+
+/**
+ * How a workflow names itself in a URL and to the endpoint.
+ *
+ * The Unknown workflow arrives with a null id, having none of its own, and
+ * travels as a word instead. Written once because the table writes these keys
+ * and the label memory reads them back: two spellings would leave the chip
+ * looking up a name under a key nothing ever stored.
+ */
+export function workflowKey(usage: Pick<AnalysisMonitoringWorkflowUsage, 'workflowId'>): string {
+  return usage.workflowId === null ? UNKNOWN_WORKFLOW : String(usage.workflowId)
+}
 
 export interface TrendSegment {
   /** The bucket this segment belongs to, as the server labelled it. */
