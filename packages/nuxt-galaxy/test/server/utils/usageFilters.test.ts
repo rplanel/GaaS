@@ -6,6 +6,12 @@ describe('parseUsageFilters', () => {
     expect(parseUsageFilters({})).toEqual({})
   })
 
+  it('reads a bound that is present but empty as absent', () => {
+    // `?from=` is a bound nobody chose, the same as leaving it out, which is
+    // how the other two parameters already read an empty value
+    expect(parseUsageFilters({ from: '', to: '' })).toEqual({})
+  })
+
   it('reads a calendar day as the UTC instant it starts at', () => {
     expect(parseUsageFilters({ from: '2026-08-01' }).from).toEqual(new Date('2026-08-01T00:00:00.000Z'))
   })
@@ -42,6 +48,19 @@ describe('parseUsageFilters', () => {
   it('accepts a long but sane range', () => {
     expect(parseUsageFilters({ from: '2020-01-01', to: '2026-01-01' }).from)
       .toEqual(new Date('2020-01-01T00:00:00.000Z'))
+  })
+
+  it('serves a span of exactly ten years and refuses one longer', () => {
+    // where the cap sits, not merely that there is one: the server
+    // documentation publishes the number, so a drift in the constant should
+    // fail here rather than quietly contradict the docs
+    const start = Date.UTC(2016, 0, 1)
+    const day = (offset: number) => new Date(start + offset * 86_400_000).toISOString().slice(0, 10)
+
+    // `to` is inclusive, so naming day 3652 asks for a span of 3653 days
+    expect(parseUsageFilters({ from: day(0), to: day(3652) }).from).toEqual(new Date(day(0)))
+    expect(() => parseUsageFilters({ from: day(0), to: day(3653) }))
+      .toThrowError(expect.objectContaining({ statusCode: 400 }))
   })
 
   it('caps a range with no end, which runs to today', () => {
