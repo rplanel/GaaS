@@ -116,9 +116,25 @@ describe('toHttpError', () => {
     )).toThrowError(expect.objectContaining({ statusMessage: 'Internal Server Error' }))
   })
 
-  it('does not let a handler downgrade a shared rule', () => {
-    // 401/403/503 are the same answer everywhere by design, so a per-endpoint
-    // map cannot quietly disagree with them
+  it('answers a tag the handler maps alongside one it may not', () => {
+    const error: ForbiddenError | NotFoundError = new NotFoundError({ message: 'gone' })
+
+    expect(() => toHttpError(event, error, 'sync analysis', {
+      statuses: { NotFoundError: 404 },
+    })).toThrowError(expect.objectContaining({ statusCode: 404 }))
+  })
+
+  it('still puts a shared rule first for a caller that casts past the type', () => {
+    // 401/403/503 are the same answer everywhere by design, so `SharedTag` is
+    // excluded from the map's key type and no handler can name one: adding
+    // `ForbiddenError` to a real handler's map fails `pnpm typecheck` with
+    // TS2353. That guarantee is enforced at each of the six call sites and
+    // cannot be pinned from here — `tsconfig.json` excludes `test`, so a
+    // `@ts-expect-error` in this file is never evaluated and would pass
+    // whether the exclusion existed or not.
+    //
+    // What this does pin is the runtime order, which the type makes
+    // unreachable through an honest call and so is only drivable by casting.
     expect(() => toHttpError(
       event,
       new ForbiddenError({ message: 'nope' }),

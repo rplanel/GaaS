@@ -38,10 +38,18 @@ function messageOf(error: TaggedFailure): string | undefined {
  * `GetSupabaseUserError` is absent on purpose: it is answered below with a
  * fixed message rather than the error's own.
  */
-const SHARED_STATUSES: Record<string, number | undefined> = {
+const SHARED_STATUSES = {
   ForbiddenError: 403,
   GalaxyServiceUnavailable: 503,
-}
+} as const
+
+/**
+ * The tags a handler may not remap, derived from the table above so the two
+ * cannot disagree. `GetSupabaseUserError` joins them: it is answered with a
+ * fixed body rather than a looked-up status, so it is absent from the table
+ * but just as much not a handler's to decide.
+ */
+type SharedTag = 'GetSupabaseUserError' | keyof typeof SHARED_STATUSES
 
 /**
  * Turn a folded failure into the response it deserves, or a logged 500.
@@ -50,7 +58,11 @@ const SHARED_STATUSES: Record<string, number | undefined> = {
  * against the handler's own error union, so a key naming a tag that union
  * does not contain fails `vue-tsc` — the check the hand-written
  * `error._tag === '…'` cascades got for free, and the reason this takes a
- * typed map rather than a `Record<string, number>`.
+ * typed map rather than a `Record<string, number>`. The shared tags are
+ * excluded from it too, so "answer 403 differently here" is a compile error
+ * rather than a silent correction. A handler that really needs its own answer
+ * for one keeps a branch at the call site, as `workflows.post` does for the
+ * status its 409 carries on the error.
  *
  * `handler` names the endpoint in the 500 log, as "<handler> handler failed".
  * `options.context` adds fields to that log, for a handler with something
@@ -61,7 +73,7 @@ export function toHttpError<E extends TaggedFailure>(
   error: E,
   handler: string,
   options: {
-    readonly statuses?: Partial<Record<E['_tag'], number>>
+    readonly statuses?: Partial<Record<Exclude<E['_tag'], SharedTag>, number>>
     readonly context?: Record<string, unknown>
   } = {},
 ): never {
@@ -71,9 +83,11 @@ export function toHttpError<E extends TaggedFailure>(
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  // shared first, so a per-endpoint map cannot quietly disagree with an
-  // answer the other handlers give
-  const statusCode = SHARED_STATUSES[error._tag]
+  // A handler cannot name a shared tag in `statuses` — `SharedTag` is
+  // excluded from the key type — so this order is belt to that brace, for a
+  // caller that casts past it. It is deliberately unreachable through the
+  // typed call, and the one test that drives it has to cast to get there.
+  const statusCode = (SHARED_STATUSES as Record<string, number | undefined>)[error._tag]
     ?? (options.statuses as Record<string, number | undefined> | undefined)?.[error._tag]
 
   if (statusCode !== undefined) {
