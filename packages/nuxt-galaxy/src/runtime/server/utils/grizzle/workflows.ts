@@ -6,11 +6,15 @@ import { Data, Effect } from 'effect'
 import { workflows } from '../../db/schema/galaxy/workflows'
 import { Drizzle } from '../drizzle'
 import { takeUniqueOrThrow } from './helper'
-import { ServerSupabaseClaims, ServerSupabaseClient } from './supabase'
+import { ForbiddenError, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from './supabase'
 import { getCurrentUserEffect } from './user'
 import { generateWorkflowSlug } from './workflowSlug'
 
 export class GetWorkflowError extends Data.TaggedError('GetWorkflowError')<{
+  readonly message: string
+}> {}
+
+export class InsertWorkflowError extends Data.TaggedError('InsertWorkflowError')<{
   readonly message: string
 }> {}
 
@@ -109,7 +113,7 @@ export function insertWorkflow(
       )
       if (error) {
         if (error.code === '42501') {
-          return yield* Effect.fail(new Error('Permission denied'))
+          return yield* Effect.fail(new ForbiddenError({ message: 'Permission denied' }))
         }
 
         if (error.code === '23505') {
@@ -118,11 +122,17 @@ export function insertWorkflow(
           ))
         }
 
-        return yield* Effect.fail(new Error(`supabase error: ${error.message}\ncode : ${error.code}`))
+        return yield* Effect.fail(new InsertWorkflowError({ message: `supabase error: ${error.message}\ncode : ${error.code}` }))
       }
       else {
         return data
       }
+    }
+    else {
+      // without this the generator falls off the end and returns undefined,
+      // which resolves as a success -- so the endpoint answered a caller with
+      // no session 200 and an empty body, where every sibling answers 401
+      return yield* Effect.fail(new GetSupabaseUserError({ message: 'Unauthorized' }))
     }
   })
 }
