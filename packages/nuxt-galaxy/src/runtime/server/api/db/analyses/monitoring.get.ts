@@ -1,11 +1,11 @@
 import type { AnalysisMonitoringStats } from '../../../../types/nuxt-galaxy'
-import { Cause, Effect, Either, Layer } from 'effect'
-import { useLogger } from 'evlog'
-import { createError, defineEventHandler } from 'h3'
+import { Effect, Either, Layer } from 'effect'
+import { defineEventHandler } from 'h3'
 import { Drizzle } from '../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../utils/evlog-effect'
 import { getAnalysisMonitoringStats } from '../../../utils/grizzle/analysisMonitoring'
 import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClient } from '../../../utils/grizzle/supabase'
+import { toHttpError } from '../../../utils/httpError'
 import { readUsageRequest } from '../../../utils/usageFilters'
 
 export default defineEventHandler(async (event): Promise<AnalysisMonitoringStats> => {
@@ -30,14 +30,7 @@ export default defineEventHandler(async (event): Promise<AnalysisMonitoringStats
   )
 
   return Either.match(result, {
-    onLeft: (error) => {
-      if (error._tag === 'GetSupabaseUserError') {
-        throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-      }
-      const log = useLogger(event)
-      log.error('analysis monitoring handler failed', { cause: Cause.pretty(Cause.fail(error)) })
-      throw createError({ statusCode: 500, statusMessage: 'Internal Server Error' })
-    },
+    onLeft: error => toHttpError(event, error, 'analysis monitoring'),
     onRight: value => value,
   })
 })

@@ -109,12 +109,18 @@ describe('post /api/db/workflows', () => {
   it('refuses an unauthenticated caller with 401, as its siblings do', async () => {
     // the claims branch failing is what "no session" looks like from here; it
     // used to fall through to a 200 with an empty body
+    // the message is the shape `getSupabaseUser` really produces on a failed
+    // lookup, so the assertion below proves the 401 body is fixed rather than
+    // taken from the error -- it would leak the reason otherwise
     mocks.insertWorkflow.mockReturnValue(
-      Effect.fail(new GetSupabaseUserError({ message: 'Unauthorized' })),
+      Effect.fail(new GetSupabaseUserError({ message: 'Failed to get auth user: token expired' })),
     )
     const handler = await loadHandler()
 
-    await expect(handler(event)).rejects.toMatchObject({ statusCode: 401 })
+    await expect(handler(event)).rejects.toMatchObject({
+      statusCode: 401,
+      statusMessage: 'Unauthorized',
+    })
   })
 
   it.each([

@@ -7,6 +7,7 @@ import { Drizzle } from '../../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../../../utils/galaxy'
 import { ForbiddenError, getSupabaseUser, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from '../../../../utils/grizzle/supabase'
+import { toHttpError } from '../../../../utils/httpError'
 
 export class NotFoundError extends Data.TaggedError('NotFoundError')<{
   readonly message: string
@@ -56,24 +57,12 @@ export default defineEventHandler(async (event) => {
   )
 
   return Either.match(result, {
-    onLeft: (error) => {
-      if (error._tag === 'GetSupabaseUserError') {
-        throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-      }
-      if (error._tag === 'NotFoundError') {
-        throw createError({ statusCode: 404, statusMessage: 'Analysis not found' })
-      }
-      if (error._tag === 'ForbiddenError') {
-        throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-      }
-      const log = useLogger(event)
-      log.error('sync analysis handler failed', {
-        errorTag: error._tag,
-        message: (error as { message?: string }).message ?? String(error),
-        analysisId: parsedAnalysisId,
-      })
-      throw createError({ statusCode: 500, statusMessage: 'Internal Server Error' })
-    },
+    // both messages below are already what the errors carry, so folding the
+    // tail leaves every status and body on this endpoint unchanged
+    onLeft: error => toHttpError(event, error, 'sync analysis', {
+      statuses: { NotFoundError: 404 },
+      context: { analysisId: parsedAnalysisId },
+    }),
     onRight: (value) => {
       const log = useLogger(event)
       log.info('sync queued', { analysisId: parsedAnalysisId, userId: value.userId })

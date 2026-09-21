@@ -36,6 +36,13 @@ class GetSupabaseUserError extends Error {
   }
 }
 
+class GalaxyServiceUnavailable extends Error {
+  readonly _tag = 'GalaxyServiceUnavailable'
+  constructor(opts: { message: string }) {
+    super(opts.message)
+  }
+}
+
 class ForbiddenError extends Error {
   readonly _tag = 'ForbiddenError'
   constructor(opts: { message: string }) {
@@ -167,6 +174,52 @@ describe('post /api/db/analyses/:id/sync', () => {
       statusCode: 401,
       statusMessage: 'Unauthorized',
     })
+
+    // Restore
+    getSupabaseUserSpy.mockReturnValue(Effect.succeed(mockSupabaseUser))
+  })
+
+  it('answers 503 when Galaxy is unavailable, as its siblings do', async () => {
+    // this handler pipes `toGalaxyServiceUnavailable`, so Galaxy being down is
+    // a live outcome here — it used to arrive as a 500 because the fold had no
+    // branch for the tag
+    const supabaseMock = await import('../../../../../../src/runtime/server/utils/grizzle/supabase')
+    const getSupabaseUserSpy = supabaseMock.getSupabaseUser as ReturnType<typeof vi.fn>
+    getSupabaseUserSpy.mockReturnValueOnce(
+      Effect.fail(new GalaxyServiceUnavailable({ message: 'Galaxy service is unavailable' })),
+    )
+
+    const handler = (await import('../../../../../../src/runtime/server/api/db/analyses/[id]/sync.post')).default
+
+    await expect(handler(createMockEvent())).rejects.toMatchObject({
+      statusCode: 503,
+      statusMessage: 'Galaxy service is unavailable',
+    })
+
+    // Restore
+    getSupabaseUserSpy.mockReturnValue(Effect.succeed(mockSupabaseUser))
+  })
+
+  it('still records which analysis it was when it answers 500', async () => {
+    // this fold logs more than the others do; sharing the tail must not cost
+    // it the one field that says which analysis failed
+    const requestLog = createMockRequestLogger()
+    vi.mocked(useLogger).mockReturnValue(requestLog)
+
+    const supabaseMock = await import('../../../../../../src/runtime/server/utils/grizzle/supabase')
+    const getSupabaseUserSpy = supabaseMock.getSupabaseUser as ReturnType<typeof vi.fn>
+    getSupabaseUserSpy.mockReturnValueOnce(Effect.fail(new Error('db connection lost')))
+
+    const handler = (await import('../../../../../../src/runtime/server/api/db/analyses/[id]/sync.post')).default
+
+    await expect(handler(createMockEvent())).rejects.toMatchObject({
+      statusCode: 500,
+      statusMessage: 'Internal Server Error',
+    })
+    expect(requestLog.error).toHaveBeenCalledWith(
+      'sync analysis handler failed',
+      expect.objectContaining({ analysisId: 1 }),
+    )
 
     // Restore
     getSupabaseUserSpy.mockReturnValue(Effect.succeed(mockSupabaseUser))
