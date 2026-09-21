@@ -151,6 +151,35 @@ export default defineEventHandler(async (event) => {
 })
 ```
 
+### Route parameters
+
+Measured against h3 1.15.11's router, not assumed (#28):
+
+- On a **matched** route a parameter is never `undefined`. `getRouterParam`
+  types it as `string | undefined`, but a request that omits a segment does
+  not match the route and never reaches the handler.
+- It *can* be the empty string, but only when the parameter is **not the
+  final segment**. An empty segment satisfies a middle parameter, so
+  `/api/galaxy/tools//1.0` matches with `toolId === ''`, while
+  `/api/db/analyses/` does not match `[analysisId]` at all.
+
+So a falsy parameter is reachable for a middle parameter and unreachable for
+a trailing one — and in neither case is returning `undefined` an answer. A
+handler that falls off the end sends **200 with an empty body**, which tells
+the caller nothing. Refuse instead, with the answer the endpoint already
+gives for an id it cannot use:
+
+```typescript
+const analysisId = getRouterParam(event, 'analysisId')
+const parsed = Number.parseInt(analysisId ?? '', 10)
+if (Number.isNaN(parsed)) {
+  throw createError({ statusCode: 404, statusMessage: 'Analysis not found' })
+}
+```
+
+Parsing folds the empty and the unusable case together: `Number.parseInt('')`
+and `Number.parseInt('abc')` are both `NaN`, so one check answers both.
+
 ### Configuration Options
 ```typescript
 interface ModuleOptions {
