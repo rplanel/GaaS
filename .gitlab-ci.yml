@@ -23,7 +23,11 @@ stages:
 # and splitting would pay for them once per job.
 test:packages:
   stage: test
-  image: node:22.16.0-bookworm
+  # Not the 22.16.0 the docs job pins. Loading Nuxt in `test/module/tasks.test.ts`
+  # goes through `require()` of an ES module, which Node only allows unflagged
+  # from 22.18; on 22.16 the suite fails with `default is not defined`. 24 is
+  # what the project is developed against.
+  image: node:24-bookworm
   # A new push supersedes the run it interrupts.
   interruptible: true
   variables:
