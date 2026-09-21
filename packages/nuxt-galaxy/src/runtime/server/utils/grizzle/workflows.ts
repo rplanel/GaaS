@@ -7,7 +7,7 @@ import { workflows } from '../../db/schema/galaxy/workflows'
 import { Drizzle } from '../drizzle'
 import { takeUniqueOrNull } from './helper'
 import { ForbiddenError, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from './supabase'
-import { getCurrentUserEffect } from './user'
+import { galaxyUserNotFound, getCurrentUserEffect } from './user'
 import { generateWorkflowSlug } from './workflowSlug'
 
 export class GetWorkflowError extends Data.TaggedError('GetWorkflowError')<{
@@ -18,26 +18,52 @@ export class InsertWorkflowError extends Data.TaggedError('InsertWorkflowError')
   readonly message: string
 }> {}
 
+/**
+ * No activated workflow carries the identifier the caller asked for.
+ *
+ * Of everything that can go wrong on this path it is the only cause the
+ * caller can act on, so it is told apart from the rest and answered with a
+ * 404 rather than folded into a fault.
+ */
+export class WorkflowNotFoundError extends Data.TaggedError('WorkflowNotFoundError')<{
+  readonly message: string
+}> {}
+
+/**
+ * The workflow, or a named reason there is none (ADR 0002). The whole body
+ * used to sit inside `if (currentUser)` with no `else`, and the query itself
+ * answers `null` for a workflow that does not exist — so both a deployment
+ * fault and an identifier the caller made up arrived as the same successful
+ * `undefined`/`null`.
+ */
 export function getWorkflowEffect(workflowId: number) {
   const { public: { galaxy: { url } }, galaxy: { email } } = useRuntimeConfig()
   return Effect.gen(function* () {
     const currentUser = yield* getCurrentUserEffect(url, email)
     const useDrizzle = yield* Drizzle
-    if (currentUser) {
-      return yield* Effect.tryPromise({
-        try: () => useDrizzle
-          .select()
-          .from(workflows)
-          .where(
-            and(
-              eq(workflows.userId, currentUser.user.id),
-              eq(workflows.id, workflowId),
-            ),
-          )
-          .then(takeUniqueOrNull),
-        catch: error => new GetWorkflowError({ message: `Error getting workflow: ${error}` }),
-      })
+    if (!currentUser) {
+      return yield* Effect.fail(galaxyUserNotFound(url, email))
     }
+
+    const workflow = yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .select()
+        .from(workflows)
+        .where(
+          and(
+            eq(workflows.userId, currentUser.user.id),
+            eq(workflows.id, workflowId),
+          ),
+        )
+        .then(takeUniqueOrNull),
+      catch: error => new GetWorkflowError({ message: `Error getting workflow: ${error}` }),
+    })
+    if (!workflow) {
+      return yield* Effect.fail(new WorkflowNotFoundError({
+        message: `No workflow ${workflowId} is available`,
+      }))
+    }
+    return workflow
   })
 }
 

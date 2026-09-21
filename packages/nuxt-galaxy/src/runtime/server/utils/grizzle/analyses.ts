@@ -56,28 +56,28 @@ export function runAnalysis(
       datamap,
       invocation,
     }
-    const insertedAnalysis = yield* insertAnalysis(newAnalysis, workflowSnapshot)
-    if (insertedAnalysis) {
-      const { insertedId: insertedAnalysisId } = insertedAnalysis
-      results.id = insertedAnalysisId
-      const analysisInputs = yield* Effect.all(
-        Object.entries(inputs).map(([_step, { dbid, id: galaxyDatasetId }]) => {
-          return Effect.gen(function* () {
-            if (dbid) {
-              const dataset = yield* bt.getDatasetEffect(galaxyDatasetId, galaxyHistoryId)
-              return yield* insertAnalysisInputEffect(
-                insertedAnalysisId,
-                dbid,
-                dataset.state,
-              )
-            }
-          })
-        }),
-      )
-      results.inputIds = analysisInputs
-        .filter(input => input !== undefined && input !== null)
-        .map(({ id }) => id)
-    }
+    // no guard on the insert: `insertAnalysis` takes its row with
+    // `takeExactlyOne`, so a zero-row insert is refused there (#31) and the
+    // `if (insertedAnalysis)` that used to wrap this block was unreachable
+    const { insertedId: insertedAnalysisId } = yield* insertAnalysis(newAnalysis, workflowSnapshot)
+    results.id = insertedAnalysisId
+    const analysisInputs = yield* Effect.all(
+      Object.entries(inputs).map(([_step, { dbid, id: galaxyDatasetId }]) => {
+        return Effect.gen(function* () {
+          if (dbid) {
+            const dataset = yield* bt.getDatasetEffect(galaxyDatasetId, galaxyHistoryId)
+            return yield* insertAnalysisInputEffect(
+              insertedAnalysisId,
+              dbid,
+              dataset.state,
+            )
+          }
+        })
+      }),
+    )
+    results.inputIds = analysisInputs
+      .filter(input => input !== undefined && input !== null)
+      .map(({ id }) => id)
     return results
   })
 }

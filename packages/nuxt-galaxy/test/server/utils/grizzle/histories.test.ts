@@ -2,6 +2,7 @@ import { Effect } from 'effect'
 import { describe, expect, it, vi } from 'vitest'
 import {
   addHistoryEffect,
+  CreateGalaxyHistoryError,
   DeleteGalaxyHistoryError,
   deleteHistory,
   getAnalysisHistory,
@@ -13,6 +14,7 @@ import {
   updateHistoryState,
   updateIsHistorySync,
 } from '../../../../src/runtime/server/utils/grizzle/histories'
+import { GalaxyUserNotFoundError } from '../../../../src/runtime/server/utils/grizzle/user'
 import {
   createMockDrizzle,
   createMockGalaxyLayer,
@@ -24,8 +26,11 @@ import {
   mockGalaxyHistory,
 } from '../../fixtures'
 
-// Mock getCurrentUserEffect to avoid nested Drizzle resolution issues
-vi.mock('../../../../src/runtime/server/utils/grizzle/user', () => ({
+// Mock getCurrentUserEffect to avoid nested Drizzle resolution issues. The
+// module's error classes are kept real so `toBeInstanceOf` below compares
+// against the class production throws.
+vi.mock('../../../../src/runtime/server/utils/grizzle/user', async importOriginal => ({
+  ...await importOriginal<typeof import('../../../../src/runtime/server/utils/grizzle/user')>(),
   getCurrentUserEffect: vi.fn(() =>
     Effect.succeed({
       user: { id: 1, email: 'admin@example.org', instanceId: 1, createdAt: new Date('2024-01-01') },
@@ -230,6 +235,61 @@ describe('addHistoryEffect', () => {
     )
 
     expect(result).toEqual({ id: 1, galaxyId: 'galaxy-history-1' })
+  })
+
+  // Each guard below used to fall off the end of the generator and resolve
+  // with `undefined`, which is a *success*: the caller could not tell the three
+  // apart, and `POST /api/db/analyses` answered 200 with an empty body.
+  it('says which of the two causes it was when there is no Galaxy user row', async () => {
+    const userModule = await import('../../../../src/runtime/server/utils/grizzle/user')
+    const getCurrentUserEffectSpy = userModule.getCurrentUserEffect as ReturnType<typeof vi.fn>
+    getCurrentUserEffectSpy.mockReturnValueOnce(Effect.succeed(null))
+
+    const drizzle = createMockDrizzle()
+    const galaxyLayer = createMockGalaxyLayer(mockGalaxyHistory)
+
+    const exit = await addHistoryEffect('New History', 'owner-uuid-1').pipe(
+      Effect.provide(drizzle.layer),
+      Effect.provide(galaxyLayer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect(error).toBeInstanceOf(GalaxyUserNotFoundError)
+    })
+  })
+
+  it('fails rather than resolving with undefined when Galaxy creates nothing', async () => {
+    const drizzle = createMockDrizzle()
+    // Galaxy answering with an empty body: the response is typed non-nullable,
+    // so only the guard stands between this and a successful `undefined`
+    const galaxyLayer = createMockGalaxyLayer(undefined)
+
+    const exit = await addHistoryEffect('New History', 'owner-uuid-1').pipe(
+      Effect.provide(drizzle.layer),
+      Effect.provide(galaxyLayer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect(error).toBeInstanceOf(CreateGalaxyHistoryError)
+    })
+  })
+
+  it('keeps Galaxy vocabulary out of what a caller reads', async () => {
+    const drizzle = createMockDrizzle()
+    const galaxyLayer = createMockGalaxyLayer(undefined)
+
+    const exit = await addHistoryEffect('New History', 'owner-uuid-1').pipe(
+      Effect.provide(drizzle.layer),
+      Effect.provide(galaxyLayer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect((error as CreateGalaxyHistoryError).message.toLowerCase()).not.toContain('history')
+      expect((error as CreateGalaxyHistoryError).message).toContain('analysis')
+    })
   })
 })
 
