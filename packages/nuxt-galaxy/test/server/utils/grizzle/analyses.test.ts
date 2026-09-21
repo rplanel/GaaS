@@ -70,6 +70,32 @@ describe('insertAnalysis', () => {
     expect(drizzle.mock.insert).toHaveBeenCalled()
   })
 
+  it('refuses an insert that returned no row', async () => {
+    // the row was just written, so none coming back means the database broke
+    // a promise rather than that anything was legitimately absent
+    const drizzle = createMockDrizzle()
+    drizzle.setResult([])
+
+    const exit = await insertAnalysis({
+      name: 'Test Analysis',
+      historyId: 1,
+      workflowId: 1,
+      state: 'scheduled',
+      galaxyId: 'galaxy-invocation-1',
+      ownerId: 'owner-uuid-1',
+      parameters: {},
+      datamap: {},
+      invocation: mockGalaxyInvocation as any,
+    }).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect((error as { message: string }).message).toContain('Expected exactly one row')
+    })
+  })
+
   it('should insert a monitoring row with pending outcome when inserting an analysis', async () => {
     const drizzle = createMockDrizzle()
     drizzle.setResult([{ insertedId: 1 }])

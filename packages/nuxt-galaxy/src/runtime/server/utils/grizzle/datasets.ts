@@ -11,7 +11,7 @@ import { datasets } from '../../db/schema/galaxy/datasets.js'
 import { objects } from '../../db/schema/storage/objects.js'
 import { Drizzle, eq } from '../drizzle.js'
 import { UrlFetch } from '../fetch'
-import { takeUniqueOrThrow } from './helper.js'
+import { takeUniqueOrNull } from './helper.js'
 import { deleteHistory } from './histories'
 import { createSignedUrl } from './supabase'
 
@@ -181,7 +181,7 @@ export function uploadFileToSupabase() {
         .select()
         .from(objects)
         .where(eq(objects.id, ''))
-        .then(takeUniqueOrThrow),
+        .then(takeUniqueOrNull),
       catch: error => new NoStorageObjectError({ message: `Error getting storage object: ${error}` }),
     })
   })
@@ -195,7 +195,7 @@ export function getStorageObject(storageObjectId: string) {
         .select()
         .from(objects)
         .where(eq(objects.id, storageObjectId))
-        .then(takeUniqueOrThrow),
+        .then(takeUniqueOrNull),
       catch: error => new GetStorageObjectError({ message: `Error getting storage object: ${error}` }),
     })
   })
@@ -211,7 +211,7 @@ export function insertDatasetEffect(dataset: NewDataset) {
     return yield* Effect.tryPromise({
       try: () => useDrizzle.insert(datasets).values(
         dataset,
-      ).onConflictDoNothing().returning().then(takeUniqueOrThrow),
+      ).onConflictDoNothing().returning().then(takeUniqueOrNull),
       catch: error => new InsertDatasetError({ message: `Error inserting dataset: ${error}` }),
     })
   })

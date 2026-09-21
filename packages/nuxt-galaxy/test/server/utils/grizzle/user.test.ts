@@ -6,7 +6,7 @@ import { createMockDrizzle, expectFailure, mockDbUser } from '../../fixtures'
 describe('getCurrentUserEffect', () => {
   it('should return the user when found', async () => {
     const drizzle = createMockDrizzle()
-    // takeUniqueOrThrow returns the single element
+    // takeUniqueOrNull returns the single element
     drizzle.setResult([mockDbUser])
 
     const result = await getCurrentUserEffect('https://galaxy.example.com', 'admin@example.org').pipe(
@@ -20,7 +20,7 @@ describe('getCurrentUserEffect', () => {
 
   it('should return null when no user is found', async () => {
     const drizzle = createMockDrizzle()
-    drizzle.setResult([]) // empty result -> takeUniqueOrThrow returns null
+    drizzle.setResult([]) // empty result -> takeUniqueOrNull returns null
 
     const result = await getCurrentUserEffect('https://galaxy.example.com', 'nonexistent@example.org').pipe(
       Effect.provide(drizzle.layer),

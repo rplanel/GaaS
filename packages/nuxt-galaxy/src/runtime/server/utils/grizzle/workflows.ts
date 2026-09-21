@@ -5,7 +5,7 @@ import { and, eq } from 'drizzle-orm'
 import { Data, Effect } from 'effect'
 import { workflows } from '../../db/schema/galaxy/workflows'
 import { Drizzle } from '../drizzle'
-import { takeUniqueOrThrow } from './helper'
+import { takeUniqueOrNull } from './helper'
 import { ForbiddenError, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from './supabase'
 import { getCurrentUserEffect } from './user'
 import { generateWorkflowSlug } from './workflowSlug'
@@ -34,8 +34,8 @@ export function getWorkflowEffect(workflowId: number) {
               eq(workflows.id, workflowId),
             ),
           )
-          .then(takeUniqueOrThrow),
-        catch: () => new GetWorkflowError({ message: 'Error getting workflow' }),
+          .then(takeUniqueOrNull),
+        catch: error => new GetWorkflowError({ message: `Error getting workflow: ${error}` }),
       })
     }
   })
