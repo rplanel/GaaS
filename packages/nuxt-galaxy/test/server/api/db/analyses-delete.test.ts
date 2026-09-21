@@ -135,6 +135,49 @@ describe('delete /api/db/analyses/:analysisId', () => {
     getSupabaseUserSpy.mockReturnValue(Effect.succeed(mockSupabaseUser))
   })
 
+  it('refuses a request whose user lookup succeeds with no user', async () => {
+    // #7: `getSupabaseUser` returns `authUser.user`, which Supabase types as
+    // `User | null`, so "no user" arrives as a *success* carrying null rather
+    // than as a failure. The handler used to branch on `if (supabaseUser?.id)`
+    // with no else and fall off the end, which resolved this destructive
+    // endpoint successfully without deleting or refusing anything.
+    const supabaseMock = await import('../../../../src/runtime/server/utils/grizzle/supabase')
+    const getSupabaseUserSpy = supabaseMock.getSupabaseUser as ReturnType<typeof vi.fn>
+    getSupabaseUserSpy.mockReturnValueOnce(Effect.succeed(null))
+
+    const analysesMock = await import('../../../../src/runtime/server/utils/grizzle/analyses')
+    const deleteAnalysisSpy = analysesMock.deleteAnalysis as ReturnType<typeof vi.fn>
+
+    const handler = (await import('../../../../src/runtime/server/api/db/analyses/[analysisId].delete')).default
+
+    await expect(handler({} as any)).rejects.toMatchObject({
+      statusCode: 401,
+      statusMessage: 'Unauthorized',
+    })
+    expect(deleteAnalysisSpy).not.toHaveBeenCalled()
+
+    // Restore
+    getSupabaseUserSpy.mockReturnValue(Effect.succeed(mockSupabaseUser))
+  })
+
+  it('refuses a request whose user has an empty id', async () => {
+    // the other half of #7's "null or has no id"
+    const supabaseMock = await import('../../../../src/runtime/server/utils/grizzle/supabase')
+    const getSupabaseUserSpy = supabaseMock.getSupabaseUser as ReturnType<typeof vi.fn>
+    getSupabaseUserSpy.mockReturnValueOnce(Effect.succeed({ id: '', email: 'nobody@example.com' }))
+
+    const analysesMock = await import('../../../../src/runtime/server/utils/grizzle/analyses')
+    const deleteAnalysisSpy = analysesMock.deleteAnalysis as ReturnType<typeof vi.fn>
+
+    const handler = (await import('../../../../src/runtime/server/api/db/analyses/[analysisId].delete')).default
+
+    await expect(handler({} as any)).rejects.toMatchObject({ statusCode: 401 })
+    expect(deleteAnalysisSpy).not.toHaveBeenCalled()
+
+    // Restore
+    getSupabaseUserSpy.mockReturnValue(Effect.succeed(mockSupabaseUser))
+  })
+
   it('answers 503 when Galaxy is unavailable, as its siblings do', async () => {
     // this handler pipes `toGalaxyServiceUnavailable`, so Galaxy being down is
     // a live outcome here — it used to arrive as a 500 because the fold had no
