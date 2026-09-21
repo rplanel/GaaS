@@ -1,12 +1,12 @@
 import { toGalaxyServiceUnavailable } from 'blendtype'
-import { Cause, Effect, Either, Layer } from 'effect'
-import { useLogger } from 'evlog'
-import { createError, defineEventHandler, getRouterParam } from 'h3'
+import { Effect, Either, Layer } from 'effect'
+import { defineEventHandler, getRouterParam } from 'h3'
 import { Drizzle } from '../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../../utils/galaxy'
 import { deleteAnalysis } from '../../../utils/grizzle/analyses'
 import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from '../../../utils/grizzle/supabase'
+import { toHttpError } from '../../../utils/httpError'
 
 export default defineEventHandler(async (event) => {
   const analysisId = getRouterParam(event, 'analysisId')
@@ -34,14 +34,7 @@ export default defineEventHandler(async (event) => {
   )
 
   return Either.match(result, {
-    onLeft: (error) => {
-      if (error._tag === 'GetSupabaseUserError') {
-        throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-      }
-      const log = useLogger(event)
-      log.error('delete analysis handler failed', { cause: Cause.pretty(Cause.fail(error)) })
-      throw createError({ statusCode: 500, statusMessage: 'Internal Server Error' })
-    },
+    onLeft: error => toHttpError(event, error, 'delete analysis'),
     onRight: value => value,
   })
 })

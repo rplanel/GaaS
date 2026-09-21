@@ -1,13 +1,13 @@
 import { useRuntimeConfig } from '#imports'
 import { toGalaxyServiceUnavailable } from 'blendtype'
-import { Cause, Effect, Either, Layer } from 'effect'
-import { useLogger } from 'evlog'
+import { Effect, Either, Layer } from 'effect'
 import { createError, defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle'
 import { runGalaxyEffect } from '../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../utils/galaxy'
 import { ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase'
 import { insertWorkflow } from '../../utils/grizzle/workflows'
+import { toHttpError } from '../../utils/httpError'
 
 /**
  * The one thing this endpoint needs from a request body, read rather than
@@ -59,24 +59,12 @@ export default defineEventHandler<{ body: { galaxyId: string } }>(
 
     return Either.match(result, {
       onLeft: (error) => {
-        if (error._tag === 'GetSupabaseUserError') {
-          throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-        }
-        // the insert goes through the user-scoped client, so an RLS refusal is
-        // the database saying this caller may not import workflows: a refusal,
-        // not a fault
-        if (error._tag === 'ForbiddenError') {
-          throw createError({ statusCode: 403, statusMessage: error.message })
-        }
+        // the one status this endpoint answers that travels on the error
+        // rather than being decided here, so it stays at the call site
         if (error._tag === 'WorkflowAlreadyExistsError') {
           throw createError({ statusCode: error.statusCode, statusMessage: error.message })
         }
-        if (error._tag === 'GalaxyServiceUnavailable') {
-          throw createError({ statusCode: 503, statusMessage: error.message })
-        }
-        const log = useLogger(event)
-        log.error('insert workflow handler failed', { cause: Cause.pretty(Cause.fail(error)) })
-        throw createError({ statusCode: 500, statusMessage: 'Internal Server Error' })
+        return toHttpError(event, error, 'insert workflow')
       },
       onRight: value => value,
     })

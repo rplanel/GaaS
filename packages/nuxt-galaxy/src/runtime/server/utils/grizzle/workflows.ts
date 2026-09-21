@@ -138,6 +138,9 @@ export function insertWorkflow(
         .select(),
       )
       if (error) {
+        // the insert goes through the user-scoped client, so an RLS refusal is
+        // the database saying this caller may not import workflows: a refusal,
+        // not a fault, which is why it leaves here as a 403 rather than a 500
         if (error.code === '42501') {
           return yield* Effect.fail(new ForbiddenError({ message: 'Permission denied' }))
         }

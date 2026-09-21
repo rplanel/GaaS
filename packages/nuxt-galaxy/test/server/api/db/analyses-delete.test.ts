@@ -17,6 +17,13 @@ class GetSupabaseUserError extends Error {
   }
 }
 
+class GalaxyServiceUnavailable extends Error {
+  readonly _tag = 'GalaxyServiceUnavailable'
+  constructor(opts: { message: string }) {
+    super(opts.message)
+  }
+}
+
 // Define mock service classes at top-level (before vi.mock hoisting)
 class MockDrizzle extends Context.Tag('@nuxt-galaxy/Drizzle')<MockDrizzle, any>() {
   static readonly Live = Layer.succeed(MockDrizzle, {})
@@ -126,6 +133,27 @@ describe('delete /api/db/analyses/:analysisId', () => {
 
     // Restore
     getSupabaseUserSpy.mockReturnValue(Effect.succeed(mockSupabaseUser))
+  })
+
+  it('answers 503 when Galaxy is unavailable, as its siblings do', async () => {
+    // this handler pipes `toGalaxyServiceUnavailable`, so Galaxy being down is
+    // a live outcome here — it used to arrive as a 500 because the fold had no
+    // branch for the tag
+    const analysesMock = await import('../../../../src/runtime/server/utils/grizzle/analyses')
+    const deleteAnalysisSpy = analysesMock.deleteAnalysis as ReturnType<typeof vi.fn>
+    deleteAnalysisSpy.mockReturnValueOnce(
+      Effect.fail(new GalaxyServiceUnavailable({ message: 'Galaxy service is unavailable' })),
+    )
+
+    const handler = (await import('../../../../src/runtime/server/api/db/analyses/[analysisId].delete')).default
+
+    await expect(handler({ path: '/api/db/analyses/1', method: 'DELETE' } as any)).rejects.toMatchObject({
+      statusCode: 503,
+      statusMessage: 'Galaxy service is unavailable',
+    })
+
+    // Restore
+    deleteAnalysisSpy.mockReturnValue(Effect.succeed(mockDeleteResult))
   })
 
   it('should log cause and return 500 on unexpected errors', async () => {

@@ -1,9 +1,8 @@
 import type { GalaxyWorkflowInput } from 'blendtype'
 import type { AnalysisBody } from '../../../types/nuxt-galaxy.js'
 import { toGalaxyServiceUnavailable } from 'blendtype'
-import { Cause, Effect, Either, Layer } from 'effect'
-import { useLogger } from 'evlog'
-import { createError, defineEventHandler, readBody } from 'h3'
+import { Effect, Either, Layer } from 'effect'
+import { defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle.js'
 import { runGalaxyEffect } from '../../utils/evlog-effect'
 import { UrlFetch } from '../../utils/fetch'
@@ -14,6 +13,7 @@ import { addHistoryEffect } from '../../utils/grizzle/histories'
 import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase.js'
 import { getWorkflowEffect } from '../../utils/grizzle/workflows'
 import { checkGalaxyHealthEffect, CheckGalaxyHealthError } from '../../utils/health.js'
+import { toHttpError } from '../../utils/httpError'
 
 export default defineEventHandler<{ body: AnalysisBody }>(
   async (event) => {
@@ -96,33 +96,19 @@ export default defineEventHandler<{ body: AnalysisBody }>(
     )
 
     return Either.match(result, {
-      onLeft: (error) => {
-        if (error._tag === 'GetSupabaseUserError') {
-          throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-        }
-        // the only cause on this path the caller can act on: an identifier
-        // that names no workflow they may run
-        if (error._tag === 'WorkflowNotFoundError') {
-          throw createError({ statusCode: 404, statusMessage: error.message })
-        }
-        // Galaxy accepted the request and gave back nothing to run against,
-        // which is Galaxy being unwell rather than this server being wrong
-        if (error._tag === 'CreateGalaxyHistoryError') {
-          throw createError({ statusCode: 503, statusMessage: error.message })
-        }
-        if (error._tag === 'CheckGalaxyHealthError') {
-          throw createError({ statusCode: 503, statusMessage: error.message })
-        }
-        if (error._tag === 'GalaxyServiceUnavailable') {
-          throw createError({ statusCode: 503, statusMessage: error.message })
-        }
-        // everything else, `GalaxyUserNotFoundError` included: a deployment
-        // this caller cannot do anything about, so the reason goes to the log
-        // and not to them
-        const log = useLogger(event)
-        log.error('create analysis handler failed', { cause: Cause.pretty(Cause.fail(error)) })
-        throw createError({ statusCode: 500, statusMessage: 'Internal Server Error' })
-      },
+      // `GalaxyUserNotFoundError` is deliberately unmapped: a deployment this
+      // caller cannot do anything about, so it takes the logged 500
+      onLeft: error => toHttpError(event, error, 'create analysis', {
+        statuses: {
+          // the only cause on this path the caller can act on: an identifier
+          // that names no workflow they may run
+          WorkflowNotFoundError: 404,
+          // Galaxy accepted the request and gave back nothing to run against,
+          // which is Galaxy being unwell rather than this server being wrong
+          CreateGalaxyHistoryError: 503,
+          CheckGalaxyHealthError: 503,
+        },
+      }),
       onRight: value => value,
     })
   },
