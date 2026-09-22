@@ -11,17 +11,29 @@ export interface ResultsViewKey {
  */
 export type ResultsViewRung = 'exact' | 'name-level' | 'app-wide'
 
-/** The rung a match landed on, or `none` when no view applies and the generic results view shows. */
-export type MatchedResultsViewRung = ResultsViewRung | 'none'
-
 /**
- * What a registry entry says about which workflows it applies to. The build
- * generates entries of this shape from the directory names, verbatim.
+ * What a results view says about which workflows it applies to, read off the
+ * directories it sits in, verbatim. The scanner adds the file to it and the
+ * generated registry adds the component; this is the part the match reads.
  */
 export type ResultsViewScope
-  = | { rung: 'exact', name: string, version: string }
-    | { rung: 'name-level', name: string }
-    | { rung: 'app-wide' }
+  = | {
+    /** `app/workflows/<name>/<version>/results.vue`: one workflow. */
+    rung: 'exact'
+    /** The `<name>` directory: the workflow's `name:` tag value, exactly as spelled. */
+    name: string
+    /** The `<version>` directory: the workflow's `version:` tag value, exactly as spelled. */
+    version: string
+  }
+  | {
+    /** `app/workflows/<name>/results.vue`: every version of one workflow name. */
+    rung: 'name-level'
+    name: string
+  }
+  | {
+    /** `app/workflows/results.vue`: every workflow of the application. */
+    rung: 'app-wide'
+  }
 
 /** The outcome of matching a workflow against the registry: which rung applied, and the entry that did. */
 export type ResultsViewMatch<T>
@@ -33,9 +45,10 @@ export type ResultsViewMatch<T>
  *
  * The rungs are tried from the most specific down: the exact view for the
  * name and version, then the name-level view for the name alone, then the
- * app-wide view. The comparison at each rung is plain equality, so it is
- * exact, case and dots included: `satellitefinder` does not stand for
- * `satelliteFinder`, and `0.1.1` does not stand for `0.11` (ADR 0003).
+ * app-wide view; `none` means the generic results view shows. The comparison
+ * at each rung is plain equality, so it is exact, case and dots included:
+ * `satellitefinder` does not stand for `satelliteFinder`, and `0.1.1` does
+ * not stand for `0.11` (ADR 0003).
  */
 export function matchResultsView<T extends ResultsViewScope>(views: readonly T[], workflow: ResultsViewKey): ResultsViewMatch<T> {
   const exact = views.find(view => view.rung === 'exact' && view.name === workflow.name && view.version === workflow.version)
