@@ -321,6 +321,40 @@ export function createRoutedGalaxyLayer(
   )
 }
 
+/** One Galaxy request, as the effect under test made it. */
+export interface RecordedGalaxyCall {
+  method: string
+  url: string
+}
+
+/**
+ * Creates a GalaxyFetch layer that records every call it answers, and answers
+ * each one from `answer` (an `Error` is thrown rather than returned). Two
+ * effects can address the same path and differ only by method — creating and
+ * removing a history are both `api/histories` — so a test that has to say
+ * which of them ran needs the method, which the routed layer above discards.
+ */
+export function createRecordingGalaxyLayer(
+  answer: (call: RecordedGalaxyCall) => unknown,
+): { calls: RecordedGalaxyCall[], layer: Layer.Layer<GalaxyFetch> } {
+  const calls: RecordedGalaxyCall[] = []
+  return {
+    calls,
+    layer: Layer.succeed(
+      GalaxyFetch,
+      (async (url: string, options?: { method?: string }) => {
+        const call = { method: options?.method ?? 'GET', url }
+        calls.push(call)
+        const response = answer(call)
+        if (response instanceof Error) {
+          throw response
+        }
+        return response
+      }) as unknown as GalaxyFetchService,
+    ),
+  }
+}
+
 /**
  * Creates a GalaxyFetch layer that always throws.
  */

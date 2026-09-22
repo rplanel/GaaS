@@ -40,6 +40,7 @@ const mocks = vi.hoisted(() => ({
   getSupabaseUser: vi.fn(),
   getWorkflowEffect: vi.fn(),
   addHistoryEffect: vi.fn(),
+  discardPreparedHistoryEffect: vi.fn(),
   runAnalysis: vi.fn(),
   uploadDatasetsEffect: vi.fn(),
   checkGalaxyHealthEffect: vi.fn(),
@@ -142,6 +143,7 @@ vi.mock('../../../../src/runtime/server/utils/grizzle/workflows', () => ({
 
 vi.mock('../../../../src/runtime/server/utils/grizzle/histories', () => ({
   addHistoryEffect: mocks.addHistoryEffect,
+  discardPreparedHistoryEffect: mocks.discardPreparedHistoryEffect,
 }))
 
 vi.mock('../../../../src/runtime/server/utils/grizzle/datasets', () => ({
@@ -181,6 +183,7 @@ describe('post /api/db/analyses', () => {
     mocks.getSupabaseUser.mockReturnValue(Effect.succeed(mockSupabaseUser))
     mocks.getWorkflowEffect.mockReturnValue(Effect.succeed(mockDbWorkflow))
     mocks.addHistoryEffect.mockReturnValue(Effect.succeed(mockDbHistory))
+    mocks.discardPreparedHistoryEffect.mockReturnValue(Effect.void)
     mocks.runAnalysis.mockReturnValue(Effect.succeed(mockAnalysisResult))
     mocks.uploadDatasetsEffect.mockReturnValue(Effect.succeed([
       { step: '0', insertedId: 1, galaxyId: 'galaxy-ds-1' },
@@ -326,5 +329,70 @@ describe('post /api/db/analyses', () => {
       'create analysis handler failed',
       expect.objectContaining({ cause: expect.stringContaining('the run could not be started') }),
     )
+  })
+
+  // #39. `addHistoryEffect` runs before anything is uploaded, so everything
+  // below it has a container on Galaxy and a row recording it to take back
+  // out. The compensation that existed hung off a single upload, and
+  // `uploadDatasetsEffect` for an empty datamap is `Effect.all([])`: no
+  // upload runs, so nothing carrying it runs either.
+  describe('a request that strands the analysis it prepared', () => {
+    beforeEach(() => {
+      // the shape the unselected input submitted: a name, and nothing to
+      // upload for a workflow that expects something
+      mocks.readBody.mockResolvedValue({
+        name: 'Test Analysis',
+        datamap: {},
+        parameters: {},
+        workflowId: 1,
+      })
+      mocks.uploadDatasetsEffect.mockReturnValue(Effect.succeed([]))
+    })
+
+    it('takes it back out when the run fails and nothing was uploaded', async () => {
+      mocks.runAnalysis.mockReturnValue(
+        Effect.fail(new Error('Galaxy refused the invocation')),
+      )
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({ statusCode: 500 })
+      expect(mocks.discardPreparedHistoryEffect).toHaveBeenCalledWith(
+        mockDbHistory.galaxyId,
+        mockDbHistory.id,
+      )
+    })
+
+    it('takes it back out when an upload fails', async () => {
+      mocks.uploadDatasetsEffect.mockReturnValue(
+        Effect.fail(new Error('the dataset could not be uploaded')),
+      )
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({ statusCode: 500 })
+      expect(mocks.discardPreparedHistoryEffect).toHaveBeenCalledWith(
+        mockDbHistory.galaxyId,
+        mockDbHistory.id,
+      )
+      expect(mocks.runAnalysis).not.toHaveBeenCalled()
+    })
+
+    it('leaves it alone when the analysis started', async () => {
+      const handler = await loadHandler()
+
+      expect(await handler(event)).toEqual(mockAnalysisResult)
+      expect(mocks.discardPreparedHistoryEffect).not.toHaveBeenCalled()
+    })
+
+    // Nothing was prepared yet, so there is nothing to unwind: unwinding
+    // anyway would delete by whatever identifiers the failed call left.
+    it('has nothing to take back out when preparing it is what failed', async () => {
+      mocks.addHistoryEffect.mockReturnValue(
+        Effect.fail(new CreateGalaxyHistoryError({ message: 'The analysis could not be prepared on Galaxy' })),
+      )
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({ statusCode: 503 })
+      expect(mocks.discardPreparedHistoryEffect).not.toHaveBeenCalled()
+    })
   })
 })

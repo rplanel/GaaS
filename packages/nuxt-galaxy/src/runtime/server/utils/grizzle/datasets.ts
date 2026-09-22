@@ -12,7 +12,6 @@ import { objects } from '../../db/schema/storage/objects.js'
 import { Drizzle, eq } from '../drizzle.js'
 import { UrlFetch } from '../fetch'
 import { takeUniqueOrNull } from './helper.js'
-import { deleteHistory } from './histories'
 import { createSignedUrl } from './supabase'
 
 export class NoStorageObjectError extends Data.TaggedError('NoStorageObjectError')<{
@@ -109,14 +108,14 @@ export function uploadSingleDatasetEffect(params: UploadSingleDatasetParams) {
       })
     }
 
+    // No compensation here any more: `POST /api/db/analyses` unwinds the
+    // prepared analysis around everything it does after preparing it, so an
+    // upload failure is covered there along with every other one. Doing it
+    // from here as well meant removing the same container twice — the second
+    // removal failing, and its failure replacing the cause that started it
+    // (#39).
     const historyDataset = yield* historyDatasetEffect.pipe(
       Effect.tap(input => Console.log(`Uploaded file ${filename} to history ${historyId}\n input: ${input}`)),
-      Effect.catchAllCause((cause) => {
-        return bt.deleteHistoryEffect(galaxyHistoryId).pipe(
-          Effect.flatMap(() => deleteHistory(historyId)),
-          Effect.flatMap(() => Effect.fail(cause)),
-        )
-      }),
     )
 
     const uploadedDatasets = historyDataset.outputs
