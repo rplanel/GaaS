@@ -8,7 +8,6 @@ import { Drizzle } from '../drizzle'
 import { takeUniqueOrNull } from './helper'
 import { ForbiddenError, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from './supabase'
 import { galaxyUserNotFound, getCurrentUserEffect } from './user'
-import { generateWorkflowSlug } from './workflowSlug'
 import { canNameResultsViewDirectory } from './workflowTagValue'
 
 export class GetWorkflowError extends Data.TaggedError('GetWorkflowError')<{
@@ -153,24 +152,12 @@ export function insertWorkflow(
         return yield* Effect.fail(new GetWorkflowError({ message: 'No galaxy user found' }))
       }
 
-      let workflowSlug: string
-      try {
-        workflowSlug = generateWorkflowSlug(tagName, tagVersion)
-      }
-      catch (e) {
-        const message = e instanceof Error
-          ? e.message
-          : 'Failed to generate workflow slug'
-        return yield* Effect.fail(new GetWorkflowError({ message }))
-      }
-
       // use supabaseClient to insert the workflow instead of drizzle because
       // need to be sure that not anybody can insert a workflow
       const { error, data } = yield* Effect.promise(() => supabaseClient
         .schema('galaxy')
         .from('workflows')
         .insert({
-          workflow_slug: workflowSlug,
           version_key: tagVersion,
           name_key: tagName,
           auto_version: galaxyWorkflow.version,

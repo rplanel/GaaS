@@ -228,7 +228,10 @@ describe('insertWorkflow', () => {
       Effect.runPromise,
     )
 
-    expect(insertedRow(mockClient)).toMatchObject({ name_key: 'satelliteFinder', version_key: '0.11' })
+    const row = insertedRow(mockClient)
+    expect(row).toMatchObject({ name_key: 'satelliteFinder', version_key: '0.11' })
+    // the name and the version are the whole identity: no derived slug rides along (ADR 0003)
+    expect(row).not.toHaveProperty('workflow_slug')
   })
 
   it.each([
