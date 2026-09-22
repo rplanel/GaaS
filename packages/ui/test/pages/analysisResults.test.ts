@@ -16,6 +16,7 @@ vi.mock('#build/gaas/results-views.mjs', async () => {
   return {
     resultsViews: [
       {
+        rung: 'exact',
         name: 'satelliteFinder',
         version: '0.11',
         component: defineComponent({

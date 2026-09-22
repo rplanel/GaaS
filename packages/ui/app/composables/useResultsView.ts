@@ -1,20 +1,25 @@
 import type { MaybeRefOrGetter } from 'vue'
 import type { ResultsViewKey } from '../utils/resultsViews'
 import { resultsViews } from '#build/gaas/results-views.mjs'
-import { findResultsView } from '../utils/resultsViews'
+import { matchResultsView } from '../utils/resultsViews'
 
 /**
- * The results view registered for a workflow, following the workflow given.
+ * The results view that applies to a workflow, following the workflow given.
  *
  * The registry is generated at build time from every layer's
- * `app/workflows/<name>/<version>/results.vue`, so `view` is `undefined`
- * exactly when no such file exists for the workflow's tags.
+ * `app/workflows/` directory. `view` is the entry that applies, for the page
+ * to render, and `rung` says how specifically it matched: `exact`,
+ * `name-level`, `app-wide`, or `none` when no file covers the workflow's tags
+ * and the generic results view shows. Both are `undefined` while the workflow
+ * itself is unknown.
  */
 export function useResultsView(workflow: MaybeRefOrGetter<ResultsViewKey | undefined>) {
-  const view = computed(() => {
+  const match = computed(() => {
     const key = toValue(workflow)
-    return key ? findResultsView(resultsViews, key) : undefined
+    return key ? matchResultsView(resultsViews, key) : undefined
   })
+  const view = computed(() => match.value?.view)
+  const rung = computed(() => match.value?.rung)
 
-  return { view }
+  return { view, rung }
 }

@@ -1,7 +1,7 @@
-import type { ScannedResultsView } from './scan'
 import { resolve } from 'node:path'
 // The `nuxt/kit` subpath binds the kit to the Nuxt that loads this layer, so the package declares no kit of its own.
 import { addTemplate, addTypeTemplate, defineNuxtModule, getLayerDirectories, logger, updateTemplates } from 'nuxt/kit'
+import { createShadowedReporter, describeResultsViews } from './report'
 import { scanResultsViews, toPosixPath } from './scan'
 import { renderResultsViewsRegistry, renderResultsViewsTypes, RESULTS_VIEWS_MODULE_ID } from './template'
 
@@ -17,11 +17,16 @@ const REGISTRY_TYPES_FILENAME = `${REGISTRY_FILENAME.replace(/\.mjs$/, '')}.d.ts
  *
  * Every layer is scanned for `app/workflows/<name>/<version>/results.vue`,
  * where the two directories are the workflow's `name:` and `version:` tag
- * values written exactly as tagged. The views are written into a generated
- * registry the results page imports, keyed by those names verbatim and each
- * loaded on first render. In development the registry follows the file system,
- * so a view directory created or removed while the server runs shows up on the
- * next navigation.
+ * values written exactly as tagged, and for the two fallbacks below it:
+ * `app/workflows/<name>/results.vue` for every version of a name, and
+ * `app/workflows/results.vue` for every workflow of the application. The
+ * views are written into a generated registry the results page imports, each
+ * carrying its rung and its directory names verbatim, and each loaded on
+ * first render. When the application and a layer both define a view of the
+ * same scope, the application's is used, and development mode says once which
+ * file was shadowed. In development the registry follows the file system, so
+ * a view created or removed while the server runs shows up on the next
+ * navigation.
  */
 export default defineNuxtModule({
   meta: {
@@ -32,11 +37,11 @@ export default defineNuxtModule({
   },
   async setup(_options, nuxt) {
     const appDirs = getLayerDirectories(nuxt).map(dirs => dirs.app)
-    let views = await scanResultsViews(appDirs)
+    let scan = await scanResultsViews(appDirs)
 
     addTemplate({
       filename: REGISTRY_FILENAME,
-      getContents: () => renderResultsViewsRegistry(views),
+      getContents: () => renderResultsViewsRegistry(scan.views),
     })
     addTypeTemplate({
       filename: REGISTRY_TYPES_FILENAME,
@@ -46,7 +51,9 @@ export default defineNuxtModule({
     if (!nuxt.options.dev)
       return
 
-    log.info(`Results views: ${describeViews(views)}`)
+    const reportShadowed = createShadowedReporter(message => log.info(message))
+    log.info(`Results views: ${describeResultsViews(scan.views)}`)
+    reportShadowed(scan.shadowed)
 
     // Creating or deleting a directory fires several events for one change; a
     // rescan is cheap, regenerating the registry and reloading the page is not.
@@ -59,17 +66,13 @@ export default defineNuxtModule({
       if (!workflowsDirs.some(dir => changed === dir || changed.startsWith(`${dir}/`)))
         return
       const rescanned = await scanResultsViews(appDirs)
-      if (JSON.stringify(rescanned) === JSON.stringify(views))
+      const viewsChanged = JSON.stringify(rescanned.views) !== JSON.stringify(scan.views)
+      scan = rescanned
+      reportShadowed(scan.shadowed)
+      if (!viewsChanged)
         return
-      views = rescanned
       await updateTemplates({ filter: template => template.filename === REGISTRY_FILENAME })
-      log.info(`Results views: ${describeViews(views)}`)
+      log.info(`Results views: ${describeResultsViews(scan.views)}`)
     })
   },
 })
-
-function describeViews(views: ScannedResultsView[]): string {
-  if (views.length === 0)
-    return 'none'
-  return views.map(view => `${view.name}/${view.version}`).join(', ')
-}
