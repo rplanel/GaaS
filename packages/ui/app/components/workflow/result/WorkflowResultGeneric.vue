@@ -5,6 +5,11 @@ import type { ResultsViewProps } from '#gaas/ui'
 // this component's contract when writing their own (ADR 0003).
 const props = defineProps<ResultsViewProps>()
 
+// The user reads one line and nothing else: the inputs, jobs and outputs are
+// already listed above this view. The path is for the developer writing the
+// view, so only the development server shows it.
+const inDevelopment = isDevelopmentMode()
+
 /** The one file that would replace this view, spelled with the workflow's own tag values. */
 const viewPath = computed(() =>
   `app/workflows/${props.analysis.workflows.name_key}/${props.analysis.workflows.version_key}/results.vue`,
@@ -13,10 +18,17 @@ const viewPath = computed(() =>
 
 <template>
   <div class="space-y-4">
+    <p class="text-sm text-muted">
+      This workflow has no dedicated results view yet.
+    </p>
     <UAlert
-      icon="i-lucide:puzzle" color="info" variant="outline"
-      title="No results view for this workflow"
-      :description="`Create \`${viewPath}\`, named after the workflow's name and version tags, to give this workflow a results view.`"
-    />
+      v-if="inDevelopment"
+      icon="i-lucide:code" color="neutral" variant="subtle"
+      title="Shown by the development server only"
+    >
+      <template #description>
+        Create <code>{{ viewPath }}</code> to give this workflow a results view.
+      </template>
+    </UAlert>
   </div>
 </template>
