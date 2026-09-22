@@ -69,10 +69,14 @@ function buildLogContext(options: {
     context.effectSpans = serializeSpans(options.spans)
   if (options.annotations)
     context.effectAnnotations = serializeAnnotations(options.annotations)
-  if (options.cause) {
-    context.effectCause = Cause.isCause(options.cause)
-      ? Cause.pretty(options.cause)
-      : String(options.cause)
+  // Effect passes `Cause.empty` on an ordinary log, and an empty cause is a
+  // truthy object, so a cause counts only once it holds something.
+  if (Cause.isCause(options.cause)) {
+    if (!Cause.isEmpty(options.cause))
+      context.effectCause = Cause.pretty(options.cause)
+  }
+  else if (options.cause) {
+    context.effectCause = String(options.cause)
   }
   return context
 }
