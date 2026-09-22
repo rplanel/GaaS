@@ -136,4 +136,26 @@ describe('get /api/galaxy/histories', () => {
       statusMessage: 'Galaxy is unavailable',
     })
   })
+
+  it('answers 500 and logs the cause when the handler throws a bug', async () => {
+    // A `throw` inside `Effect.gen` is a defect, not a failure, so it is not
+    // in the channel `Effect.either` recovered. This request used to reject
+    // with a `FiberFailureImpl`, never reach `toHttpError` and write nothing
+    // at all — the one class of failure worth seeing was the one class that
+    // left no trace (#40). The status was always going to be 500; what the
+    // fold over `Exit` buys is the line below it.
+    resolveHistory = () => {
+      throw new TypeError('boom: a real bug')
+    }
+
+    await expect(callHandler()).rejects.toMatchObject({
+      statusCode: 500,
+      statusMessage: 'Internal Server Error',
+    })
+
+    expect(logError).toHaveBeenCalledWith(
+      'galaxy histories handler failed',
+      expect.objectContaining({ cause: expect.stringContaining('boom: a real bug') }),
+    )
+  })
 })

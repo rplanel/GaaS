@@ -1,5 +1,5 @@
 import { getWorkflowsEffect, toGalaxyServiceUnavailable } from 'blendtype'
-import { Effect, Either } from 'effect'
+import { Effect, Exit } from 'effect'
 import { defineEventHandler } from 'h3'
 import { runGalaxyEffect } from '../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../utils/galaxy'
@@ -11,12 +11,12 @@ export default defineEventHandler(async (event) => {
     getWorkflowsEffect().pipe(
       toGalaxyServiceUnavailable,
       Effect.provide(useGalaxyLayer()),
-      Effect.either,
+      Effect.exit,
     ),
   )
 
-  return Either.match(result, {
-    onLeft: error => toHttpError(event, error, 'galaxy workflows'),
-    onRight: value => value,
+  return Exit.match(result, {
+    onFailure: cause => toHttpError(event, cause, 'galaxy workflows'),
+    onSuccess: value => value,
   })
 })

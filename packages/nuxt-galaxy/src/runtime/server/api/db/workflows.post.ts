@@ -1,13 +1,13 @@
 import { useRuntimeConfig } from '#imports'
 import { toGalaxyServiceUnavailable } from 'blendtype'
-import { Effect, Either, Layer } from 'effect'
+import { Effect, Exit, Layer, Option } from 'effect'
 import { createError, defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle'
 import { runGalaxyEffect } from '../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../utils/galaxy'
 import { ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase'
 import { insertWorkflow } from '../../utils/grizzle/workflows'
-import { toHttpError } from '../../utils/httpError'
+import { answerableFailure, toHttpError } from '../../utils/httpError'
 
 /**
  * The one thing this endpoint needs from a request body, read rather than
@@ -53,20 +53,26 @@ export default defineEventHandler<{ body: { galaxyId: string } }>(
         toGalaxyServiceUnavailable,
         Effect.provide(finalLayer),
         Effect.provide(useGalaxyLayer()),
-        Effect.either,
+        Effect.exit,
       ),
     )
 
-    return Either.match(result, {
-      onLeft: (error) => {
+    return Exit.match(result, {
+      onFailure: (cause) => {
         // the one status this endpoint answers that travels on the error
-        // rather than being decided here, so it stays at the call site
-        if (error._tag === 'WorkflowAlreadyExistsError') {
-          throw createError({ statusCode: error.statusCode, statusMessage: error.message })
+        // rather than being decided here, so it stays at the call site. The
+        // failure is unwrapped for the tag check only, and through
+        // `answerableFailure` rather than `Cause.failureOption`: a 409 that
+        // arrived paired with a defect is not a 409 worth answering, and
+        // reading the failure directly here would have walked this one branch
+        // past the logged 500 the rest of the module routes it to.
+        const failure = Option.getOrUndefined(answerableFailure(cause))
+        if (failure?._tag === 'WorkflowAlreadyExistsError') {
+          throw createError({ statusCode: failure.statusCode, statusMessage: failure.message })
         }
-        return toHttpError(event, error, 'insert workflow')
+        return toHttpError(event, cause, 'insert workflow')
       },
-      onRight: value => value,
+      onSuccess: value => value,
     })
   },
 )
