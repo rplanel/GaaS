@@ -12,6 +12,22 @@ _Avoid_: Run, job, invocation (the latter two are Galaxy-side parts of an analys
 A Galaxy workflow, identified by its name and version, that an administrator has activated for the web application.
 _Avoid_: Pipeline, tool
 
+**Version**:
+The release label a workflow's author gives it through its `version:` tag in Galaxy. Two activated workflows with the same name and different versions are two workflows to the web application.
+_Avoid_: Galaxy version, auto version, revision
+
+**Revision**:
+One save of a workflow on the Galaxy side. Every save appends a revision with its own identifier, while the workflow keeps its name and version.
+_Avoid_: Galaxy version, version index, workflow instance
+
+**Results view**:
+The component a developer writes to display the results of an analysis, matched to the analysis's workflow by name and version. When no view matches the version, the view for the workflow name alone applies.
+_Avoid_: Result page, workflow component, custom result display
+
+**Generic results view**:
+The results view GaaS itself shows for an analysis whose workflow has no results view.
+_Avoid_: Fallback component, default view
+
 **Owner**:
 The user who requested an analysis. Every analysis and every monitoring record has exactly one owner.
 _Avoid_: Author, creator
