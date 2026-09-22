@@ -30,6 +30,9 @@ export class WorkflowNotFoundError extends Data.TaggedError('WorkflowNotFoundErr
   readonly message: string
 }> {}
 
+/** The two tags a workflow is identified by (ADR 0003). */
+export type WorkflowTagKind = 'name' | 'version'
+
 /**
  * A `name:` or `version:` tag value that cannot name the directory a results
  * view is found in (ADR 0003).
@@ -42,16 +45,16 @@ export class WorkflowNotFoundError extends Data.TaggedError('WorkflowNotFoundErr
  */
 export class InvalidWorkflowTagError extends Data.TaggedError('InvalidWorkflowTagError')<{
   readonly message: string
-  readonly tag: 'name' | 'version'
+  readonly tag: WorkflowTagKind
   readonly value: string
 }> {}
 
 /**
  * The failure above, worded once. Each guard still writes its own
- * `Effect.fail`, as ADR 0002 asks; this only keeps the two guards from
- * drifting apart in what they tell the administrator.
+ * `Effect.fail`, as `galaxyUserNotFound` does; this only keeps the two guards
+ * from drifting apart in what they tell the administrator.
  */
-export function invalidWorkflowTag(tag: 'name' | 'version', value: string): InvalidWorkflowTagError {
+export function invalidWorkflowTag(tag: WorkflowTagKind, value: string): InvalidWorkflowTagError {
   return new InvalidWorkflowTagError({
     tag,
     value,
