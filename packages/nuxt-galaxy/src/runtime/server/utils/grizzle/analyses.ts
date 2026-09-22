@@ -171,20 +171,6 @@ export class GetAnalysisError extends Data.TaggedError('GetAnalysisError')<{
   readonly message: string
 }> { }
 
-export function getAnalysis(analysisId: number, ownerId: string) {
-  return Effect.gen(function* () {
-    const useDrizzle = yield* Drizzle
-    return yield* Effect.tryPromise({
-      try: () => useDrizzle
-        .select()
-        .from(analyses)
-        .where(and(eq(analyses.id, analysisId), eq(analyses.ownerId, ownerId)))
-        .then(takeUniqueOrNull),
-      catch: error => new GetAnalysisError({ message: `Error getting analysis: ${error}` }),
-    })
-  })
-}
-
 export function updateAnalysisState(analysisId: number, invocation: GalaxyInvocation, ownerId: string) {
   return Effect.gen(function* () {
     const drizzle = yield* Drizzle

@@ -7,7 +7,6 @@ import {
   deleteAnalysis,
   DeleteAnalysisError,
   getAllAnalyses,
-  getAnalysis,
   GetAnalysisError,
   getHistoryAnalysis,
   insertAnalysis,
@@ -220,46 +219,6 @@ describe('insertAnalysis', () => {
   })
 })
 
-describe('getAnalysis', () => {
-  it('should return an analysis when found', async () => {
-    const drizzle = createMockDrizzle()
-    drizzle.setResult([mockDbAnalysis])
-
-    const result = await getAnalysis(1, 'owner-uuid-1').pipe(
-      Effect.provide(drizzle.layer),
-      Effect.runPromise,
-    )
-
-    expect(result).toEqual(mockDbAnalysis)
-  })
-
-  it('should return null when not found', async () => {
-    const drizzle = createMockDrizzle()
-    drizzle.setResult([])
-
-    const result = await getAnalysis(999, 'owner-uuid-1').pipe(
-      Effect.provide(drizzle.layer),
-      Effect.runPromise,
-    )
-
-    expect(result).toBeNull()
-  })
-
-  it('should fail with GetAnalysisError on database error', async () => {
-    const drizzle = createMockDrizzle()
-    drizzle.mock.select.mockImplementation(mockDrizzleSelectRejects(['from', 'where'], new Error('DB error')))
-
-    const exit = await getAnalysis(1, 'owner-uuid-1').pipe(
-      Effect.provide(drizzle.layer),
-      Effect.runPromiseExit,
-    )
-
-    expectFailure(exit, (error) => {
-      expect(error).toBeInstanceOf(GetAnalysisError)
-    })
-  })
-})
-
 describe('getAllAnalyses', () => {
   it('should return all analyses for an owner', async () => {
     const drizzle = createMockDrizzle()
@@ -284,6 +243,23 @@ describe('getAllAnalyses', () => {
     )
 
     expect(result).toEqual([])
+  })
+
+  // `GetAnalysisError` is shared by several queries in this file. This
+  // assertion used to live on `getAnalysis`; it moved here when that function
+  // was deleted, so the class keeps a test against a caller that still exists.
+  it('should fail with GetAnalysisError on database error', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.mock.select.mockImplementation(mockDrizzleSelectRejects(['from', 'where'], new Error('DB error')))
+
+    const exit = await getAllAnalyses('owner-uuid-1').pipe(
+      Effect.provide(drizzle.layer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect(error).toBeInstanceOf(GetAnalysisError)
+    })
   })
 })
 
