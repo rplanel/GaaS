@@ -5,6 +5,7 @@
   "main": "./nuxt.config.ts",
   "files": [
     "app",
+    "modules",
     "nuxt.config.ts"
   ],
   "scripts": {
@@ -37,6 +38,7 @@
     "@internationalized/date": "catalog:",
     "@nuxt/content": "catalog:nuxt",
     "@nuxt/eslint": "catalog:nuxt",
+    "@nuxt/kit": "catalog:nuxt",
     "@nuxt/ui": "catalog:nuxt",
     "@nuxtjs/supabase": "catalog:nuxt",
     "@observablehq/plot": "catalog:dataviz",

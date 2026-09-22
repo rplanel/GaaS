@@ -15,16 +15,9 @@ const { data: analysis, isPending: analysisPending } = useQuery(
   () => analysisByIdWithOutputsAndWorkflowsQuery({ id: analysisId.value, supabase }),
 )
 
-const workflowSlug = computed(() => {
-  return analysis.value?.workflows?.workflow_slug ?? 'generic'
-})
-
-const { component, componentName, isCustom } = useWorkflowResultResolver({
-  workflowSlug,
-})
-
-const targetComponentName = computed(() => {
-  return isCustom.value ? undefined : componentName.value
+const { view } = useResultsView(() => {
+  const workflow = analysis.value?.workflows
+  return workflow ? { name: workflow.name_key, version: workflow.version_key } : undefined
 })
 </script>
 
@@ -46,10 +39,19 @@ const targetComponentName = computed(() => {
       </template>
 
       <template v-else>
-        <component
-          :is="component" :analysis-id="analysisId" :workflow-slug="workflowSlug"
-          :target-component-name="targetComponentName"
-        />
+        <!-- A view that throws stays inside this boundary; the analysis page around it keeps working. -->
+        <NuxtErrorBoundary :key="analysisId">
+          <component :is="view.component" v-if="view" :analysis-id="analysisId" />
+          <WorkflowResultGeneric v-else :analysis-id="analysisId" />
+
+          <template #error="{ error, clearError }">
+            <UAlert
+              icon="i-lucide:alert-triangle" color="error" variant="subtle" title="The results view failed"
+              :description="error instanceof Error ? error.message : String(error)"
+              :actions="[{ label: 'Try again', color: 'neutral', variant: 'outline', onClick: clearError }]"
+            />
+          </template>
+        </NuxtErrorBoundary>
       </template>
 
       <NuxtPage />
