@@ -7,7 +7,6 @@ export {
   analysisByIdWithDetailsQuery,
   analysisByIdWithJobsQuery,
   analysisByIdWithOutputsAndWorkflowsQuery,
-  supabaseAnalysisByIdForResultsViewQuery,
 } from './analyses'
 
 // Analyses inputs view

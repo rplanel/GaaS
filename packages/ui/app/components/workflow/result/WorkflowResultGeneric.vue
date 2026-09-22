@@ -16,7 +16,7 @@ const viewPath = computed(() =>
     <UAlert
       icon="i-lucide:puzzle" color="info" variant="outline"
       title="No results view for this workflow"
-      :description="`Create \`${viewPath}\`, named after the workflow's name and version tags, to customize this page.`"
+      :description="`Create \`${viewPath}\`, named after the workflow's name and version tags, to give this workflow a results view.`"
     />
   </div>
 </template>

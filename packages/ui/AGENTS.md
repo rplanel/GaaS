@@ -53,7 +53,7 @@ app/
 ├── composables/            # Shared composables
 ├── layouts/                # Page layouts
 ├── plugins/                # Nuxt plugins
-├── types/public/           # The `#gaas/ui` alias target: the layer's public types (ResultsViewProps)
+├── types/                  # Shared types; `public/` is the `#gaas/ui` alias target (ResultsViewProps)
 ├── utils/                  # Utility functions
 └── workflows/              # Results views: <name>/<version>/results.vue declaring
                             # `defineProps<ResultsViewProps>()` imported from '#gaas/ui' (ADR 0003)
@@ -87,6 +87,8 @@ export default defineNuxtConfig({
     },
   },
   css: [join(currentDir, './app/assets/css/main.css')],
+  // The layer's public types, imported as '#gaas/ui' by results views (ADR 0003)
+  alias: { '#gaas/ui': join(currentDir, './app/types/public') },
   vite: {
     optimizeDeps: {
       include: [
