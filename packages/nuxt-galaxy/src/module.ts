@@ -290,7 +290,6 @@ export default defineNuxtModule<ModuleOptions>({
       // database composables
       { name: 'useDatabaseAnalysisOutput', path: './runtime/app/composables/database/useDatabaseAnalysisOutput' },
       { name: 'useDatabaseResultDatasets', path: './runtime/app/composables/database/useDatabaseResultDatasets' },
-      { name: 'useDatabaseWorkflow', path: './runtime/app/composables/database/useDatabaseWorkflow' },
 
     ]
 

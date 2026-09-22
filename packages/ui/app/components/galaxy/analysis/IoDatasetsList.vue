@@ -9,12 +9,11 @@ type AnalysisIOsWithStoratePath = AnalysisInputWithStoragePathRow | AnalysisOutp
 
 export interface Props {
   items?: AnalysisIOsWithStoratePath[] | undefined
-  resultRoutes?: Record<string, { tag: string, to: string }>
 }
 
 export type AnalysisIOsWithStoratePathAndSize = AnalysisIOsWithStoratePath & { humanFileSize: string }
 
-const props = withDefaults(defineProps<Props>(), { items: undefined, resultRoutes: undefined })
+const props = defineProps<Props>()
 const items = toRef(() => props.items)
 
 const fileMetadataSchema = z.object({
