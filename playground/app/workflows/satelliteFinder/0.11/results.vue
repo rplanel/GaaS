@@ -1,19 +1,25 @@
 <script lang="ts" setup>
+import type { ResultsViewProps } from '#gaas/ui'
 import type { Sequence } from '#layers/@gaas/ui/app/types/sequenceBrowser'
 import type { AnalysisInputWithStoragePathRow, AnalysisOutputWithStoragePathRow, Database, DatasetBlob } from 'nuxt-galaxy'
 import type { Seq } from 'seqparse'
 import { parseFile } from 'seqparse'
 import { ref, watch } from 'vue'
 
-interface Props {
-  analysisId: number
-}
-
-const props = withDefaults(defineProps<Props>(), {})
+// The props every results view receives (ADR 0003): the analysis arrives
+// loaded, with its workflow, inputs and outputs, so nothing below has to
+// query it before rendering.
+const props = defineProps<ResultsViewProps>()
 
 const analysisId = toRef(() => props.analysisId)
-const supabase = useSupabaseClient<Database>()
+const workflow = computed(() => props.analysis.workflows)
+const inputs = computed(() => props.analysis.analysis_inputs)
+const outputs = computed(() => props.analysis.analysis_outputs)
 
+// The one thing the prop cannot carry is the files themselves: they live in
+// Storage and are downloaded here, in the browser, on top of the rows the
+// prop already names.
+const supabase = useSupabaseClient<Database>()
 const { data } = useQuery({
   ...analysisDatasetsQuery({ analysisId: analysisId.value!, supabase }),
   enabled: () => !!analysisId.value,
@@ -102,13 +108,25 @@ watch(
 <template>
   <div>
     <h1 class="text-xl font-bold">
-      results
+      {{ workflow.name }} <VersionBadge :version="workflow.version_key" />
     </h1>
+    <p class="text-sm text-muted">
+      {{ analysis.name }}: {{ inputs.length }} input{{ inputs.length === 1 ? '' : 's' }},
+      {{ outputs.length }} output{{ outputs.length === 1 ? '' : 's' }}
+    </p>
 
-    <div v-if="parsedInputs.length" class="mt-4">
+    <div v-if="inputs.length" class="mt-4">
       <h2 class="text-lg font-semibold">
         Inputs
       </h2>
+      <ul class="text-sm text-muted">
+        <li v-for="input in inputs" :key="input.id">
+          {{ input.datasets.dataset_name }}
+          <UBadge v-for="tag in input.tags" :key="tag.id" variant="subtle" size="xs" class="ms-1">
+            {{ tag.label }}
+          </UBadge>
+        </li>
+      </ul>
       <UCard v-for="(item, i) in parsedInputs" :key="`input-${i}`" variant="outline" class="my-4">
         <template #title>
           <h3 class="font-semibold mb-2">
@@ -131,10 +149,18 @@ watch(
         </UScrollArea>
       </UCard>
     </div>
-    <div v-if="parsedOutputs.length" class="mt-4">
+    <div v-if="outputs.length" class="mt-4">
       <h2 class="text-lg font-semibold">
         Outputs
       </h2>
+      <ul class="text-sm text-muted">
+        <li v-for="output in outputs" :key="output.id">
+          {{ output.datasets.dataset_name }}
+          <UBadge v-for="tag in output.tags" :key="tag.id" variant="subtle" size="xs" class="ms-1">
+            {{ tag.label }}
+          </UBadge>
+        </li>
+      </ul>
       <UCard v-for="(item, i) in parsedOutputs" :key="`output-${i}`" variant="outline" class="my-4">
         <template #title>
           <h3 class="font-semibold">

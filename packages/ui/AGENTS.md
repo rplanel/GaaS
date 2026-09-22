@@ -53,8 +53,10 @@ app/
 ├── composables/            # Shared composables
 ├── layouts/                # Page layouts
 ├── plugins/                # Nuxt plugins
+├── types/public/           # The `#gaas/ui` alias target: the layer's public types (ResultsViewProps)
 ├── utils/                  # Utility functions
-└── workflows/              # Results views: <name>/<version>/results.vue (ADR 0003)
+└── workflows/              # Results views: <name>/<version>/results.vue declaring
+                            # `defineProps<ResultsViewProps>()` imported from '#gaas/ui' (ADR 0003)
 modules/                    # Build-time Nuxt modules the layer ships (results-views scanner)
 nuxt.config.ts              # Layer configuration
 .playground/                # Development playground

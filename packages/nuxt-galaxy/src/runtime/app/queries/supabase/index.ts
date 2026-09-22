@@ -3,9 +3,11 @@ export { SUPABASE_ANALYSES_QUERY_KEYS } from './analyses'
 export {
   analysesListQuery,
   analysesListWithWorkflowAndHistoryQuery,
+  analysisByIdForResultsViewQuery,
   analysisByIdWithDetailsQuery,
   analysisByIdWithJobsQuery,
   analysisByIdWithOutputsAndWorkflowsQuery,
+  supabaseAnalysisByIdForResultsViewQuery,
 } from './analyses'
 
 // Analyses inputs view

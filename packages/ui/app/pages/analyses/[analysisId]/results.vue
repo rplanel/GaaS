@@ -11,8 +11,10 @@ const analysisId = computed(() => {
   const idParam = route.params.analysisId
   return Number.parseInt(idParam as string)
 })
+// Dedicated to this page: it carries the inputs and outputs a view receives,
+// which the query the analysis panel shares has no reason to load (ADR 0003).
 const { data: analysis, isPending: analysisPending } = useQuery(
-  () => analysisByIdWithOutputsAndWorkflowsQuery({ id: analysisId.value, supabase }),
+  () => analysisByIdForResultsViewQuery({ id: analysisId.value, supabase }),
 )
 
 const { view } = useResultsView(() => {
@@ -42,16 +44,17 @@ const { view } = useResultsView(() => {
         <!--
           A view that throws stays inside this boundary and the analysis page around it keeps
           working. The boundary only catches on the client, so a registered view renders there
-          only; it fetches its datasets in the browser anyway.
+          only; it fetches its dataset contents in the browser anyway.
+          Both views receive the same props (ResultsViewProps): the id and the loaded analysis.
         -->
         <NuxtErrorBoundary :key="analysisId">
           <ClientOnly v-if="view">
-            <component :is="view.component" :analysis-id="analysisId" />
+            <component :is="view.component" :analysis-id="analysisId" :analysis="analysis" />
             <template #fallback>
               <USkeleton class="h-20 w-full" />
             </template>
           </ClientOnly>
-          <WorkflowResultGeneric v-else :analysis-id="analysisId" />
+          <WorkflowResultGeneric v-else :analysis-id="analysisId" :analysis="analysis" />
 
           <template #error="{ error, clearError }">
             <UAlert

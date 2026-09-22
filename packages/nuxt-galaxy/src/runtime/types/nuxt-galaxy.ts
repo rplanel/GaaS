@@ -57,6 +57,33 @@ export interface AnalysisDetail extends AnalysisRow {
   jobs?: JobRow[]
 }
 
+/** An analysis input as a results view receives it: the row, its dataset and its tags. */
+export interface AnalysisInputWithDatasetAndTags extends AnalysisInputRow {
+  datasets: DatasetRow
+  tags: TagRow[]
+}
+
+/** An analysis output as a results view receives it: the row, its dataset and its tags. */
+export interface AnalysisOutputWithDatasetAndTags extends AnalysisOutputRow {
+  datasets: DatasetRow
+  tags: TagRow[]
+}
+
+/**
+ * The analysis as a results view receives it (ADR 0003): the row with its
+ * workflow, its inputs and its outputs.
+ *
+ * Inputs and outputs share one shape, dataset beside tags, so a view author
+ * handles both the same way. In the database the two are stored differently:
+ * an output's tags hang off the output, an input's off its dataset. The query
+ * that loads this row folds that difference away rather than passing it on.
+ */
+export interface ResultsViewAnalysis extends AnalysisRow {
+  workflows: WorkflowRow
+  analysis_inputs: AnalysisInputWithDatasetAndTags[]
+  analysis_outputs: AnalysisOutputWithDatasetAndTags[]
+}
+
 export interface AnalysisWithJobs extends AnalysisRow {
   jobs: JobRow[]
 }
