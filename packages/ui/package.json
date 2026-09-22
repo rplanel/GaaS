@@ -52,7 +52,6 @@
     "blendtype": "workspace:*",
     "d3": "catalog:dataviz",
     "date-fns": "catalog:",
-    "effect": "catalog:",
     "evlog": "catalog:",
     "htl": "catalog:",
     "isomorphic-dompurify": "catalog:",
