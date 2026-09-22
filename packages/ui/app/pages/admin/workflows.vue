@@ -1,18 +1,26 @@
 <script setup lang="ts">
 // import type { SupabaseTypes } from '#build/types/database'
-import type { BreadcrumbItem, TableColumn } from '@nuxt/ui'
+import type { BadgeProps, BreadcrumbItem, TableColumn } from '@nuxt/ui'
 
 import type { GalaxyWorkflowsItem } from 'blendtype'
 import type { Database } from 'nuxt-galaxy'
+import type { ResultsViewReading } from '../../utils/resultsViews'
+import { resultsViews } from '#build/gaas/results-views.mjs'
 import { USwitch } from '#components'
 import { getWorkflowTagName, getWorkflowTagVersion } from 'blendtype'
 import { log } from 'evlog/client'
 import { describeActivationFailure } from '../../utils/activationFailure'
+import { matchResultsView, resultsViewReading } from '../../utils/resultsViews'
 // type Database = SupabaseTypes.Database
 
 interface ComputedGalaxyWorklowItem extends GalaxyWorkflowsItem {
-  version: string | boolean
+  /** The `version:` tag value. */
+  version: string
+  /** The `name:` tag value. */
+  tagName: string
   activated: boolean
+  /** Whether a results view names this workflow, something wider stands in, or none does. */
+  resultsView: ResultsViewReading
 }
 interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined
@@ -24,6 +32,13 @@ const breadcrumbsItems = toRef(() => props.breadcrumbsItems)
 
 const toast = useToast()
 const UBadge = resolveComponent('UBadge')
+
+/** The reading at a glance: a view of the workflow's own, something wider, or nothing. */
+const resultsViewReadingColor = {
+  exact: 'success',
+  fallback: 'info',
+  none: 'neutral',
+} as const satisfies Record<ResultsViewReading, BadgeProps['color']>
 
 const supabase = useSupabaseClient<Database>()
 const {
@@ -81,6 +96,21 @@ const galaxyWorkflowGalaxyColumns = ref<
     },
   },
 
+  {
+    // Keyed by tag values, so it answers before activation too: a developer
+    // sees here whether the view directory they wrote will be picked up
+    // (ADR 0003). The same match the results page runs, so the two agree.
+    accessorKey: 'resultsView',
+    header: 'Results view',
+    cell: ({ row }) => {
+      const reading = row.original.resultsView
+      return h(UBadge, {
+        'data-testid': 'workflow-results-view',
+        'variant': 'subtle',
+        'color': resultsViewReadingColor[reading],
+      }, () => reading)
+    },
+  },
   {
     header: 'Activated',
     cell: ({ row }) => {
@@ -184,18 +214,22 @@ const computedWorkflows = computed<ComputedGalaxyWorklowItem[]>(() => {
     return []
   }
 
-  return (allWorkflowsVal as GalaxyWorkflowsItem[])
-    .map((workflow) => {
-      const version = getWorkflowTagVersion(workflow.tags)
-      const tagName = getWorkflowTagName(workflow.tags)
-      return {
-        ...workflow,
-        version,
-        tagName,
-        activated: dbWorkflowsMap.value.has(workflow.id),
-      }
-    })
-    .filter(({ version, tagName }) => version !== null && tagName !== null) as ComputedGalaxyWorklowItem[]
+  // Only a workflow carrying both tags can be activated or have a results
+  // view, so the others are left out rather than shown with blanks.
+  return (allWorkflowsVal as GalaxyWorkflowsItem[]).flatMap((workflow) => {
+    const version = getWorkflowTagVersion(workflow.tags)
+    const tagName = getWorkflowTagName(workflow.tags)
+    if (version === null || tagName === null)
+      return []
+    const { rung } = matchResultsView(resultsViews, { name: tagName, version })
+    return [{
+      ...workflow,
+      version,
+      tagName,
+      activated: dbWorkflowsMap.value.has(workflow.id),
+      resultsView: resultsViewReading(rung),
+    }]
+  })
 })
 
 const pageHeaderProps = computed(() => {
