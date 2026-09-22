@@ -180,6 +180,49 @@ if (Number.isNaN(parsed)) {
 Parsing folds the empty and the unusable case together: `Number.parseInt('')`
 and `Number.parseInt('abc')` are both `NaN`, so one check answers both.
 
+### Folding an effect at the handler boundary
+
+`runGalaxyEffect` ends in `Effect.runPromise`, so an effect that fails rejects
+the promise and Nitro renders a generic 500. h3 only produces a status when the
+handler **throws** `createError` in ordinary async/await — a throw inside
+`Effect.gen` is captured as a defect and buried in a `FiberFailure`. So the
+failure has to leave the effect as a *value* first, and the handler throws at
+the boundary. That is what the fold is, and ADR 0002 has the argument for it.
+
+**Prefer `Effect.exit` over `Effect.either`.** Measured, not assumed (#40):
+`Effect.either` recovers the **error channel only**. A defect — a plain `throw`
+inside `Effect.gen`, or `Effect.die` — and an interruption are not in that
+channel, so they pass straight through the fold. A `TypeError` thrown inside a
+folded handler rejects with a `FiberFailureImpl`, never reaches `toHttpError`,
+and writes nothing to evlog: the failures most worth seeing are the only ones
+that produce no structured event. `Exit<A, E>` is `Either<A, Cause<E>>`, and a
+`Cause` carries expected failure, defect and interruption alike.
+
+This is about an **effect's outcome**, not about the data type in general.
+`Either` is still the right answer for a two-case value that is not the result
+of running an effect.
+
+**Until #40 lands**, `toHttpError` takes a single tagged error rather than a
+`Cause`, so all seven folding handlers use `Effect.either` and a new one has to
+match them:
+
+```typescript
+const result = await runGalaxyEffect(event, program.pipe(
+  toGalaxyServiceUnavailable,
+  Effect.provide(finalLayer),
+  Effect.either,
+))
+
+return Either.match(result, {
+  onLeft: error => toHttpError(event, error, 'galaxy histories'),
+  onRight: value => value,
+})
+```
+
+Follow that shape and let #40 migrate them together. Do not hand-roll a one-off
+`Exit` fold: unwrapping the `Cause` back to a single error in order to call
+`toHttpError` throws away the reason for reaching for `Exit`.
+
 ### Configuration Options
 ```typescript
 interface ModuleOptions {
