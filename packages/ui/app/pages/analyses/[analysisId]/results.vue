@@ -15,16 +15,9 @@ const { data: analysis, isPending: analysisPending } = useQuery(
   () => analysisByIdWithOutputsAndWorkflowsQuery({ id: analysisId.value, supabase }),
 )
 
-const workflowSlug = computed(() => {
-  return analysis.value?.workflows?.workflow_slug ?? 'generic'
-})
-
-const { component, componentName, isCustom } = useWorkflowResultResolver({
-  workflowSlug,
-})
-
-const targetComponentName = computed(() => {
-  return isCustom.value ? undefined : componentName.value
+const { view } = useResultsView(() => {
+  const workflow = analysis.value?.workflows
+  return workflow ? { name: workflow.name_key, version: workflow.version_key } : undefined
 })
 </script>
 
@@ -46,10 +39,28 @@ const targetComponentName = computed(() => {
       </template>
 
       <template v-else>
-        <component
-          :is="component" :analysis-id="analysisId" :workflow-slug="workflowSlug"
-          :target-component-name="targetComponentName"
-        />
+        <!--
+          A view that throws stays inside this boundary and the analysis page around it keeps
+          working. The boundary only catches on the client, so a registered view renders there
+          only; it fetches its datasets in the browser anyway.
+        -->
+        <NuxtErrorBoundary :key="analysisId">
+          <ClientOnly v-if="view">
+            <component :is="view.component" :analysis-id="analysisId" />
+            <template #fallback>
+              <USkeleton class="h-20 w-full" />
+            </template>
+          </ClientOnly>
+          <WorkflowResultGeneric v-else :analysis-id="analysisId" />
+
+          <template #error="{ error, clearError }">
+            <UAlert
+              icon="i-lucide:alert-triangle" color="error" variant="subtle" title="The results view failed"
+              :description="error instanceof Error ? error.message : String(error)"
+              :actions="[{ label: 'Try again', color: 'neutral', variant: 'outline', onClick: clearError }]"
+            />
+          </template>
+        </NuxtErrorBoundary>
       </template>
 
       <NuxtPage />

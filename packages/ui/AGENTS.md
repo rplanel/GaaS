@@ -53,7 +53,9 @@ app/
 ├── composables/            # Shared composables
 ├── layouts/                # Page layouts
 ├── plugins/                # Nuxt plugins
-└── utils/                  # Utility functions
+├── utils/                  # Utility functions
+└── workflows/              # Results views: <name>/<version>/results.vue (ADR 0003)
+modules/                    # Build-time Nuxt modules the layer ships (results-views scanner)
 nuxt.config.ts              # Layer configuration
 .playground/                # Development playground
 ```
