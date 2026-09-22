@@ -7,6 +7,7 @@ import { Effect, Exit, Layer } from 'effect'
 import { expect, vi } from 'vitest'
 import { Drizzle } from '../../src/runtime/server/utils/drizzle'
 import { ServerSupabaseClaims, ServerSupabaseClient } from '../../src/runtime/server/utils/grizzle/supabase'
+import { workflowDefinition } from './workflowDefinition'
 
 // ============================================================================
 // Galaxy Mock Data (reusable across all tests)
@@ -91,15 +92,8 @@ export const mockGalaxyWorkflow: GalaxyWorkflow = {
   version: 1,
 }
 
-export const mockGalaxyWorkflowExport: GalaxyWorkflowExport = {
-  'a_galaxy_workflow': true,
-  'name': 'Test Workflow',
-  'annotation': '',
-  'format-version': '0.1',
-  'tags': ['name:test-workflow', 'version:1.0'],
-  'steps': {},
-  'version': 1,
-}
+/** A workflow that declares no steps. `workflowDefinition` owns the shape. */
+export const mockGalaxyWorkflowExport: GalaxyWorkflowExport = workflowDefinition({})
 
 export const mockGalaxyDataset: GalaxyDataset = {
   dataset_id: 'galaxy-dataset-1',

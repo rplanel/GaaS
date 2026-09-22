@@ -11,6 +11,7 @@ import { runAnalysis } from '../../utils/grizzle/analyses.js'
 import { uploadDatasetsEffect } from '../../utils/grizzle/datasets'
 import { addHistoryEffect, discardPreparedHistoryEffect } from '../../utils/grizzle/histories'
 import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase.js'
+import { requireDatamapDeclaresInputs } from '../../utils/grizzle/workflowInputs'
 import { getWorkflowEffect } from '../../utils/grizzle/workflows'
 import { checkGalaxyHealthEffect, CheckGalaxyHealthError } from '../../utils/health.js'
 import { toHttpError } from '../../utils/httpError'
@@ -38,6 +39,17 @@ export default defineEventHandler<{ body: AnalysisBody }>(
       // decide. The workflow is resolved first, so an identifier nobody can
       // act on is refused before anything exists on Galaxy.
       const workflow = yield* getWorkflowEffect(workflowId)
+
+      // `getWorkflowEffect` does `select()`, so `definition` — every step
+      // with its type — is already in scope here, one line before the first
+      // thing that gets created. #39 made the form refuse an unselected
+      // input and left this side as it was, so the guard was client-side only
+      // and the form was never the only client (#43). Refusing here means
+      // nothing has been prepared when the refusal happens, which is the same
+      // ordering argument as resolving the workflow first: a request nobody
+      // can act on costs a round trip and nothing more.
+      yield* requireDatamapDeclaresInputs(workflow.definition, datamap)
+
       const historyDb = yield* addHistoryEffect(name, supabaseUser.id)
 
       // Everything below has an analysis prepared to take back out if it
@@ -111,9 +123,11 @@ export default defineEventHandler<{ body: AnalysisBody }>(
       // caller cannot do anything about, so it takes the logged 500
       onFailure: cause => toHttpError(event, cause, 'create analysis', {
         statuses: {
-          // the only cause on this path the caller can act on: an identifier
-          // that names no workflow they may run
+          // the two causes on this path the caller can act on: an identifier
+          // that names no workflow they may run, and a datamap that cannot
+          // start the one it names
           WorkflowNotFoundError: 404,
+          DatamapMismatchError: 400,
           // Galaxy accepted the request and gave back nothing to run against,
           // which is Galaxy being unwell rather than this server being wrong
           CreateGalaxyHistoryError: 503,

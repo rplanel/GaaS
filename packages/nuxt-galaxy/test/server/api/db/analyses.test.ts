@@ -3,6 +3,7 @@ import { Context, Data, Effect, Layer } from 'effect'
 import { useLogger } from 'evlog'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockRequestLogger } from '../../setup'
+import { dataInputStep, workflowDefinition } from '../../workflowDefinition'
 
 const mockAnalysisResult = {
   id: 1,
@@ -19,6 +20,18 @@ const mockDbWorkflow = {
   name: 'Test Workflow',
   galaxyId: 'galaxy-wf-1',
   versionKey: '1.0',
+  // The column the refusal in #43 is read off. It declares the two inputs the
+  // default datamap below supplies, so the happy path stays the happy path.
+  definition: workflowDefinition({
+    0: dataInputStep(0, 'Input FASTQ'),
+    1: dataInputStep(1, 'Input reference'),
+  }),
+}
+
+/** A workflow that asks for nothing, for which an empty datamap is correct. */
+const mockDbWorkflowWithoutInputs = {
+  ...mockDbWorkflow,
+  definition: workflowDefinition({}),
 }
 
 const mockDbHistory = {
@@ -338,8 +351,14 @@ describe('post /api/db/analyses', () => {
   // upload runs, so nothing carrying it runs either.
   describe('a request that strands the analysis it prepared', () => {
     beforeEach(() => {
-      // the shape the unselected input submitted: a name, and nothing to
-      // upload for a workflow that expects something
+      // An empty datamap for a workflow that declares nothing. It used to be
+      // an empty datamap for a workflow that declares inputs — the shape the
+      // unselected input submitted — but #43 refuses that before anything is
+      // prepared, so it can no longer reach the compensation. What #39 cares
+      // about is that no upload ran, and `Effect.all([])` is still how that
+      // happens: a workflow with nothing to upload reaches the invocation
+      // with the same empty `inputs`.
+      mocks.getWorkflowEffect.mockReturnValue(Effect.succeed(mockDbWorkflowWithoutInputs))
       mocks.readBody.mockResolvedValue({
         name: 'Test Analysis',
         datamap: {},
@@ -393,6 +412,129 @@ describe('post /api/db/analyses', () => {
 
       await expect(handler(event)).rejects.toMatchObject({ statusCode: 503 })
       expect(mocks.discardPreparedHistoryEffect).not.toHaveBeenCalled()
+    })
+  })
+
+  /**
+   * #43. #39 made the form refuse an unselected input, which left the guard
+   * client-side only: the endpoint went on accepting a datamap that named no
+   * input for a workflow that declares one, prepared a history, asked Galaxy
+   * to invoke with no inputs, and recorded an analysis that cannot have run.
+   *
+   * The information to refuse it was already loaded — `getWorkflowEffect`
+   * does `select()`, so `definition` is in scope one line before the first
+   * thing that gets created. These assert that it is now read there.
+   */
+  describe('a datamap that does not match the workflow it names', () => {
+    it('refuses 400 and names the input that was left out', async () => {
+      mocks.readBody.mockResolvedValue({
+        name: 'Test Analysis',
+        datamap: { 0: { storage_object_id: 'so-1' } },
+        parameters: {},
+        workflowId: 1,
+      })
+      const handler = await loadHandler()
+
+      // the input's own label, not a restatement of the request: the reader
+      // is told which field to go back and fill in
+      await expect(handler(event)).rejects.toMatchObject({
+        statusCode: 400,
+        statusMessage: 'No dataset was provided for the input "Input reference"',
+      })
+    })
+
+    it('refuses before anything is prepared, on Galaxy or in the database', async () => {
+      mocks.readBody.mockResolvedValue({
+        name: 'Test Analysis',
+        datamap: {},
+        parameters: {},
+        workflowId: 1,
+      })
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({ statusCode: 400 })
+      // the ordering the refusal depends on: no container, no row, no upload,
+      // no invocation — and so nothing to unwind either
+      expect(mocks.addHistoryEffect).not.toHaveBeenCalled()
+      expect(mocks.uploadDatasetsEffect).not.toHaveBeenCalled()
+      expect(mocks.runAnalysis).not.toHaveBeenCalled()
+      expect(mocks.discardPreparedHistoryEffect).not.toHaveBeenCalled()
+    })
+
+    it('accepts an empty datamap for a workflow that declares no inputs', async () => {
+      mocks.getWorkflowEffect.mockReturnValue(Effect.succeed(mockDbWorkflowWithoutInputs))
+      mocks.readBody.mockResolvedValue({
+        name: 'Test Analysis',
+        datamap: {},
+        parameters: {},
+        workflowId: 1,
+      })
+      mocks.uploadDatasetsEffect.mockReturnValue(Effect.succeed([]))
+      const handler = await loadHandler()
+
+      expect(await handler(event)).toEqual(mockAnalysisResult)
+      expect(mocks.runAnalysis).toHaveBeenCalled()
+    })
+
+    it('refuses a datamap naming a step the workflow does not declare', async () => {
+      // Refused although Galaxy would ignore it, for the reason argued in
+      // `workflowInputs.ts`: the upload happens before Galaxy sees anything.
+      mocks.readBody.mockResolvedValue({
+        name: 'Test Analysis',
+        datamap: {
+          0: { storage_object_id: 'so-1' },
+          1: { storage_object_id: 'so-2' },
+          7: { storage_object_id: 'so-7' },
+        },
+        parameters: {},
+        workflowId: 1,
+      })
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({
+        statusCode: 400,
+        statusMessage: 'This workflow declares no dataset input at step 7',
+      })
+      expect(mocks.uploadDatasetsEffect).not.toHaveBeenCalled()
+    })
+
+    it('reconciles the datamap against the definition\'s own step keys', async () => {
+      // The two shapes are keyed the same way and that is the whole
+      // reconciliation: `definition.steps` is keyed by step index, and Galaxy
+      // resolves an invocation's `inputs` by `step_index` because
+      // `invokeWorkflowEffect` sends no `inputs_by`. A definition whose only
+      // input sits at step 4 is supplied by a datamap key of '4' and by
+      // nothing else — so the same datamap that satisfies it here would be
+      // refused against the default fixture's steps 0 and 1.
+      mocks.getWorkflowEffect.mockReturnValue(Effect.succeed({
+        ...mockDbWorkflow,
+        definition: workflowDefinition({ 4: dataInputStep(4, 'Input FASTQ') }),
+      }))
+      mocks.readBody.mockResolvedValue({
+        name: 'Test Analysis',
+        datamap: { 4: { storage_object_id: 'so-4' } },
+        parameters: {},
+        workflowId: 1,
+      })
+      const handler = await loadHandler()
+
+      expect(await handler(event)).toEqual(mockAnalysisResult)
+    })
+
+    it('says nothing about a mismatch when the workflow could not be resolved', async () => {
+      // the 404 comes first: there is no definition to reconcile against
+      mocks.getWorkflowEffect.mockReturnValue(
+        Effect.fail(new WorkflowNotFoundError({ message: 'No workflow 999 is available' })),
+      )
+      mocks.readBody.mockResolvedValue({
+        name: 'Test Analysis',
+        datamap: {},
+        parameters: {},
+        workflowId: 999,
+      })
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({ statusCode: 404 })
     })
   })
 })
