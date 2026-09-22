@@ -45,6 +45,7 @@ describe('nuxt-galaxy types export', () => {
     expect(content).toContain('JobRow')
     expect(content).toContain('UploadedDatasetRow')
     expect(content).toContain('AnalysisDetail')
+    expect(content).toContain('ResultsViewAnalysis')
     expect(content).toContain('AnalysisBody')
     expect(content).toContain('RoleType')
     expect(content).toContain('RolePermission')
