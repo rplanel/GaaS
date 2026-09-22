@@ -1,6 +1,7 @@
 import type { ScannedResultsView } from './scan'
 import { resolve } from 'node:path'
-import { addTemplate, addTypeTemplate, defineNuxtModule, getLayerDirectories, logger, updateTemplates } from '@nuxt/kit'
+// The `nuxt/kit` subpath binds the kit to the Nuxt that loads this layer, so the package declares no kit of its own.
+import { addTemplate, addTypeTemplate, defineNuxtModule, getLayerDirectories, logger, updateTemplates } from 'nuxt/kit'
 import { scanResultsViews, toPosixPath } from './scan'
 import { renderResultsViewsRegistry, renderResultsViewsTypes, RESULTS_VIEWS_MODULE_ID } from './template'
 
