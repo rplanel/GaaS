@@ -8,7 +8,7 @@ const props = defineProps<ResultsViewProps>()
 // The user reads one line and nothing else: the inputs, jobs and outputs are
 // already listed above this view. The path is for the developer writing the
 // view, so only the development server shows it.
-const development = isDevelopmentMode()
+const inDevelopment = isDevelopmentMode()
 
 /** The one file that would replace this view, spelled with the workflow's own tag values. */
 const viewPath = computed(() =>
@@ -22,7 +22,7 @@ const viewPath = computed(() =>
       This workflow has no dedicated results view yet.
     </p>
     <UAlert
-      v-if="development"
+      v-if="inDevelopment"
       icon="i-lucide:code" color="neutral" variant="subtle"
       title="Shown by the development server only"
     >
