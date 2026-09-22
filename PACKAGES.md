@@ -98,7 +98,7 @@ const program = Effect.gen(function* () {
 - **Workflows**: `getWorkflows`, `getWorkflow`, `invokeWorkflow`
 - **Jobs**: `getJob`, `getJobOutputs`
 - **Tools**: `getTool`, `getTools`
-- **Invocations**: `getInvocation`, `getInvocationOutputs`
+- **Invocations**: `getInvocation`
 
 ---
 
