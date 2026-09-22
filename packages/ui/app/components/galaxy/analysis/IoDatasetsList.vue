@@ -13,7 +13,7 @@ export interface Props {
 
 export type AnalysisIOsWithStoratePathAndSize = AnalysisIOsWithStoratePath & { humanFileSize: string }
 
-const props = withDefaults(defineProps<Props>(), { items: undefined })
+const props = defineProps<Props>()
 const items = toRef(() => props.items)
 
 const fileMetadataSchema = z.object({
