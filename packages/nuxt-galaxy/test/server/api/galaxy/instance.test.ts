@@ -1,31 +1,52 @@
-import { Effect } from 'effect'
-import { describe, expect, it, vi } from 'vitest'
+import { Effect, Layer } from 'effect'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-// Mock blendtype
+const mockVersion = { version_major: '23', version_minor: '1' }
+
+/** What Galaxy answers. Set per test so one mock covers success and outage. */
+let resolveVersion: () => Effect.Effect<unknown, unknown> = () => Effect.succeed(mockVersion)
+
+// Mock blendtype. `getVersionEffect` is a value rather than a function, so it
+// is a suspended effect here to stay variable per test, and
+// `toGalaxyServiceUnavailable` is the identity so the real `.pipe` chain runs.
 vi.mock('blendtype', () => ({
-  getVersionEffect: { pipe: vi.fn(() => Effect.succeed({
-    version_major: '23',
-    version_minor: '1',
-  })) },
-  toGalaxyServiceUnavailable: vi.fn(),
-  makeGalaxyLayer: vi.fn(() => ({})),
+  getVersionEffect: Effect.suspend(() => resolveVersion()),
+  toGalaxyServiceUnavailable: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
+  makeGalaxyLayer: vi.fn(() => Layer.empty),
 }))
 
 // Mock the galaxy utility
 vi.mock('../../../../src/runtime/server/utils/galaxy', () => ({
-  useGalaxyLayer: vi.fn(() => ({})),
+  useGalaxyLayer: vi.fn(() => Layer.empty),
 }))
 
+async function callHandler() {
+  const handler = (await import('../../../../src/runtime/server/api/galaxy/instance.get')).default
+  return handler({} as any)
+}
+
 describe('gET /api/galaxy/instance', () => {
+  beforeEach(() => {
+    resolveVersion = () => Effect.succeed(mockVersion)
+  })
+
   it('should return instance URL and version info', async () => {
-    const handler = (await import('../../../../src/runtime/server/api/galaxy/instance.get')).default
-
-    const result = await handler({} as any)
-
-    expect(result).toEqual({
+    expect(await callHandler()).toEqual({
       url: 'https://galaxy.example.com',
       version_major: '23',
       version_minor: '1',
+    })
+  })
+
+  it('answers 503 rather than 500 when Galaxy is unavailable', async () => {
+    resolveVersion = () => Effect.fail({
+      _tag: 'GalaxyServiceUnavailable',
+      message: 'Galaxy is unavailable',
+    })
+
+    await expect(callHandler()).rejects.toMatchObject({
+      statusCode: 503,
+      statusMessage: 'Galaxy is unavailable',
     })
   })
 })

@@ -9,11 +9,12 @@ const mockTool = {
   outputs: [],
 }
 
+/** What Galaxy answers. Set per test so one mock covers success and outage. */
+let resolveTool: () => Effect.Effect<unknown, unknown> = () => Effect.succeed(mockTool)
+
 // Mock blendtype
 vi.mock('blendtype', () => ({
-  getToolEffect: vi.fn((_toolId: string, _version: string) =>
-    Effect.succeed(mockTool),
-  ),
+  getToolEffect: vi.fn((_toolId: string, _version: string) => resolveTool()),
   toGalaxyServiceUnavailable: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
   makeGalaxyLayer: vi.fn(() => Layer.empty),
 }))
@@ -81,5 +82,21 @@ describe('gET /api/galaxy/tools/:toolId/:toolVersion', () => {
       }
       return params[param]
     })
+  })
+
+  it('answers 503 rather than 500 when Galaxy is unavailable', async () => {
+    resolveTool = () => Effect.fail({
+      _tag: 'GalaxyServiceUnavailable',
+      message: 'Galaxy is unavailable',
+    })
+
+    const handler = (await import('../../../../src/runtime/server/api/galaxy/tools/[toolId]/[toolVersion].get')).default
+
+    await expect(handler({} as any)).rejects.toMatchObject({
+      statusCode: 503,
+      statusMessage: 'Galaxy is unavailable',
+    })
+
+    resolveTool = () => Effect.succeed(mockTool)
   })
 })
