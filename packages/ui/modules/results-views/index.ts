@@ -51,7 +51,10 @@ export default defineNuxtModule({
     // Creating or deleting a directory fires several events for one change; a
     // rescan is cheap, regenerating the registry and reloading the page is not.
     const workflowsDirs = appDirs.map(dir => toPosixPath(resolve(dir, 'workflows')))
-    nuxt.hook('builder:watch', async (_event, path) => {
+    nuxt.hook('builder:watch', async (event, path) => {
+      // Editing a view changes no directory name, so only added or removed entries matter.
+      if (event === 'change')
+        return
       const changed = toPosixPath(resolve(nuxt.options.srcDir, path))
       if (!workflowsDirs.some(dir => changed === dir || changed.startsWith(`${dir}/`)))
         return
