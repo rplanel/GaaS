@@ -39,9 +39,18 @@ const { view } = useResultsView(() => {
       </template>
 
       <template v-else>
-        <!-- A view that throws stays inside this boundary; the analysis page around it keeps working. -->
+        <!--
+          A view that throws stays inside this boundary and the analysis page around it keeps
+          working. The boundary only catches on the client, so a registered view renders there
+          only; it fetches its datasets in the browser anyway.
+        -->
         <NuxtErrorBoundary :key="analysisId">
-          <component :is="view.component" v-if="view" :analysis-id="analysisId" />
+          <ClientOnly v-if="view">
+            <component :is="view.component" :analysis-id="analysisId" />
+            <template #fallback>
+              <USkeleton class="h-20 w-full" />
+            </template>
+          </ClientOnly>
           <WorkflowResultGeneric v-else :analysis-id="analysisId" />
 
           <template #error="{ error, clearError }">

@@ -43,7 +43,7 @@ describe('scanResultsViews', () => {
     const views = await scanResultsViews([appDir])
 
     expect(views.some(view => view.name === 'README.md')).toBe(false)
-    expect(views.some(view => view.name === 'orphan')).toBe(false)
+    expect(views.some(view => view.name === 'nameOnly')).toBe(false)
     expect(views.some(view => view.file.endsWith('Helper.vue'))).toBe(false)
   })
 

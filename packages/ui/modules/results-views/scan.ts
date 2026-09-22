@@ -34,12 +34,17 @@ export async function scanResultsViews(appDirs: string[]): Promise<ScannedResult
         if (seen.has(key))
           continue
         seen.add(key)
-        views.push({ name, version, file })
+        views.push({ name, version, file: toPosixPath(file) })
       }
     }
   }
 
   return views
+}
+
+/** The path with forward slashes, as Nuxt and Vite spell paths on every platform. */
+export function toPosixPath(path: string): string {
+  return path.replace(/\\/g, '/')
 }
 
 /** The names of the directories directly under `dir`, sorted; none when `dir` is absent. */

@@ -1,15 +1,15 @@
 import type { ScannedResultsView } from './scan'
 import { resolve } from 'node:path'
 import { addTemplate, addTypeTemplate, defineNuxtModule, getLayerDirectories, logger, updateTemplates } from '@nuxt/kit'
-import { scanResultsViews } from './scan'
-import { renderResultsViewsRegistry, renderResultsViewsTypes } from './template'
+import { scanResultsViews, toPosixPath } from './scan'
+import { renderResultsViewsRegistry, renderResultsViewsTypes, RESULTS_VIEWS_MODULE_ID } from './template'
 
 const log = logger.withTag('@gaas/ui')
 
-/** The template's name inside the build directory; `#build/` + this is what the page imports. */
-const REGISTRY_FILENAME = 'gaas/results-views.mjs'
+/** The registry template's name inside the build directory, which `#build/` prefixes for the page. */
+const REGISTRY_FILENAME = RESULTS_VIEWS_MODULE_ID.replace(/^#build\//, '')
 /** Named after the registry so Nuxt skips its untyped `declare module` shorthand for it. */
-const REGISTRY_TYPES_FILENAME = 'gaas/results-views.d.ts'
+const REGISTRY_TYPES_FILENAME = `${REGISTRY_FILENAME.replace(/\.mjs$/, '')}.d.ts` as const
 
 /**
  * Finds results views by directory (ADR 0003).
@@ -25,6 +25,9 @@ const REGISTRY_TYPES_FILENAME = 'gaas/results-views.d.ts'
 export default defineNuxtModule({
   meta: {
     name: '@gaas/ui/results-views',
+    compatibility: {
+      nuxt: '>=4.0.0',
+    },
   },
   async setup(_options, nuxt) {
     const appDirs = getLayerDirectories(nuxt).map(dirs => dirs.app)
@@ -46,9 +49,9 @@ export default defineNuxtModule({
 
     // Creating or deleting a directory fires several events for one change; a
     // rescan is cheap, regenerating the registry and reloading the page is not.
-    const workflowsDirs = appDirs.map(dir => resolve(dir, 'workflows'))
+    const workflowsDirs = appDirs.map(dir => toPosixPath(resolve(dir, 'workflows')))
     nuxt.hook('builder:watch', async (_event, path) => {
-      const changed = resolve(nuxt.options.srcDir, path)
+      const changed = toPosixPath(resolve(nuxt.options.srcDir, path))
       if (!workflowsDirs.some(dir => changed === dir || changed.startsWith(`${dir}/`)))
         return
       const rescanned = await scanResultsViews(appDirs)
