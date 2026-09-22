@@ -70,7 +70,16 @@ export default defineEventHandler<{ body: { galaxyId: string } }>(
         if (failure?._tag === 'WorkflowAlreadyExistsError') {
           throw createError({ statusCode: failure.statusCode, statusMessage: failure.message })
         }
-        return toHttpError(event, cause, 'insert workflow')
+        return toHttpError(event, cause, 'insert workflow', {
+          statuses: {
+            // The request was well formed and named a real workflow; what is
+            // refused is the workflow as tagged, which the administrator fixes
+            // in Galaxy. Hence 422 rather than the 400 the body checks above
+            // answer, and the error's own words, since they name the tag and
+            // the value (ADR 0003).
+            InvalidWorkflowTagError: 422,
+          },
+        })
       },
       onSuccess: value => value,
     })
