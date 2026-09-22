@@ -4,7 +4,7 @@ import { useRuntimeConfig } from '#imports'
 import { HistoryStates } from 'blendtype'
 import * as bt from 'blendtype'
 import { and, eq } from 'drizzle-orm'
-import { Data, Effect } from 'effect'
+import { Cause, Data, Effect } from 'effect'
 import { analyses } from '../../db/schema/galaxy/analyses'
 import { histories } from '../../db/schema/galaxy/histories'
 import { Drizzle } from '../drizzle'
@@ -105,7 +105,97 @@ export function addHistoryEffect(name: string, ownerId: string) {
       galaxyId: galaxyHistory.id,
       state: 'new',
     }
-    return yield* insertHistory(historyToInsert)
+    // The narrower of the two windows #39 describes: Galaxy holds a container
+    // and the row that would have recorded it is the thing that failed, so
+    // nothing outside this function has an identifier to clean up with — the
+    // caller is handed a failure, not an id. It goes back out from here,
+    // where the id still exists.
+    return yield* insertHistory(historyToInsert).pipe(
+      Effect.onError(() => discardGalaxyHistory(galaxyHistory.id)),
+    )
+  })
+}
+
+/**
+ * Say what went wrong and carry on.
+ *
+ * Every step of a compensation needs this: it runs because something else
+ * already failed, and that failure is the one its caller has to be answered
+ * with, so a step that cannot finish may not replace it. The log is then the
+ * only place the leftover is visible at all, which is why each caller passes
+ * the identifiers to find it by.
+ */
+function sayAndContinue(message: string, fields: Record<string, unknown>) {
+  return <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    effect.pipe(
+      Effect.catchAllCause(cause => Effect.logError(message, { ...fields, cause: Cause.pretty(cause) })),
+    )
+}
+
+/** Remove a container from Galaxy, reporting nothing back. */
+function discardGalaxyHistory(galaxyHistoryId: string) {
+  return bt.deleteHistoryEffect(galaxyHistoryId).pipe(
+    sayAndContinue('galaxy would not remove the container prepared for a failed request', { galaxyHistoryId }),
+  )
+}
+
+/**
+ * Whether an analysis already references this history — the question of what
+ * removing the history row would take with it, which `analyses.history_id`
+ * answers on its own: it is unique, and `ON DELETE CASCADE`, whoever owns it.
+ */
+function analysisExistsFor(historyId: number) {
+  return Effect.gen(function* () {
+    const useDrizzle = yield* Drizzle
+    return yield* Effect.tryPromise({
+      try: () => useDrizzle
+        .select({ id: analyses.id })
+        .from(analyses)
+        .where(eq(analyses.historyId, historyId))
+        .then(rows => rows.length > 0),
+      catch: error => new GetHistoryError({ message: `Error looking for the analysis of history ${historyId}: ${error}` }),
+    })
+  })
+}
+
+/**
+ * Take back out what `addHistoryEffect` prepared: the container on Galaxy,
+ * then the row recording it. `POST /api/db/analyses` prepares both before it
+ * uploads anything, so every failure after that point has both to unwind
+ * (#39) — including a request that uploads nothing at all, which the
+ * compensation hanging off a single upload never covered.
+ *
+ * Galaxy first, as `deleteAnalysis` does, and then the row *whatever* Galaxy
+ * answered: a compensation gets no second attempt, and a row stuck at
+ * `state: 'new'` pointing at a container this application can no longer
+ * account for is the mess being unwound. Neither half can fail the caller.
+ */
+export function discardPreparedHistoryEffect(galaxyHistoryId: string, historyId: number) {
+  return Effect.gen(function* () {
+    // The one thing this does not take back out is a history an analysis
+    // already references. `analyses.history_id` is `ON DELETE CASCADE`, so
+    // removing the row would take the analysis with it and leave its
+    // monitoring record counting a run that no longer exists as Pending for
+    // ever — the pairing only `deleteAnalysis` is equipped to undo. That is
+    // never the #39 case: a request that strands a history failed before it
+    // had an analysis, and finds nothing here.
+    //
+    // An invocation Galaxy accepted that no analysis row records is *not*
+    // spared. Nothing in this application can see, monitor or stop such a
+    // run, so removing its container is the only thing that ends it.
+    const started = yield* analysisExistsFor(historyId).pipe(
+      sayAndContinue('could not tell whether the failed request had started an analysis', { historyId }),
+      // The log leaves nothing where the answer would have been, and an
+      // unanswered question is answered as "started": leaving a container
+      // behind is recoverable, purging a running analysis is not.
+      Effect.map(answer => answer ?? true),
+    )
+    if (!started) {
+      yield* discardGalaxyHistory(galaxyHistoryId)
+      yield* deleteHistory(historyId).pipe(
+        sayAndContinue('could not remove the row recording an analysis that was never started', { historyId }),
+      )
+    }
   })
 }
 

@@ -53,8 +53,6 @@ const analysisId = toRef(() => props.analysisId)
 const startingAnalysis = ref<boolean>(false)
 /** Why the last submission was refused, or `null` if none was. */
 const submitError = ref<StartAnalysisFailure | null>(null)
-/** An unselected input is an absent key, never an absent map. */
-const workflowInputDatasetsModel = ref<Record<string, UploadedDatasetDb>>({})
 const invokeWorkflowParameterModel = ref<Record<string, WorkflowToolParameters>>({})
 const supabase = useSupabaseClient<Database>()
 
@@ -68,7 +66,13 @@ const { refreshAnalysesList } = analysesListInjected || {}
  */
 const REQUIRED = 'Required'
 
-const schema = z.object({
+/**
+ * Rebuilt whenever the workflow arrives, because what it declares is what
+ * there is to validate: one entry per input, so `required` on those fields is
+ * something `UForm` can act on rather than a marker beside a field it never
+ * sees.
+ */
+const schema = computed(() => z.object({
   // `min(1)` is what makes the `required` marker on the field mean something:
   // plain `z.string()` rejects the untouched `undefined` but accepts the `''`
   // a reader leaves behind by typing a name and clearing it again.
@@ -76,13 +80,46 @@ const schema = z.object({
     .string({ error: REQUIRED })
     .min(1, REQUIRED)
     .max(256, 'Must be less than 256 characters'),
-})
+  inputs: z.object(
+    Object.fromEntries(
+      Object.keys(toValue(workflowInputs)).map(stepId => [
+        stepId,
+        // There is nothing to check about a selection beyond its being
+        // there: the picker writes back one of the rows it was given.
+        z.custom<UploadedDatasetDb>(
+          selection => selection !== undefined && selection !== null,
+          REQUIRED,
+        ),
+      ]),
+    ),
+  ),
+}))
 
-type Schema = z.output<typeof schema>
+type Schema = z.output<typeof schema.value>
 
-const state = reactive<Partial<Schema>>({
+/**
+ * `analysisName` is absent until the reader types one. `inputs` is always
+ * there, with an absent key for an input nobody has chosen yet: `UForm`
+ * validates the object handed to it as `:state`, so a selection kept
+ * anywhere else is a selection it cannot refuse (#39).
+ */
+type FormState = Partial<Pick<Schema, 'analysisName'>> & Pick<Schema, 'inputs'>
+
+const state = reactive<FormState>({
   analysisName: undefined,
+  inputs: {},
 })
+
+/**
+ * The name a `UFormField` has to carry for the error zod reports at
+ * `inputs.<stepId>` to render against it. `UFormField` matches an error by
+ * comparing its `name` to the joined issue path, so the two silently
+ * disagreeing renders the error nowhere — which is what `input.uuid` did
+ * here, one field over from the name #36 repaired.
+ */
+function inputFieldName(stepId: string) {
+  return `inputs.${stepId}`
+}
 
 const toolInputParameterComponent = computed(() => {
   const toolsVal = toValue(toolsObj)
@@ -195,13 +232,18 @@ function rememberThisPage() {
 
 /**
  * `UForm` hands the submit event the schema's *output*, so the name arrives
- * already validated as a non-empty string. Reading it from `event.data`
- * rather than from `state` is what stops an empty name being a falsy value
- * this function has to guard against: there is no branch left to fall
- * through, because there is no `undefined` to fall through on.
+ * already validated as a non-empty string and the datamap already carries a
+ * selection for every input the workflow declares. Reading both from
+ * `event.data` rather than from `state` is what stops an empty name being a
+ * falsy value this function has to guard against: there is no branch left to
+ * fall through, because there is no `undefined` to fall through on.
+ *
+ * It also decides what the datamap may contain: the schema names the inputs
+ * this workflow declares, and `z.object` keeps nothing else, so a selection
+ * stored against a step the workflow has since dropped is not sent. The form
+ * asks for exactly what it showed.
  */
 async function runAnalysis(event: FormSubmitEvent<Schema>) {
-  const workflowInputsModelVal = toValue(workflowInputDatasetsModel)
   const analysesNameVal = event.data.analysisName
   const workflowIdVal = toValue(props.workflowId)
   const workflowParametersModelVal = toValue(invokeWorkflowParameterModel)
@@ -211,7 +253,7 @@ async function runAnalysis(event: FormSubmitEvent<Schema>) {
   const parameters = toValue(encodedParameters)
   const payload = {
     name: analysesNameVal,
-    datamap: workflowInputsModelVal,
+    datamap: event.data.inputs,
     parameters,
     workflowId: workflowIdVal,
   }
@@ -302,10 +344,13 @@ watchEffect(() => {
       dbAnalysisVal.parameters,
     )
     invokeWorkflowParameterModel.value = decodedParameters.value
-    // A stored analysis with no datamap re-runs as an empty selection, which
-    // the server answers for, rather than as a submission that does nothing.
-    // Dropping the `?? {}` is a type error, not a silent regression.
-    workflowInputDatasetsModel.value = dbAnalysisVal.datamap ?? {}
+    // A stored analysis whose datamap no longer covers every input the
+    // workflow declares re-runs as a field error on the ones it misses,
+    // rather than as a submission with a gap in it. Copied rather than
+    // shared: the picker writes into this object, and the original belongs to
+    // the query cache. Dropping the `?? {}` is a type error, not a silent
+    // regression.
+    state.inputs = { ...dbAnalysisVal.datamap ?? {} }
   }
   else {
     invokeWorkflowParameterModel.value = workflowParametersModel.value
@@ -326,7 +371,15 @@ watchEffect(() => {
             icon="i-lucide-files"
             class="mt-5 mb-3"
           /> -->
-      <div v-if="datasets" class="mt-5">
+      <!--
+        Gated on what the workflow declares, not on the list of datasets
+        having arrived: these fields are where the errors for those inputs
+        render, so hiding them until the list loads — or for ever, if the
+        query for it fails — would leave Run doing nothing the reader can
+        see, which is the shape both #36 and #39 are about. An empty picker
+        is the honest state while the list is on its way.
+      -->
+      <div v-if="Object.keys(workflowInputs).length > 0" class="mt-5">
         <h3 class="font-bold text-lg ">
           <template v-if="Object.values(workflowInputs).length > 1">
             Select workflow inputs
@@ -338,14 +391,14 @@ watchEffect(() => {
 
         <UFormField
           v-for="(input, stepId) in workflowInputs" :key="stepId" :label="input.label" required
-          :name="input.uuid"
+          :name="inputFieldName(stepId)" :data-testid="`workflow-input-${stepId}`"
         >
           <USelectMenu
-            v-model="workflowInputDatasetsModel[stepId]" :search-input="{
+            v-model="state.inputs[stepId]" :search-input="{
               placeholder: 'Filter...',
               icon: 'i-lucide-search',
-            }" :create-item="{ position: 'top', when: 'always' }" icon="i-material-symbols:dataset" :items="datasets"
-            label-key="dataset_name" class="w-full" :name="input.uuid"
+            }" :create-item="{ position: 'top', when: 'always' }" icon="i-material-symbols:dataset"
+            :items="datasets ?? []" label-key="dataset_name" class="w-full" :name="inputFieldName(stepId)"
           />
         </UFormField>
       </div>

@@ -9,7 +9,7 @@ import { UrlFetch } from '../../utils/fetch'
 import { useGalaxyLayer } from '../../utils/galaxy.js'
 import { runAnalysis } from '../../utils/grizzle/analyses.js'
 import { uploadDatasetsEffect } from '../../utils/grizzle/datasets'
-import { addHistoryEffect } from '../../utils/grizzle/histories'
+import { addHistoryEffect, discardPreparedHistoryEffect } from '../../utils/grizzle/histories'
 import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase.js'
 import { getWorkflowEffect } from '../../utils/grizzle/workflows'
 import { checkGalaxyHealthEffect, CheckGalaxyHealthError } from '../../utils/health.js'
@@ -40,43 +40,54 @@ export default defineEventHandler<{ body: AnalysisBody }>(
       const workflow = yield* getWorkflowEffect(workflowId)
       const historyDb = yield* addHistoryEffect(name, supabaseUser.id)
 
-      const datasets = yield* uploadDatasetsEffect({
-        datamap,
-        galaxyHistoryId: historyDb.galaxyId,
-        historyId: historyDb.id,
-        ownerId: supabaseUser.id,
-        event,
-      })
-      // load input dataset sous la forme de datamap mais comme id pg id
-      const workflowInput: GalaxyWorkflowInput = {}
-      const inputs = datasets.filter(data => data !== undefined)
-        .reduce((acc, curr) => {
-          if (curr) {
-            const { step, galaxyId, insertedId } = curr
-            acc[step] = {
-              id: galaxyId,
-              src: 'hda',
-              dbid: insertedId,
+      // Everything below has an analysis prepared to take back out if it
+      // fails: a container on Galaxy and a row recording it, neither of which
+      // a reader can reach until an analysis references them. The
+      // compensation used to hang off a single upload instead, so a request
+      // that uploaded nothing — an empty datamap is `Effect.all([])` — left
+      // both behind, and so did any later failure, such as an invocation
+      // Galaxy refuses for a reason this server cannot anticipate (#39).
+      return yield* Effect.gen(function* () {
+        const datasets = yield* uploadDatasetsEffect({
+          datamap,
+          galaxyHistoryId: historyDb.galaxyId,
+          historyId: historyDb.id,
+          ownerId: supabaseUser.id,
+          event,
+        })
+        // load input dataset sous la forme de datamap mais comme id pg id
+        const workflowInput: GalaxyWorkflowInput = {}
+        const inputs = datasets.filter(data => data !== undefined)
+          .reduce((acc, curr) => {
+            if (curr) {
+              const { step, galaxyId, insertedId } = curr
+              acc[step] = {
+                id: galaxyId,
+                src: 'hda',
+                dbid: insertedId,
+              }
             }
-          }
-          return acc
-        }, workflowInput)
-      const workflowSnapshot = {
-        workflowName: workflow.name ?? null,
-        galaxyWorkflowId: workflow.galaxyId ?? null,
-        workflowVersion: workflow.versionKey ?? null,
-      }
-      return yield* runAnalysis(
-        name,
-        historyDb.galaxyId,
-        workflow.galaxyId,
-        historyDb.id,
-        workflow.id,
-        supabaseUser.id,
-        inputs,
-        parameters || {},
-        datamap,
-        workflowSnapshot,
+            return acc
+          }, workflowInput)
+        const workflowSnapshot = {
+          workflowName: workflow.name ?? null,
+          galaxyWorkflowId: workflow.galaxyId ?? null,
+          workflowVersion: workflow.versionKey ?? null,
+        }
+        return yield* runAnalysis(
+          name,
+          historyDb.galaxyId,
+          workflow.galaxyId,
+          historyDb.id,
+          workflow.id,
+          supabaseUser.id,
+          inputs,
+          parameters || {},
+          datamap,
+          workflowSnapshot,
+        )
+      }).pipe(
+        Effect.onError(() => discardPreparedHistoryEffect(historyDb.galaxyId, historyDb.id)),
       )
     })
     const finalLayer = Layer.mergeAll(

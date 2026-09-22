@@ -325,7 +325,10 @@ describe('uploadSingleDatasetEffect', () => {
     )
 
     // The upload failure reaches the caller wrapped by deleteHistoryEffect,
-    // which also goes through GalaxyFetch.
+    // which also goes through GalaxyFetch: blendtype removes the history
+    // itself when an upload fails, and here that removal fails too, on the
+    // same layer. Nothing in this package wraps it any more — the prepared
+    // analysis is unwound by `POST /api/db/analyses` (#39).
     expectFailureOf(exit, HistoryError, (error) => {
       expect(error.message).toContain('Upload failed')
     })

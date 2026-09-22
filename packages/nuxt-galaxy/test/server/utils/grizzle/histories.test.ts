@@ -1,10 +1,11 @@
-import { Effect } from 'effect'
+import { Effect, Exit } from 'effect'
 import { describe, expect, it, vi } from 'vitest'
 import {
   addHistoryEffect,
   CreateGalaxyHistoryError,
   DeleteGalaxyHistoryError,
   deleteHistory,
+  discardPreparedHistoryEffect,
   getAnalysisHistory,
   getHistoryDb,
   GetHistoryError,
@@ -18,6 +19,7 @@ import { GalaxyUserNotFoundError } from '../../../../src/runtime/server/utils/gr
 import {
   createMockDrizzle,
   createMockGalaxyLayer,
+  createRecordingGalaxyLayer,
   expectFailure,
   mockDbHistory,
   mockDrizzleDeleteRejects,
@@ -290,6 +292,146 @@ describe('addHistoryEffect', () => {
       expect((error as CreateGalaxyHistoryError).message.toLowerCase()).not.toContain('history')
       expect((error as CreateGalaxyHistoryError).message).toContain('analysis')
     })
+  })
+
+  // The narrower of the two windows #39 describes: Galaxy holds a container
+  // and the row that would have recorded it is the thing that failed, so
+  // nothing outside this function has an identifier to clean up with. It is
+  // taken back out from in here, where the identifier still exists.
+  it('removes the container it created when the row recording it cannot be written', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.mock.insert.mockImplementation(
+      mockDrizzleInsertRejects(['values', 'returning'], new Error('DB error')),
+    )
+    const galaxy = createRecordingGalaxyLayer(() => mockGalaxyHistory)
+
+    const exit = await addHistoryEffect('New History', 'owner-uuid-1').pipe(
+      Effect.provide(drizzle.layer),
+      Effect.provide(galaxy.layer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect(error).toBeInstanceOf(InsertHistoryError)
+    })
+    expect(galaxy.calls).toEqual([
+      { method: 'POST', url: 'api/histories' },
+      { method: 'DELETE', url: `api/histories/${mockGalaxyHistory.id}` },
+    ])
+  })
+
+  it('reports the write that failed, not whatever Galaxy answered the removal with', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.mock.insert.mockImplementation(
+      mockDrizzleInsertRejects(['values', 'returning'], new Error('DB error')),
+    )
+    const galaxy = createRecordingGalaxyLayer(call =>
+      call.method === 'DELETE' ? new Error('Galaxy would not remove it') : mockGalaxyHistory,
+    )
+
+    const exit = await addHistoryEffect('New History', 'owner-uuid-1').pipe(
+      Effect.provide(drizzle.layer),
+      Effect.provide(galaxy.layer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect(error).toBeInstanceOf(InsertHistoryError)
+    })
+  })
+})
+
+// #39: `addHistoryEffect` runs before anything is uploaded, so every failure
+// after it leaves a container on Galaxy and a row at `state: 'new'` with no
+// analysis behind them. The compensation that existed hung off the upload
+// step, which a request with an empty datamap never reaches.
+describe('discardPreparedHistoryEffect', () => {
+  it('removes the container on Galaxy and the row that records it', async () => {
+    const drizzle = createMockDrizzle()
+    const galaxy = createRecordingGalaxyLayer(() => mockGalaxyHistory)
+
+    await discardPreparedHistoryEffect(mockGalaxyHistory.id, 1).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.provide(galaxy.layer),
+      Effect.runPromise,
+    )
+
+    expect(galaxy.calls).toEqual([
+      { method: 'DELETE', url: `api/histories/${mockGalaxyHistory.id}` },
+    ])
+    expect(drizzle.mock.delete).toHaveBeenCalledTimes(1)
+  })
+
+  // A compensation gets no second attempt, so a row left pointing at a
+  // container this application can no longer account for is the mess #39 is
+  // about. What Galaxy would not remove is in the log instead.
+  it('removes the row even when Galaxy would not remove the container', async () => {
+    const drizzle = createMockDrizzle()
+    const galaxy = createRecordingGalaxyLayer(() => new Error('Galaxy would not remove it'))
+
+    await discardPreparedHistoryEffect(mockGalaxyHistory.id, 1).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.provide(galaxy.layer),
+      Effect.runPromise,
+    )
+
+    expect(drizzle.mock.delete).toHaveBeenCalledTimes(1)
+  })
+
+  // Galaxy accepted the invocation, so the run exists. Removing the history
+  // would cascade the analysis away from under the monitoring record still
+  // counting it as Pending, which is a pairing only `deleteAnalysis` undoes.
+  it('leaves a history an analysis already references alone', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.setResult([{ id: 5 }])
+    const galaxy = createRecordingGalaxyLayer(() => mockGalaxyHistory)
+
+    await discardPreparedHistoryEffect(mockGalaxyHistory.id, 1).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.provide(galaxy.layer),
+      Effect.runPromise,
+    )
+
+    expect(galaxy.calls).toEqual([])
+    expect(drizzle.mock.delete).not.toHaveBeenCalled()
+  })
+
+  // Leaving a container behind is recoverable; purging a running analysis is
+  // not, so the unanswerable question is answered the safe way.
+  it('removes nothing when it cannot tell whether an analysis was started', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.mock.select.mockImplementation(
+      mockDrizzleSelectRejects(['from', 'where'], new Error('DB error')),
+    )
+    const galaxy = createRecordingGalaxyLayer(() => mockGalaxyHistory)
+
+    await discardPreparedHistoryEffect(mockGalaxyHistory.id, 1).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.provide(galaxy.layer),
+      Effect.runPromise,
+    )
+
+    expect(galaxy.calls).toEqual([])
+    expect(drizzle.mock.delete).not.toHaveBeenCalled()
+  })
+
+  // It only ever runs because something else already failed, and that is the
+  // cause the caller has to be answered with. A compensation that failed on
+  // top of it would replace the answer with its own.
+  it('cannot fail, whatever either removal answers', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.mock.delete.mockImplementation(
+      mockDrizzleDeleteRejects(['where'], new Error('DB error')),
+    )
+    const galaxy = createRecordingGalaxyLayer(() => new Error('Galaxy would not remove it'))
+
+    const exit = await discardPreparedHistoryEffect(mockGalaxyHistory.id, 1).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.provide(galaxy.layer),
+      Effect.runPromiseExit,
+    )
+
+    expect(Exit.isSuccess(exit)).toBe(true)
   })
 })
 
