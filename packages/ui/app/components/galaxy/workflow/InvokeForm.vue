@@ -397,7 +397,7 @@ watchEffect(() => {
             v-model="state.inputs[stepId]" :search-input="{
               placeholder: 'Filter...',
               icon: 'i-lucide-search',
-            }" :create-item="{ position: 'top', when: 'always' }" icon="i-material-symbols:dataset"
+            }" icon="i-material-symbols:dataset"
             :items="datasets ?? []" label-key="dataset_name" class="w-full" :name="inputFieldName(stepId)"
           />
         </UFormField>
