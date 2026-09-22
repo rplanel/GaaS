@@ -16,6 +16,11 @@ class WorkflowAlreadyExistsError extends Data.TaggedError('WorkflowAlreadyExists
   readonly message: string
   readonly statusCode: number
 }> {}
+class InvalidWorkflowTagError extends Data.TaggedError('InvalidWorkflowTagError')<{
+  readonly message: string
+  readonly tag: 'name' | 'version'
+  readonly value: string
+}> {}
 
 const mockInsertedWorkflow = [{ id: 1, name: 'Test Workflow', galaxy_id: 'galaxy-wf-1' }]
 
@@ -162,6 +167,23 @@ describe('post /api/db/workflows', () => {
     const handler = await loadHandler()
 
     await expect(handler(event)).rejects.toMatchObject({ statusCode: 409 })
+  })
+
+  it('answers 422 with the error\'s own words when a tag value cannot name a directory', async () => {
+    // the request was well formed and named a real workflow; what is refused
+    // is the workflow as tagged, which the administrator fixes in Galaxy. The
+    // message is what tells them which tag and which value, so it has to
+    // reach them rather than be swapped for a reason phrase (#26)
+    const message = 'The `name:` tag value `nf-core/epitopeprediction` cannot name a results view directory.'
+    mocks.insertWorkflow.mockReturnValue(
+      Effect.fail(new InvalidWorkflowTagError({ message, tag: 'name', value: 'nf-core/epitopeprediction' })),
+    )
+    const handler = await loadHandler()
+
+    await expect(handler(event)).rejects.toMatchObject({
+      statusCode: 422,
+      statusMessage: message,
+    })
   })
 
   it('logs and answers 500 when a bug travels with the 409, rather than answering the 409', async () => {

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest'
 import { Effect } from 'effect'
 import { describe, expect, it, vi } from 'vitest'
 import { GalaxyUserNotFoundError } from '../../../../src/runtime/server/utils/grizzle/user'
@@ -5,6 +6,7 @@ import {
   getWorkflowEffect,
   GetWorkflowError,
   insertWorkflow,
+  InvalidWorkflowTagError,
   WorkflowNotFoundError,
 } from '../../../../src/runtime/server/utils/grizzle/workflows'
 import {
@@ -190,6 +192,77 @@ describe('insertWorkflow', () => {
       expect(error).toBeInstanceOf(GetWorkflowError)
       expect((error as GetWorkflowError).message).toContain('Workflow is missing a name tag')
     })
+  })
+
+  /**
+   * The row `insertWorkflow` handed to Supabase. The mock client answers
+   * every `.schema()` with one shared chain, so the first result is it.
+   */
+  function insertedRow(mockClient: ReturnType<typeof createMockServerSupabaseClientLayer>['mockClient']) {
+    const chain = mockClient.schema.mock.results[0]!.value as Record<string, Mock>
+    return chain.insert!.mock.calls[0]![0]
+  }
+
+  it('stores a name and a version that can name a directory exactly as tagged, case included', async () => {
+    // `satelliteFinder` has to reach `name_key` with its capital F: the
+    // results view is found by a directory of that exact name (ADR 0003), so
+    // nothing may be lowercased or otherwise tidied on the way in
+    const galaxyLayer = createMockGalaxyLayer({
+      ...mockGalaxyWorkflowExport,
+      tags: ['name:satelliteFinder', 'version:0.11'],
+    })
+    const drizzle = createMockDrizzle()
+    drizzle.setResult([mockDbUser])
+
+    const { layer: supabaseClientLayer, mockClient } = createMockServerSupabaseClientLayer({
+      queryResult: { data: [{ id: 1 }], error: null },
+    })
+    const supabaseClaimsLayer = createMockServerSupabaseClaimsLayer(mockSupabaseUser)
+    const event = createMockEvent()
+
+    await insertWorkflow('galaxy-workflow-1', 'https://galaxy.example.com', 'admin@example.org', event).pipe(
+      Effect.provide(galaxyLayer),
+      Effect.provide(drizzle.layer),
+      Effect.provide(supabaseClientLayer),
+      Effect.provide(supabaseClaimsLayer),
+      Effect.runPromise,
+    )
+
+    expect(insertedRow(mockClient)).toMatchObject({ name_key: 'satelliteFinder', version_key: '0.11' })
+  })
+
+  it.each([
+    ['name', 'nf-core/epitopeprediction', ['name:nf-core/epitopeprediction', 'version:1.0']],
+    ['version', '1.0+galaxy1', ['name:epitopeprediction', 'version:1.0+galaxy1']],
+  ] as const)('refuses a %s tag value that cannot name a directory, naming the tag and the value', async (tag, value, tags) => {
+    // Galaxy accepts both of these: it only strips whitespace from a tag. A
+    // path separator or a `+` cannot name the directory a results view lives
+    // in, so activation says which tag and which value rather than storing a
+    // workflow no view can ever be found for
+    const galaxyLayer = createMockGalaxyLayer({ ...mockGalaxyWorkflowExport, tags: [...tags] })
+    const drizzle = createMockDrizzle()
+    drizzle.setResult([mockDbUser])
+
+    const { layer: supabaseClientLayer, mockClient } = createMockServerSupabaseClientLayer()
+    const supabaseClaimsLayer = createMockServerSupabaseClaimsLayer(mockSupabaseUser)
+    const event = createMockEvent()
+
+    const exit = await insertWorkflow('galaxy-workflow-1', 'https://galaxy.example.com', 'admin@example.org', event).pipe(
+      Effect.provide(galaxyLayer),
+      Effect.provide(drizzle.layer),
+      Effect.provide(supabaseClientLayer),
+      Effect.provide(supabaseClaimsLayer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect(error).toBeInstanceOf(InvalidWorkflowTagError)
+      expect(error).toMatchObject({ tag, value })
+      expect((error as InvalidWorkflowTagError).message).toContain(`${tag}:`)
+      expect((error as InvalidWorkflowTagError).message).toContain(value)
+    })
+    // refused before anything reached the database
+    expect(mockClient.schema).not.toHaveBeenCalled()
   })
 
   it('should fail with permission denied on 42501 error code', async () => {

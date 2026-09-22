@@ -6,6 +6,8 @@ import type { GalaxyWorkflowsItem } from 'blendtype'
 import type { Database } from 'nuxt-galaxy'
 import { USwitch } from '#components'
 import { getWorkflowTagName, getWorkflowTagVersion } from 'blendtype'
+import { log } from 'evlog/client'
+import { describeActivationFailure } from '../../utils/activationFailure'
 // type Database = SupabaseTypes.Database
 
 interface ComputedGalaxyWorklowItem extends GalaxyWorkflowsItem {
@@ -88,12 +90,6 @@ const galaxyWorkflowGalaxyColumns = ref<
         disabled: row.original.activated,
         onChange() {
           addToDb({ id: row.original.id })
-
-          toast.add({
-            title: 'Workflow added to the webservice',
-            color: 'success',
-            icon: 'i-lucide-circle-check',
-          })
         },
       })
     },
@@ -109,14 +105,30 @@ async function addToDb(workflow: { id: string }) {
         galaxyId,
       },
     })
+    // only once the server has said yes: this used to fire from the switch
+    // before the request was even sent, so a refusal still read as a success
+    toast.add({
+      title: 'Workflow activated',
+      color: 'success',
+      icon: 'i-lucide-circle-check',
+    })
     router.push('/workflows')
   }
   catch (error) {
+    // a refusal names what to fix in Galaxy, so the administrator reads it
+    // here, next to the switch, rather than on the error page; the cause
+    // itself is only ever worth a log
     const { errorStatus } = useErrorStatus(error)
-    const { errorMessage } = useErrorMessage(error)
-    showError({
-      statusCode: toValue(errorStatus),
-      statusMessage: toValue(errorMessage),
+    log.error({
+      action: 'workflow:activate_failed',
+      tag: 'admin/workflows',
+      status: toValue(errorStatus),
+      error: String(error),
+    })
+    toast.add({
+      ...describeActivationFailure(error),
+      color: 'error',
+      icon: 'i-lucide-circle-x',
     })
   }
 }

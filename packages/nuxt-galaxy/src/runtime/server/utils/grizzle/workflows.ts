@@ -9,6 +9,7 @@ import { takeUniqueOrNull } from './helper'
 import { ForbiddenError, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from './supabase'
 import { galaxyUserNotFound, getCurrentUserEffect } from './user'
 import { generateWorkflowSlug } from './workflowSlug'
+import { canNameResultsViewDirectory } from './workflowTagValue'
 
 export class GetWorkflowError extends Data.TaggedError('GetWorkflowError')<{
   readonly message: string
@@ -28,6 +29,39 @@ export class InsertWorkflowError extends Data.TaggedError('InsertWorkflowError')
 export class WorkflowNotFoundError extends Data.TaggedError('WorkflowNotFoundError')<{
   readonly message: string
 }> {}
+
+/** The two tags a workflow is identified by (ADR 0003). */
+export type WorkflowTagKind = 'name' | 'version'
+
+/**
+ * A `name:` or `version:` tag value that cannot name the directory a results
+ * view is found in (ADR 0003).
+ *
+ * Galaxy lets such a value through, so the administrator learns of it here,
+ * at activation, and fixes the tag in Galaxy; nothing about the request itself
+ * was wrong. The handler answers it with a status the administrator can act
+ * on, carrying this message, rather than folding it into a fault. Workflows
+ * activated before the rule are left as they are.
+ */
+export class InvalidWorkflowTagError extends Data.TaggedError('InvalidWorkflowTagError')<{
+  readonly message: string
+  readonly tag: WorkflowTagKind
+  readonly value: string
+}> {}
+
+/**
+ * The failure above, worded once. Each guard still writes its own
+ * `Effect.fail`, as `galaxyUserNotFound` does; this only keeps the two guards
+ * from drifting apart in what they tell the administrator.
+ */
+export function invalidWorkflowTag(tag: WorkflowTagKind, value: string): InvalidWorkflowTagError {
+  return new InvalidWorkflowTagError({
+    tag,
+    value,
+    message: `The \`${tag}:\` tag value \`${value}\` cannot name a results view directory. `
+      + 'Use letters, digits, dots, hyphens and underscores, starting with a letter or digit.',
+  })
+}
 
 /**
  * The workflow, or a named reason there is none (ADR 0002). The whole body
@@ -104,6 +138,16 @@ export function insertWorkflow(
         return yield* Effect.fail(new GetWorkflowError({
           message: 'Workflow is missing a name tag. Add a tag like "name:MyWorkflow" in Galaxy.',
         }))
+      }
+      // the two values are stored as tagged and matched against a directory
+      // name verbatim, so a value no directory can carry is refused here,
+      // where the tag it came from is still known, instead of being tidied
+      // into something the developer would then have to guess at
+      if (!canNameResultsViewDirectory(tagName)) {
+        return yield* Effect.fail(invalidWorkflowTag('name', tagName))
+      }
+      if (!canNameResultsViewDirectory(tagVersion)) {
+        return yield* Effect.fail(invalidWorkflowTag('version', tagVersion))
       }
       if (!galaxyUser) {
         return yield* Effect.fail(new GetWorkflowError({ message: 'No galaxy user found' }))
