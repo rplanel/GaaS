@@ -101,17 +101,19 @@ describe('analysis results page', () => {
     expect(wrapper.text()).toContain('Satellite Finder 0.11')
     expect(wrapper.text()).toContain('1 input(s), 1 output(s)')
     expect(wrapper.text()).toContain('first input genome.fasta tagged genome')
-    expect(wrapper.text()).not.toContain('No results view for this workflow')
+    expect(wrapper.text()).not.toContain('This workflow has no dedicated results view yet')
   })
 
-  it('falls back to the generic results view, which names the directory to create', async () => {
+  it('falls back to the generic results view, which tells the user the workflow has none yet', async () => {
     analysisIdParam.value = '8'
     workflowRow = workflow('defenseFinder', '2.0.0+galaxy1')
 
     const wrapper = await mountPage()
-    await vi.waitFor(() => expect(wrapper.text()).toContain('No results view for this workflow'))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('This workflow has no dedicated results view yet'))
 
-    expect(wrapper.text()).toContain('app/workflows/defenseFinder/2.0.0+galaxy1/results.vue')
+    // The test environment is a production build, where the path to create
+    // stays with the developer: the development server alone shows it.
+    expect(wrapper.text()).not.toContain('app/workflows/defenseFinder/2.0.0+galaxy1/results.vue')
     expect(wrapper.text()).not.toContain('satellite view')
   })
 
@@ -120,7 +122,7 @@ describe('analysis results page', () => {
     workflowRow = workflow('satellitefinder', '0.1.1')
 
     const wrapper = await mountPage()
-    await vi.waitFor(() => expect(wrapper.text()).toContain('No results view for this workflow'))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('This workflow has no dedicated results view yet'))
 
     expect(wrapper.text()).not.toContain('satellite view')
   })
@@ -132,7 +134,7 @@ describe('analysis results page', () => {
     const wrapper = await mountPage()
     await vi.waitFor(() => expect(wrapper.text()).toContain('Analysis not found'))
 
-    expect(wrapper.text()).not.toContain('No results view for this workflow')
+    expect(wrapper.text()).not.toContain('This workflow has no dedicated results view yet')
     expect(wrapper.text()).not.toContain('satellite view')
   })
 })
