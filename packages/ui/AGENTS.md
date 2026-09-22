@@ -55,8 +55,10 @@ app/
 ├── plugins/                # Nuxt plugins
 ├── types/                  # Shared types; `public/` is the `#gaas/ui` alias target (ResultsViewProps)
 ├── utils/                  # Utility functions
-└── workflows/              # Results views: <name>/<version>/results.vue declaring
-                            # `defineProps<ResultsViewProps>()` imported from '#gaas/ui' (ADR 0003)
+└── workflows/              # Results views (ADR 0003), each declaring `defineProps<ResultsViewProps>()`
+                            # imported from '#gaas/ui': <name>/<version>/results.vue (exact),
+                            # <name>/results.vue (name-level), results.vue (app-wide); the app's file
+                            # wins over a layer's, and dev logs the shadowed one once
 modules/                    # Build-time Nuxt modules the layer ships (results-views scanner)
 nuxt.config.ts              # Layer configuration
 .playground/                # Development playground

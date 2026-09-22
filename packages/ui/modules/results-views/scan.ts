@@ -1,14 +1,49 @@
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 
-/** One `app/workflows/<name>/<version>/results.vue` found on disk. */
-export interface ScannedResultsView {
-  /** The `<name>` directory, verbatim: the workflow's `name:` tag value. */
-  name: string
-  /** The `<version>` directory, verbatim: the workflow's `version:` tag value. */
-  version: string
-  /** Absolute path of the component file. */
+/**
+ * How specifically a results view names the workflows it applies to (ADR 0003).
+ *
+ * - `exact`: `app/workflows/<name>/<version>/results.vue`, one workflow.
+ * - `name-level`: `app/workflows/<name>/results.vue`, every version of a name.
+ * - `app-wide`: `app/workflows/results.vue`, every workflow of the app.
+ */
+export type ResultsViewRung = 'exact' | 'name-level' | 'app-wide'
+
+/** One `results.vue` found on disk, with the directory names that scope it, verbatim. */
+export type ScannedResultsView
+  = | {
+    rung: 'exact'
+    /** The `<name>` directory: the workflow's `name:` tag value. */
+    name: string
+    /** The `<version>` directory: the workflow's `version:` tag value. */
+    version: string
+    /** Absolute path of the component file. */
+    file: string
+  }
+  | {
+    rung: 'name-level'
+    name: string
+    file: string
+  }
+  | {
+    rung: 'app-wide'
+    file: string
+  }
+
+/** A view a later layer defines that an earlier layer's view of the same scope hides. */
+export interface ShadowedResultsView {
+  /** Absolute path of the file that is not used. */
   file: string
+  /** Absolute path of the file that applies in its place. */
+  shadowedBy: string
+}
+
+export interface ResultsViewsScan {
+  /** The views that apply, one per scope. */
+  views: ScannedResultsView[]
+  /** The files that lost to an earlier layer, in the order they were met. */
+  shadowed: ShadowedResultsView[]
 }
 
 /**
@@ -16,30 +51,45 @@ export interface ScannedResultsView {
  *
  * `appDirs` are the layers' `app/` directories in the order Nuxt lists its
  * layers: the application first, then what it extends. When two layers define
- * the same name and version, the first one given wins, as it does for every
- * other Nuxt convention.
+ * a view of the same scope, the first one given wins, as it does for every
+ * other Nuxt convention, and the loser is reported as shadowed.
  */
-export async function scanResultsViews(appDirs: string[]): Promise<ScannedResultsView[]> {
+export async function scanResultsViews(appDirs: string[]): Promise<ResultsViewsScan> {
   const views: ScannedResultsView[] = []
-  const seen = new Set<string>()
+  const shadowed: ShadowedResultsView[] = []
+  const winners = new Map<string, string>()
+
+  const found = (key: string, view: ScannedResultsView) => {
+    const winner = winners.get(key)
+    if (winner) {
+      shadowed.push({ file: view.file, shadowedBy: winner })
+      return
+    }
+    winners.set(key, view.file)
+    views.push(view)
+  }
 
   for (const appDir of appDirs) {
     const workflowsDir = join(appDir, 'workflows')
+
+    const appWide = join(workflowsDir, 'results.vue')
+    if (await isFile(appWide))
+      found('app-wide', { rung: 'app-wide', file: toPosixPath(appWide) })
+
     for (const name of await subdirectories(workflowsDir)) {
+      const nameLevel = join(workflowsDir, name, 'results.vue')
+      if (await isFile(nameLevel))
+        found(`name-level:${name}`, { rung: 'name-level', name, file: toPosixPath(nameLevel) })
+
       for (const version of await subdirectories(join(workflowsDir, name))) {
-        const file = join(workflowsDir, name, version, 'results.vue')
-        if (!await isFile(file))
-          continue
-        const key = `${name}/${version}`
-        if (seen.has(key))
-          continue
-        seen.add(key)
-        views.push({ name, version, file: toPosixPath(file) })
+        const exact = join(workflowsDir, name, version, 'results.vue')
+        if (await isFile(exact))
+          found(`exact:${name}/${version}`, { rung: 'exact', name, version, file: toPosixPath(exact) })
       }
     }
   }
 
-  return views
+  return { views, shadowed }
 }
 
 /** The path with forward slashes, as Nuxt and Vite spell paths on every platform. */

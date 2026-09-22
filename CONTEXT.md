@@ -21,8 +21,12 @@ One save of a workflow on the Galaxy side. Every save appends a revision with it
 _Avoid_: Galaxy version, version index, workflow instance
 
 **Results view**:
-The component a developer writes to display the results of an analysis, matched to the analysis's workflow by name and version. When no view matches the version, the view for the workflow name alone applies.
+The component a developer writes to display the results of an analysis, matched to the analysis's workflow by name and version. When no view matches the version, the view for the workflow name alone applies; when there is none either, the view for every workflow of the app applies.
 _Avoid_: Result page, workflow component, custom result display
+
+**Rung**:
+How specifically a results view names the workflows it applies to, tried from the most specific down: exact (one name and version), name-level (every version of a name), app-wide (every workflow of the app). A match says which rung applied, or none, in which case the generic results view shows.
+_Avoid_: Fallback level, match type, specificity
 
 **Generic results view**:
 The results view GaaS itself shows for an analysis whose workflow has no results view.

@@ -1,3 +1,3 @@
 <template>
-  <div>name-level view, out of scope for the exact-version scan</div>
+  <div>app/workflows/nameOnly/results.vue: a name-level view with no version directory</div>
 </template>
