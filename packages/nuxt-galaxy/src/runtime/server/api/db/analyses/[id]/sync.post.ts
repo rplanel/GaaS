@@ -1,5 +1,5 @@
 import { toGalaxyServiceUnavailable } from 'blendtype'
-import { Data, Effect, Either, Layer } from 'effect'
+import { Data, Effect, Exit, Layer } from 'effect'
 import { useLogger } from 'evlog'
 import { createError, defineEventHandler, getRouterParam, setResponseStatus } from 'h3'
 import { runTask } from 'nitropack/runtime/task'
@@ -52,18 +52,18 @@ export default defineEventHandler(async (event) => {
     program.pipe(
       toGalaxyServiceUnavailable,
       Effect.provide(Layer.mergeAll(Drizzle.Live, ServerSupabaseClient.Live, ServerSupabaseClaims.Live, useGalaxyLayer())),
-      Effect.either,
+      Effect.exit,
     ),
   )
 
-  return Either.match(result, {
+  return Exit.match(result, {
     // both messages below are already what the errors carry, so folding the
     // tail leaves every status and body on this endpoint unchanged
-    onLeft: error => toHttpError(event, error, 'sync analysis', {
+    onFailure: cause => toHttpError(event, cause, 'sync analysis', {
       statuses: { NotFoundError: 404 },
       context: { analysisId: parsedAnalysisId },
     }),
-    onRight: (value) => {
+    onSuccess: (value) => {
       const log = useLogger(event)
       log.info('sync queued', { analysisId: parsedAnalysisId, userId: value.userId })
       setResponseStatus(event, 202, 'Accepted')

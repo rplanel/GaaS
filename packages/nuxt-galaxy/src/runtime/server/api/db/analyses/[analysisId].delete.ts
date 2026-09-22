@@ -1,5 +1,5 @@
 import { toGalaxyServiceUnavailable } from 'blendtype'
-import { Effect, Either, Layer } from 'effect'
+import { Effect, Exit, Layer } from 'effect'
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { Drizzle } from '../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../utils/evlog-effect'
@@ -36,12 +36,12 @@ export default defineEventHandler(async (event) => {
     program.pipe(
       toGalaxyServiceUnavailable,
       Effect.provide(Layer.mergeAll(Drizzle.Live, ServerSupabaseClient.Live, ServerSupabaseClaims.Live, useGalaxyLayer())),
-      Effect.either,
+      Effect.exit,
     ),
   )
 
-  return Either.match(result, {
-    onLeft: error => toHttpError(event, error, 'delete analysis'),
-    onRight: value => value,
+  return Exit.match(result, {
+    onFailure: cause => toHttpError(event, cause, 'delete analysis'),
+    onSuccess: value => value,
   })
 })

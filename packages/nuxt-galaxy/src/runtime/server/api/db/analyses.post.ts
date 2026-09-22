@@ -1,7 +1,7 @@
 import type { GalaxyWorkflowInput } from 'blendtype'
 import type { AnalysisBody } from '../../../types/nuxt-galaxy.js'
 import { toGalaxyServiceUnavailable } from 'blendtype'
-import { Effect, Either, Layer } from 'effect'
+import { Effect, Exit, Layer } from 'effect'
 import { defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle.js'
 import { runGalaxyEffect } from '../../utils/evlog-effect'
@@ -102,14 +102,14 @@ export default defineEventHandler<{ body: AnalysisBody }>(
         toGalaxyServiceUnavailable,
         Effect.provide(finalLayer),
         Effect.provide(useGalaxyLayer()),
-        Effect.either,
+        Effect.exit,
       ),
     )
 
-    return Either.match(result, {
+    return Exit.match(result, {
       // `GalaxyUserNotFoundError` is deliberately unmapped: a deployment this
       // caller cannot do anything about, so it takes the logged 500
-      onLeft: error => toHttpError(event, error, 'create analysis', {
+      onFailure: cause => toHttpError(event, cause, 'create analysis', {
         statuses: {
           // the only cause on this path the caller can act on: an identifier
           // that names no workflow they may run
@@ -120,7 +120,7 @@ export default defineEventHandler<{ body: AnalysisBody }>(
           CheckGalaxyHealthError: 503,
         },
       }),
-      onRight: value => value,
+      onSuccess: value => value,
     })
   },
 

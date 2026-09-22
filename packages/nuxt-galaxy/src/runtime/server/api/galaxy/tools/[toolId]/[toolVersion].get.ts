@@ -1,5 +1,5 @@
 import { getToolEffect, toGalaxyServiceUnavailable } from 'blendtype'
-import { Effect, Either } from 'effect'
+import { Effect, Exit } from 'effect'
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { decode } from 'ufo'
 import { runGalaxyEffect } from '../../../../utils/evlog-effect'
@@ -31,11 +31,11 @@ export default defineEventHandler(async (event) => {
   const result = await runGalaxyEffect(event, getToolEffect(decode(toolId), toolVersion).pipe(
     toGalaxyServiceUnavailable,
     Effect.provide(useGalaxyLayer()),
-    Effect.either,
+    Effect.exit,
   ))
 
-  return Either.match(result, {
-    onLeft: error => toHttpError(event, error, 'galaxy tool'),
-    onRight: value => value,
+  return Exit.match(result, {
+    onFailure: cause => toHttpError(event, cause, 'galaxy tool'),
+    onSuccess: value => value,
   })
 })

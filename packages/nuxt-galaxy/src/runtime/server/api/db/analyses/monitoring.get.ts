@@ -1,5 +1,5 @@
 import type { AnalysisMonitoringStats } from '../../../../types/nuxt-galaxy'
-import { Effect, Either, Layer } from 'effect'
+import { Effect, Exit, Layer } from 'effect'
 import { defineEventHandler } from 'h3'
 import { Drizzle } from '../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../utils/evlog-effect'
@@ -25,12 +25,12 @@ export default defineEventHandler(async (event): Promise<AnalysisMonitoringStats
     event,
     program.pipe(
       Effect.provide(Layer.mergeAll(Drizzle.Live, ServerSupabaseClient.Live)),
-      Effect.either,
+      Effect.exit,
     ),
   )
 
-  return Either.match(result, {
-    onLeft: error => toHttpError(event, error, 'analysis monitoring'),
-    onRight: value => value,
+  return Exit.match(result, {
+    onFailure: cause => toHttpError(event, cause, 'analysis monitoring'),
+    onSuccess: value => value,
   })
 })

@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import { Context, Data, Effect, Layer } from 'effect'
+import { Cause, Context, Data, Effect, Layer } from 'effect'
 import { useLogger } from 'evlog'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockRequestLogger } from '../../setup'
@@ -162,6 +162,27 @@ describe('post /api/db/workflows', () => {
     const handler = await loadHandler()
 
     await expect(handler(event)).rejects.toMatchObject({ statusCode: 409 })
+  })
+
+  it('logs and answers 500 when a bug travels with the 409, rather than answering the 409', async () => {
+    // This endpoint is the only one that reads the failure itself, for the
+    // status its 409 carries — so it is the only one that could walk a defect
+    // past the logged 500 the rest of the module routes it to. It reads
+    // through `answerableFailure`, which refuses a failure that arrived
+    // paired with a defect, so the bug is what gets answered and recorded.
+    const requestLog = createMockRequestLogger()
+    vi.mocked(useLogger).mockReturnValue(requestLog)
+    mocks.insertWorkflow.mockReturnValue(Effect.failCause(Cause.sequential(
+      Cause.fail(new WorkflowAlreadyExistsError({ message: 'already exists', statusCode: 409 })),
+      Cause.die(new TypeError('boom: a real bug')),
+    )))
+    const handler = await loadHandler()
+
+    await expect(handler(event)).rejects.toMatchObject({ statusCode: 500 })
+    expect(requestLog.error).toHaveBeenCalledWith(
+      'insert workflow handler failed',
+      expect.objectContaining({ cause: expect.stringContaining('boom: a real bug') }),
+    )
   })
 
   it('answers 503 when Galaxy is unavailable, as the galaxy endpoints do', async () => {

@@ -202,26 +202,28 @@ This is about an **effect's outcome**, not about the data type in general.
 `Either` is still the right answer for a two-case value that is not the result
 of running an effect.
 
-**Until #40 lands**, `toHttpError` takes a single tagged error rather than a
-`Cause`, so all seven folding handlers use `Effect.either` and a new one has to
-match them:
+`toHttpError` takes the `Cause` and decides from it: a named failure gets its
+mapped status, a defect anywhere in the cause gets the logged 500, and an
+interruption is rethrown unanswered — nobody is left to read a status, and
+giving up is not a fault. So a folding handler is this shape:
 
 ```typescript
 const result = await runGalaxyEffect(event, program.pipe(
   toGalaxyServiceUnavailable,
   Effect.provide(finalLayer),
-  Effect.either,
+  Effect.exit,
 ))
 
-return Either.match(result, {
-  onLeft: error => toHttpError(event, error, 'galaxy histories'),
-  onRight: value => value,
+return Exit.match(result, {
+  onFailure: cause => toHttpError(event, cause, 'galaxy histories'),
+  onSuccess: value => value,
 })
 ```
 
-Follow that shape and let #40 migrate them together. Do not hand-roll a one-off
-`Exit` fold: unwrapping the `Cause` back to a single error in order to call
-`toHttpError` throws away the reason for reaching for `Exit`.
+Hand the whole cause over. A handler that needs the failure itself — as
+`workflows.post` does, for the status its 409 carries — reads it with
+`Cause.failureOption` for that one check and passes the cause on regardless.
+Unwrapping it on the way in throws away the reason for reaching for `Exit`.
 
 ### Configuration Options
 ```typescript

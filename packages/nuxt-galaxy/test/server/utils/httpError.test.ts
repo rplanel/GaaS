@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import { Data } from 'effect'
+import { Cause, Data, FiberId } from 'effect'
 import { useLogger } from 'evlog'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { toHttpError } from '../../../src/runtime/server/utils/httpError'
@@ -14,6 +14,17 @@ class NotFoundError extends Data.TaggedError('NotFoundError')<{ readonly message
 class SomethingElseError extends Data.TaggedError('SomethingElseError')<{ readonly message: string }> {}
 
 const event = { path: '/api/db/things', method: 'GET' } as H3Event
+
+/** What the caller actually threw, for the branches that do not throw an h3 error. */
+function thrownBy(run: () => never): unknown {
+  try {
+    run()
+  }
+  catch (error) {
+    return error
+  }
+  throw new Error('expected toHttpError to throw')
+}
 
 describe('toHttpError', () => {
   let requestLog: ReturnType<typeof createMockRequestLogger>
@@ -30,7 +41,7 @@ describe('toHttpError', () => {
     // than taken from the error
     expect(() => toHttpError(
       event,
-      new GetSupabaseUserError({ message: 'Failed to get auth user: token expired at 12:04' }),
+      Cause.fail(new GetSupabaseUserError({ message: 'Failed to get auth user: token expired at 12:04' })),
       'list things',
     )).toThrowError(expect.objectContaining({
       statusCode: 401,
@@ -43,7 +54,7 @@ describe('toHttpError', () => {
     // worth reading
     expect(() => toHttpError(
       event,
-      new ForbiddenError({ message: 'Forbidden: admin role required' }),
+      Cause.fail(new ForbiddenError({ message: 'Forbidden: admin role required' })),
       'list things',
     )).toThrowError(expect.objectContaining({
       statusCode: 403,
@@ -56,7 +67,7 @@ describe('toHttpError', () => {
     // two of them used to forget it and answered 500
     expect(() => toHttpError(
       event,
-      new GalaxyServiceUnavailable({ message: 'Galaxy service is unavailable' }),
+      Cause.fail(new GalaxyServiceUnavailable({ message: 'Galaxy service is unavailable' })),
       'list things',
     )).toThrowError(expect.objectContaining({
       statusCode: 503,
@@ -67,7 +78,7 @@ describe('toHttpError', () => {
   it('answers a tag the handler maps with that status and the error message', () => {
     expect(() => toHttpError(
       event,
-      new NotFoundError({ message: 'Analysis not found' }),
+      Cause.fail(new NotFoundError({ message: 'Analysis not found' })),
       'sync analysis',
       { statuses: { NotFoundError: 404 } },
     )).toThrowError(expect.objectContaining({
@@ -79,7 +90,7 @@ describe('toHttpError', () => {
   it('answers 500 for a tag nobody mapped, and logs the cause under the handler name', () => {
     expect(() => toHttpError(
       event,
-      new SomethingElseError({ message: 'the database fell over' }),
+      Cause.fail(new SomethingElseError({ message: 'the database fell over' })),
       'sync analysis',
     )).toThrowError(expect.objectContaining({
       statusCode: 500,
@@ -97,7 +108,7 @@ describe('toHttpError', () => {
     // throw that away
     expect(() => toHttpError(
       event,
-      new SomethingElseError({ message: 'boom' }),
+      Cause.fail(new SomethingElseError({ message: 'boom' })),
       'sync analysis',
       { context: { analysisId: 1 } },
     )).toThrow()
@@ -111,7 +122,7 @@ describe('toHttpError', () => {
   it('says nothing to the caller about a cause it only logged', () => {
     expect(() => toHttpError(
       event,
-      new SomethingElseError({ message: 'connection string user=admin password=hunter2' }),
+      Cause.fail(new SomethingElseError({ message: 'connection string user=admin password=hunter2' })),
       'sync analysis',
     )).toThrowError(expect.objectContaining({ statusMessage: 'Internal Server Error' }))
   })
@@ -121,7 +132,7 @@ describe('toHttpError', () => {
     // narrow `error` to `NotFoundError` and `E` would never be the union.
     const error: ForbiddenError | NotFoundError = new NotFoundError({ message: 'gone' })
 
-    expect(() => toHttpError<ForbiddenError | NotFoundError>(event, error, 'sync analysis', {
+    expect(() => toHttpError<ForbiddenError | NotFoundError>(event, Cause.fail(error), 'sync analysis', {
       statuses: { NotFoundError: 404 },
     })).toThrowError(expect.objectContaining({ statusCode: 404 }))
   })
@@ -134,11 +145,23 @@ describe('toHttpError', () => {
     // directive (TS2578).
     const error: ForbiddenError | NotFoundError = new NotFoundError({ message: 'gone' })
 
-    expect(() => toHttpError<ForbiddenError | NotFoundError>(event, error, 'list things', {
+    expect(() => toHttpError<ForbiddenError | NotFoundError>(event, Cause.fail(error), 'list things', {
       // @ts-expect-error `ForbiddenError` is a shared tag, so it is not a key
       // a handler may remap; only `NotFoundError` is.
       statuses: { NotFoundError: 404, ForbiddenError: 418 },
     })).toThrowError(expect.objectContaining({ statusCode: 404 }))
+  })
+
+  it('refuses a tag the handler cannot raise', () => {
+    // The other half of the key check: a map naming a tag absent from the
+    // handler's own union is a typo, and `vue-tsc` is what catches it. Same
+    // compile-time assertion as above — widen the key type and TS2578 fires.
+    const error: ForbiddenError | NotFoundError = new NotFoundError({ message: 'gone' })
+
+    expect(() => toHttpError<ForbiddenError | NotFoundError>(event, Cause.fail(error), 'list things', {
+      // @ts-expect-error `SomethingElseError` is not in this handler's union.
+      statuses: { SomethingElseError: 418 },
+    })).toThrowError(expect.objectContaining({ statusCode: 500 }))
   })
 
   it('still puts a shared rule first for a caller that casts past the type', () => {
@@ -146,7 +169,7 @@ describe('toHttpError', () => {
     // unreachable through an honest call and so is only drivable by casting.
     expect(() => toHttpError(
       event,
-      new ForbiddenError({ message: 'nope' }),
+      Cause.fail(new ForbiddenError({ message: 'nope' })),
       'list things',
       { statuses: { ForbiddenError: 418 } as never },
     )).toThrowError(expect.objectContaining({ statusCode: 403 }))
@@ -158,7 +181,7 @@ describe('toHttpError', () => {
     // become the string "undefined".
     const noMessage = { _tag: 'GalaxyServiceUnavailable' } as const
 
-    expect(() => toHttpError(event, noMessage, 'list things'))
+    expect(() => toHttpError(event, Cause.fail(noMessage), 'list things'))
       .toThrowError(expect.objectContaining({
         statusCode: 503,
         statusMessage: undefined,
@@ -168,11 +191,82 @@ describe('toHttpError', () => {
   it('logs nothing when it answers a status the caller can act on', () => {
     expect(() => toHttpError(
       event,
-      new NotFoundError({ message: 'Analysis not found' }),
+      Cause.fail(new NotFoundError({ message: 'Analysis not found' })),
       'sync analysis',
       { statuses: { NotFoundError: 404 } },
     )).toThrow()
 
     expect(requestLog.error).not.toHaveBeenCalled()
+  })
+
+  it('answers 500 and logs the pretty cause for a defect', () => {
+    // The reason this takes a `Cause` at all (#40). A plain `throw` inside
+    // `Effect.gen` is a defect, not a failure: it never reached the old
+    // `Either`-shaped fold, so the bug most worth seeing was the one that
+    // wrote nothing.
+    expect(() => toHttpError(
+      event,
+      Cause.die(new TypeError('boom: a real bug')),
+      'galaxy histories',
+    )).toThrowError(expect.objectContaining({
+      statusCode: 500,
+      statusMessage: 'Internal Server Error',
+    }))
+
+    expect(requestLog.error).toHaveBeenCalledWith(
+      'galaxy histories handler failed',
+      expect.objectContaining({ cause: expect.stringContaining('boom: a real bug') }),
+    )
+  })
+
+  it('keeps the stack of a defect in the logged cause', () => {
+    // `Cause.pretty` is the whole reason the cause goes to the log rather than
+    // the message: a defect's stack is what says which line threw.
+    expect(() => toHttpError(event, Cause.die(new TypeError('boom')), 'galaxy histories')).toThrow()
+
+    const [, logged] = vi.mocked(requestLog.error).mock.calls[0] as [string, { cause: string }]
+    expect(logged.cause).toMatch(/TypeError: boom/)
+    expect(logged.cause).toMatch(/\n\s+at /)
+  })
+
+  it('logs the defect rather than answering the failure it travelled with', () => {
+    // A compensating finalizer that dies leaves a composite: a named failure
+    // and a defect together. Answering the failure's mapped status would drop
+    // the defect on the floor, which is the loss this helper exists to stop,
+    // so the bug wins and the whole cause is logged.
+    const cause = Cause.sequential(
+      Cause.fail(new NotFoundError({ message: 'Analysis not found' })),
+      Cause.die(new TypeError('discard failed')),
+    )
+
+    expect(() => toHttpError(event, cause, 'sync analysis', { statuses: { NotFoundError: 404 } }))
+      .toThrowError(expect.objectContaining({ statusCode: 500 }))
+
+    expect(requestLog.error).toHaveBeenCalledWith(
+      'sync analysis handler failed',
+      expect.objectContaining({ cause: expect.stringContaining('discard failed') }),
+    )
+  })
+
+  it('rethrows an interruption and logs nothing', () => {
+    // An aborted request has nobody left to answer, and giving up is not a
+    // fault: there is no status worth inventing and nothing worth recording.
+    const thrown = thrownBy(() => toHttpError(event, Cause.interrupt(FiberId.none), 'galaxy histories'))
+
+    expect(Cause.isInterruptedException(thrown)).toBe(true)
+    expect(thrown).not.toHaveProperty('statusCode')
+    expect(requestLog.error).not.toHaveBeenCalled()
+  })
+
+  it('answers the failure an interrupted fiber carries, rather than the interruption', () => {
+    // Interruption after a real failure is still a real failure: something
+    // named it before the fiber went away, and the caller may still be there.
+    const cause = Cause.sequential(
+      Cause.fail(new NotFoundError({ message: 'Analysis not found' })),
+      Cause.interrupt(FiberId.none),
+    )
+
+    expect(() => toHttpError(event, cause, 'sync analysis', { statuses: { NotFoundError: 404 } }))
+      .toThrowError(expect.objectContaining({ statusCode: 404 }))
   })
 })

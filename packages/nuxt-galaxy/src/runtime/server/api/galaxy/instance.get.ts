@@ -1,7 +1,7 @@
 import type { GalaxyInstanceDetails } from '../../../types/nuxt-galaxy'
 import { useRuntimeConfig } from '#imports'
 import { getVersionEffect, toGalaxyServiceUnavailable } from 'blendtype'
-import { Effect, Either } from 'effect'
+import { Effect, Exit } from 'effect'
 import { defineEventHandler } from 'h3'
 import { runGalaxyEffect } from '../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../utils/galaxy'
@@ -14,12 +14,12 @@ export default defineEventHandler(async (event): Promise<GalaxyInstanceDetails> 
     getVersionEffect.pipe(
       toGalaxyServiceUnavailable,
       Effect.provide(useGalaxyLayer()),
-      Effect.either,
+      Effect.exit,
     ),
   )
 
-  return Either.match(result, {
-    onLeft: error => toHttpError(event, error, 'galaxy instance'),
-    onRight: version => ({ url, ...version }),
+  return Exit.match(result, {
+    onFailure: cause => toHttpError(event, cause, 'galaxy instance'),
+    onSuccess: version => ({ url, ...version }),
   })
 })

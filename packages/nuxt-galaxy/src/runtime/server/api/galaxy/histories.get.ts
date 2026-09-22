@@ -1,5 +1,5 @@
 import { getHistoryEffect, toGalaxyServiceUnavailable } from 'blendtype'
-import { Data, Effect, Either } from 'effect'
+import { Data, Effect, Exit } from 'effect'
 import { defineEventHandler } from 'h3'
 import { runGalaxyEffect } from '../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../utils/galaxy'
@@ -47,11 +47,11 @@ export default defineEventHandler(async (event) => {
     toGalaxyServiceUnavailable,
     Effect.provide(ServerSupabaseClient.Live),
     Effect.provide(useGalaxyLayer()),
-    Effect.either,
+    Effect.exit,
   ))
 
-  return Either.match(result, {
-    onLeft: error => toHttpError(event, error, 'galaxy histories'),
-    onRight: value => value,
+  return Exit.match(result, {
+    onFailure: cause => toHttpError(event, cause, 'galaxy histories'),
+    onSuccess: value => value,
   })
 })
