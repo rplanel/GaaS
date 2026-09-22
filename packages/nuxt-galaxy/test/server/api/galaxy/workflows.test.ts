@@ -1,31 +1,51 @@
-import { Effect } from 'effect'
-import { describe, expect, it, vi } from 'vitest'
+import { Effect, Layer } from 'effect'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockWorkflows = [
   { id: 'wf-1', name: 'Workflow 1' },
   { id: 'wf-2', name: 'Workflow 2' },
 ]
 
-// Mock blendtype
+/** What Galaxy answers. Set per test so one mock covers success and outage. */
+let resolveWorkflows: () => Effect.Effect<unknown, unknown> = () => Effect.succeed(mockWorkflows)
+
+// Mock blendtype. `toGalaxyServiceUnavailable` is the identity so the real
+// `.pipe` chain runs — stubbing `pipe` itself would skip `Effect.either` and
+// test nothing.
 vi.mock('blendtype', () => ({
-  getWorkflowsEffect: vi.fn(() => ({
-    pipe: () => Effect.succeed(mockWorkflows),
-  })),
-  toGalaxyServiceUnavailable: vi.fn(),
-  makeGalaxyLayer: vi.fn(() => ({})),
+  getWorkflowsEffect: vi.fn(() => resolveWorkflows()),
+  toGalaxyServiceUnavailable: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
+  makeGalaxyLayer: vi.fn(() => Layer.empty),
 }))
 
 // Mock the galaxy utility
 vi.mock('../../../../src/runtime/server/utils/galaxy', () => ({
-  useGalaxyLayer: vi.fn(() => ({})),
+  useGalaxyLayer: vi.fn(() => Layer.empty),
 }))
 
+async function callHandler() {
+  const handler = (await import('../../../../src/runtime/server/api/galaxy/workflows.get')).default
+  return handler({} as any)
+}
+
 describe('gET /api/galaxy/workflows', () => {
+  beforeEach(() => {
+    resolveWorkflows = () => Effect.succeed(mockWorkflows)
+  })
+
   it('should return a list of workflows', async () => {
-    const handler = (await import('../../../../src/runtime/server/api/galaxy/workflows.get')).default
+    expect(await callHandler()).toEqual(mockWorkflows)
+  })
 
-    const result = await handler({} as any)
+  it('answers 503 rather than 500 when Galaxy is unavailable', async () => {
+    resolveWorkflows = () => Effect.fail({
+      _tag: 'GalaxyServiceUnavailable',
+      message: 'Galaxy is unavailable',
+    })
 
-    expect(result).toEqual(mockWorkflows)
+    await expect(callHandler()).rejects.toMatchObject({
+      statusCode: 503,
+      statusMessage: 'Galaxy is unavailable',
+    })
   })
 })
