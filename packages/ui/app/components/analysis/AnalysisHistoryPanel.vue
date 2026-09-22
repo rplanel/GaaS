@@ -194,10 +194,6 @@ const { data: outputs, refresh: _refreshOutputs } = useQuery(() =>
   analysisOutputsViewByIdQuery({ analysisId: analysisId.value, supabase }),
 )
 
-const { data: analysisWithOutputsAndWorkflows } = useQuery(
-  () => analysisByIdWithOutputsAndWorkflowsQuery({ id: toValue(analysisId), supabase }),
-)
-
 // function enterMotion(delay: number = 0) {
 //   return {
 //     initial: { opacity: 0, y: 16 },
@@ -223,25 +219,6 @@ const { data: analysisWithOutputsAndWorkflows } = useQuery(
 //     transition: { duration: 0.6, delay: index * 0.08 },
 //   }
 // }
-
-const resultRoutes = computed<Record<string, { tag: string, to: string }>>(() => {
-  const analysisVal = toValue(analysisWithOutputsAndWorkflows)
-  const analysisIdVal = toValue(analysisId)
-  if (!analysisVal?.analysis_outputs || !analysisIdVal) {
-    return {}
-  }
-  const routes: Record<string, { tag: string, to: string }> = {}
-  for (const output of analysisVal.analysis_outputs) {
-    if (!output.tags || output.tags.length === 0) {
-      continue
-    }
-    const tag = output.tags.map(t => t.label).sort().join('-')
-    if (tag) {
-      routes[output.datasets.id] = { tag, to: `/analyses/${analysisIdVal}/results/${tag}` }
-    }
-  }
-  return routes
-})
 
 const sortedOutputs = computed(() => {
   const outputsVal = toValue(outputs)
@@ -335,7 +312,7 @@ const sortedOutputs = computed(() => {
       <USeparator label="Outputs" />
 
       <UPageCard variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-        <GalaxyAnalysisIoDatasetsList :items="sortedOutputs" :result-routes="resultRoutes" />
+        <GalaxyAnalysisIoDatasetsList :items="sortedOutputs" />
       </UPageCard>
     </template>
   </slot>
