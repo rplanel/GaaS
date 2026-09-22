@@ -636,7 +636,6 @@ export type Database = {
           name_key: string
           user_id: number
           version_key: string
-          workflow_slug: string
         }
         Insert: {
           annotation?: string | null
@@ -648,7 +647,6 @@ export type Database = {
           name_key: string
           user_id: number
           version_key: string
-          workflow_slug: string
         }
         Update: {
           annotation?: string | null
@@ -660,7 +658,6 @@ export type Database = {
           name_key?: string
           user_id?: number
           version_key?: string
-          workflow_slug?: string
         }
         Relationships: [
           {
