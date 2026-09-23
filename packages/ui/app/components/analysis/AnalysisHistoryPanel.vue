@@ -56,6 +56,21 @@ const workflowGalaxyId = computed(() => {
   }
   return undefined
 })
+// The revision this analysis was started against, recorded on it at start
+// (#48). Asked for by name so that the steps and tools shown are the ones
+// the jobs ran; Galaxy's latest revision, which the proxy describes when
+// asked for none, moves with every save in its editor (#68). An analysis
+// started before #48 recorded none: it ran whatever was latest at the time,
+// which nothing here can recover, and the revision its workflow row was
+// activated at is the closest description this server holds. #67 lists the
+// backfill that would retire the fallback.
+const workflowRevision = computed(() => {
+  const detailedAnalysisVal = toValue(detailedAnalysis)
+  if (detailedAnalysisVal) {
+    return detailedAnalysisVal.workflow_revision ?? detailedAnalysisVal.workflows.auto_version
+  }
+  return undefined
+})
 
 // Display-only refresh: this subscription re-fetches displayed rows and must not trigger Galaxy sync.
 useSupabaseRealtime(`galaxy:histories:${props.analysisId}`, 'histories', refresh)
@@ -69,7 +84,7 @@ const {
   workflowToolIds,
   stepToTool,
   error: workflowError,
-} = useGalaxyWorkflow(workflowGalaxyId)
+} = useGalaxyWorkflow(workflowGalaxyId, workflowRevision)
 
 const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
 const { getToolParameters, getParametersInputComponent } = useAnalysisTools(toolsObj)
