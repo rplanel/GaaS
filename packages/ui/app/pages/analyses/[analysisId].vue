@@ -21,9 +21,10 @@ const analysisIdFromRoute = computed(() => {
   return Number.parseInt(analysisIdParam as string)
 })
 
-const { data: analysis, refresh: refreshAnalysis } = useQuery(
+const { data: analysis } = useQuery(
   () => analysisByIdWithOutputsAndWorkflowsQuery({ id: toValue(analysisIdFromRoute), supabase }),
 )
+const queryCache = useQueryCache()
 
 watch(() => {
   if (route?.params && 'analysisId' in route.params) {
@@ -50,8 +51,14 @@ useSupabaseRealtime(`histories:${toValue(analysisIdFromRoute)}`, 'histories', ha
 useSupabaseRealtime(`jobs:${toValue(analysisIdFromRoute)}`, 'jobs', handleUpdates)
 useSupabaseRealtime(`analysis_outputs:${toValue(analysisIdFromRoute)}`, 'analysis_outputs', handleUpdates)
 
+// Every cache entry under this analysis, not only this page's own: the results
+// page below reads a dedicated entry of the same analysis (ADR 0003) and the
+// view it renders can never query for itself, so a `refresh()` here, which
+// reaches one entry, left the view with the outputs it was first handed until
+// a focus change or a navigation (#58). Keys nest under `byId`, so the prefix
+// takes in every entry, and only the active ones are refetched.
 function handleUpdates() {
-  refreshAnalysis()
+  queryCache.invalidateQueries({ key: SUPABASE_ANALYSES_QUERY_KEYS.byId(toValue(analysisIdFromRoute)) })
 }
 
 async function syncAnalysis() {
