@@ -30,6 +30,12 @@ export const analyses = galaxy.table(
     ownerId: uuid('owner_id').notNull().references(() => owners.id, { onDelete: 'cascade' }),
     historyId: integer('history_id').notNull().unique().references(() => histories.id, { onDelete: 'cascade' }),
     workflowId: integer('workflow_id').notNull().references(() => workflows.id),
+    // The Galaxy revision this analysis was started against: the 0-based index
+    // `POST /api/workflows/{id}/invocations` took as `version`, read off the
+    // workflow row's `auto_version` at start (#48). Nullable because analyses
+    // started before #48 ran whatever revision was latest at the time, and
+    // `NULL` says so rather than guessing.
+    workflowRevision: integer('workflow_revision'),
     galaxyId: varchar('galaxy_id', { length: 256 }).notNull(),
     stderr: text('stderr'),
     stdout: text('stdout'),

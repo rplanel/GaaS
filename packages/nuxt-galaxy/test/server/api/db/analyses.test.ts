@@ -20,6 +20,9 @@ const mockDbWorkflow = {
   name: 'Test Workflow',
   galaxyId: 'galaxy-wf-1',
   versionKey: '1.0',
+  // The Galaxy revision that was activated: the 0-based index the export's
+  // `version` carried, which #48 hands back to Galaxy as the one to run.
+  autoVersion: 3,
   // The column the refusal in #43 is read off. It declares the two inputs the
   // default datamap below supplies, so the happy path stays the happy path.
   definition: workflowDefinition({
@@ -48,6 +51,9 @@ class WorkflowNotFoundError extends Data.TaggedError('WorkflowNotFoundError')<{ 
 class CreateGalaxyHistoryError extends Data.TaggedError('CreateGalaxyHistoryError')<{ readonly message: string }> {}
 class GalaxyServiceUnavailable extends Data.TaggedError('GalaxyServiceUnavailable')<{ readonly message: string }> {}
 class CheckGalaxyHealthError extends Data.TaggedError('CheckGalaxyHealthError')<{ readonly message: string }> {}
+// `blendtype`'s own failure for a Galaxy call, with the shape it gives a
+// refused invocation: the status Galaxy answered and the sentence it wrote.
+class WorkflowError extends Data.TaggedError('WorkflowError')<{ readonly message: string, readonly workflowId?: string, readonly statusCode?: number }> {}
 
 const mocks = vi.hoisted(() => ({
   getSupabaseUser: vi.fn(),
@@ -225,13 +231,29 @@ describe('post /api/db/analyses', () => {
     await handler(event)
 
     const callArgs = mocks.runAnalysis.mock.calls[0]!
-    // runAnalysis(name, galaxyHistoryId, galaxyWorkflowId, historyId, workflowId,
+    // runAnalysis(name, galaxyHistoryId, workflow, historyId, workflowId,
     //             ownerId, inputs, parameters, datamap, workflowSnapshot)
     const workflowSnapshot = callArgs[9]
     expect(workflowSnapshot).toEqual({
       workflowName: mockDbWorkflow.name,
       galaxyWorkflowId: mockDbWorkflow.galaxyId,
       workflowVersion: mockDbWorkflow.versionKey,
+    })
+  })
+
+  // #48. Galaxy runs the latest revision of a stored workflow unless the
+  // invocation names one, so every save in Galaxy's editor after activation
+  // changed what the next analysis ran, under the same name and version. The
+  // activated revision is the `version` the export carried at activation,
+  // stored as `auto_version` and read by nothing until now.
+  it('starts the revision that was activated, not whatever Galaxy has latest', async () => {
+    const handler = await loadHandler()
+    await handler(event)
+
+    const [, , workflow] = mocks.runAnalysis.mock.calls[0]!
+    expect(workflow).toEqual({
+      galaxyId: mockDbWorkflow.galaxyId,
+      revision: mockDbWorkflow.autoVersion,
     })
   })
 
@@ -400,6 +422,42 @@ describe('post /api/db/analyses', () => {
 
       expect(await handler(event)).toEqual(mockAnalysisResult)
       expect(mocks.discardPreparedHistoryEffect).not.toHaveBeenCalled()
+    })
+
+    // #48. Pinning the invocation to the activated revision makes this
+    // reachable: Galaxy's `require_exact_tool_versions` defaults to true, so
+    // a tool upgraded in Galaxy since activation leaves the revision naming a
+    // version that is no longer installed, and Galaxy refuses to start it.
+    // Nothing the reader can do fixes an uninstalled tool, so they keep the
+    // generic copy; the tool names, the whole answer for an administrator, go
+    // to the log, which `blendtype` fills from Galaxy's own sentence rather
+    // than from the status line.
+    it('takes it back out when Galaxy refuses the revision for missing tools, and logs which', async () => {
+      const requestLog = createMockRequestLogger()
+      vi.mocked(useLogger).mockReturnValue(requestLog)
+      mocks.runAnalysis.mockReturnValue(
+        Effect.fail(new WorkflowError({
+          message: 'Error invoking workflow galaxy-wf-1: Workflow was not invoked; the following required tools are not installed: fastp (version 0.23.4)',
+          workflowId: 'galaxy-wf-1',
+          statusCode: 400,
+        })),
+      )
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({
+        statusCode: 500,
+        statusMessage: 'Internal Server Error',
+      })
+      expect(requestLog.error).toHaveBeenCalledWith(
+        'create analysis handler failed',
+        expect.objectContaining({
+          cause: expect.stringContaining('the following required tools are not installed: fastp (version 0.23.4)'),
+        }),
+      )
+      expect(mocks.discardPreparedHistoryEffect).toHaveBeenCalledWith(
+        mockDbHistory.galaxyId,
+        mockDbHistory.id,
+      )
     })
 
     // Nothing was prepared yet, so there is nothing to unwind: unwinding
@@ -700,7 +758,7 @@ describe('post /api/db/analyses', () => {
       const handler = await loadHandler()
 
       expect(await handler(event)).toEqual(mockAnalysisResult)
-      // runAnalysis(name, galaxyHistoryId, galaxyWorkflowId, historyId,
+      // runAnalysis(name, galaxyHistoryId, workflow, historyId,
       //             workflowId, ownerId, inputs, parameters, datamap, snapshot)
       expect(mocks.runAnalysis.mock.calls[0]![7]).toEqual({})
     })

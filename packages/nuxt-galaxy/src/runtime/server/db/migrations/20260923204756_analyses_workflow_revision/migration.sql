@@ -1,0 +1,1 @@
+ALTER TABLE "galaxy"."analyses" ADD COLUMN "workflow_revision" integer;

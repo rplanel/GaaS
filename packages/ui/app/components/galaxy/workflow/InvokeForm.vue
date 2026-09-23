@@ -325,6 +325,11 @@ const workflowGalaxyId = computed(() => {
   const dbWorkflowVal = toValue(dbWorkflow)
   return dbWorkflowVal?.galaxy_id
 })
+// The revision the row was activated at, which is the one the server starts
+// (#48). Asked for by name so the inputs shown are the inputs that will run;
+// Galaxy's latest revision, which the proxy describes when asked for none,
+// moves with every save in its editor.
+const workflowRevision = computed(() => toValue(dbWorkflow)?.auto_version)
 
 const {
   workflowSteps,
@@ -333,7 +338,7 @@ const {
   workflowToolSteps,
   workflowToolIds,
   workflowParametersModel,
-} = useGalaxyWorkflow(workflowGalaxyId)
+} = useGalaxyWorkflow(workflowGalaxyId, workflowRevision)
 
 const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
 

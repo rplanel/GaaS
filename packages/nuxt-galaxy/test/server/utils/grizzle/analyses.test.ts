@@ -1,5 +1,7 @@
+import type { Context } from 'effect'
+import { GalaxyFetch } from 'blendtype'
 import { and, eq } from 'drizzle-orm'
-import { Effect } from 'effect'
+import { Effect, Layer } from 'effect'
 import { describe, expect, it, vi } from 'vitest'
 import { analyses } from '../../../../src/runtime/server/db/schema/galaxy/analyses'
 import { analysisMonitoring } from '../../../../src/runtime/server/db/schema/galaxy/analysisMonitoring'
@@ -12,6 +14,7 @@ import {
   insertAnalysis,
   InsertAnalysisError,
   isInvocationTerminalState,
+  runAnalysis,
 } from '../../../../src/runtime/server/utils/grizzle/analyses'
 import { finalizeAnalysisMonitoringEffect } from '../../../../src/runtime/server/utils/grizzle/analysisMonitoring'
 import {
@@ -41,6 +44,86 @@ describe('isInvocationTerminalState', () => {
     expect(isInvocationTerminalState('ready')).toBe(false)
     expect(isInvocationTerminalState('scheduled')).toBe(false)
     expect(isInvocationTerminalState('cancelling')).toBe(false)
+  })
+})
+
+/** One Galaxy request as `runAnalysis` made it, body included. */
+interface RecordedRequest {
+  url: string
+  body: Record<string, unknown> | undefined
+}
+
+/**
+ * A Galaxy layer that records the body of every request and answers all of
+ * them with `response`. The shared `createRecordingGalaxyLayer` keeps the
+ * method and the URL only, and what #48 has to see is a field in the body.
+ */
+function createBodyRecordingGalaxyLayer<T>(response: T): { requests: RecordedRequest[], layer: Layer.Layer<GalaxyFetch> } {
+  const requests: RecordedRequest[] = []
+  return {
+    requests,
+    layer: Layer.succeed(
+      GalaxyFetch,
+      (async (url: string, options?: { body?: Record<string, unknown> }) => {
+        requests.push({ url, body: options?.body })
+        return response
+      }) as unknown as Context.Tag.Service<typeof GalaxyFetch>,
+    ),
+  }
+}
+
+/**
+ * #48. Galaxy invokes the latest revision of a stored workflow unless the
+ * request names one, and until now the request named none: a save in Galaxy's
+ * editor after activation changed what the next analysis ran, under the same
+ * name and version. The revision that was activated is the `version` the
+ * export carried, stored as `auto_version`, and it now travels in two places:
+ * the invocation, so that it is what runs, and the analysis row, so that it
+ * is known afterwards.
+ */
+describe('runAnalysis', () => {
+  const galaxyWorkflow = { galaxyId: 'galaxy-wf-1', revision: 3 }
+
+  function start(layer: Layer.Layer<GalaxyFetch>, drizzle: ReturnType<typeof createMockDrizzle>) {
+    return runAnalysis(
+      'Test Analysis',
+      'galaxy-history-1',
+      galaxyWorkflow,
+      1,
+      1,
+      'owner-uuid-1',
+      {},
+      {},
+      {},
+    ).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.provide(layer),
+      Effect.runPromise,
+    )
+  }
+
+  it('names the activated revision in the invocation it asks Galaxy for', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.setResult([{ insertedId: 1 }])
+    const galaxy = createBodyRecordingGalaxyLayer(mockGalaxyInvocation)
+
+    await start(galaxy.layer, drizzle)
+
+    const invocation = galaxy.requests.find(request => request.url === 'api/workflows/galaxy-wf-1/invocations')
+    expect(invocation?.body).toMatchObject({ history_id: 'galaxy-history-1', version: 3 })
+  })
+
+  it('records the revision it started on the analysis row', async () => {
+    const drizzle = createMockDrizzle()
+    drizzle.setResult([{ insertedId: 1 }])
+    const galaxy = createBodyRecordingGalaxyLayer(mockGalaxyInvocation)
+
+    const result = await start(galaxy.layer, drizzle)
+
+    expect(result.id).toBe(1)
+    expect(drizzle.mock.insert).toHaveBeenCalledWith(analyses)
+    const analysisValues = drizzle.mock.insert.mock.results[0]?.value.values.mock.calls[0]?.[0]
+    expect(analysisValues).toMatchObject({ workflowId: 1, workflowRevision: 3 })
   })
 })
 

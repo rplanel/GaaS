@@ -15,10 +15,24 @@ import { takeExactlyOne, takeUniqueOrNull } from './helper'
 
 export { isInvocationTerminalState } from './analysisMonitoring'
 
+/**
+ * The Galaxy workflow an analysis starts, pinned to one revision.
+ *
+ * Galaxy runs the latest revision of a stored workflow unless the invocation
+ * names one, and every save in its editor appends a revision, so before #48 a
+ * save after activation changed what the next analysis ran, under the same
+ * name and version. The revision is the `version` the export carried at
+ * activation, stored on the workflow row as `auto_version`.
+ */
+export interface GalaxyWorkflowToRun {
+  readonly galaxyId: string
+  readonly revision: number
+}
+
 export function runAnalysis(
   analysisName: string,
   galaxyHistoryId: string,
-  galaxyWorkflowId: string,
+  workflow: GalaxyWorkflowToRun,
   historyId: number,
   workflowId: number,
   ownerId: string,
@@ -34,9 +48,10 @@ export function runAnalysis(
   return Effect.gen(function* () {
     const galaxyInvocation = yield* bt.invokeWorkflowEffect(
       galaxyHistoryId,
-      galaxyWorkflowId,
+      workflow.galaxyId,
       inputs,
       parameters,
+      workflow.revision,
     )
 
     const results: {
@@ -53,6 +68,10 @@ export function runAnalysis(
       name: analysisName,
       historyId,
       workflowId,
+      // kept on the row beside `workflow_id`: the row it points at says which
+      // revision was activated, this says which one this analysis ran, and
+      // the two stop agreeing the day the workflow row moves on
+      workflowRevision: workflow.revision,
       state: galaxyInvocation.state,
       galaxyId: galaxyInvocation.id,
       ownerId,

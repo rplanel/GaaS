@@ -59,6 +59,36 @@ describe('getWorkflowEffect', () => {
         }),
         Effect.runPromise,
       ))
+
+    // #48. Galaxy keeps every save of a stored workflow as a revision and
+    // answers `GET /api/workflows/{id}` with the latest unless `version`
+    // names one: the 0-based index `get_internal_version` resolves.
+    it('asks for one revision when given one', () =>
+      pipe(
+        Effect.gen(function* () {
+          const trackingLayer = createUrlTrackingLayer(mockGalaxyWorkflow)
+          yield* getWorkflowEffect('wf-abc', 3).pipe(
+            Effect.provide(trackingLayer),
+          )
+
+          expect(trackingLayer.getLastUrl()).toBe('api/workflows/wf-abc')
+          expect(trackingLayer.getLastOptions()?.query).toEqual({ version: 3 })
+        }),
+        Effect.runPromise,
+      ))
+
+    it('asks for the latest revision when given none, as before', () =>
+      pipe(
+        Effect.gen(function* () {
+          const trackingLayer = createUrlTrackingLayer(mockGalaxyWorkflow)
+          yield* getWorkflowEffect('wf-abc').pipe(
+            Effect.provide(trackingLayer),
+          )
+
+          expect(trackingLayer.getLastOptions()?.query).toBeUndefined()
+        }),
+        Effect.runPromise,
+      ))
   })
 
   describe('error cases', () => {
@@ -290,6 +320,45 @@ describe('invokeWorkflowEffect', () => {
         expect(result.state).toBe('new')
       }),
       Effect.provide(createSuccessLayer(mockInvocation)),
+      Effect.runPromise,
+    ))
+
+  // #48. Without `version` Galaxy invokes the latest revision of the stored
+  // workflow, so a save in its editor after activation changed what the next
+  // analysis ran. `InvokeWorkflowPayload.version` names the revision to run.
+  it('names the revision to run when given one', () =>
+    pipe(
+      Effect.gen(function* () {
+        const trackingLayer = createUrlTrackingLayer(mockInvocation)
+        yield* invokeWorkflowEffect(
+          'hist-1',
+          'wf-1',
+          { 0: { id: 'ds-1', src: 'hda' } },
+          {},
+          3,
+        ).pipe(Effect.provide(trackingLayer))
+
+        expect(trackingLayer.getLastUrl()).toBe('api/workflows/wf-1/invocations')
+        expect(trackingLayer.getLastOptions()?.body).toEqual({
+          history_id: 'hist-1',
+          inputs: { 0: { id: 'ds-1', src: 'hda' } },
+          parameters: {},
+          version: 3,
+        })
+      }),
+      Effect.runPromise,
+    ))
+
+  it('leaves the revision to Galaxy when given none, as before', () =>
+    pipe(
+      Effect.gen(function* () {
+        const trackingLayer = createUrlTrackingLayer(mockInvocation)
+        yield* invokeWorkflowEffect('hist-1', 'wf-1', {}, {}).pipe(
+          Effect.provide(trackingLayer),
+        )
+
+        expect(trackingLayer.getLastOptions()?.body).not.toHaveProperty('version')
+      }),
       Effect.runPromise,
     ))
 
