@@ -108,7 +108,8 @@ watch(
 <template>
   <div>
     <h1 class="text-xl font-bold">
-      {{ workflow.name }} <VersionBadge :version="workflow.version_key" />
+      {{ workflow.name }}
+      <VersionBadge :version="workflow.version_key" />
     </h1>
     <p class="text-sm text-muted">
       {{ analysis.name }}: {{ inputs.length }} input{{ inputs.length === 1 ? '' : 's' }},
