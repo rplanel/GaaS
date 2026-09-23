@@ -7,7 +7,7 @@ import { workflows } from '../../db/schema/galaxy/workflows'
 import { Drizzle } from '../drizzle'
 import { takeUniqueOrNull } from './helper'
 import { ForbiddenError, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from './supabase'
-import { galaxyUserNotFound, getCurrentUserEffect } from './user'
+import { getCurrentUserEffect } from './user'
 import { canNameResultsViewDirectory } from './workflowTagValue'
 
 export class GetWorkflowError extends Data.TaggedError('GetWorkflowError')<{
@@ -67,16 +67,14 @@ export function invalidWorkflowTag(tag: WorkflowTagKind, value: string): Invalid
  * used to sit inside `if (currentUser)` with no `else`, and the query itself
  * answers `null` for a workflow that does not exist — so both a deployment
  * fault and an identifier the caller made up arrived as the same successful
- * `undefined`/`null`.
+ * `undefined`/`null`. The first of those is now `getCurrentUserEffect`'s own
+ * failure (#33), so only the second is decided here.
  */
 export function getWorkflowEffect(workflowId: number) {
   const { public: { galaxy: { url } }, galaxy: { email } } = useRuntimeConfig()
   return Effect.gen(function* () {
     const currentUser = yield* getCurrentUserEffect(url, email)
     const useDrizzle = yield* Drizzle
-    if (!currentUser) {
-      return yield* Effect.fail(galaxyUserNotFound(url, email))
-    }
 
     const workflow = yield* Effect.tryPromise({
       try: () => useDrizzle
@@ -147,9 +145,6 @@ export function insertWorkflow(
       }
       if (!canNameResultsViewDirectory(tagVersion)) {
         return yield* Effect.fail(invalidWorkflowTag('version', tagVersion))
-      }
-      if (!galaxyUser) {
-        return yield* Effect.fail(new GetWorkflowError({ message: 'No galaxy user found' }))
       }
 
       // use supabaseClient to insert the workflow instead of drizzle because

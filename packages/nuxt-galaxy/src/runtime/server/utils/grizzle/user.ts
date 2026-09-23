@@ -2,15 +2,8 @@ import { and, eq } from 'drizzle-orm'
 import { Data, Effect } from 'effect'
 import { instances } from '../../db/schema/galaxy/instances'
 import { users } from '../../db/schema/galaxy/users'
-import { Drizzle, useDrizzle } from '../drizzle'
+import { Drizzle } from '../drizzle'
 import { takeUniqueOrNull } from './helper'
-
-export async function getCurrentUser(url: string, email: string) {
-  return useDrizzle().select().from(users).innerJoin(instances, eq(users.instanceId, instances.id)).where(and(
-    eq(users.email, email),
-    eq(instances.url, url),
-  )).then(takeUniqueOrNull)
-}
 
 export class GetCurrentUserError extends Data.TaggedError('GetCurrentUserError')<{
   readonly message: string
@@ -20,15 +13,18 @@ export class GetCurrentUserError extends Data.TaggedError('GetCurrentUserError')
 /**
  * The Galaxy service account this application runs as has no row.
  *
- * `getCurrentUserEffect` answers `null` for it, which every caller used to let
- * fall through as a success. It is a deployment fault rather than anything a
- * caller did — an unseeded database, or a `GALAXY_URL`/`GALAXY_EMAIL` changed
- * out from under the rows that were seeded — so callers map it to a 500 and
- * say nothing more to the client.
+ * It is a deployment fault rather than anything a caller did — an unseeded
+ * database, or a `GALAXY_URL`/`GALAXY_EMAIL` changed out from under the rows
+ * that were seeded — so handlers leave it unmapped, which is the logged 500,
+ * and say nothing more to the client.
  *
- * One class shared by every guard that turns that `null` into a failure: the
- * cause and the answer are the same wherever it is raised, and a tag per call
- * site would only give the handler more names for one status.
+ * Raised by `getCurrentUserEffect` itself (#33). It used to answer `null` for
+ * the missing row and every one of its three callers refused that `null`
+ * with this failure, two of them with these exact words and the third under
+ * `GetWorkflowError`, the tag for a workflow query that failed. Absence is
+ * never a legitimate answer here, which is the test ADR 0002 sets for moving
+ * the failure into the leaf: the callers had all already decided they could
+ * not continue.
  */
 export class GalaxyUserNotFoundError extends Data.TaggedError('GalaxyUserNotFoundError')<{
   readonly message: string
@@ -37,9 +33,9 @@ export class GalaxyUserNotFoundError extends Data.TaggedError('GalaxyUserNotFoun
 /**
  * The failure above, with the two settings a reader needs to act on it.
  *
- * Each guard still writes its own `Effect.fail` — that is the point of ADR
- * 0002, and this does not take the effect or hide the nullable the way the
- * rejected `orFail` helper would. It only keeps one wording of the reason.
+ * Exported for the tests that stand in for the leaf: a caller's test mocking
+ * `getCurrentUserEffect` fails it with this, so the stand-in speaks the same
+ * words production does.
  */
 export function galaxyUserNotFound(url: string, email: string): GalaxyUserNotFoundError {
   return new GalaxyUserNotFoundError({
@@ -47,10 +43,17 @@ export function galaxyUserNotFound(url: string, email: string): GalaxyUserNotFou
   })
 }
 
+/**
+ * The Galaxy service account's row, or a named reason there is none (ADR
+ * 0002). `takeUniqueOrNull` is the right reading of the query — a missing row
+ * is one row, not a bug in the uniqueness assumption — and the `null` it
+ * hands back is turned into the failure here, where the two settings that
+ * explain it are still in scope, rather than at each caller.
+ */
 export function getCurrentUserEffect(url: string, email: string) {
   return Effect.gen(function* () {
     const useDrizzle = yield* Drizzle
-    return yield* Effect.tryPromise({
+    const currentUser = yield* Effect.tryPromise({
       try: () => useDrizzle
         .select()
         .from(users)
@@ -62,5 +65,9 @@ export function getCurrentUserEffect(url: string, email: string) {
         .then(takeUniqueOrNull),
       catch: error => new GetCurrentUserError({ message: `Error getting current user: ${error}` }),
     })
+    if (!currentUser) {
+      return yield* Effect.fail(galaxyUserNotFound(url, email))
+    }
+    return currentUser
   })
 }

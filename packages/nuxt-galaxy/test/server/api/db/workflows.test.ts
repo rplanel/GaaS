@@ -12,6 +12,7 @@ class GetSupabaseUserError extends Data.TaggedError('GetSupabaseUserError')<{ re
 class ForbiddenError extends Data.TaggedError('ForbiddenError')<{ readonly message: string }> {}
 class GalaxyServiceUnavailable extends Data.TaggedError('GalaxyServiceUnavailable')<{ readonly message: string }> {}
 class InsertWorkflowError extends Data.TaggedError('InsertWorkflowError')<{ readonly message: string }> {}
+class GalaxyUserNotFoundError extends Data.TaggedError('GalaxyUserNotFoundError')<{ readonly message: string }> {}
 class WorkflowAlreadyExistsError extends Data.TaggedError('WorkflowAlreadyExistsError')<{
   readonly message: string
   readonly statusCode: number
@@ -216,6 +217,32 @@ describe('post /api/db/workflows', () => {
     const handler = await loadHandler()
 
     await expect(handler(event)).rejects.toMatchObject({ statusCode: 503 })
+  })
+
+  // #33 moved this failure out of `insertWorkflow`'s own guard, where it was
+  // tagged `GetWorkflowError`, into `getCurrentUserEffect`. The status did
+  // not move: an unseeded database is nothing the caller can act on, so the
+  // tag stays unmapped here and falls to the logged 500 it always answered.
+  // Pinned rather than assumed, because a renamed tag is the kind of change
+  // that quietly turns a 500 into something else.
+  it('answers 500 when this deployment has no Galaxy user row, and says so in the log', async () => {
+    const requestLog = createMockRequestLogger()
+    vi.mocked(useLogger).mockReturnValue(requestLog)
+    mocks.insertWorkflow.mockReturnValue(
+      Effect.fail(new GalaxyUserNotFoundError({
+        message: 'No Galaxy user registered for admin@example.org at https://galaxy.example.com',
+      })),
+    )
+    const handler = await loadHandler()
+
+    await expect(handler(event)).rejects.toMatchObject({
+      statusCode: 500,
+      statusMessage: 'Internal Server Error',
+    })
+    expect(requestLog.error).toHaveBeenCalledWith(
+      'insert workflow handler failed',
+      expect.objectContaining({ cause: expect.stringContaining('No Galaxy user registered') }),
+    )
   })
 
   it('answers 500 for anything else, and says so in the log', async () => {
