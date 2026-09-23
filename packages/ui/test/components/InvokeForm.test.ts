@@ -9,6 +9,12 @@ import InvokeForm from '../../app/components/galaxy/workflow/InvokeForm.vue'
 
 /** The status the analyses endpoint refuses the next submission with. */
 let refuseWith: number | null = null
+/**
+ * The words it refuses with, in the JSON body's `statusMessage`, as a 400
+ * naming a left-out input does (#43). `null` refuses with none, as
+ * `toHttpError` does for the statuses that have no words of their own.
+ */
+let refuseMessage: string | null = null
 /** Whether it answers 200 with nothing in the body, as it did before #25. */
 let serveEmptyBody = false
 
@@ -104,10 +110,14 @@ function submittedBody(req: IncomingMessage): Record<string, unknown> {
 }
 
 /**
- * The real endpoint's refusals, as `toHttpError` sends them: a status and
- * nothing the reader is expected to read. The status is set on the Node
- * response rather than through `createError` so this test does not reach for
- * `h3`, which is not a declared dependency of this package.
+ * The real endpoint's refusals, as `toHttpError` sends them: a status, and
+ * words in the body only when the server had some. The status is set on the
+ * Node response rather than through `createError` so this test does not reach
+ * for `h3`, which is not a declared dependency of this package. That also
+ * leaves the reason phrase to the transport: empty in this harness, as it is
+ * over HTTP/2, and Node's default for the status — "Bad Request" for a 400 —
+ * over HTTP/1.1 when the server set none. Neither is the server's sentence,
+ * which is why the form reads the body.
  */
 registerEndpoint('/api/db/analyses', {
   method: 'POST',
@@ -116,7 +126,7 @@ registerEndpoint('/api/db/analyses', {
     lastBody = submittedBody(event.node.req)
     if (refuseWith !== null) {
       event.node.res.statusCode = refuseWith
-      return { statusCode: refuseWith, statusMessage: 'Refused' }
+      return { statusCode: refuseWith, statusMessage: refuseMessage ?? 'Refused' }
     }
     if (serveEmptyBody) {
       return null
@@ -224,6 +234,7 @@ async function submit(wrapper: Awaited<ReturnType<typeof mountForm>>) {
 
 beforeEach(() => {
   refuseWith = null
+  refuseMessage = null
   serveEmptyBody = false
   requestsMade = 0
   lastBody = null
@@ -339,6 +350,26 @@ describe('invokeForm component', () => {
     await vi.waitFor(() => {
       expect(form.text()).toContain('That workflow is no longer available')
     })
+    expect(form.find('[data-testid="start-analysis-failure-sign-in"]').exists()).toBe(false)
+  })
+
+  // #46. #43 made the server name the input a datamap left out, and the form
+  // showed the "our side" copy over it. The name arrives before the workflow
+  // does, so a reader who submits during that window is the common path here.
+  it('shows the reader the input the server said was left out', async () => {
+    refuseWith = 400
+    refuseMessage = 'No dataset was provided for the input "Input FASTQ"'
+    const form = await mountForm()
+
+    await submit(form)
+
+    await vi.waitFor(() => {
+      expect(form.find('[role="alert"]').text()).toContain('No dataset was provided for the input "Input FASTQ"')
+    })
+    // nothing went wrong on our side, and the same submission would be
+    // refused the same way, so neither line of the generic copy fits
+    expect(form.text()).not.toContain('Something went wrong on our side')
+    // the session is fine; offering the login page would send them in a circle
     expect(form.find('[data-testid="start-analysis-failure-sign-in"]').exists()).toBe(false)
   })
 
