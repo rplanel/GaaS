@@ -1,4 +1,4 @@
-import type { Datamap, GalaxyToolParameters, GalaxyWorkflowParameters, HistoryState, InvocationState, JobState, WorkflowStep } from 'blendtype'
+import type { GalaxyToolParameters, HistoryState, InvocationState, JobState, WorkflowStep } from 'blendtype'
 import type { analyses } from '../server/db/schema/galaxy/analyses'
 import type { datasets } from '../server/db/schema/galaxy/datasets'
 import type { histories } from '../server/db/schema/galaxy/histories'
@@ -129,12 +129,13 @@ export interface UpdatedAnalysisLog extends Sync {
   isSync: boolean
 }
 
-export interface AnalysisBody {
-  name: string
-  datamap: Datamap
-  parameters: GalaxyWorkflowParameters
-  workflowId: number
-}
+/**
+ * What `POST /api/db/analyses` accepts. Inferred from the schema that checks
+ * it (#47) rather than declared here beside it, so that the type a client
+ * builds its request against and the check the request meets cannot drift
+ * apart.
+ */
+export type { AnalysisBody } from '../server/utils/analysisBody'
 
 export interface AnalysisMonitoringCounts {
   total: number

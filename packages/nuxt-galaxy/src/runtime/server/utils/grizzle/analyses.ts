@@ -1,6 +1,7 @@
-import type { Datamap, GalaxyInvocation, GalaxyWorkflowInput, GalaxyWorkflowParameters } from 'blendtype'
+import type { GalaxyInvocation, GalaxyWorkflowInput, GalaxyWorkflowParameters } from 'blendtype'
 import type { Context } from 'effect'
 import type { NewAnalysis } from '../../../types/nuxt-galaxy'
+import type { AnalysisDatamap } from '../analysisBody'
 import type { WorkflowSnapshot } from './analysisMonitoring'
 import * as bt from 'blendtype'
 import { and, eq } from 'drizzle-orm'
@@ -23,7 +24,10 @@ export function runAnalysis(
   ownerId: string,
   inputs: GalaxyWorkflowInput,
   parameters: GalaxyWorkflowParameters,
-  datamap: Datamap,
+  // stored on the row as the request sent it — copying an analysis reads it
+  // back — so it is typed by what a request may send, not by `blendtype`'s
+  // `Datamap`, whose entries require an `id` and `name` no request carries
+  datamap: AnalysisDatamap,
   workflowSnapshot?: WorkflowSnapshot,
 
 ) {

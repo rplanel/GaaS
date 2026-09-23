@@ -1,8 +1,9 @@
 import type { GalaxyWorkflowInput } from 'blendtype'
-import type { AnalysisBody } from '../../../types/nuxt-galaxy.js'
+import type { AnalysisBody } from '../../utils/analysisBody'
 import { toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect, Exit, Layer } from 'effect'
 import { defineEventHandler, readBody } from 'h3'
+import { readAnalysisBody } from '../../utils/analysisBody'
 import { Drizzle } from '../../utils/drizzle.js'
 import { runGalaxyEffect } from '../../utils/evlog-effect'
 import { UrlFetch } from '../../utils/fetch'
@@ -18,7 +19,17 @@ import { toHttpError } from '../../utils/httpError'
 
 export default defineEventHandler<{ body: AnalysisBody }>(
   async (event) => {
-    const { datamap, name, parameters, workflowId } = await readBody(event)
+    // Read and checked before any work is done, so a body nobody can act on
+    // costs a round trip and nothing more (#47). The type annotation above is
+    // erased at build time, so nothing checked the body until here: no body
+    // was a `TypeError` thrown before `program` existed — a 500 that reached
+    // no log, the loss #40 widened `toHttpError` to stop — and every other
+    // wrong shape was a 500 from somewhere further down, after a workflow
+    // lookup or a Galaxy history it did not need. `readBody` throws on a body
+    // it cannot parse, which is the same class of mistake and gets the same
+    // answer, in this handler's words rather than h3's.
+    const body = await readBody(event).catch(() => undefined)
+    const { datamap, name, parameters, workflowId } = readAnalysisBody(body)
     const program = Effect.gen(function* () {
       const supabaseUser = yield* getSupabaseUser(event)
       if (!supabaseUser?.id) {

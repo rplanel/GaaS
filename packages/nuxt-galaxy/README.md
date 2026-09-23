@@ -125,12 +125,15 @@ import type {
   RowAnalysis
 } from 'nuxt-galaxy'
 
-// Create a new analysis request
+// Create a new analysis request. `AnalysisBody` is inferred from the schema
+// `POST /api/db/analyses` checks the body against, so a body this type
+// accepts is one the endpoint accepts: `datamap` is keyed by the workflow's
+// step index and each entry names the uploaded dataset's storage object.
 const analysisRequest: AnalysisBody = {
   name: 'My RNA-Seq Analysis',
   workflowId: 1,
   datamap: {
-    input_fastq: { id: 123, src: 'hda' }
+    0: { storage_object_id: '3f1c2a0e-…' }
   },
   parameters: {}
 }
