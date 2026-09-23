@@ -4,7 +4,7 @@ import { useRuntimeConfig } from '#imports'
 import { HistoryStates } from 'blendtype'
 import * as bt from 'blendtype'
 import { and, eq } from 'drizzle-orm'
-import { Cause, Data, Effect } from 'effect'
+import { Data, Effect } from 'effect'
 import { analyses } from '../../db/schema/galaxy/analyses'
 import { histories } from '../../db/schema/galaxy/histories'
 import { Drizzle } from '../drizzle'
@@ -124,11 +124,16 @@ export function addHistoryEffect(name: string, ownerId: string) {
  * with, so a step that cannot finish may not replace it. The log is then the
  * only place the leftover is visible at all, which is why each caller passes
  * the identifiers to find it by.
+ *
+ * The cause travels as itself, which the bridge writes as `effectCause`, and
+ * the identifiers as annotations, which it writes as `effectAnnotations`.
+ * Handed over as one plain object beside the message, both were stringified
+ * into the message text, where no query could reach either.
  */
 function sayAndContinue(message: string, fields: Record<string, unknown>) {
   return <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     effect.pipe(
-      Effect.catchAllCause(cause => Effect.logError(message, { ...fields, cause: Cause.pretty(cause) })),
+      Effect.catchAllCause(cause => Effect.logError(message, cause).pipe(Effect.annotateLogs(fields))),
     )
 }
 

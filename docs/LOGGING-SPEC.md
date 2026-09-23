@@ -119,13 +119,16 @@ import { Effect } from 'effect'
 
 const program = Effect.gen(function* () {
   yield* Effect.logInfo('fetching workflows')
-  yield* Effect.logDebug('pagination', { page, limit })
-  yield* Effect.logWarning('slow response', { durationMs })
-  yield* Effect.logError('galaxy request failed', error)
-})
+  yield* Effect.logDebug('pagination').pipe(Effect.annotateLogs({ page, limit }))
+  yield* Effect.logWarning('slow response').pipe(Effect.annotateLogs({ durationMs }))
+}).pipe(
+  Effect.tapErrorCause(cause => Effect.logError('galaxy request failed', cause)),
+)
 ```
 
 Execute these programs through `runGalaxyEffect` or `runTaskEffect` so the custom `evlogEffectLogger` bridge routes them into the request/task logger.
+
+Identifiers go through `Effect.annotateLogs`, which the bridge writes as `effectAnnotations`, and a failure is logged as its `Cause`, which the bridge writes as `effectCause`. A plain object or error passed beside the message is stringified into the message text, where no query can reach it.
 
 ## Expected wide-event shape
 
@@ -149,11 +152,13 @@ Every request-scoped wide event contains at least the following base fields:
 
 | Surface | Common context fields |
 |---|---|
-| Server routes | `handler`, `requestLogs[]`, `user.id?`, `galaxy.*`, `db.*` |
+| Server routes | `handler`, `requestLogs[]`, `user.id?`, `galaxy.*`, `db.*`, `cause` |
 | Scheduled tasks | `operation`, `requestId`, `synced`, `failed`, `skipped` |
 | Client composables | `action`, `tag` / `component`, client-side error codes |
 | Module lifecycle | `@nuxt/kit` logger tag (not a wide event) |
 | Effect programs | `effectSpans`, `effectAnnotations`, `effectCause` |
+
+A surface is what the code does, not which directory its file sits in. `server/utils/**` code that logs to the request logger after the fold — `toHttpError`'s `"<handler> handler failed"` line — decorates the server-route wide event, so the cause it writes is `cause`. A cause raised inside a running effect reaches the bridge as a `Cause` and is written as `effectCause`, and only when the cause is non-empty, so an event carrying `effectCause` is one where something failed. Two names for two surfaces: a query for one never has to know about the other.
 
 Guidelines for adding context:
 

@@ -1,4 +1,4 @@
-import { Effect, HashMap, List, LogSpan } from 'effect'
+import { Cause, Effect, HashMap, List, LogSpan } from 'effect'
 import { useLogger } from 'evlog'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { evlogEffectLogger, runGalaxyEffect, runTaskEffect } from '../../../src/runtime/server/utils/evlog-effect'
@@ -165,5 +165,43 @@ describe('runTaskEffect', () => {
     expect(taskLog.error).toHaveBeenCalledWith('task error', expect.any(Object))
     expect(taskLog.warn).toHaveBeenCalledWith('task warning', expect.any(Object))
     expect(taskLog.info).toHaveBeenCalledWith('task info', expect.any(Object))
+  })
+})
+
+// Effect hands the logger a `Cause` on every log, `Cause.empty` when nothing
+// failed, and an empty cause is a truthy object. Guarding on truthiness put
+// "All fibers interrupted without errors." on every event the bridge wrote,
+// which made `effectCause` mean nothing (#45).
+describe('the cause of an Effect log', () => {
+  /** What the request logger was handed for the one line `effect` logs, at `level`. */
+  async function written(level: 'info' | 'error', effect: Effect.Effect<void>) {
+    const requestLog = createMockRequestLogger()
+    vi.mocked(useLogger).mockReturnValue(requestLog)
+
+    await runGalaxyEffect({ path: '/api/test', method: 'GET' } as any, effect)
+
+    const [message, context] = vi.mocked(requestLog[level]).mock.calls[0] as [string, Record<string, unknown>]
+    return { message, context }
+  }
+
+  it('is absent when nothing failed', async () => {
+    const { message, context } = await written('info', Effect.logInfo('nothing went wrong'))
+
+    expect(message).toBe('nothing went wrong')
+    expect(context).not.toHaveProperty('effectCause')
+  })
+
+  it('is the pretty cause of a failure, beside a message that does not repeat it', async () => {
+    const { message, context } = await written('error', Effect.logError('galaxy request failed', Cause.fail(new Error('kaboom'))))
+
+    expect(message).toBe('galaxy request failed')
+    expect(context.effectCause).toContain('kaboom')
+  })
+
+  it('is the pretty cause of a defect, stack included', async () => {
+    const { context } = await written('error', Effect.logError('galaxy request failed', Cause.die(new TypeError('a real bug'))))
+
+    expect(context.effectCause).toMatch(/TypeError: a real bug/)
+    expect(context.effectCause).toMatch(/\n\s+at /)
   })
 })

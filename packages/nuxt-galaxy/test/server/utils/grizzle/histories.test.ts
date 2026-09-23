@@ -1,5 +1,6 @@
 import { Effect, Exit } from 'effect'
 import { describe, expect, it, vi } from 'vitest'
+import { runTaskEffect } from '../../../../src/runtime/server/utils/evlog-effect'
 import {
   addHistoryEffect,
   CreateGalaxyHistoryError,
@@ -27,6 +28,7 @@ import {
   mockDrizzleSelectRejects,
   mockGalaxyHistory,
 } from '../../fixtures'
+import { createMockRequestLogger } from '../../setup'
 
 // Mock getCurrentUserEffect to avoid nested Drizzle resolution issues. The
 // module's error classes are kept real so `toBeInstanceOf` below compares
@@ -376,6 +378,27 @@ describe('discardPreparedHistoryEffect', () => {
     )
 
     expect(drizzle.mock.delete).toHaveBeenCalledTimes(1)
+  })
+
+  // The log is the only place the leftover is visible, so what it says has
+  // to be queryable: the cause as a field of its own and the identifiers as
+  // annotations, the way the bridge writes them, rather than one object
+  // stringified into the message text where no query can reach it (#45).
+  it('logs what Galaxy answered as the cause, and the identifiers as annotations', async () => {
+    const drizzle = createMockDrizzle()
+    const galaxy = createRecordingGalaxyLayer(() => new Error('Galaxy would not remove it'))
+    const taskLog = createMockRequestLogger()
+
+    await runTaskEffect(taskLog, discardPreparedHistoryEffect(mockGalaxyHistory.id, 1).pipe(
+      Effect.provide(drizzle.layer),
+      Effect.provide(galaxy.layer),
+    ))
+
+    expect(taskLog.error).toHaveBeenCalledTimes(1)
+    const [message, context] = vi.mocked(taskLog.error).mock.calls[0] as [string, Record<string, unknown>]
+    expect(message).toBe('galaxy would not remove the container prepared for a failed request')
+    expect(context.effectCause).toContain('Galaxy would not remove it')
+    expect(context.effectAnnotations).toEqual({ galaxyHistoryId: mockGalaxyHistory.id })
   })
 
   // Galaxy accepted the invocation, so the run exists. Removing the history
