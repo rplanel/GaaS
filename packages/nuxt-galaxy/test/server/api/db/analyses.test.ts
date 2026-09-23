@@ -537,4 +537,201 @@ describe('post /api/db/analyses', () => {
       await expect(handler(event)).rejects.toMatchObject({ statusCode: 404 })
     })
   })
+
+  /**
+   * #47. The handler's type annotation is erased at build time, so nothing
+   * checked that a body arrived or had the shape the handler destructures:
+   * `undefined` threw a `TypeError` into a 500 before the program existed —
+   * and so before `toHttpError`, so it reached no log — `workflowId: "abc"`
+   * reached Postgres, a missing `name` bought two Galaxy round trips before
+   * the `varchar(256)` refused it, and `datamap: "f"` passed #43's key
+   * comparison because `Object.keys("f")` is `["0"]`.
+   *
+   * These assert the body is read and refused before the program is built:
+   * nothing looked up, nothing prepared, nothing to unwind. `getSupabaseUser`
+   * is the first thing the program does, so it standing untouched is what
+   * "before the program" means here.
+   */
+  describe('a body that is not an analysis request', () => {
+    const validBody = {
+      name: 'Test Analysis',
+      datamap: {
+        0: { storage_object_id: 'so-1' },
+        1: { storage_object_id: 'so-2' },
+      },
+      parameters: {},
+      workflowId: 1,
+    }
+
+    function expectNothingPrepared() {
+      expect(mocks.getSupabaseUser).not.toHaveBeenCalled()
+      expect(mocks.getWorkflowEffect).not.toHaveBeenCalled()
+      expect(mocks.addHistoryEffect).not.toHaveBeenCalled()
+      expect(mocks.uploadDatasetsEffect).not.toHaveBeenCalled()
+      expect(mocks.runAnalysis).not.toHaveBeenCalled()
+      expect(mocks.discardPreparedHistoryEffect).not.toHaveBeenCalled()
+    }
+
+    it('refuses a request with no body with 400, and names what a body must carry', async () => {
+      // h3 1.15.11's `_parseJSON` resolves `undefined` for an empty body;
+      // this used to be the destructure's `TypeError`, a 500 with no log
+      mocks.readBody.mockResolvedValue(undefined)
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({
+        statusCode: 400,
+        statusMessage: expect.stringMatching(/`name`.*`workflowId`.*`datamap`/),
+      })
+      expectNothingPrepared()
+    })
+
+    it('refuses an unparseable body with its own 400, so h3\'s does not reach the caller', async () => {
+      // `readBody` throws for a body that is not JSON; left uncaught that was
+      // h3's `400 Bad Request` with `Invalid JSON body`, a caller-facing
+      // message this handler never wrote
+      mocks.readBody.mockRejectedValue(new Error('Invalid JSON body'))
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({ statusCode: 400 })
+      await expect(handler(event)).rejects.toSatisfy(
+        (error: { statusMessage?: string }) =>
+          error.statusMessage !== 'Bad Request' && !error.statusMessage?.includes('Invalid JSON'),
+      )
+      expectNothingPrepared()
+    })
+
+    it('refuses a `workflowId` that is not a number before the workflow is looked up', async () => {
+      // `eq(workflows.id, 'abc')` against an integer column was a Postgres
+      // error, and a `GetWorkflowError` this handler does not map: a 500
+      mocks.readBody.mockResolvedValue({ ...validBody, workflowId: 'abc' })
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({
+        statusCode: 400,
+        statusMessage: expect.stringContaining('`workflowId`'),
+      })
+      expectNothingPrepared()
+    })
+
+    // decided in the ticket: the form sends a number, and a client sending
+    // "1" has a bug worth being told about, so it is not coerced
+    it('does not coerce a numeric string into a `workflowId`', async () => {
+      mocks.readBody.mockResolvedValue({ ...validBody, workflowId: '1' })
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({
+        statusCode: 400,
+        statusMessage: expect.stringContaining('`workflowId`'),
+      })
+      expectNothingPrepared()
+    })
+
+    // `analyses.name` is `varchar(256) notNull`, so each of these used to
+    // create a Galaxy history and insert a row before Postgres refused the
+    // insert with a 500. #39's compensation unwound the history; the two
+    // round trips were still spent.
+    describe.each([
+      ['absent', undefined],
+      ['empty', ''],
+      ['blank', '   '],
+      ['over 256 characters', 'a'.repeat(257)],
+    ])('a `name` that is %s', (_label, name) => {
+      it('is refused with 400 before anything is prepared on Galaxy or in the database', async () => {
+        mocks.readBody.mockResolvedValue({ ...validBody, name })
+        const handler = await loadHandler()
+
+        await expect(handler(event)).rejects.toMatchObject({
+          statusCode: 400,
+          statusMessage: expect.stringContaining('`name`'),
+        })
+        expectNothingPrepared()
+      })
+    })
+
+    it('accepts a `name` of exactly 256 characters, the column\'s width', async () => {
+      mocks.readBody.mockResolvedValue({ ...validBody, name: 'a'.repeat(256) })
+      const handler = await loadHandler()
+
+      expect(await handler(event)).toEqual(mockAnalysisResult)
+    })
+
+    // #43's guard compares `Object.keys(datamap)` against the declared steps,
+    // and `Object.keys` answers for a non-object: `"f"` gives `["0"]`, which
+    // satisfies a workflow declaring an input at step 0 and reaches
+    // `uploadDatasetsEffect` with `storage_object_id: undefined`; `{ 0: null }`
+    // is a `TypeError` inside its destructure, a logged 500. Both are named
+    // in the ticket and both are named here.
+    describe.each([
+      ['the string "f"', 'f'],
+      ['a number', 42],
+      ['an array', ['a']],
+      ['null', null],
+      ['an entry that is null, { "0": null }', { 0: null }],
+      ['an entry that is a string', { 0: 'so-1' }],
+      ['an entry carrying no `storage_object_id`', { 0: { id: 1, dataset_name: 'reads.fastq' } }],
+      ['an entry whose `storage_object_id` is not a string', { 0: { storage_object_id: 7 } }],
+    ])('a `datamap` that is %s', (_label, datamap) => {
+      it('is refused with 400 naming the field and what its entries must carry', async () => {
+        mocks.readBody.mockResolvedValue({ ...validBody, datamap })
+        const handler = await loadHandler()
+
+        await expect(handler(event)).rejects.toMatchObject({
+          statusCode: 400,
+          statusMessage: expect.stringMatching(/`datamap`.*`storage_object_id`/),
+        })
+        expectNothingPrepared()
+      })
+    })
+
+    it('refuses `parameters` that is not an object', async () => {
+      mocks.readBody.mockResolvedValue({ ...validBody, parameters: 'not parameters' })
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({
+        statusCode: 400,
+        statusMessage: expect.stringContaining('`parameters`'),
+      })
+      expectNothingPrepared()
+    })
+
+    it('accepts a body with no `parameters`, as the handler always has', async () => {
+      const { parameters: _parameters, ...bodyWithoutParameters } = validBody
+      mocks.readBody.mockResolvedValue(bodyWithoutParameters)
+      const handler = await loadHandler()
+
+      expect(await handler(event)).toEqual(mockAnalysisResult)
+      // runAnalysis(name, galaxyHistoryId, galaxyWorkflowId, historyId,
+      //             workflowId, ownerId, inputs, parameters, datamap, snapshot)
+      expect(mocks.runAnalysis.mock.calls[0]![7]).toEqual({})
+    })
+
+    // decided in the ticket: refuse on the fields the handler uses and ignore
+    // the rest, so an additive client change is not a 400. The form sends the
+    // whole `uploaded_datasets` row it picked as each datamap entry, and the
+    // stored datamap is what copying an analysis later reads back, so those
+    // keys have to survive the check too.
+    it('passes a valid body through unchanged, unknown keys included', async () => {
+      const datamap = {
+        0: { storage_object_id: 'so-1', id: 1, dataset_name: 'reads.fastq', owner_id: 'owner-1' },
+        1: { storage_object_id: 'so-2', id: 2, dataset_name: 'genome.fasta', owner_id: 'owner-1' },
+      }
+      const parameters = { 2: { threshold: '0.5', verbose: true } }
+      mocks.readBody.mockResolvedValue({
+        name: '  Test Analysis  ',
+        datamap,
+        parameters,
+        workflowId: 1,
+        clientVersion: '2.0.0',
+      })
+      const handler = await loadHandler()
+
+      expect(await handler(event)).toEqual(mockAnalysisResult)
+      expect(mocks.uploadDatasetsEffect).toHaveBeenCalledWith(expect.objectContaining({ datamap }))
+      const [name, , , , , , , passedParameters, passedDatamap] = mocks.runAnalysis.mock.calls[0]!
+      // the name is the reader's, spaces and all: checked, not rewritten
+      expect(name).toBe('  Test Analysis  ')
+      expect(passedParameters).toEqual(parameters)
+      expect(passedDatamap).toEqual(datamap)
+    })
+  })
 })

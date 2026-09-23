@@ -1,4 +1,4 @@
-import type { Datamap, DatasetState, DatasetTerminalState } from 'blendtype'
+import type { DatasetState, DatasetTerminalState } from 'blendtype'
 import type { EventHandlerRequest, H3Event } from 'h3'
 
 import type { NewDataset } from '../../../types/nuxt-galaxy'
@@ -46,8 +46,21 @@ export class UpdateDatasetError extends Data.TaggedError('UpdateDatasetError')<{
   readonly message: string
 }> {}
 
+/**
+ * What this reads off a datamap entry, and nothing more: the storage object
+ * behind the dataset. It used to be typed as `blendtype`'s `Datamap`, whose
+ * `DataFromMap` also requires an `id` and a `name` that the form never sends
+ * and this code never reads, so the type claimed more than the request could
+ * satisfy (#47). A missing identifier is still answered below with
+ * `MissingStorageObjectIdError`, so a caller typed more loosely than the
+ * request body is refused rather than uploaded from nothing.
+ */
+export interface UploadableDatamapEntry {
+  readonly storage_object_id?: string | null
+}
+
 export interface UploadDatasetParams {
-  datamap: Datamap
+  datamap: Record<string, UploadableDatamapEntry>
   galaxyHistoryId: string
   historyId: number
   ownerId: string

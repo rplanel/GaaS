@@ -76,7 +76,8 @@
     "effect": "catalog:",
     "evlog": "catalog:",
     "jwt-decode": "catalog:",
-    "postgres": "catalog:"
+    "postgres": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@antfu/eslint-config": "catalog:",
