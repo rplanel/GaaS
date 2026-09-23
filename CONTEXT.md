@@ -9,16 +9,28 @@ One run of a workflow, requested by a user through the web application and execu
 _Avoid_: Run, job, invocation (the latter two are Galaxy-side parts of an analysis)
 
 **Workflow**:
-A Galaxy workflow, identified by its name and version, that an administrator has activated for the web application.
+A Galaxy workflow, identified by its name and version, that an administrator has published for the web application.
 _Avoid_: Pipeline, tool
 
 **Version**:
-The release label a workflow's author gives it through its `version:` tag in Galaxy. Two activated workflows with the same name and different versions are two workflows to the web application.
-_Avoid_: Galaxy version, auto version, revision
+The label an administrator gives one revision of a Galaxy workflow when publishing it. A label never moves: a change to the workflow, however small, is a new version. Two published workflows with the same name and different versions are two workflows to the web application.
+_Avoid_: Galaxy version, auto version, revision, version tag
 
 **Revision**:
-One save of a workflow on the Galaxy side. Every save appends a revision with its own identifier, while the workflow keeps its name and version.
+One save of a workflow on the Galaxy side. Every save appends a revision with its own identifier, while the workflow keeps its name. A version pins exactly one revision, and an analysis runs the revision its version pins.
 _Avoid_: Galaxy version, version index, workflow instance
+
+**Publish**:
+The act by which an administrator makes a version: choosing one revision of a Galaxy workflow and giving it a label. Nothing is copied in Galaxy.
+_Avoid_: Activate, import, register
+
+**Active**:
+A version users may start an analysis on. A version is active when published; an administrator can retire it and make it active again.
+_Avoid_: Enabled, live, visible
+
+**Retired**:
+A version that is no longer active. It stays a version: its analyses, their results views and its usage statistics are untouched.
+_Avoid_: Unpublished, deactivated, deleted, archived, inactive
 
 **Results view**:
 The component a developer writes to display the results of an analysis, matched to the analysis's workflow by name and version. When no view matches the version, the view for the workflow name alone applies; when there is none either, the view for every workflow of the app applies.
@@ -31,10 +43,6 @@ _Avoid_: Fallback level, match type, specificity
 **Generic results view**:
 The results view GaaS itself shows for an analysis whose workflow has no results view.
 _Avoid_: Fallback component, default view
-
-**Retagged workflow**:
-An activated workflow whose `name:` or `version:` tag in Galaxy no longer equals the values stored at activation. The stored values are what every analysis of it is matched with, so its results view is read from them; the admin workflows page names both the stored and the live values on the row.
-_Avoid_: Stale workflow, outdated tags, tag mismatch
 
 **Owner**:
 The user who requested an analysis. Every analysis and every monitoring record has exactly one owner.
