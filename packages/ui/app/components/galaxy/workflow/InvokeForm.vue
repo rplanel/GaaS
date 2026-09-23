@@ -75,11 +75,18 @@ const REQUIRED = 'Required'
 const schema = computed(() => z.object({
   // `min(1)` is what makes the `required` marker on the field mean something:
   // plain `z.string()` rejects the untouched `undefined` but accepts the `''`
-  // a reader leaves behind by typing a name and clearing it again.
+  // a reader leaves behind by typing a name and clearing it again. `trim()`
+  // comes first so that a name of only spaces is that same `''` rather than a
+  // string with a length: the server refuses it either way (#47), but here
+  // the reader is told by the marker beside the field, not after a round
+  // trip. What the schema outputs is the trimmed name, and that is what is
+  // sent, so the length rule measures what will be stored (`varchar(256)`,
+  // 256 allowed).
   analysisName: z
     .string({ error: REQUIRED })
+    .trim()
     .min(1, REQUIRED)
-    .max(256, 'Must be less than 256 characters'),
+    .max(256, 'Must be at most 256 characters'),
   inputs: z.object(
     Object.fromEntries(
       Object.keys(toValue(workflowInputs)).map(stepId => [
