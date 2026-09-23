@@ -25,7 +25,7 @@ The component a developer writes to display the results of an analysis, matched 
 _Avoid_: Result page, workflow component, custom result display
 
 **Rung**:
-How specifically a results view names the workflows it applies to, tried from the most specific down: exact (one name and version), name-level (every version of a name), app-wide (every workflow of the app). A match says which rung applied, or none, in which case the generic results view shows.
+How specifically a results view names the workflows it applies to, tried from the most specific down: exact (one name and version), name-level (every version of a name), app-wide (every workflow of the app). A match says which rung applied, or none, in which case the generic results view shows. The admin workflows page reads a match to an administrator in three words: exact, fallback (a name-level or app-wide view stands in) or none; that fallback is a reading of the match, not a rung.
 _Avoid_: Fallback level, match type, specificity
 
 **Generic results view**:
