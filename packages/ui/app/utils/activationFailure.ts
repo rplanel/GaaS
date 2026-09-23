@@ -1,3 +1,5 @@
+import { serverWordsOf, statusCodeOf } from './serverRefusal'
+
 /**
  * What an administrator is told when activating a workflow was refused.
  */
@@ -26,6 +28,14 @@ export const unexplainedActivationFailure: ActivationFailure = {
  * that comes with a message is shown as the server wrote it, and only the
  * statuses whose message would mislead (a bare "Unauthorized", a database
  * "Permission denied") get their own wording.
+ *
+ * The words are the ones in the JSON body, read through `serverWordsOf`. This
+ * used to fall back to the rejection's own `statusMessage`, the HTTP reason
+ * phrase, when the body had none, which could show an administrator Node's
+ * default phrase for the status — "Conflict" — as if the server had written
+ * it. It no longer does (#63): a 4xx with no words in the body gets the
+ * fixed copy below, and since Nitro writes a `statusMessage` into every error
+ * body it renders, no refusal this server produces reaches that case.
  */
 export function describeActivationFailure(error: unknown): ActivationFailure {
   const statusCode = statusCodeOf(error)
@@ -55,28 +65,4 @@ export function describeActivationFailure(error: unknown): ActivationFailure {
     }
   }
   return unexplainedActivationFailure
-}
-
-function statusCodeOf(error: unknown): number | undefined {
-  const statusCode = fieldOf(error, 'statusCode')
-  return typeof statusCode === 'number' ? statusCode : undefined
-}
-
-/**
- * The server's own words, if it had any.
- *
- * The JSON body h3 sends is read first: `$fetch` keeps it under `data`, and it
- * is the only place the message survives HTTP/2, which drops the reason phrase
- * the error's own `statusMessage` is read from.
- */
-function serverWordsOf(error: unknown): string | undefined {
-  for (const candidate of [fieldOf(fieldOf(error, 'data'), 'statusMessage'), fieldOf(error, 'statusMessage')]) {
-    if (typeof candidate === 'string' && candidate.trim().length > 0)
-      return candidate
-  }
-  return undefined
-}
-
-function fieldOf(value: unknown, field: string): unknown {
-  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>)[field] : undefined
 }

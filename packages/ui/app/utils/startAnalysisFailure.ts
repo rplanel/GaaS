@@ -1,3 +1,5 @@
+import { serverWordsOf, statusCodeOf } from './serverRefusal'
+
 /**
  * What a reader is told when starting an analysis was refused.
  */
@@ -36,7 +38,8 @@ const unexplainedRefusal = 'Check the inputs you selected and submit again.'
  * That sentence is written for a reader — it names the input by the label
  * they saw beside the field — so it is shown as the description under a fixed
  * title. Every other status keeps its fixed copy, and a bare number is read as
- * a status with no words at all.
+ * a status with no words at all. The words are read from the JSON body alone,
+ * through `serverWordsOf`, which says why the reason phrase is never read.
  *
  * A 403 is not reachable from this endpoint today, but `ForbiddenError` is one
  * of the shared statuses every handler answers the same way (see
@@ -81,35 +84,4 @@ export function describeStartAnalysisFailure(refusal: unknown): StartAnalysisFai
     }
   }
   return unexplainedStartAnalysisFailure
-}
-
-function statusCodeOf(error: unknown): number | undefined {
-  const statusCode = fieldOf(error, 'statusCode')
-  return typeof statusCode === 'number' ? statusCode : undefined
-}
-
-/**
- * The server's own words, if it had any.
- *
- * Only the JSON body is read. `$fetch` rejects with an ofetch `FetchError`
- * that keeps that body under `data` and sets its own `statusMessage` from the
- * response's reason phrase, which is not the server's sentence: HTTP/2 carries
- * no reason phrase at all, and over HTTP/1.1 Node fills in the status's
- * default one — "Bad Request" — when the server set none, so reading it would
- * show the reader a phrase nobody wrote for them. Nitro's error handler writes
- * the thrown error's `statusMessage` and `message` into the body, which is
- * where `activationFailure.ts` reads them too; that one falls back to the
- * reason phrase, and this one does not, for the reason above.
- */
-function serverWordsOf(error: unknown): string | undefined {
-  const body = fieldOf(error, 'data')
-  for (const candidate of [fieldOf(body, 'statusMessage'), fieldOf(body, 'message')]) {
-    if (typeof candidate === 'string' && candidate.trim().length > 0)
-      return candidate
-  }
-  return undefined
-}
-
-function fieldOf(value: unknown, field: string): unknown {
-  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>)[field] : undefined
 }
