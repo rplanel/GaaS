@@ -270,6 +270,100 @@ describe('insertWorkflow', () => {
     expect(row).not.toHaveProperty('workflow_slug')
   })
 
+  /**
+   * #66. The export's `version` is not a version and does not start at 1: it
+   * is the 0-based index of the latest revision, added to the export by
+   * Galaxy's `workflow_to_dict` as `len(stored.workflows) - 1`
+   * (`managers/workflows.py:1063`, dev 47c11fe5edbd). A workflow imported
+   * from a file and never edited has one revision and exports `0`, and the
+   * check refused it as an invalid version.
+   */
+  describe('the export\'s version, a 0-based revision index', () => {
+    it.each([
+      ['0, the only revision of an imported workflow', 0],
+      ['1, the first save after creating in the editor', 1],
+    ])('activates a workflow whose export carries %s and stores it as auto_version', async (_label, version) => {
+      const galaxyLayer = createMockGalaxyLayer({ ...mockGalaxyWorkflowExport, version })
+      const drizzle = createMockDrizzle()
+      drizzle.setResult([mockDbUser])
+
+      const { layer: supabaseClientLayer, mockClient } = createMockServerSupabaseClientLayer({
+        queryResult: { data: [{ id: 1 }], error: null },
+      })
+      const supabaseClaimsLayer = createMockServerSupabaseClaimsLayer(mockSupabaseUser)
+      const event = createMockEvent()
+
+      await insertWorkflow('galaxy-workflow-1', 'https://galaxy.example.com', 'admin@example.org', event).pipe(
+        Effect.provide(galaxyLayer),
+        Effect.provide(drizzle.layer),
+        Effect.provide(supabaseClientLayer),
+        Effect.provide(supabaseClaimsLayer),
+        Effect.runPromise,
+      )
+
+      expect(insertedRow(mockClient)).toMatchObject({ auto_version: version })
+    })
+
+    it.each([
+      ['a negative number', -1],
+      ['a fraction', 1.5],
+    ])('refuses %s, calling it the revision index rather than a version', async (_label, version) => {
+      // Galaxy cannot produce either, so an export carrying one is not what
+      // it claims to be and is refused before anything is written
+      const galaxyLayer = createMockGalaxyLayer({ ...mockGalaxyWorkflowExport, version })
+      const drizzle = createMockDrizzle()
+      drizzle.setResult([mockDbUser])
+
+      const { layer: supabaseClientLayer, mockClient } = createMockServerSupabaseClientLayer()
+      const supabaseClaimsLayer = createMockServerSupabaseClaimsLayer(mockSupabaseUser)
+      const event = createMockEvent()
+
+      const exit = await insertWorkflow('galaxy-workflow-1', 'https://galaxy.example.com', 'admin@example.org', event).pipe(
+        Effect.provide(galaxyLayer),
+        Effect.provide(drizzle.layer),
+        Effect.provide(supabaseClientLayer),
+        Effect.provide(supabaseClaimsLayer),
+        Effect.runPromiseExit,
+      )
+
+      expectFailure(exit, (error) => {
+        expect(error).toBeInstanceOf(GetWorkflowError)
+        expect((error as GetWorkflowError).message).toContain('revision index')
+        expect((error as GetWorkflowError).message).toContain(String(version))
+        // the glossary reserves "Version" for the release tag
+        expect((error as GetWorkflowError).message).not.toMatch(/\bVersion\b/)
+      })
+      expect(mockClient.schema).not.toHaveBeenCalled()
+    })
+
+    it('refuses a numeric string one layer up, in the export schema, before the range is read', async () => {
+      // `galaxyWorkflowExportSchema` types `version` as a number, so a string
+      // never reaches `insertWorkflow`'s range check: blendtype refuses the
+      // export as a whole. Named here so the two layers are read together.
+      const galaxyLayer = createMockGalaxyLayer({ ...mockGalaxyWorkflowExport, version: '1' as unknown as number })
+      const drizzle = createMockDrizzle()
+      drizzle.setResult([mockDbUser])
+
+      const { layer: supabaseClientLayer, mockClient } = createMockServerSupabaseClientLayer()
+      const supabaseClaimsLayer = createMockServerSupabaseClaimsLayer(mockSupabaseUser)
+      const event = createMockEvent()
+
+      const exit = await insertWorkflow('galaxy-workflow-1', 'https://galaxy.example.com', 'admin@example.org', event).pipe(
+        Effect.provide(galaxyLayer),
+        Effect.provide(drizzle.layer),
+        Effect.provide(supabaseClientLayer),
+        Effect.provide(supabaseClaimsLayer),
+        Effect.runPromiseExit,
+      )
+
+      expectFailure(exit, (error) => {
+        expect(error).toMatchObject({ _tag: 'WorkflowError' })
+        expect((error as { message: string }).message).toContain('Invalid workflow export format')
+      })
+      expect(mockClient.schema).not.toHaveBeenCalled()
+    })
+  })
+
   it.each([
     ['name', 'nf-core/epitopeprediction', ['name:nf-core/epitopeprediction', 'version:1.0']],
     ['version', '1.0+galaxy1', ['name:epitopeprediction', 'version:1.0+galaxy1']],

@@ -118,9 +118,19 @@ export function insertWorkflow(
           message: 'Workflow has no name. Set a name in Galaxy before exporting.',
         }))
       }
-      if (typeof galaxyWorkflow.version !== 'number' || !Number.isInteger(galaxyWorkflow.version) || galaxyWorkflow.version < 1) {
+      // The export's `version` is not a version and does not start at 1. It is
+      // the 0-based index of the revision exported, which Galaxy adds to every
+      // downloaded dict as `len(stored.workflows) - 1` (`workflow_to_dict`,
+      // `managers/workflows.py:1063`, dev 47c11fe5edbd), and it is the same
+      // integer `invoke` takes to run that revision (#48). A workflow imported
+      // from a file and never edited has one revision and exports `0`; the
+      // check used to refuse it as an invalid version (#66). The export schema
+      // has already refused anything that is not a number, so only the range
+      // is decided here: an integer of at least 0, which is all Galaxy can
+      // produce. Anything else means the export is not what it claims to be.
+      if (!Number.isInteger(galaxyWorkflow.version) || galaxyWorkflow.version < 0) {
         return yield* Effect.fail(new GetWorkflowError({
-          message: `Workflow version is invalid (${galaxyWorkflow.version}). Version must be a positive integer.`,
+          message: `The export's \`version\` (the revision index) is invalid (${galaxyWorkflow.version}). It must be an integer of at least 0.`,
         }))
       }
 
