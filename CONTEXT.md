@@ -32,6 +32,10 @@ _Avoid_: Fallback level, match type, specificity
 The results view GaaS itself shows for an analysis whose workflow has no results view.
 _Avoid_: Fallback component, default view
 
+**Retagged workflow**:
+An activated workflow whose `name:` or `version:` tag in Galaxy no longer equals the values stored at activation. The stored values are what every analysis of it is matched with, so its results view is read from them; the admin workflows page names both the stored and the live values on the row.
+_Avoid_: Stale workflow, outdated tags, tag mismatch
+
 **Owner**:
 The user who requested an analysis. Every analysis and every monitoring record has exactly one owner.
 _Avoid_: Author, creator
