@@ -312,6 +312,61 @@ describe('invokeForm component', () => {
     expect(lastBody).toMatchObject({ name: 'My analysis', workflowId: 1 })
   })
 
+  // #61. `min(1)` measured the name as typed, so a name of only spaces had a
+  // length and was sent; the server then refused it (#47) and the reader was
+  // told after a round trip, in the server's words, what the `Required`
+  // marker says one keystroke earlier for an empty name.
+  it('refuses a name of only spaces as it refuses an empty one', async () => {
+    const form = await mountForm()
+
+    await form.find('input[name="name"]').setValue('   ')
+    await form.find('form').trigger('submit')
+
+    await vi.waitFor(() => {
+      expect(form.text()).toContain('Required')
+    })
+    expect(requestsMade).toBe(0)
+  })
+
+  it('sends the name without the spaces around it', async () => {
+    const form = await mountForm()
+
+    await form.find('input[name="name"]').setValue('  My analysis  ')
+    await form.find('form').trigger('submit')
+
+    await vi.waitFor(() => {
+      expect(requestsMade).toBe(1)
+    })
+    expect(lastBody).toMatchObject({ name: 'My analysis' })
+  })
+
+  // The rule is the column's width, `varchar(256)`, and the server accepts
+  // exactly 256 (#47); the message used to say "less than 256", which the
+  // rule never enforced.
+  it('accepts a name of exactly 256 characters', async () => {
+    const form = await mountForm()
+
+    await form.find('input[name="name"]').setValue('a'.repeat(256))
+    await form.find('form').trigger('submit')
+
+    await vi.waitFor(() => {
+      expect(requestsMade).toBe(1)
+    })
+    expect(lastBody).toMatchObject({ name: 'a'.repeat(256) })
+  })
+
+  it('refuses a name of 257 characters, saying how many are allowed', async () => {
+    const form = await mountForm()
+
+    await form.find('input[name="name"]').setValue('a'.repeat(257))
+    await form.find('form').trigger('submit')
+
+    await vi.waitFor(() => {
+      expect(form.text()).toContain('Must be at most 256 characters')
+    })
+    expect(requestsMade).toBe(0)
+  })
+
   it('tells the reader when Galaxy refuses the submission', async () => {
     refuseWith = 503
     const form = await mountForm()
