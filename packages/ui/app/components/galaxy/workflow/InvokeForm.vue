@@ -267,8 +267,10 @@ async function runAnalysis(event: FormSubmitEvent<Schema>) {
   }).catch((error: unknown) => {
     // Shown rather than thrown: every status this endpoint refuses with is
     // one the reader may be able to act on, and a fatal page would cost
-    // them the form they just filled in. The reader gets the status turned
-    // into words; the cause itself is only ever worth a log.
+    // them the form they just filled in. The rejection itself is handed
+    // over, not just its status: a 400 carries the server's own words for
+    // which input was left out (#43, #46), and the status alone cannot say.
+    // The cause is still only ever worth a log.
     const { errorStatus } = useErrorStatus(error)
     log.error({
       action: 'analysis:start_failed',
@@ -276,7 +278,7 @@ async function runAnalysis(event: FormSubmitEvent<Schema>) {
       status: toValue(errorStatus),
       error: String(error),
     })
-    submitError.value = describeStartAnalysisFailure(toValue(errorStatus))
+    submitError.value = describeStartAnalysisFailure(error)
     return null
   })
   startingAnalysis.value = false
