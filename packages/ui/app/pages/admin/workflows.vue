@@ -3,8 +3,8 @@
 import type { BadgeProps, BreadcrumbItem, TableColumn } from '@nuxt/ui'
 
 import type { GalaxyWorkflowsItem } from 'blendtype'
-import type { Database } from 'nuxt-galaxy'
-import type { ResultsViewReading } from '../../utils/resultsViews'
+import type { Database, WorkflowRow } from 'nuxt-galaxy'
+import type { ResultsViewKey, ResultsViewReading } from '../../utils/resultsViews'
 import { resultsViews } from '#build/gaas/results-views.mjs'
 import { USwitch } from '#components'
 import { getWorkflowTagName, getWorkflowTagVersion } from 'blendtype'
@@ -14,13 +14,23 @@ import { matchResultsView, resultsViewReading } from '../../utils/resultsViews'
 // type Database = SupabaseTypes.Database
 
 interface ComputedGalaxyWorklowItem extends GalaxyWorkflowsItem {
-  /** The `version:` tag value. */
+  /** The `version:` tag value, as Galaxy carries it now. */
   version: string
-  /** The `name:` tag value. */
+  /** The `name:` tag value, as Galaxy carries it now. */
   tagName: string
   activated: boolean
-  /** Whether a results view names this workflow, something wider stands in, or none does. */
+  /**
+   * Whether a results view names this workflow, something wider stands in, or
+   * none does. Read from the keys stored at activation once there are any,
+   * from the live tags before.
+   */
   resultsView: ResultsViewReading
+  /**
+   * Set when the workflow was retagged in Galaxy after activation: the keys
+   * activation stored, which every analysis of it is matched with, beside
+   * the tags Galaxy carries now, which no analysis will ever be matched with.
+   */
+  retagged?: { stored: ResultsViewKey, live: ResultsViewKey }
 }
 interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined
@@ -73,6 +83,8 @@ const galaxyWorkflowGalaxyColumns = ref<
   TableColumn<ComputedGalaxyWorklowItem>[]
 >([
   { accessorKey: 'name', header: 'Name' },
+  // The live tag, even once activation has stored another: this column says
+  // what Galaxy carries, and the Results view cell says when the two differ.
   { accessorKey: 'version', header: 'Version' },
   {
     accessorKey: 'number_of_steps',
@@ -97,18 +109,28 @@ const galaxyWorkflowGalaxyColumns = ref<
   },
 
   {
-    // Keyed by tag values, so it answers before activation too: a developer
-    // sees here whether the view directory they wrote will be picked up
-    // (ADR 0003). The same match the results page runs, so the two agree.
+    // The same match the results page runs, handed the same keys, so the two
+    // agree (ADR 0003). Once activated, those are the `name_key` and
+    // `version_key` stored then, which every analysis is matched with even
+    // after the workflow is retagged in Galaxy; before activation there are
+    // none, so the live tags stand in and a developer sees here whether the
+    // view directory they wrote will be picked up. A row whose tags moved says
+    // so, naming both values, since the reading otherwise looks wrong.
     accessorKey: 'resultsView',
     header: 'Results view',
     cell: ({ row }) => {
-      const reading = row.original.resultsView
-      return h(UBadge, {
+      const { resultsView: reading, retagged } = row.original
+      const badge = h(UBadge, {
         'data-testid': 'workflow-results-view',
         'variant': 'subtle',
         'color': resultsViewReadingColor[reading],
       }, () => reading)
+      if (!retagged)
+        return badge
+      return h('div', { class: 'flex flex-col items-start gap-1' }, [
+        badge,
+        h('p', { 'data-testid': 'workflow-tag-drift', 'class': 'text-xs text-warning' }, describeRetag(retagged)),
+      ])
     },
   },
   {
@@ -197,15 +219,25 @@ const { data: dbWorkflows } = useQuery(() => {
   return workflowsListQuery({ supabase })
 })
 
+/** The activated workflows by Galaxy id, each carrying the keys activation stored. */
 const dbWorkflowsMap = computed(() => {
   const dbWorkflowsVal = toValue(dbWorkflows)
   if (dbWorkflowsVal) {
-    return new Map(
+    return new Map<string, WorkflowRow>(
       dbWorkflowsVal.map(workflow => [workflow.galaxy_id, workflow]),
     )
   }
-  return new Map()
+  return new Map<string, WorkflowRow>()
 })
+
+/**
+ * The one line an administrator reads on a retagged row: what activation
+ * stored, then what Galaxy carries now, each as `name/version`, so a
+ * developer can see which directory the analyses are matched against.
+ */
+function describeRetag({ stored, live }: NonNullable<ComputedGalaxyWorklowItem['retagged']>) {
+  return `Activated as ${stored.name}/${stored.version}; Galaxy now tags it ${live.name}/${live.version}.`
+}
 
 const computedWorkflows = computed<ComputedGalaxyWorklowItem[]>(() => {
   const allWorkflowsVal = toValue(allWorkflows)
@@ -221,13 +253,22 @@ const computedWorkflows = computed<ComputedGalaxyWorklowItem[]>(() => {
     const tagName = getWorkflowTagName(workflow.tags)
     if (version === null || tagName === null)
       return []
-    const { rung } = matchResultsView(resultsViews, { name: tagName, version })
+    const live: ResultsViewKey = { name: tagName, version }
+    // Activation stores the tag values once and nothing updates them, so an
+    // analysis is matched with the stored keys whatever Galaxy tags now.
+    const stored = dbWorkflowsMap.value.get(workflow.id)
+    const key: ResultsViewKey = stored ? { name: stored.name_key, version: stored.version_key } : live
+    const { rung } = matchResultsView(resultsViews, key)
+    const retagged = stored && (key.name !== live.name || key.version !== live.version)
+      ? { stored: key, live }
+      : undefined
     return [{
       ...workflow,
       version,
       tagName,
-      activated: dbWorkflowsMap.value.has(workflow.id),
+      activated: stored !== undefined,
       resultsView: resultsViewReading(rung),
+      retagged,
     }]
   })
 })
