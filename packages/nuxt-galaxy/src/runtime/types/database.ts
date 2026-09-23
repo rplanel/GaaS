@@ -28,6 +28,7 @@ export type Database = {
           stdout: string | null
           sync_attempts: number
           workflow_id: number
+          workflow_revision: number | null
         }
         Insert: {
           created_at?: string
@@ -47,6 +48,7 @@ export type Database = {
           stdout?: string | null
           sync_attempts?: number
           workflow_id: number
+          workflow_revision?: number | null
         }
         Update: {
           created_at?: string
@@ -66,6 +68,7 @@ export type Database = {
           stdout?: string | null
           sync_attempts?: number
           workflow_id?: number
+          workflow_revision?: number | null
         }
         Relationships: [
           {

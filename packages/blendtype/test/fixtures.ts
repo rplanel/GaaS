@@ -293,17 +293,27 @@ export function createLogCaptureLayer(messages: string[]): Layer.Layer<never> {
   )
 }
 
+/** The options an effect handed to `$fetch`, as far as tests read them. */
+export interface TrackedFetchOptions {
+  method?: string
+  query?: Record<string, unknown>
+  body?: Record<string, unknown>
+}
+
 /**
- * Creates a mock GalaxyFetch layer that tracks the last request URL.
- * Useful for verifying correct API calls.
+ * Creates a mock GalaxyFetch layer that tracks the last request URL and the
+ * options it was made with. Useful for verifying correct API calls: the URL
+ * says which resource, the options say how (method, query, body).
  */
 export function createUrlTrackingLayer<T>(
   response: T,
-): Layer.Layer<GalaxyFetch> & { getLastUrl: () => string } {
+): Layer.Layer<GalaxyFetch> & { getLastUrl: () => string, getLastOptions: () => TrackedFetchOptions | undefined } {
   let lastUrl = ''
+  let lastOptions: TrackedFetchOptions | undefined
 
-  const fetchMock = async (url: string, _options?: unknown) => {
+  const fetchMock = async (url: string, options?: TrackedFetchOptions) => {
     lastUrl = url
+    lastOptions = options
     return response
   }
 
@@ -314,6 +324,7 @@ export function createUrlTrackingLayer<T>(
 
   return Object.assign(layer, {
     getLastUrl: () => lastUrl,
+    getLastOptions: () => lastOptions,
   })
 }
 

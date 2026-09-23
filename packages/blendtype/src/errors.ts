@@ -144,6 +144,27 @@ export function extractStatusCode(error: unknown): number | undefined {
 }
 
 /**
+ * What Galaxy said, when it said anything.
+ *
+ * Galaxy refuses a request with a JSON body `{ err_msg, err_code }` (its
+ * `MessageException`), and ofetch keeps that body under `data` while setting
+ * the error's own `message` to the status line, `[POST] "…": 400 Bad Request`.
+ * The sentence Galaxy wrote is the one worth carrying — which tools an
+ * invocation is missing, why a request was refused — so it wins when present.
+ * A body without one, or a cause that is not a fetch error, has only the
+ * message to offer (#48).
+ */
+function whatGalaxySaid(cause: unknown): string | undefined {
+  if (typeof cause !== 'object' || cause === null)
+    return undefined
+  const data = (cause as { data?: unknown }).data
+  if (typeof data !== 'object' || data === null)
+    return undefined
+  const errMsg = (data as { err_msg?: unknown }).err_msg
+  return typeof errMsg === 'string' && errMsg.trim().length > 0 ? errMsg : undefined
+}
+
+/**
  * Helper to create error message with context.
  */
 export function formatErrorMessage(
@@ -153,7 +174,7 @@ export function formatErrorMessage(
   cause: unknown,
 ): string {
   const resource = resourceId ? ` ${resourceId}` : ''
-  const causeMessage = cause instanceof Error ? cause.message : String(cause)
+  const causeMessage = whatGalaxySaid(cause) ?? (cause instanceof Error ? cause.message : String(cause))
   return `${action} ${resourceType}${resource}: ${causeMessage}`
 }
 

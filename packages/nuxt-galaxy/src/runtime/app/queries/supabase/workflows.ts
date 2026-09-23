@@ -29,7 +29,9 @@ async function supabaseWorkflowByIdQuery({ id, supabase }: { id: number, supabas
   return supabase
     .schema('galaxy')
     .from('workflows')
-    .select('id, name, galaxy_id, definition')
+    // `auto_version` is the revision the row was activated at, which the form
+    // asks Galaxy to describe and the server starts (#48)
+    .select('id, name, galaxy_id, auto_version, definition')
     .eq('id', id)
     .limit(1)
     .single()

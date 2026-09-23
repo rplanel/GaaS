@@ -25,6 +25,10 @@ let lastBody: Record<string, unknown> | null = null
 
 /** The Galaxy identifier the workflow row the form is started for carries. */
 const GALAXY_WORKFLOW_ID = 'galaxy-wf-1'
+/** The Galaxy revision that row was activated at, its `auto_version`. */
+const WORKFLOW_REVISION = 3
+/** The `version` the form asked Galaxy for on its last workflow fetch, `null` when it asked for none. */
+let requestedRevision: string | null = null
 
 /** The inputs the workflow declares, as Galaxy describes them. */
 let workflowInputs: Record<string, WorkflowInput> = {}
@@ -50,7 +54,7 @@ function anInput(label: string, uuid: string): WorkflowInput {
 function servedRows(relation: string) {
   switch (relation) {
     case 'workflows':
-      return { id: 1, name: 'A workflow', galaxy_id: GALAXY_WORKFLOW_ID, definition: null }
+      return { id: 1, name: 'A workflow', galaxy_id: GALAXY_WORKFLOW_ID, auto_version: WORKFLOW_REVISION, definition: null }
     case 'uploaded_datasets_with_storage_path':
       if (datasetsUnavailable) {
         throw new Error('the dataset list is unavailable')
@@ -90,10 +94,17 @@ function fakeSupabaseClient() {
 const supabase = fakeSupabaseClient()
 mockNuxtImport('useSupabaseClient', () => () => supabase)
 
-/** Only the two fields the form reads off a Galaxy workflow are filled in. */
-registerEndpoint(`/api/galaxy/workflows/${GALAXY_WORKFLOW_ID}`, () => ({
-  data: { inputs: workflowInputs, steps: {} } as unknown as GalaxyWorkflow,
-}))
+/**
+ * Only the two fields the form reads off a Galaxy workflow are filled in. The
+ * query string is read off the raw request rather than with `getQuery`, for
+ * the reason `submittedBody` gives below: `h3` is not a dependency here.
+ */
+registerEndpoint(`/api/galaxy/workflows/${GALAXY_WORKFLOW_ID}`, (event) => {
+  requestedRevision = new URL(event.node.req.url ?? '/', 'http://test').searchParams.get('version')
+  return {
+    data: { inputs: workflowInputs, steps: {} } as unknown as GalaxyWorkflow,
+  }
+})
 
 /**
  * The submitted JSON. `readBody` would mean importing `h3`, which is not a
@@ -235,6 +246,7 @@ async function submit(wrapper: Awaited<ReturnType<typeof mountForm>>) {
 beforeEach(() => {
   refuseWith = null
   refuseMessage = null
+  requestedRevision = null
   serveEmptyBody = false
   requestsMade = 0
   lastBody = null
@@ -266,6 +278,19 @@ describe('an input whose pickable datasets never arrived', () => {
 })
 
 describe('invokeForm component', () => {
+  // #48. The proxy answered with Galaxy's latest revision while the server
+  // compares the datamap against, and now invokes, the activated one; a save
+  // in Galaxy's editor that added an input would have shown a field the
+  // server then refused. The form asks for the revision the row was
+  // activated at, which is the one that will run.
+  it('asks Galaxy for the revision that was activated, not the latest', async () => {
+    await mountForm()
+
+    await vi.waitFor(() => {
+      expect(requestedRevision).toBe(String(WORKFLOW_REVISION))
+    })
+  })
+
   it('can mount component', async () => {
     const component = await mountForm()
     expect(component.text()).toContain('Select workflow parameters')

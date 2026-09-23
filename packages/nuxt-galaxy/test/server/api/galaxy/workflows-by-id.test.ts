@@ -1,5 +1,5 @@
 import { Context, Effect, Layer } from 'effect'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockWorkflow = {
   id: 'galaxy-workflow-1',
@@ -59,6 +59,11 @@ vi.mock('../../../../src/runtime/server/utils/grizzle/supabase', () => ({
   ServerSupabaseClaims: MockServerSupabaseClaims,
 }))
 
+/** The query string of the request under test; `{}` is a request with none. */
+const mocks = vi.hoisted(() => ({
+  getQuery: vi.fn((): Record<string, unknown> => ({})),
+}))
+
 // Mock h3
 vi.mock('h3', async (importOriginal) => {
   const original = await importOriginal<typeof import('h3')>()
@@ -69,10 +74,15 @@ vi.mock('h3', async (importOriginal) => {
         return 'galaxy-workflow-1'
       return undefined
     }),
+    getQuery: mocks.getQuery,
   }
 })
 
 describe('get /api/galaxy/workflows/:workflowId', () => {
+  beforeEach(() => {
+    mocks.getQuery.mockReturnValue({})
+  })
+
   it('should return { data, error: undefined } on success', async () => {
     const bt = await import('blendtype')
     const getWorkflowEffectSpy = bt.getWorkflowEffect as ReturnType<typeof vi.fn>
@@ -117,5 +127,55 @@ describe('get /api/galaxy/workflows/:workflowId', () => {
     expect(result.error).toBeDefined()
     expect(result.error?.message).toBeDefined()
     expect(result.data).toBeUndefined()
+  })
+
+  // #48. Galaxy answers `GET /api/workflows/{id}` with the latest revision
+  // unless `version` names one, and the form built its inputs from this
+  // proxy while the server compared the datamap against, and now invokes,
+  // the activated revision. The proxy forwards the one it is asked for.
+  describe('the revision the caller asks for', () => {
+    it('forwards a revision index to Galaxy', async () => {
+      mocks.getQuery.mockReturnValue({ version: '3' })
+      const bt = await import('blendtype')
+      const getWorkflowEffectSpy = bt.getWorkflowEffect as ReturnType<typeof vi.fn>
+      getWorkflowEffectSpy.mockReturnValue(Effect.succeed(mockWorkflow))
+
+      const handler = (await import('../../../../src/runtime/server/api/galaxy/workflows/[workflowId].get')).default
+      const result = await handler({} as any)
+
+      expect(getWorkflowEffectSpy).toHaveBeenLastCalledWith('galaxy-workflow-1', 3)
+      expect(result.data).toEqual(mockWorkflow)
+    })
+
+    it('asks for the latest when no revision is named, as before', async () => {
+      const bt = await import('blendtype')
+      const getWorkflowEffectSpy = bt.getWorkflowEffect as ReturnType<typeof vi.fn>
+      getWorkflowEffectSpy.mockReturnValue(Effect.succeed(mockWorkflow))
+
+      const handler = (await import('../../../../src/runtime/server/api/galaxy/workflows/[workflowId].get')).default
+      await handler({} as any)
+
+      expect(getWorkflowEffectSpy).toHaveBeenLastCalledWith('galaxy-workflow-1', undefined)
+    })
+
+    // Galaxy's `get_internal_version` indexes a list, so anything but a
+    // non-negative integer is refused here rather than handed to Galaxy to
+    // answer for; the form only ever sends the row's `auto_version`, so a
+    // caller reaching this has a bug worth being told about.
+    it.each([
+      ['a word', 'abc'],
+      ['a negative index', '-1'],
+      ['a fraction', '1.5'],
+    ])('refuses %s with 400 before asking Galaxy', async (_label, version) => {
+      mocks.getQuery.mockReturnValue({ version })
+      const bt = await import('blendtype')
+      const getWorkflowEffectSpy = bt.getWorkflowEffect as ReturnType<typeof vi.fn>
+      getWorkflowEffectSpy.mockClear()
+
+      const handler = (await import('../../../../src/runtime/server/api/galaxy/workflows/[workflowId].get')).default
+
+      await expect(handler({} as any)).rejects.toMatchObject({ statusCode: 400 })
+      expect(getWorkflowEffectSpy).not.toHaveBeenCalled()
+    })
   })
 })

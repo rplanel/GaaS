@@ -2,7 +2,16 @@ import type { Ref } from '#imports'
 import type { GalaxyWorkflow, WorkflowToolParameters, WorkflowToolStep } from 'blendtype'
 import { computed, createError, ref, toValue, watch } from '#imports'
 
-export function useGalaxyWorkflow(workflowId: Ref<string | undefined>) {
+/**
+ * One Galaxy workflow as the proxy describes it, with the readings the form
+ * and the analysis panel take off it.
+ *
+ * `revision` is the revision to describe: the workflow row's `auto_version`,
+ * the one an analysis of that row starts (#48). Left out, Galaxy describes
+ * its latest revision, which is what every caller got before and which a save
+ * in Galaxy's editor moves.
+ */
+export function useGalaxyWorkflow(workflowId: Ref<string | undefined>, revision?: Ref<number | undefined>) {
   const workflow = ref<GalaxyWorkflow | undefined>(undefined)
   const error = ref<Error | null>(null)
   const workflowSteps = computed(() => {
@@ -81,8 +90,10 @@ export function useGalaxyWorkflow(workflowId: Ref<string | undefined>) {
     if (!workflowIdVal) {
       return
     }
+    const revisionVal = toValue(revision)
     const { error: getWorkflowError, data } = await $fetch<{ error: { message: string, statusMessage: string, statusCode: number } | string | undefined, data: GalaxyWorkflow | undefined }>(
       `/api/galaxy/workflows/${workflowIdVal}`,
+      revisionVal === undefined ? undefined : { query: { version: revisionVal } },
     )
     if (getWorkflowError) {
       if (typeof getWorkflowError === 'string') {
@@ -99,9 +110,11 @@ export function useGalaxyWorkflow(workflowId: Ref<string | undefined>) {
     workflow.value = data
   }
 
-  watch(workflowId, () => {
+  // both arrive from the same workflow row, so one change to either is one
+  // fetch of the workflow they name together
+  watch(() => [toValue(workflowId), toValue(revision)], () => {
     fetchWorkflow()
-  }, { immediate: true, deep: true })
+  }, { immediate: true })
 
   // fetchWorkflow()
   return {

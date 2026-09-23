@@ -5,7 +5,16 @@ import { extractStatusCode, formatErrorMessage, WorkflowError } from './errors'
 import { GalaxyFetch, toGalaxyServiceUnavailable, withRetry } from './galaxy'
 import { galaxyWorkflowExportSchema } from './types'
 
-export function getWorkflowEffect(workflowId: string) {
+/**
+ * One stored workflow as Galaxy describes it, at one revision.
+ *
+ * Galaxy keeps every save of a stored workflow as a revision and answers
+ * `GET /api/workflows/{id}` with the latest unless `version` names another:
+ * the 0-based index of the revision, oldest first, which is the integer the
+ * export's own `version` field carries and the one an invocation takes (#48).
+ * Left out, the latest is described, as before.
+ */
+export function getWorkflowEffect(workflowId: string, revision?: number) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
     const workflow = Effect.tryPromise({
@@ -13,6 +22,7 @@ export function getWorkflowEffect(workflowId: string) {
         `api/workflows/${workflowId}`,
         {
           method: 'GET',
+          ...(revision === undefined ? {} : { query: { version: revision } }),
         },
       ),
       catch: caughtError => new WorkflowError({
@@ -26,8 +36,8 @@ export function getWorkflowEffect(workflowId: string) {
   }).pipe(withRetry)
 }
 
-export function getWorkflow(workflowId: string, layer: Layer.Layer<GalaxyFetch>) {
-  return getWorkflowEffect(workflowId).pipe(
+export function getWorkflow(workflowId: string, layer: Layer.Layer<GalaxyFetch>, revision?: number) {
+  return getWorkflowEffect(workflowId, revision).pipe(
     toGalaxyServiceUnavailable,
     Effect.provide(layer),
     Effect.runPromise,
@@ -103,7 +113,17 @@ export function getWorkflows(layer: Layer.Layer<GalaxyFetch>) {
   )
 }
 
-export function invokeWorkflowEffect(historyGalaxyId: string, workflowId: string, inputs: GalaxyWorkflowInput, parameters: GalaxyWorkflowParameters) {
+/**
+ * Start `workflowId` in the history `historyGalaxyId` with `inputs` and
+ * `parameters`.
+ *
+ * `revision` is the 0-based index of the revision to run, the same integer
+ * the export's `version` field carries; Galaxy resolves it with
+ * `get_internal_version`. Left out, Galaxy runs the latest revision of the
+ * stored workflow, which is what every caller got before #48 and what let a
+ * save in Galaxy's editor change what the next analysis ran.
+ */
+export function invokeWorkflowEffect(historyGalaxyId: string, workflowId: string, inputs: GalaxyWorkflowInput, parameters: GalaxyWorkflowParameters, revision?: number) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
     const workflow = Effect.tryPromise({
@@ -111,7 +131,12 @@ export function invokeWorkflowEffect(historyGalaxyId: string, workflowId: string
         `api/workflows/${workflowId}/invocations`,
         {
           method: 'POST',
-          body: { history_id: historyGalaxyId, inputs, parameters },
+          body: {
+            history_id: historyGalaxyId,
+            inputs,
+            parameters,
+            ...(revision === undefined ? {} : { version: revision }),
+          },
         },
       ),
       catch: caughtError => new WorkflowError({
@@ -125,8 +150,8 @@ export function invokeWorkflowEffect(historyGalaxyId: string, workflowId: string
   })
 }
 
-export function invokeWorkflow(historyGalaxyId: string, workflowId: string, inputs: GalaxyWorkflowInput, parameters: GalaxyWorkflowParameters, layer: Layer.Layer<GalaxyFetch>) {
-  return invokeWorkflowEffect(historyGalaxyId, workflowId, inputs, parameters).pipe(
+export function invokeWorkflow(historyGalaxyId: string, workflowId: string, inputs: GalaxyWorkflowInput, parameters: GalaxyWorkflowParameters, layer: Layer.Layer<GalaxyFetch>, revision?: number) {
+  return invokeWorkflowEffect(historyGalaxyId, workflowId, inputs, parameters, revision).pipe(
     toGalaxyServiceUnavailable,
     Effect.provide(layer),
     Effect.runPromise,
