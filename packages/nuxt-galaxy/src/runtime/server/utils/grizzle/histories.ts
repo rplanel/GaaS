@@ -9,7 +9,7 @@ import { analyses } from '../../db/schema/galaxy/analyses'
 import { histories } from '../../db/schema/galaxy/histories'
 import { Drizzle } from '../drizzle'
 import { takeExactlyOne, takeUniqueOrNull } from './helper.js'
-import { galaxyUserNotFound, getCurrentUserEffect } from './user'
+import { getCurrentUserEffect } from './user'
 
 // const supabase = useSupabaseClient();
 
@@ -80,16 +80,15 @@ export class CreateGalaxyHistoryError extends Data.TaggedError('CreateGalaxyHist
  *
  * The third guard is gone rather than tagged: `insertHistory` takes its row
  * with `takeExactlyOne`, which refuses a zero-row insert itself (#31), so
- * `historyDb` can no longer be null and the guard was unreachable.
+ * `historyDb` can no longer be null and the guard was unreachable. The first
+ * went the same way in #33: `getCurrentUserEffect` fails for a missing row
+ * itself, so the one guard left is Galaxy creating nothing.
  */
 export function addHistoryEffect(name: string, ownerId: string) {
   const { public: { galaxy: { url } }, galaxy: { email } } = useRuntimeConfig()
 
   return Effect.gen(function* () {
     const currentUser = yield* getCurrentUserEffect(url, email)
-    if (!currentUser) {
-      return yield* Effect.fail(galaxyUserNotFound(url, email))
-    }
 
     const galaxyHistory = yield* bt.createHistoryEffect(name)
     if (!galaxyHistory) {

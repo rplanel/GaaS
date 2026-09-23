@@ -16,7 +16,7 @@ import {
   updateHistoryState,
   updateIsHistorySync,
 } from '../../../../src/runtime/server/utils/grizzle/histories'
-import { GalaxyUserNotFoundError } from '../../../../src/runtime/server/utils/grizzle/user'
+import { galaxyUserNotFound, GalaxyUserNotFoundError } from '../../../../src/runtime/server/utils/grizzle/user'
 import {
   createMockDrizzle,
   createMockGalaxyLayer,
@@ -247,7 +247,9 @@ describe('addHistoryEffect', () => {
   it('says which of the two causes it was when there is no Galaxy user row', async () => {
     const userModule = await import('../../../../src/runtime/server/utils/grizzle/user')
     const getCurrentUserEffectSpy = userModule.getCurrentUserEffect as ReturnType<typeof vi.fn>
-    getCurrentUserEffectSpy.mockReturnValueOnce(Effect.succeed(null))
+    // the leaf's own answer since #33: it fails for a missing row rather than
+    // handing back a `null` for this function to refuse
+    getCurrentUserEffectSpy.mockReturnValueOnce(Effect.fail(galaxyUserNotFound('https://galaxy.example.com', 'admin@example.org')))
 
     const drizzle = createMockDrizzle()
     const galaxyLayer = createMockGalaxyLayer(mockGalaxyHistory)

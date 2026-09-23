@@ -1,7 +1,7 @@
 import type { Mock } from 'vitest'
 import { Effect } from 'effect'
 import { describe, expect, it, vi } from 'vitest'
-import { GalaxyUserNotFoundError } from '../../../../src/runtime/server/utils/grizzle/user'
+import { galaxyUserNotFound, GalaxyUserNotFoundError } from '../../../../src/runtime/server/utils/grizzle/user'
 import {
   getWorkflowEffect,
   GetWorkflowError,
@@ -68,7 +68,9 @@ describe('getWorkflowEffect', () => {
   it('fails rather than resolving with undefined when there is no Galaxy user row', async () => {
     const userModule = await import('../../../../src/runtime/server/utils/grizzle/user')
     const getCurrentUserEffectSpy = userModule.getCurrentUserEffect as ReturnType<typeof vi.fn>
-    getCurrentUserEffectSpy.mockReturnValueOnce(Effect.succeed(null))
+    // the leaf's own answer since #33: it fails for a missing row rather than
+    // handing back a `null` for this function to refuse
+    getCurrentUserEffectSpy.mockReturnValueOnce(Effect.fail(galaxyUserNotFound('https://galaxy.example.com', 'admin@example.org')))
 
     const drizzle = createMockDrizzle()
     drizzle.setResult([mockDbWorkflow])
@@ -116,6 +118,40 @@ describe('getWorkflowEffect', () => {
 })
 
 describe('insertWorkflow', () => {
+  // #33. This function refused the missing row with `GetWorkflowError`, the
+  // tag that means "the workflow query failed", so the one grep a reader
+  // does when an import breaks found a deployment fault under it. The leaf
+  // is run for real here, against an empty user table, so this proves the
+  // failure now arrives under its own name rather than that the mock says so.
+  it('reports a missing Galaxy user row as itself, not as a workflow read failure', async () => {
+    const userModule = await import('../../../../src/runtime/server/utils/grizzle/user')
+    const realUserModule = await vi.importActual<typeof userModule>('../../../../src/runtime/server/utils/grizzle/user')
+    vi.mocked(userModule.getCurrentUserEffect).mockImplementationOnce(realUserModule.getCurrentUserEffect)
+
+    const galaxyLayer = createMockGalaxyLayer(mockGalaxyWorkflowExport)
+    const drizzle = createMockDrizzle()
+    drizzle.setResult([]) // no Galaxy user row
+    const { layer: supabaseClientLayer, mockClient } = createMockServerSupabaseClientLayer({
+      queryResult: { data: [], error: null },
+    })
+    const supabaseClaimsLayer = createMockServerSupabaseClaimsLayer(mockSupabaseUser)
+
+    const exit = await insertWorkflow('galaxy-workflow-1', 'https://galaxy.example.com', 'admin@example.org', createMockEvent()).pipe(
+      Effect.provide(galaxyLayer),
+      Effect.provide(drizzle.layer),
+      Effect.provide(supabaseClientLayer),
+      Effect.provide(supabaseClaimsLayer),
+      Effect.runPromiseExit,
+    )
+
+    expectFailure(exit, (error) => {
+      expect(error).toBeInstanceOf(GalaxyUserNotFoundError)
+      expect(error).not.toBeInstanceOf(GetWorkflowError)
+    })
+    // refused before the insert, as before: nothing reaches the database
+    expect(mockClient.schema).not.toHaveBeenCalled()
+  })
+
   it('should export workflow from Galaxy and insert via Supabase', async () => {
     const galaxyLayer = createMockGalaxyLayer(mockGalaxyWorkflowExport)
     const drizzle = createMockDrizzle()
