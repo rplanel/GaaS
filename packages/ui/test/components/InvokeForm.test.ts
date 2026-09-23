@@ -166,13 +166,54 @@ async function choose(
   stepId: string,
   dataset: UploadedDatasetDb,
 ) {
+  await pickerOf(form, stepId).findComponent({ name: 'ComboboxRoot' }).setValue(dataset)
+}
+
+/** The dataset picker rendered for `stepId`, found by the name its field carries. */
+function pickerOf(form: Awaited<ReturnType<typeof mountForm>>, stepId: string) {
   const picker = form
     .findAllComponents({ name: 'USelectMenu' })
     .find(candidate => candidate.props('name') === `inputs.${stepId}`)
   if (!picker) {
     throw new Error(`no dataset picker is rendered for step ${stepId}`)
   }
-  await picker.findComponent({ name: 'ComboboxRoot' }).setValue(dataset)
+  return picker
+}
+
+/**
+ * What the picker for `stepId` offers once the reader has opened it and typed
+ * `text` into its filter, as the labels of the options listed.
+ *
+ * The menu renders in a portal on `document.body`, outside the wrapper, so it
+ * is reached through the trigger's `aria-controls`, which names the one menu
+ * that belongs to this picker.
+ */
+async function offeredAfterTyping(
+  form: Awaited<ReturnType<typeof mountForm>>,
+  stepId: string,
+  text: string,
+): Promise<string[]> {
+  const trigger = pickerOf(form, stepId).find('button[aria-haspopup="listbox"]')
+  await trigger.trigger('click')
+
+  const menu = await vi.waitFor(() => {
+    const element = document.getElementById(trigger.attributes('aria-controls') ?? '')
+    expect(element, 'the picker opened its menu').not.toBeNull()
+    return element!
+  })
+  const filter = menu.querySelector<HTMLInputElement>('input[role="combobox"]')
+  if (!filter) {
+    throw new Error('the picker has no filter input')
+  }
+  filter.value = text
+  filter.dispatchEvent(new Event('input', { bubbles: true }))
+
+  return vi.waitFor(() => {
+    const options = Array.from(menu.querySelectorAll('[role="option"]'))
+      .map(option => option.textContent?.trim() ?? '')
+    expect(options, 'the filter reached the list').not.toEqual(DATASETS.map(dataset => dataset.dataset_name))
+    return options
+  })
 }
 
 /** Name the analysis and ask for it, the way a reader does. */
@@ -393,6 +434,25 @@ describe('workflow inputs the reader has to choose', () => {
         1: { storage_object_id: 'so-genome' },
       },
     })
+  })
+})
+
+// #44: the picker offered **Create "…"** for any text typed, and clicking it
+// did nothing: `USelectMenu` only emits `create`, and nothing here listened.
+// The picker chooses among datasets already uploaded, so it offers nothing
+// but those. Asserted on the options a reader is shown, not on the prop that
+// used to produce the dead one.
+describe('the dataset picker', () => {
+  it('offers the datasets that match what the reader typed, and no action', async () => {
+    workflowInputs = { 0: anInput('Sequence data', 'input-uuid-0') }
+    const form = await mountForm()
+    await inputFieldOf(form, '0')
+
+    const offered = await offeredAfterTyping(form, '0', 'reads')
+
+    // the typed text reached the list: without this, an empty menu would pass
+    expect(offered).toContain('reads.fastq')
+    expect(offered.filter(option => option.startsWith('Create'))).toEqual([])
   })
 })
 
