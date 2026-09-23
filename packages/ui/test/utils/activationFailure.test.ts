@@ -4,7 +4,9 @@ import { describeActivationFailure } from '../../app/utils/activationFailure'
 /**
  * What `$fetch` rejects with: the status, and the h3 JSON body under `data`,
  * whose `statusMessage` is where the server's words survive HTTP/2, which
- * drops the reason phrase `statusMessage` on the error itself is read from.
+ * drops the reason phrase that `statusMessage` on the error itself is. Here
+ * the two carry the same words, as they do over HTTP/1.1 when the server set
+ * a reason phrase; `reasonPhraseOnly` below is the case where they differ.
  */
 function fetchError(statusCode: number, statusMessage?: string) {
   return {
@@ -12,6 +14,21 @@ function fetchError(statusCode: number, statusMessage?: string) {
     statusMessage,
     data: { statusCode, statusMessage },
     message: `[POST] "/api/db/workflows": ${statusCode} ${statusMessage ?? ''}`,
+  }
+}
+
+/**
+ * A rejection whose body carries no words while the error's own
+ * `statusMessage` does: Node fills in the status's default reason phrase over
+ * HTTP/1.1 when the server set none, so the phrase says something the server
+ * never wrote.
+ */
+function reasonPhraseOnly(statusCode: number, reasonPhrase: string, body: Record<string, unknown> = { statusCode, statusMessage: '' }) {
+  return {
+    statusCode,
+    statusMessage: reasonPhrase,
+    data: body,
+    message: `[POST] "/api/db/workflows": ${statusCode} ${reasonPhrase}`,
   }
 }
 
@@ -79,6 +96,42 @@ describe('describeActivationFailure', () => {
 
     expect(described.title).toBe('Could not activate the workflow')
     expect(described.description).toBe('Something went wrong on our side. Please try again.')
+  })
+
+  // #63. The reason phrase is never the server's sentence: absent over
+  // HTTP/2, Node's default for the status over HTTP/1.1 when the server set
+  // none, and a copy of the body's `statusMessage` when it did. This util used
+  // to fall back to it; `startAnalysisFailure.ts` never did, and now both
+  // read the same way.
+  describe('a refusal whose reason phrase says more than its body', () => {
+    it('does not show the administrator the reason phrase when the body carried no words', () => {
+      const described = describeActivationFailure(reasonPhraseOnly(409, 'Conflict'))
+
+      expect(described.description).not.toBe('Conflict')
+      expect(described.title).toBe('Could not activate the workflow')
+      expect(described.description).toBe('Something went wrong on our side. Please try again.')
+    })
+
+    it('still shows the body\'s words when they differ from the reason phrase', () => {
+      // the positive control for the case above: it is the body that is read,
+      // not the phrase, so words in the body win over a phrase that disagrees
+      const words = 'Workflow galaxy-wf-1 already exists in the database'
+      const described = describeActivationFailure(
+        reasonPhraseOnly(409, 'Conflict', { statusCode: 409, statusMessage: words }),
+      )
+
+      expect(described.title).toBe('Workflow not activated')
+      expect(described.description).toBe(words)
+    })
+
+    it('reads words that arrived in the body\'s `message` alone', () => {
+      const words = 'Workflow galaxy-wf-1 already exists in the database'
+      const described = describeActivationFailure(
+        reasonPhraseOnly(409, 'Conflict', { statusCode: 409, message: words }),
+      )
+
+      expect(described.description).toBe(words)
+    })
   })
 
   it('still says something for an error that carries no status', () => {

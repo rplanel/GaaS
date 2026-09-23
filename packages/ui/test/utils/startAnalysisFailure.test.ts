@@ -85,7 +85,7 @@ describe('describeStartAnalysisFailure', () => {
     it('does not show the reader the reason phrase when the body carried no words', () => {
       // Node fills in "Bad Request" for a 400 whose server set no reason
       // phrase, so the error's own `statusMessage` says something the server
-      // never wrote; `activationFailure.ts` falls back to it, and this must not
+      // never wrote; nothing in this layer reads it (#63), and this pins that
       const described = describeStartAnalysisFailure(
         fetchError(400, { statusCode: 400, statusMessage: '' }, 'Bad Request'),
       )
