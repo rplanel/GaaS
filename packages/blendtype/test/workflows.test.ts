@@ -6,6 +6,8 @@ import {
   exportWorkflowEffect,
   getWorkflow,
   getWorkflowEffect,
+  getWorkflowRevisions,
+  getWorkflowRevisionsEffect,
   getWorkflows,
   getWorkflowsEffect,
   getWorkflowTagName,
@@ -215,6 +217,85 @@ describe('getWorkflows (Promise wrapper)', () => {
 })
 
 // ============================================================================
+// getWorkflowRevisionsEffect
+// ============================================================================
+
+/**
+ * What `GET /api/workflows/{id}/versions` answers: one entry per revision,
+ * oldest first. `version` is the 0-based index Galaxy indexes the revision
+ * by, the same integer `download?version=` and an invocation take (#48); it
+ * is read off each entry, never off its position in the list.
+ */
+const mockRevisions = [
+  { version: 0, update_time: '2026-09-01T10:00:00', steps: 3 },
+  { version: 1, update_time: '2026-09-10T08:30:00', steps: 4 },
+  { version: 2, update_time: '2026-09-20T16:45:00', steps: 4 },
+]
+
+describe('getWorkflowRevisionsEffect', () => {
+  it('lists the revisions of a stored workflow as Galaxy indexes them', () =>
+    pipe(
+      Effect.gen(function* () {
+        const revisions = yield* getWorkflowRevisionsEffect('wf-123')
+        expect(revisions).toEqual(mockRevisions)
+        expect(revisions.map(revision => revision.version)).toEqual([0, 1, 2])
+      }),
+      Effect.provide(createSuccessLayer(mockRevisions)),
+      Effect.runPromise,
+    ))
+
+  it('asks Galaxy for the versions of that stored workflow', () =>
+    pipe(
+      Effect.gen(function* () {
+        const trackingLayer = createUrlTrackingLayer(mockRevisions)
+        yield* getWorkflowRevisionsEffect('wf-123').pipe(
+          Effect.provide(trackingLayer),
+        )
+        expect(trackingLayer.getLastUrl()).toBe('api/workflows/wf-123/versions')
+        expect(trackingLayer.getLastOptions()?.method).toBe('GET')
+      }),
+      Effect.runPromise,
+    ))
+
+  it('should handle network failures', () =>
+    pipe(
+      Effect.gen(function* () {
+        const exit = yield* Effect.exit(
+          getWorkflowRevisionsEffect('wf-123'),
+        )
+
+        expectFailure(exit, (error) => {
+          expect(error).toBeInstanceOf(WorkflowError)
+          expect(error.message).toContain('Error listing the revisions of workflow wf-123')
+          expect(error.workflowId).toBe('wf-123')
+        })
+      }),
+      Effect.provide(
+        createFailureLayer(new Error(ERROR_MESSAGES.NETWORK_REFUSED)),
+      ),
+      Effect.runPromise,
+    ))
+})
+
+describe('getWorkflowRevisions (Promise wrapper)', () => {
+  it('should resolve with the revisions', async () => {
+    const result = await getWorkflowRevisions('wf-123', createSuccessLayer(mockRevisions))
+    expect(result).toEqual(mockRevisions)
+  })
+
+  it('should map Service Unavailable to GalaxyServiceUnavailable', async () => {
+    try {
+      await getWorkflowRevisions('wf-123', createServiceUnavailableLayer())
+      expect.unreachable('Should have thrown')
+    }
+    catch (error) {
+      const inner = extractFiberFailure(error)
+      expect((inner as any)._tag).toBe('GalaxyServiceUnavailable')
+    }
+  })
+})
+
+// ============================================================================
 // exportWorkflowEffect
 // ============================================================================
 
@@ -289,6 +370,54 @@ describe('exportWorkflowEffect', () => {
       Effect.runPromise,
     ))
 
+  // ADR 0004, #73. Galaxy exports the latest revision unless `version` names
+  // one; a version may pin an older revision, so the export is asked for the
+  // one being published and the row's revision, uuid and snapshot are that
+  // export's rather than the latest's.
+  it('exports the revision it is given, by its index', () =>
+    pipe(
+      Effect.gen(function* () {
+        const trackingLayer = createUrlTrackingLayer({ ...mockRawExport, version: 2 })
+        const exported = yield* exportWorkflowEffect('wf-123', 'export', 2).pipe(
+          Effect.provide(trackingLayer),
+        )
+        expect(trackingLayer.getLastUrl()).toBe(
+          'api/workflows/wf-123/download?style=export&version=2',
+        )
+        expect(exported.version).toBe(2)
+        expect(exported.uuid).toBe('fa95ecd4-ed11-49e2-b3d6-8f178b807256')
+      }),
+      Effect.runPromise,
+    ))
+
+  it('exports the latest revision when given none, as before', () =>
+    pipe(
+      Effect.gen(function* () {
+        const trackingLayer = createUrlTrackingLayer(mockRawExport)
+        yield* exportWorkflowEffect('wf-123', 'export', undefined).pipe(
+          Effect.provide(trackingLayer),
+        )
+        expect(trackingLayer.getLastUrl()).toBe(
+          'api/workflows/wf-123/download?style=export',
+        )
+      }),
+      Effect.runPromise,
+    ))
+
+  it('asks for revision 0 rather than dropping it as falsy', () =>
+    pipe(
+      Effect.gen(function* () {
+        const trackingLayer = createUrlTrackingLayer({ ...mockRawExport, version: 0 })
+        yield* exportWorkflowEffect('wf-123', 'export', 0).pipe(
+          Effect.provide(trackingLayer),
+        )
+        expect(trackingLayer.getLastUrl()).toBe(
+          'api/workflows/wf-123/download?style=export&version=0',
+        )
+      }),
+      Effect.runPromise,
+    ))
+
   it('should handle network failures', () =>
     pipe(
       Effect.gen(function* () {
@@ -312,6 +441,13 @@ describe('exportWorkflow (Promise wrapper)', () => {
   it('should resolve with exported workflow data', async () => {
     const result = await exportWorkflow('wf-export-id', createSuccessLayer(mockRawExport))
     expect(result.name).toBe('Exported Workflow')
+  })
+
+  it('passes the revision on', async () => {
+    const trackingLayer = createUrlTrackingLayer({ ...mockRawExport, version: 1 })
+    const result = await exportWorkflow('wf-export-id', trackingLayer, 'export', 1)
+    expect(trackingLayer.getLastUrl()).toBe('api/workflows/wf-export-id/download?style=export&version=1')
+    expect(result.version).toBe(1)
   })
 
   it('should map Service Unavailable to GalaxyServiceUnavailable', async () => {
