@@ -78,13 +78,22 @@ describe('readPublishVersionBody', () => {
   it.each([
     ['name', 'nf-core/epitopeprediction'],
     ['name', '.hidden'],
-    ['label', '1.0+galaxy1'],
     ['label', 'a b'],
   ])('refuses a %s that cannot name a results view directory, naming the field and the rule', (field, value) => {
     const refused = refusal({ ...body, [field]: value })
 
     expect(refused.statusCode).toBe(400)
     expect(refused.statusMessage).toContain(`\`${field}\` cannot name a results view directory`)
-    expect(refused.statusMessage).toContain('letters, digits, dots, hyphens and underscores')
+    expect(refused.statusMessage).toContain('letters, digits, dots, hyphens, plus signs and underscores')
+  })
+
+  // A `+` is legal in a directory name, literal in a URL path segment and
+  // nothing to a prop, and the results view fixtures already hold a
+  // `satelliteFinder/0.10+galaxy2` directory the scanner finds and the matcher
+  // matches. Galaxy's `version:` tag almost always carries `+galaxyN`, so the
+  // pre-fill used to hit the refusal every time.
+  it('accepts a label with a plus sign, as Galaxy tool versions carry, and keeps it intact', () => {
+    expect(readPublishVersionBody({ ...body, label: '0.10+galaxy2' })).toEqual({ ...body, label: '0.10+galaxy2' })
+    expect(readPublishVersionBody({ ...body, name: 'satellite+finder' })).toEqual({ ...body, name: 'satellite+finder' })
   })
 })

@@ -173,7 +173,7 @@ describe('post /api/db/workflows', () => {
   it('refuses a name or a label that cannot name a results view directory with 400, before anything else', async () => {
     // the rule used to be checked against Galaxy tags and answered 422; the
     // value is typed in the dialog now, so it is a body the caller can fix
-    mocks.readBody.mockResolvedValue({ ...body, label: '0.11+galaxy2' })
+    mocks.readBody.mockResolvedValue({ ...body, label: '0.11/galaxy2' })
     const handler = await loadHandler()
 
     await expect(handler(event)).rejects.toMatchObject({

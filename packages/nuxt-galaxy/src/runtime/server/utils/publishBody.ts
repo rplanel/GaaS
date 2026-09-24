@@ -20,7 +20,7 @@ import { canNameResultsViewDirectory } from './grizzle/resultsViewDirectoryName'
  * zod. The directory rule is spelled out in full because the value it refuses
  * was typed a moment ago and the fix is to type another.
  */
-const DIRECTORY_RULE = 'Use letters, digits, dots, hyphens and underscores, starting with a letter or digit.'
+const DIRECTORY_RULE = 'Use letters, digits, dots, hyphens, plus signs and underscores, starting with a letter or digit.'
 
 const MESSAGES = {
   body: 'The request body must be a JSON object carrying `galaxyId`, `name` and `label`',
