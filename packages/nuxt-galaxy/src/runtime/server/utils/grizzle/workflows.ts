@@ -323,7 +323,8 @@ export function publishVersion(
         () => Effect.fail(new RevisionNotFoundError({
           message: revision === undefined
             ? `Galaxy no longer has stored workflow ${galaxyId}.`
-            : `Galaxy has no revision ${revision} of stored workflow ${galaxyId}.`,
+            // the body carries the index; the sentence is read by a person
+            : `Galaxy has no revision ${bt.galaxyRevisionNumber(revision)} of stored workflow ${galaxyId}.`,
         })),
       ),
     )
@@ -387,7 +388,8 @@ export function publishVersion(
     const sameRevision = ofThisStoredWorkflow.find(version => version.revision === galaxyWorkflow.version)
     if (sameRevision) {
       return yield* Effect.fail(new RevisionAlreadyPublishedError({
-        message: `Revision ${galaxyWorkflow.version} is already published as version "${sameRevision.versionKey}" of "${sameRevision.nameKey}".`,
+        // Galaxy's number, index + 1: what the editor shows the administrator
+        message: `Revision ${bt.galaxyRevisionNumber(galaxyWorkflow.version)} is already published as version "${sameRevision.versionKey}" of "${sameRevision.nameKey}".`,
       }))
     }
     const lineageName = ofThisStoredWorkflow[0]?.nameKey
@@ -408,7 +410,7 @@ export function publishVersion(
     if (missingTools.length > 0) {
       const named = missingTools.map(tool => `${tool.toolId} ${tool.toolVersion}`).join(', ')
       return yield* Effect.fail(new WorkflowToolsMissingError({
-        message: `Revision ${galaxyWorkflow.version} of "${galaxyWorkflow.name}" uses tools missing in Galaxy at their pinned version: ${named}. Install them or choose another revision.`,
+        message: `Revision ${bt.galaxyRevisionNumber(galaxyWorkflow.version)} of "${galaxyWorkflow.name}" uses tools missing in Galaxy at their pinned version: ${named}. Install them or choose another revision.`,
       }))
     }
 

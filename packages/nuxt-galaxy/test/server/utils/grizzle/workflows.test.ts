@@ -270,7 +270,8 @@ describe('publishVersion', () => {
       })
 
       expectFailureOf(await exit, RevisionAlreadyPublishedError, (error) => {
-        expect(error.message).toBe('Revision 1 is already published as version "0.10" of "satelliteFinder".')
+        // Galaxy's number, index + 1: the export carries index 1
+        expect(error.message).toBe('Revision 2 is already published as version "0.10" of "satelliteFinder".')
       })
       expect(mockClient.schema).not.toHaveBeenCalled()
     })
@@ -419,7 +420,7 @@ describe('publishVersion', () => {
       })
 
       expectFailureOf(await exit, RevisionAlreadyPublishedError, (error) => {
-        expect(error.message).toBe('Revision 1 is already published as version "0.10" of "satelliteFinder".')
+        expect(error.message).toBe('Revision 2 is already published as version "0.10" of "satelliteFinder".')
       })
       expect(mockClient.schema).not.toHaveBeenCalled()
     })
@@ -495,7 +496,8 @@ describe('publishVersion', () => {
 
       expectFailureOf(await exit, WorkflowToolsMissingError, (error) => {
         expect(error.message).toBe(
-          `Revision 3 of "Satellite Finder" uses tools missing in Galaxy at their pinned version: ${FOO} 1.2.3+galaxy0, ${BAR} 2.0. Install them or choose another revision.`,
+          // Galaxy's number for the revision the export indexes as 3
+          `Revision 4 of "Satellite Finder" uses tools missing in Galaxy at their pinned version: ${FOO} 1.2.3+galaxy0, ${BAR} 2.0. Install them or choose another revision.`,
         )
       })
       expect(mockClient.schema).not.toHaveBeenCalled()
@@ -623,7 +625,8 @@ describe('publishVersion', () => {
 
       expectFailure(await exit, (error) => {
         expect(error).toBeInstanceOf(RevisionNotFoundError)
-        expect((error as RevisionNotFoundError).message).toBe('Galaxy has no revision 999 of stored workflow galaxy-workflow-1.')
+        // the body carries the index 999; the administrator reads Galaxy's number
+        expect((error as RevisionNotFoundError).message).toBe('Galaxy has no revision 1000 of stored workflow galaxy-workflow-1.')
       })
       expect(mockClient.schema).not.toHaveBeenCalled()
     })

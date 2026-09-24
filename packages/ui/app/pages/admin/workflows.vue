@@ -4,6 +4,7 @@ import type { GalaxyWorkflowsItem } from 'blendtype'
 import type { Database, WorkflowRow } from 'nuxt-galaxy'
 import type { ResultsViewReading } from '../../utils/resultsViews'
 import { resultsViews } from '#build/gaas/results-views.mjs'
+import { galaxyRevisionNumber } from 'blendtype'
 import { log } from 'evlog/client'
 import { describeActiveSwitchFailure } from '../../utils/activeSwitchFailure'
 import { matchResultsView, resultsViewReading } from '../../utils/resultsViews'
@@ -361,7 +362,7 @@ watch(deleteDialogOpen, (isOpen) => {
 function onDeleted(version: WorkflowRow) {
   toast.add({
     title: 'Version deleted',
-    description: `${version.name_key} ${version.version_key} is gone; revision ${version.revision} can be published again under another label.`,
+    description: `${version.name_key} ${version.version_key} is gone; revision ${galaxyRevisionNumber(version.revision)} can be published again under another label.`,
     color: 'success',
     icon: 'i-lucide-circle-check',
   })

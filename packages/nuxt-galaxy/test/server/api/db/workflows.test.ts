@@ -204,13 +204,13 @@ describe('post /api/db/workflows', () => {
   // to reach the dialog rather than be swapped for a reason phrase (#26).
   it.each([
     ['a label already used for this name', new VersionLabelTakenError({ message: 'Version "0.11" of "satelliteFinder" already exists.' })],
-    ['a revision already published', new RevisionAlreadyPublishedError({ message: 'Revision 3 is already published as version "0.10" of "satelliteFinder".' })],
+    ['a revision already published', new RevisionAlreadyPublishedError({ message: 'Revision 4 is already published as version "0.10" of "satelliteFinder".' })],
     ['a name that differs from the lineage', new WorkflowNameLockedError({ message: 'This workflow is published as "satelliteFinder"; a new version keeps that name.' })],
     ['a version published meanwhile', new ConcurrentPublishError({ message: 'Another version was published meanwhile. Reload the page and try again.' })],
     // #75: the request was well formed and the caller may publish; what it
     // asks for conflicts with what Galaxy holds, which the administrator can
     // change by installing the tools or choosing another revision
-    ['a revision whose tools are missing at their pinned version', new WorkflowToolsMissingError({ message: 'Revision 3 of "Satellite Finder" uses tools missing in Galaxy at their pinned version: toolshed.g2.bx.psu.edu/repos/iuc/bar/bar/2.0 2.0. Install them or choose another revision.' })],
+    ['a revision whose tools are missing at their pinned version', new WorkflowToolsMissingError({ message: 'Revision 4 of "Satellite Finder" uses tools missing in Galaxy at their pinned version: toolshed.g2.bx.psu.edu/repos/iuc/bar/bar/2.0 2.0. Install them or choose another revision.' })],
   ])('answers 409 with the error\'s own words for %s', async (_label, error) => {
     mocks.publishVersion.mockReturnValue(Effect.fail(error))
     const handler = await loadHandler()
@@ -227,13 +227,13 @@ describe('post /api/db/workflows', () => {
   // sentence saying which of the two; it used to be a 500 with no words.
   it('answers 404 with the error\'s own words for a revision Galaxy does not have', async () => {
     mocks.publishVersion.mockReturnValue(
-      Effect.fail(new RevisionNotFoundError({ message: 'Galaxy has no revision 999 of stored workflow galaxy-wf-1.' })),
+      Effect.fail(new RevisionNotFoundError({ message: 'Galaxy has no revision 1000 of stored workflow galaxy-wf-1.' })),
     )
     const handler = await loadHandler()
 
     await expect(handler(event)).rejects.toMatchObject({
       statusCode: 404,
-      statusMessage: 'Galaxy has no revision 999 of stored workflow galaxy-wf-1.',
+      statusMessage: 'Galaxy has no revision 1000 of stored workflow galaxy-wf-1.',
     })
   })
 

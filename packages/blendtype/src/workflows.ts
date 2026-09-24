@@ -228,6 +228,22 @@ export function invokeWorkflow(historyGalaxyId: string, workflowId: string, inpu
   )
 }
 
+/**
+ * The number Galaxy's editor gives a revision, from the 0-based index the API
+ * carries.
+ *
+ * Galaxy indexes a stored workflow's revisions from 0: that index is what
+ * `GET api/workflows/{id}/versions` lists as `version`, what the export
+ * carries as `version`, what `download?version=` and an invocation take, and
+ * what GaaS stores as a version's `revision`. Galaxy's editor shows the same
+ * revision to a person as `version + 1` (`WorkflowVersionSelector.vue`), so
+ * "Revision 3" to the API is "4" in the editor. Everything a person reads
+ * goes through this; everything that travels keeps the index.
+ */
+export function galaxyRevisionNumber(index: number): number {
+  return index + 1
+}
+
 export function getWorkflowTagVersion(tags: TagCollection): string | null {
   const tag = tags?.find(tag => tag.startsWith('version:'))
   return tag ? tag.replace('version:', '') : null

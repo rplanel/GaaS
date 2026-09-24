@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { WorkflowRow } from 'nuxt-galaxy'
 import type { DeleteVersionFailure } from '../../utils/deleteVersionFailure'
+import { galaxyRevisionNumber } from 'blendtype'
 import { log } from 'evlog/client'
 import { describeDeleteVersionFailure } from '../../utils/deleteVersionFailure'
 
@@ -73,7 +74,7 @@ async function onConfirm() {
     <template #body>
       <div class="space-y-4">
         <p class="text-sm">
-          The version is removed and revision {{ version.revision }} of the Galaxy workflow can be published again under another label.
+          The version is removed and revision {{ galaxyRevisionNumber(version.revision) }} of the Galaxy workflow can be published again under another label.
           A version that has analyses cannot be deleted: retire it instead, which keeps its analyses, their results views and its usage statistics.
         </p>
 

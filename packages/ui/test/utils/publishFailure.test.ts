@@ -37,7 +37,7 @@ describe('describePublishFailure', () => {
   // can change in the dialog, so its words are shown as the server wrote them.
   it.each([
     ['a label already used for this name', 409, 'Version "0.11" of "satelliteFinder" already exists.'],
-    ['a revision already published', 409, 'Revision 3 is already published as version "0.10" of "satelliteFinder".'],
+    ['a revision already published', 409, 'Revision 4 is already published as version "0.10" of "satelliteFinder".'],
     ['a name that differs from the lineage', 409, 'This workflow is published as "satelliteFinder"; a new version keeps that name.'],
     ['a name that cannot name a results view directory', 400, '`name` cannot name a results view directory. Use letters, digits, dots, hyphens and underscores, starting with a letter or digit.'],
   ])('repeats the server\'s words for %s', (_label, statusCode, message) => {

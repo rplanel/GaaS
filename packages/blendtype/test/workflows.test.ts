@@ -6,6 +6,7 @@ import { GalaxyFetch } from '../src/galaxy'
 import {
   exportWorkflow,
   exportWorkflowEffect,
+  galaxyRevisionNumber,
   getWorkflow,
   getWorkflowEffect,
   getWorkflowRevisions,
@@ -668,5 +669,19 @@ describe('getWorkflowTagName', () => {
   it('should return null for empty tags', () => {
     const result = getWorkflowTagName([])
     expect(result).toBeNull()
+  })
+})
+
+// ============================================================================
+// galaxyRevisionNumber
+// ============================================================================
+
+describe('galaxyRevisionNumber', () => {
+  // Galaxy's editor labels a revision `version + 1` while the API, the export,
+  // the download and an invocation carry the 0-based index; a person reads
+  // the editor's number, a request carries the index
+  it('gives the number Galaxy\'s editor shows for an index', () => {
+    expect(galaxyRevisionNumber(0)).toBe(1)
+    expect(galaxyRevisionNumber(3)).toBe(4)
   })
 })
