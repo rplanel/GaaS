@@ -1,6 +1,8 @@
-import { Effect, pipe } from 'effect'
+import type { Context } from 'effect'
+import { Effect, Layer, pipe } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { WorkflowError } from '../src/errors'
+import { GalaxyFetch } from '../src/galaxy'
 import {
   exportWorkflow,
   exportWorkflowEffect,
@@ -174,6 +176,60 @@ describe('getWorkflowsEffect', () => {
       Effect.provide(createSuccessLayer([mockGalaxyWorkflowsItem])),
       Effect.runPromise,
     ))
+
+  /**
+   * Galaxy's list applies `hidden == show_hidden`: the default omits the
+   * stored workflows the account hid in Galaxy's own list, and asking with
+   * `show_hidden=true` answers only those. Hidden is a display flag of
+   * Galaxy's list and says nothing about whether GaaS can publish or run the
+   * workflow, so a caller that wants every stored workflow asks twice.
+   */
+  describe('the hidden stored workflows', () => {
+    const visible = { ...mockGalaxyWorkflowsItem, id: 'wf-visible', hidden: false }
+    const hidden = { ...mockGalaxyWorkflowsItem, id: 'wf-hidden', hidden: true }
+
+    type GalaxyFetchService = Context.Tag.Service<GalaxyFetch>
+
+    /** A Galaxy that records every call and answers the list each asks for. */
+    function recordingGalaxy() {
+      const calls: { url: string, query?: Record<string, unknown> }[] = []
+      const fetchMock = async (url: string, options?: { query?: Record<string, unknown> }) => {
+        calls.push({ url, query: options?.query })
+        return options?.query?.show_hidden === true ? [hidden] : [visible]
+      }
+      return { calls, layer: Layer.succeed(GalaxyFetch, fetchMock as unknown as GalaxyFetchService) }
+    }
+
+    it('asks once and answers the visible ones by default, as before', () =>
+      pipe(
+        Effect.gen(function* () {
+          const galaxy = recordingGalaxy()
+          const workflows = yield* getWorkflowsEffect().pipe(Effect.provide(galaxy.layer))
+
+          expect(workflows).toEqual([visible])
+          expect(galaxy.calls).toEqual([{ url: 'api/workflows', query: undefined }])
+        }),
+        Effect.runPromise,
+      ))
+
+    it('asks for the hidden ones too when told to, and answers the visible ones first', () =>
+      pipe(
+        Effect.gen(function* () {
+          const galaxy = recordingGalaxy()
+          const workflows = yield* getWorkflowsEffect({ includeHidden: true }).pipe(Effect.provide(galaxy.layer))
+
+          expect(workflows).toEqual([visible, hidden])
+          expect(galaxy.calls.map(call => call.url)).toEqual(['api/workflows', 'api/workflows'])
+          expect(galaxy.calls.map(call => call.query)).toEqual([undefined, { show_hidden: true }])
+        }),
+        Effect.runPromise,
+      ))
+
+    it('takes the option through the Promise wrapper', async () => {
+      const galaxy = recordingGalaxy()
+      expect(await getWorkflows(galaxy.layer, { includeHidden: true })).toEqual([visible, hidden])
+    })
+  })
 
   it('should handle network failures', () =>
     pipe(

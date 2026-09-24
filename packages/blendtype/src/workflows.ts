@@ -94,14 +94,34 @@ export function exportWorkflow(workflowId: string, layer: Layer.Layer<GalaxyFetc
   )
 }
 
-export function getWorkflowsEffect() {
+/** What `getWorkflowsEffect` lists beyond Galaxy's default answer. */
+export interface GetWorkflowsOptions {
+  /**
+   * Also list the stored workflows the account hid in Galaxy's own list.
+   * Galaxy's `GET /api/workflows` applies `hidden == show_hidden`: the
+   * default answers the visible ones only, and `show_hidden=true` answers
+   * only the hidden ones, so both are asked and the visible ones come first.
+   * Hidden is a display flag of Galaxy's list and says nothing about whether
+   * a workflow can be published or run.
+   */
+  readonly includeHidden?: boolean
+}
+
+/**
+ * The stored workflows of the account, as Galaxy lists them: the visible
+ * ones, and with `includeHidden` the hidden ones after them. Deleted ones are
+ * never listed; Galaxy deletes softly and describes a deleted stored workflow
+ * by id, `deleted: true`, which is how a reader tells one that is gone.
+ */
+export function getWorkflowsEffect(options: GetWorkflowsOptions = {}) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
-    const workflow = Effect.tryPromise({
+    const list = (query?: { show_hidden: true }) => Effect.tryPromise({
       try: () => fetchApi<GalaxyWorkflowsItem[]>(
         'api/workflows',
         {
           method: 'GET',
+          ...(query === undefined ? {} : { query }),
         },
       ),
       catch: caughtError => new WorkflowError({
@@ -110,12 +130,16 @@ export function getWorkflowsEffect() {
         cause: caughtError,
       }),
     })
-    return yield* workflow
+    if (!options.includeHidden) {
+      return yield* list()
+    }
+    const [visible, hidden] = yield* Effect.all([list(), list({ show_hidden: true })], { concurrency: 2 })
+    return [...visible, ...hidden]
   }).pipe(withRetry)
 }
 
-export function getWorkflows(layer: Layer.Layer<GalaxyFetch>) {
-  return getWorkflowsEffect().pipe(
+export function getWorkflows(layer: Layer.Layer<GalaxyFetch>, options: GetWorkflowsOptions = {}) {
+  return getWorkflowsEffect(options).pipe(
     toGalaxyServiceUnavailable,
     Effect.provide(layer),
     Effect.runPromise,

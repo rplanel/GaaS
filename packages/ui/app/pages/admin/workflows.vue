@@ -87,7 +87,27 @@ const computedBreadcrumbsItems = computed(() => {
 })
 
 const columns = ref<TableColumn<StoredWorkflowRow>[]>([
-  { accessorKey: 'name', header: 'Name' },
+  {
+    accessorKey: 'name',
+    header: 'Name',
+    // Galaxy's own list can hide a stored workflow; the list this page reads
+    // includes those, since hidden says nothing about publishing or running,
+    // and says so beside the name so the administrator knows why Galaxy's
+    // list does not show it.
+    cell: ({ row }) => h('span', { class: 'inline-flex items-center gap-2' }, [
+      h('span', { 'data-testid': 'workflow-name' }, row.original.name),
+      ...(row.original.galaxy?.hidden
+        ? [h(UBadge, {
+            'data-testid': 'workflow-hidden',
+            'label': 'hidden in Galaxy',
+            'color': 'neutral',
+            'variant': 'subtle',
+            'size': 'sm',
+            'title': 'Hidden in Galaxy\'s own workflow list; it can still be published and run.',
+          })]
+        : []),
+    ]),
+  },
   {
     // Every version published for this stored workflow, each with the same
     // match the results page runs (ADR 0003), handed the name and the label

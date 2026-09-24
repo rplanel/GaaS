@@ -37,6 +37,17 @@ describe('gET /api/galaxy/workflows', () => {
     expect(await callHandler()).toEqual(mockWorkflows)
   })
 
+  // Galaxy's default list omits the stored workflows the account hid in
+  // Galaxy's own list; hidden says nothing about publishing or running, and
+  // the admin page reads a stored workflow absent from this list as one
+  // Galaxy no longer has. So the proxy asks for the hidden ones too.
+  it('asks blendtype for the hidden stored workflows as well', async () => {
+    const bt = await import('blendtype')
+    await callHandler()
+
+    expect(bt.getWorkflowsEffect).toHaveBeenLastCalledWith({ includeHidden: true })
+  })
+
   it('answers 503 rather than 500 when Galaxy is unavailable', async () => {
     resolveWorkflows = () => Effect.fail({
       _tag: 'GalaxyServiceUnavailable',

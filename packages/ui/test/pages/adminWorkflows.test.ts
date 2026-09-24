@@ -32,13 +32,14 @@ mockNuxtImport('useUserRole', () => () => ({ userRole }))
 mockNuxtImport('useSupabaseClient', () => () => ({} as never))
 
 /** Only the fields the page reads off a Galaxy stored workflow are filled in. */
-function galaxyWorkflow(id: string, name: string, tags: string[]): GalaxyWorkflowsItem {
+function galaxyWorkflow(id: string, name: string, tags: string[], overrides: Partial<GalaxyWorkflowsItem> = {}): GalaxyWorkflowsItem {
   return {
     id,
     name,
     tags,
     number_of_steps: 3,
     create_time: new Date('2026-09-01T10:00:00Z'),
+    ...overrides,
   } as unknown as GalaxyWorkflowsItem
 }
 
@@ -52,6 +53,8 @@ const GALAXY_WORKFLOWS = [
   galaxyWorkflow('wf-cas', 'Cas Finder', ['name:casFinder', 'version:1.0']),
   galaxyWorkflow('wf-satellite', 'Satellite Finder', ['name:satelliteFinder', 'version:0.11']),
   galaxyWorkflow('wf-defense', 'Defense Finder', ['name:defenseFinder', 'version:2.0.0']),
+  // hidden in Galaxy's own list, which the proxy includes: an ordinary row here
+  galaxyWorkflow('wf-hidden', 'Hidden Finder', [], { hidden: true }),
 ]
 
 mockNuxtImport('galaxyWorkflowsListQuery', () => () => ({
@@ -188,7 +191,7 @@ type Page = Awaited<ReturnType<typeof mountPage>>
 
 /** The table row for the stored workflow of that name, found by its name cell alone. */
 function row(wrapper: Page, name: string) {
-  return wrapper.findAll('tbody tr').find(candidate => candidate.find('td').text() === name)
+  return wrapper.findAll('tbody tr').find(candidate => candidate.find('[data-testid="workflow-name"]').text() === name)
 }
 
 /** The table row for the stored workflow of that name, or a failure naming it. */
@@ -201,7 +204,7 @@ function rowOf(wrapper: Page, name: string) {
 
 /** The names of the stored workflows, in the order the table lists them. */
 function listedNames(wrapper: Page) {
-  return wrapper.findAll('tbody tr').map(candidate => candidate.find('td').text())
+  return wrapper.findAll('tbody tr').map(candidate => candidate.find('[data-testid="workflow-name"]').text())
 }
 
 /** Each version on that row: its label and what the Results view badge beside it says. */
@@ -344,7 +347,20 @@ describe('admin workflows', () => {
     const wrapper = await mountPage()
     await vi.waitFor(() => expect(row(wrapper, 'Untagged')).toBeDefined())
 
-    expect(listedNames(wrapper)).toEqual(['Satellite Finder', 'Defense Finder', 'Untagged', 'Cas Finder'])
+    expect(listedNames(wrapper)).toEqual(['Satellite Finder', 'Defense Finder', 'Untagged', 'Cas Finder', 'Hidden Finder'])
+  })
+
+  // Galaxy's own list hides a stored workflow the account hid there; the
+  // proxy includes those, so one is an ordinary row here, publishable, and
+  // says why Galaxy's list does not show it. Absent from this list means
+  // deleted, which is what the vanished rows below are for.
+  it('lists a stored workflow hidden in Galaxy as an ordinary row, saying so beside its name', async () => {
+    const wrapper = await mountPage()
+    await vi.waitFor(() => expect(row(wrapper, 'Hidden Finder')).toBeDefined())
+
+    expect(rowOf(wrapper, 'Hidden Finder').find('[data-testid="workflow-hidden"]').text()).toBe('hidden in Galaxy')
+    expect(rowOf(wrapper, 'Hidden Finder').find('[data-testid="publish-version"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="workflow-hidden"]')).toHaveLength(1)
   })
 
   it('lists each published version on its row with its results view reading', async () => {
@@ -651,7 +667,7 @@ describe('admin workflows', () => {
       const wrapper = await mountPage()
       await vi.waitFor(() => expect(row(wrapper, 'Gone Finder')).toBeDefined())
 
-      expect(listedNames(wrapper)).toEqual(['Gone Finder', 'Satellite Finder', 'Defense Finder', 'Untagged', 'Cas Finder'])
+      expect(listedNames(wrapper)).toEqual(['Gone Finder', 'Satellite Finder', 'Defense Finder', 'Untagged', 'Cas Finder', 'Hidden Finder'])
       expect(rowOf(wrapper, 'Gone Finder').find('[data-testid="publish-version"]').exists()).toBe(false)
       expect(rowOf(wrapper, 'Satellite Finder').find('[data-testid="publish-version"]').exists()).toBe(true)
       // what Galaxy says about a stored workflow, blank when Galaxy no longer says anything
