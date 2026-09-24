@@ -226,6 +226,7 @@ const mockRawExport = {
   'annotation': '',
   'steps': {},
   'version': 1,
+  'uuid': 'fa95ecd4-ed11-49e2-b3d6-8f178b807256',
 }
 
 describe('exportWorkflowEffect', () => {
@@ -237,6 +238,40 @@ describe('exportWorkflowEffect', () => {
         expect(exported.version).toBe(1)
       }),
       Effect.provide(createSuccessLayer(mockRawExport)),
+      Effect.runPromise,
+    ))
+
+  // ADR 0004. A published version pins one revision by two things the export
+  // carries: `version`, the 0-based index an invocation takes, and `uuid`,
+  // the identifier Galaxy gave that revision when it was saved. The index
+  // alone cannot tell a rewritten history from a stable one; the uuid is the
+  // guard, so an export without one is not an export this client can vouch for.
+  it('carries the revision uuid the export names, beside the revision index', () =>
+    pipe(
+      Effect.gen(function* () {
+        const exported = yield* exportWorkflowEffect('wf-export-id')
+        expect(exported.uuid).toBe('fa95ecd4-ed11-49e2-b3d6-8f178b807256')
+        expect(exported.version).toBe(1)
+      }),
+      Effect.provide(createSuccessLayer(mockRawExport)),
+      Effect.runPromise,
+    ))
+
+  it('refuses an export that names no revision uuid as not a Galaxy export', () =>
+    pipe(
+      Effect.gen(function* () {
+        const { uuid: _dropped, ...withoutUuid } = mockRawExport
+        const exit = yield* Effect.exit(
+          exportWorkflowEffect('wf-export-id').pipe(
+            Effect.provide(createSuccessLayer(withoutUuid)),
+          ),
+        )
+
+        expectFailure(exit, (error) => {
+          expect(error).toBeInstanceOf(WorkflowError)
+          expect(error.message).toContain('Invalid workflow export format')
+        })
+      }),
       Effect.runPromise,
     ))
 
