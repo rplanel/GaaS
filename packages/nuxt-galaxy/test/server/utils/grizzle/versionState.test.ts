@@ -62,8 +62,11 @@ function galaxy(overrides: {
     if (url === EXPORT)
       return overrides.exported ?? exportAtRevision
     const tool = /^api\/tools\/(.+)\?io_details=true&tool_version=(.+)$/.exec(url)
-    if (tool)
-      return overrides.tool?.(tool[1]!, tool[2]!) ?? installed(tool[1]!, tool[2]!)
+    if (tool) {
+      // read the way Galaxy reads a query value: decoded, a raw `+` being a space
+      const toolVersion = decodeURIComponent(tool[2]!.replaceAll('+', ' '))
+      return overrides.tool?.(tool[1]!, toolVersion) ?? installed(tool[1]!, toolVersion)
+    }
     return new Error(`unexpected call to Galaxy: ${url}`)
   })
 }
@@ -81,7 +84,8 @@ describe('versionStateEffect', () => {
     expect(layer.calls.map(call => call.url)).toEqual([
       SHOW,
       EXPORT,
-      `api/tools/${FOO}?io_details=true&tool_version=1.2.3+galaxy0`,
+      // the pinned version travels URL-encoded, a raw `+` being a space to Galaxy
+      `api/tools/${FOO}?io_details=true&tool_version=1.2.3%2Bgalaxy0`,
       `api/tools/${BAR}?io_details=true&tool_version=2.0`,
     ])
     expect(layer.calls.every(call => call.method === 'GET')).toBe(true)
