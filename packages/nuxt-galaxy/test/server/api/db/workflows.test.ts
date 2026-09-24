@@ -17,6 +17,7 @@ class VersionLabelTakenError extends Data.TaggedError('VersionLabelTakenError')<
 class RevisionAlreadyPublishedError extends Data.TaggedError('RevisionAlreadyPublishedError')<{ readonly message: string }> {}
 class WorkflowNameLockedError extends Data.TaggedError('WorkflowNameLockedError')<{ readonly message: string }> {}
 class ConcurrentPublishError extends Data.TaggedError('ConcurrentPublishError')<{ readonly message: string }> {}
+class RevisionNotFoundError extends Data.TaggedError('RevisionNotFoundError')<{ readonly message: string }> {}
 class WorkflowToolsMissingError extends Data.TaggedError('WorkflowToolsMissingError')<{ readonly message: string }> {}
 
 /** The version row the insert answers with, which is the endpoint's 200 body. */
@@ -217,6 +218,22 @@ describe('post /api/db/workflows', () => {
     await expect(handler(event)).rejects.toMatchObject({
       statusCode: 409,
       statusMessage: error.message,
+    })
+  })
+
+  // The body named a revision Galaxy has no such index for, or a stored
+  // workflow Galaxy no longer has. What does not exist is answered 404, as
+  // `analyses.post` answers a `workflowId` that names nothing, with the
+  // sentence saying which of the two; it used to be a 500 with no words.
+  it('answers 404 with the error\'s own words for a revision Galaxy does not have', async () => {
+    mocks.publishVersion.mockReturnValue(
+      Effect.fail(new RevisionNotFoundError({ message: 'Galaxy has no revision 999 of stored workflow galaxy-wf-1.' })),
+    )
+    const handler = await loadHandler()
+
+    await expect(handler(event)).rejects.toMatchObject({
+      statusCode: 404,
+      statusMessage: 'Galaxy has no revision 999 of stored workflow galaxy-wf-1.',
     })
   })
 

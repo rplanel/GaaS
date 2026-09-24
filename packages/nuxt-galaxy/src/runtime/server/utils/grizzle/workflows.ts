@@ -112,6 +112,21 @@ export class WorkflowToolsMissingError extends Data.TaggedError('WorkflowToolsMi
 }> {}
 
 /**
+ * Galaxy has nothing to export: no revision at the index the body named, or
+ * no stored workflow with that id any more. Galaxy answers 400 for an index
+ * past the end of the history and 404 for an id it does not know; both are
+ * the caller naming something that does not exist, so both are answered as
+ * `analyses.post` answers a workflow id that names nothing, 404, with the
+ * sentence saying which of the two. Until this the export's failure
+ * propagated as blendtype's own, which no status map knows, and the caller
+ * read `500 Internal Server Error` for a value it could fix. Any other
+ * failure of the export, Galaxy unwell or a fault, still propagates as is.
+ */
+export class RevisionNotFoundError extends Data.TaggedError('RevisionNotFoundError')<{
+  readonly message: string
+}> {}
+
+/**
  * The insert hit a unique constraint the checks before it did not see. The
  * checks and the insert are two round trips, so a version published between
  * them reaches the database's own rule; a refusal to reload on, not a fault.
@@ -300,7 +315,18 @@ export function publishVersion(
       return yield* Effect.fail(new GetSupabaseUserError({ message: 'Unauthorized' }))
     }
 
-    const galaxyWorkflow = yield* bt.exportWorkflowEffect(galaxyId, 'export', revision)
+    const galaxyWorkflow = yield* bt.exportWorkflowEffect(galaxyId, 'export', revision).pipe(
+      // a 400 or 404 from Galaxy here is "no such thing": an index past the
+      // end of the history, or an id Galaxy no longer knows
+      Effect.catchIf(
+        error => error.statusCode === 400 || error.statusCode === 404,
+        () => Effect.fail(new RevisionNotFoundError({
+          message: revision === undefined
+            ? `Galaxy no longer has stored workflow ${galaxyId}.`
+            : `Galaxy has no revision ${revision} of stored workflow ${galaxyId}.`,
+        })),
+      ),
+    )
     const galaxyUser = yield* getCurrentUserEffect(galaxyUrl, galaxyEmail)
 
     // The export's `version` is not a version and does not start at 1. It is

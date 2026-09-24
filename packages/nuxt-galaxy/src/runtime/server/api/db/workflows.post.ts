@@ -63,6 +63,11 @@ export default defineEventHandler<{ body: PublishVersionBody }>(
           // because every publish refusal the dialog shows as written is one,
           // and nothing in the body was wrong.
           WorkflowToolsMissingError: 409,
+          // The body named a revision Galaxy has no such index for, or a
+          // stored workflow Galaxy no longer has: what does not exist is
+          // 404, as `analyses.post` answers a workflow id naming nothing,
+          // with the sentence saying which. It used to fall to the 500.
+          RevisionNotFoundError: 404,
         },
       }),
       onSuccess: value => value,
