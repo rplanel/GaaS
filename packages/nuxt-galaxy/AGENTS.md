@@ -55,9 +55,12 @@ pnpm drizzle:migrate                        # Run migrations
 
 ### Database Seeding
 ```bash
-pnpm db:seed                                # Seed with defaults
-pnpm db:seed:example                        # Seed Galaxy@Pasteur
-pnpm db:seed:help                           # Show seed options
+# No `db:seed` script exists: the package ships a CLI. It takes a config file
+# and reads GALAXY_DRIZZLE_DATABASE_URL from the .env of the directory it runs
+# in, so the playground, which keeps the local seed.json, is the usual place.
+pnpm exec nuxt-galaxy-seed <config.json> --dry-run   # validate, write nothing
+pnpm exec nuxt-galaxy-seed <config.json>             # apply, idempotent
+pnpm exec nuxt-galaxy-seed --help                    # every option
 ```
 
 ### Release

@@ -92,4 +92,3 @@ repos
 **/.claude/skills/review-logging-patterns
 **/skills-lock.json
 **/CLAUDE.md
-packages/nuxt-galaxy/src/runtime/server/db/seed.json
