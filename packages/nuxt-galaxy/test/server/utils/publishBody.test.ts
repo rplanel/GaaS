@@ -9,6 +9,7 @@ const MESSAGES = {
   galaxyId: '`galaxyId` must be a non-empty string',
   name: '`name` must be a non-empty string of at most 255 characters',
   label: '`label` must be a non-empty string of at most 255 characters',
+  revision: '`revision` must be a non-negative integer',
 } as const
 
 /** The 400 the reader threw, or a failure saying it accepted the body. */
@@ -30,7 +31,30 @@ describe('readPublishVersionBody', () => {
   })
 
   it('ignores unknown top-level keys rather than refusing them, so an additive client change is not a 400', () => {
-    expect(readPublishVersionBody({ ...body, revision: 3 })).toEqual(body)
+    expect(readPublishVersionBody({ ...body, clientVersion: '2.0.0' })).toEqual(body)
+  })
+
+  // ADR 0004, #73. The dialog lets an administrator choose the revision the
+  // version pins: the 0-based index Galaxy lists it under, the same integer
+  // an invocation takes. Absent, the latest is published, as before.
+  it.each([
+    ['an older revision', 1],
+    ['the first revision, which is 0', 0],
+  ])('accepts %s and passes it on', (_label, revision) => {
+    expect(readPublishVersionBody({ ...body, revision })).toEqual({ ...body, revision })
+  })
+
+  it('leaves the revision out when the body names none, so the latest is published', () => {
+    expect(readPublishVersionBody(body)).not.toHaveProperty('revision')
+  })
+
+  it.each([
+    ['a negative index', -1],
+    ['a fraction', 1.5],
+    ['a numeric string', '2'],
+    ['null', null],
+  ])('refuses %s as a revision with 400 and a sentence naming the field', (_label, revision) => {
+    expect(refusal({ ...body, revision })).toMatchObject({ statusCode: 400, statusMessage: MESSAGES.revision })
   })
 
   it.each([

@@ -100,7 +100,7 @@ describe('post /api/db/workflows', () => {
   })
 
   it('passes the checked body on, and nothing it did not check', async () => {
-    mocks.readBody.mockResolvedValue({ ...body, revision: 4 })
+    mocks.readBody.mockResolvedValue({ ...body, clientVersion: '2.0.0' })
     const handler = await loadHandler()
     await handler(event)
 
@@ -110,6 +110,32 @@ describe('post /api/db/workflows', () => {
       expect.any(String),
       event,
     )
+  })
+
+  // ADR 0004, #73. The revision the dialog chose travels with the body; left
+  // out, the latest is published, so nothing is added for it here.
+  it('passes the revision on when the body names one', async () => {
+    mocks.readBody.mockResolvedValue({ ...body, revision: 4 })
+    const handler = await loadHandler()
+    await handler(event)
+
+    expect(mocks.publishVersion).toHaveBeenCalledWith(
+      { ...body, revision: 4 },
+      expect.any(String),
+      expect.any(String),
+      event,
+    )
+  })
+
+  it('refuses a revision that cannot name one with 400 and publishes nothing', async () => {
+    mocks.readBody.mockResolvedValue({ ...body, revision: -1 })
+    const handler = await loadHandler()
+
+    await expect(handler(event)).rejects.toMatchObject({
+      statusCode: 400,
+      statusMessage: '`revision` must be a non-negative integer',
+    })
+    expect(mocks.publishVersion).not.toHaveBeenCalled()
   })
 
   it('refuses an unauthenticated caller with 401, as its siblings do', async () => {
