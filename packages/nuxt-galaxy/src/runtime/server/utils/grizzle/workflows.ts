@@ -9,6 +9,7 @@ import { Drizzle } from '../drizzle'
 import { takeUniqueOrNull } from './helper'
 import { ForbiddenError, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from './supabase'
 import { getCurrentUserEffect } from './user'
+import { missingToolsEffect } from './workflowTools'
 
 export class GetWorkflowError extends Data.TaggedError('GetWorkflowError')<{
   readonly message: string
@@ -96,6 +97,17 @@ export class RevisionAlreadyPublishedError extends Data.TaggedError('RevisionAlr
  * and the insert, so that is accepted rather than constrained.
  */
 export class WorkflowNameLockedError extends Data.TaggedError('WorkflowNameLockedError')<{
+  readonly message: string
+}> {}
+
+/**
+ * Galaxy does not hold every tool of the revision at its pinned version, so
+ * it would refuse to run the version at analysis start
+ * (`require_exact_tool_versions`); publishing refuses first (ADR 0004, #75).
+ * The sentence names the tools and their versions: what the administrator
+ * can change is to install them, or to choose another revision.
+ */
+export class WorkflowToolsMissingError extends Data.TaggedError('WorkflowToolsMissingError')<{
   readonly message: string
 }> {}
 
@@ -264,10 +276,11 @@ export function deleteVersion(
  * unless asked for another. The row's revision, uuid and snapshot are all
  * read off that export, so they cannot disagree with one another. Every
  * refusal happens before anything is written, in the order the dialog reads
- * them: the label, the revision, the name, and last the permission, which the
- * database decides on the insert itself. The reads before it go through the
- * service role, which reveals nothing: the select policy lets every
- * authenticated user read versions anyway.
+ * them: the label, the revision, the name, then the tools of the revision,
+ * which Galaxy has to hold at their pinned version (#75), and last the
+ * permission, which the database decides on the insert itself. The reads
+ * before it go through the service role, which reveals nothing: the select
+ * policy lets every authenticated user read versions anyway.
  */
 export function publishVersion(
   { galaxyId, name, label, revision }: PublishVersionBody,
@@ -355,6 +368,21 @@ export function publishVersion(
     if (lineageName !== undefined && lineageName !== name) {
       return yield* Effect.fail(new WorkflowNameLockedError({
         message: `This workflow is published as "${lineageName}"; a new version keeps that name.`,
+      }))
+    }
+
+    // Galaxy refuses to run a revision whose tools are not installed at their
+    // pinned version, so a version is not published while any is missing
+    // (ADR 0004, #75): publishing is a reviewed act. Checked after the label,
+    // the revision and the name, so a refusal the administrator fixes by
+    // retyping never costs the Galaxy round trips, and before the insert, so
+    // the permission stays the database's last word. Galaxy being unwell
+    // during the check fails as blendtype's own failure, never as a refusal.
+    const missingTools = yield* missingToolsEffect(galaxyWorkflow)
+    if (missingTools.length > 0) {
+      const named = missingTools.map(tool => `${tool.toolId} ${tool.toolVersion}`).join(', ')
+      return yield* Effect.fail(new WorkflowToolsMissingError({
+        message: `Revision ${galaxyWorkflow.version} of "${galaxyWorkflow.name}" uses tools missing in Galaxy at their pinned version: ${named}. Install them or choose another revision.`,
       }))
     }
 

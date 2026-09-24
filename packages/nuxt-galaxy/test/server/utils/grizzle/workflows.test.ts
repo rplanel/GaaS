@@ -12,6 +12,7 @@ import {
   VersionLabelTakenError,
   WorkflowNameLockedError,
   WorkflowNotFoundError,
+  WorkflowToolsMissingError,
 } from '../../../../src/runtime/server/utils/grizzle/workflows'
 import {
   createMockDrizzle,
@@ -28,6 +29,7 @@ import {
   mockGalaxyWorkflowExport,
   mockSupabaseUser,
 } from '../../fixtures'
+import { toolStep, workflowDefinition } from '../../workflowDefinition'
 
 // Mock getCurrentUserEffect. The module's error classes are kept real so
 // `toBeInstanceOf` below compares against the class production throws.
@@ -435,6 +437,105 @@ describe('publishVersion', () => {
         expect(error.message).toContain('2')
       })
       expect(mockClient.schema).not.toHaveBeenCalled()
+    })
+  })
+
+  /**
+   * #75, ADR 0004. Galaxy refuses to run a revision whose tools are not
+   * installed at their exact pinned version (`require_exact_tool_versions`),
+   * so publishing is a reviewed act: the tools are checked before anything is
+   * written, and a version is not published while any is missing.
+   */
+  describe('the tools of the revision', () => {
+    const FOO = 'toolshed.g2.bx.psu.edu/repos/iuc/foo/foo/1.2.3+galaxy0'
+    const BAR = 'toolshed.g2.bx.psu.edu/repos/iuc/bar/bar/2.0'
+
+    /** An export of revision 3 of "Satellite Finder" pinning two tools. */
+    const withTools = {
+      ...workflowDefinition({ 1: toolStep(1, FOO, '1.2.3+galaxy0'), 2: toolStep(2, BAR, '2.0') }),
+      name: 'Satellite Finder',
+      version: 3,
+    }
+
+    /** What ofetch throws for a Galaxy answer with that status. */
+    function galaxyAnswers(statusCode: number) {
+      return Object.assign(new Error(`[GET] "api/tools/…": ${statusCode}`), { statusCode })
+    }
+
+    /**
+     * A Galaxy that exports `withTools` and holds each tool at the version
+     * asked for, except where `except` answers something else for a tool id.
+     */
+    function galaxy(except: (toolId: string) => unknown = () => undefined) {
+      return createRecordingGalaxyLayer(({ url }) => {
+        if (url.startsWith('api/workflows/'))
+          return withTools
+        const match = /^api\/tools\/(.+)\?io_details=true&tool_version=(.+)$/.exec(url)
+        if (!match)
+          throw new Error(`unexpected Galaxy call: ${url}`)
+        return except(match[1]!) ?? { model_class: 'Tool', id: match[1], version: match[2] }
+      })
+    }
+
+    function toolLookups(calls: { url: string }[]) {
+      return calls.filter(call => call.url.startsWith('api/tools/'))
+    }
+
+    it('refuses a revision whose tools Galaxy lacks at their pinned version, naming them, before anything is written', async () => {
+      // one tool Galaxy has at another version only (a 200 carrying it), one
+      // it has no version of (a 404): both are missing at the pinned version
+      const recording = galaxy(toolId => (toolId === FOO
+        ? { model_class: 'Tool', id: FOO, version: '1.3.0' }
+        : toolId === BAR ? galaxyAnswers(404) : undefined))
+
+      const { exit, mockClient } = publish({ body: { ...body, revision: 3 }, galaxyLayer: recording.layer })
+
+      expectFailureOf(await exit, WorkflowToolsMissingError, (error) => {
+        expect(error.message).toBe(
+          `Revision 3 of "Satellite Finder" uses tools missing in Galaxy at their pinned version: ${FOO} 1.2.3+galaxy0, ${BAR} 2.0. Install them or choose another revision.`,
+        )
+      })
+      expect(mockClient.schema).not.toHaveBeenCalled()
+    })
+
+    it('publishes when Galaxy holds every tool at its pinned version, having looked each up once', async () => {
+      const recording = galaxy()
+
+      const { exit, mockClient } = publish({ body: { ...body, revision: 3 }, galaxyLayer: recording.layer })
+
+      expect(Exit.isSuccess(await exit)).toBe(true)
+      expect(toolLookups(recording.calls).map(call => call.url).sort()).toEqual([
+        `api/tools/${BAR}?io_details=true&tool_version=2.0`,
+        `api/tools/${FOO}?io_details=true&tool_version=1.2.3+galaxy0`,
+      ])
+      expect(insertedRow(mockClient)).toMatchObject({ revision: 3, definition: withTools })
+    })
+
+    it('lets Galaxy being unwell during the check fail as itself, not as a refusal', async () => {
+      const recording = galaxy(toolId => (toolId === BAR ? galaxyAnswers(500) : undefined))
+
+      const { exit, mockClient } = publish({ body: { ...body, revision: 3 }, galaxyLayer: recording.layer })
+
+      expectFailure(await exit, (error) => {
+        expect(error).toMatchObject({ _tag: 'ToolError', statusCode: 500 })
+        expect(error).not.toBeInstanceOf(WorkflowToolsMissingError)
+      })
+      expect(mockClient.schema).not.toHaveBeenCalled()
+    })
+
+    it('checks the tools only once the label, the revision and the name have passed', async () => {
+      // a refusal the administrator fixes by retyping never costs the Galaxy
+      // round trips; the tools are the last thing looked at before the insert
+      const recording = galaxy()
+
+      const { exit } = publish({
+        body: { ...body, revision: 3 },
+        galaxyLayer: recording.layer,
+        published: [version({ versionKey: '0.11', revision: 0 })],
+      })
+
+      expectFailureOf(await exit, VersionLabelTakenError, () => {})
+      expect(toolLookups(recording.calls)).toEqual([])
     })
   })
 

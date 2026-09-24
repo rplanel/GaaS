@@ -17,6 +17,7 @@ class VersionLabelTakenError extends Data.TaggedError('VersionLabelTakenError')<
 class RevisionAlreadyPublishedError extends Data.TaggedError('RevisionAlreadyPublishedError')<{ readonly message: string }> {}
 class WorkflowNameLockedError extends Data.TaggedError('WorkflowNameLockedError')<{ readonly message: string }> {}
 class ConcurrentPublishError extends Data.TaggedError('ConcurrentPublishError')<{ readonly message: string }> {}
+class WorkflowToolsMissingError extends Data.TaggedError('WorkflowToolsMissingError')<{ readonly message: string }> {}
 
 /** The version row the insert answers with, which is the endpoint's 200 body. */
 const publishedVersion = { id: 1, name: 'Satellite Finder', galaxy_id: 'galaxy-wf-1', name_key: 'satelliteFinder', version_key: '0.11', revision: 3, active: true }
@@ -205,6 +206,10 @@ describe('post /api/db/workflows', () => {
     ['a revision already published', new RevisionAlreadyPublishedError({ message: 'Revision 3 is already published as version "0.10" of "satelliteFinder".' })],
     ['a name that differs from the lineage', new WorkflowNameLockedError({ message: 'This workflow is published as "satelliteFinder"; a new version keeps that name.' })],
     ['a version published meanwhile', new ConcurrentPublishError({ message: 'Another version was published meanwhile. Reload the page and try again.' })],
+    // #75: the request was well formed and the caller may publish; what it
+    // asks for conflicts with what Galaxy holds, which the administrator can
+    // change by installing the tools or choosing another revision
+    ['a revision whose tools are missing at their pinned version', new WorkflowToolsMissingError({ message: 'Revision 3 of "Satellite Finder" uses tools missing in Galaxy at their pinned version: toolshed.g2.bx.psu.edu/repos/iuc/bar/bar/2.0 2.0. Install them or choose another revision.' })],
   ])('answers 409 with the error\'s own words for %s', async (_label, error) => {
     mocks.publishVersion.mockReturnValue(Effect.fail(error))
     const handler = await loadHandler()

@@ -362,6 +362,12 @@ export default defineNuxtModule<ModuleOptions>({
       handler: resolver.resolve('./runtime/server/api/galaxy/workflows/[workflowId]/versions.get'),
       method: 'get',
     })
+    // the tool check of one revision, for the publish dialog (#75)
+    addServerHandler({
+      route: '/api/galaxy/workflows/:workflowId/revisions/:revision/tools',
+      handler: resolver.resolve('./runtime/server/api/galaxy/workflows/[workflowId]/revisions/[revision]/tools.get'),
+      method: 'get',
+    })
 
     // tools
     addServerHandler({

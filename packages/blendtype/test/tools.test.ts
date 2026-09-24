@@ -31,6 +31,11 @@ describe('getToolEffect', () => {
         Effect.runPromise,
       ))
 
+    // Galaxy's `GET /api/tools/{id}` reads the version to describe from
+    // `tool_version` (`api/tools.py`, `show`); a `version` parameter is
+    // ignored, and the tool comes back at whatever version the id resolves
+    // to. Publishing (#75) checks a revision's tools at their pinned version,
+    // so the parameter Galaxy actually reads is the one sent.
     it('should construct correct API URL with tool ID and version', () =>
       pipe(
         Effect.gen(function* () {
@@ -41,7 +46,7 @@ describe('getToolEffect', () => {
 
           expect(tool).toEqual(mockGalaxyTool)
           expect(trackingLayer.getLastUrl()).toBe(
-            'api/tools/test-tool-id?io_details=true&version=1.0.0',
+            'api/tools/test-tool-id?io_details=true&tool_version=1.0.0',
           )
         }),
         Effect.runPromise,

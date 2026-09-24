@@ -36,6 +36,27 @@ registerEndpoint(`/api/galaxy/workflows/${UNLISTED}/versions`, () => ({
   error: { message: 'GalaxyServiceUnavailable', statusMessage: 'Galaxy Service @ https://galaxy.example.com is unavailable', statusCode: 503 },
 }))
 
+/** A stored workflow whose revisions Galaxy lists but whose tool check fails, Galaxy answering 500 on a lookup. */
+const UNCHECKED = 'wf-unchecked'
+registerEndpoint(`/api/galaxy/workflows/${UNCHECKED}/versions`, () => ({ data: REVISIONS, error: undefined }))
+
+const FOO = 'toolshed.g2.bx.psu.edu/repos/iuc/foo/foo/1.2.3+galaxy0'
+const BAR = 'toolshed.g2.bx.psu.edu/repos/iuc/bar/bar/2.0'
+
+// #75: the tool check of each revision, as the proxy answers it. Revision 1
+// pins two tools Galaxy does not hold at their pinned version; the other two
+// are whole. A registered path is matched literally, so one per revision.
+registerEndpoint(`/api/galaxy/workflows/${LISTED}/revisions/0/tools`, () => ({ data: { missing: [], checked: 3 }, error: undefined }))
+registerEndpoint(`/api/galaxy/workflows/${LISTED}/revisions/1/tools`, () => ({
+  data: { missing: [{ toolId: FOO, toolVersion: '1.2.3+galaxy0' }, { toolId: BAR, toolVersion: '2.0' }], checked: 4 },
+  error: undefined,
+}))
+registerEndpoint(`/api/galaxy/workflows/${LISTED}/revisions/2/tools`, () => ({ data: { missing: [], checked: 4 }, error: undefined }))
+registerEndpoint(`/api/galaxy/workflows/${UNCHECKED}/revisions/2/tools`, () => ({
+  data: undefined,
+  error: { message: 'ToolError: Galaxy answered 500 for Cut1' },
+}))
+
 /** The body of the last publish request that reached the endpoint. */
 let lastBody: Record<string, unknown> | null = null
 
@@ -123,6 +144,21 @@ function submitButton() {
   return submit
 }
 
+/** Wait for the tool check of the selected revision to have let Publish through (#75). */
+async function publishable() {
+  await vi.waitFor(() => expect(submitButton().disabled).toBe(false))
+}
+
+/** The alert naming the missing tools, or none. */
+function missingToolsAlert() {
+  return dialog()?.querySelector('[data-testid="publish-missing-tools"]')
+}
+
+/** What the dialog says about the tools when none is missing, or while it is checking. */
+function toolsCheck() {
+  return dialog()?.querySelector('[data-testid="publish-tools-check"]')?.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+}
+
 beforeEach(() => {
   lastBody = null
 })
@@ -177,6 +213,8 @@ describe('the publish dialog\'s revision picker', () => {
     expect(listedRevisions().map(item => item.selected)).toEqual([true, false, false])
     expect(summary()).toMatch(/Revision 0, older than the latest \(2\)/)
 
+    // Publish waits for the chosen revision's tool check (#75)
+    await publishable()
     submitButton().click()
 
     await vi.waitFor(() => expect(lastBody).toEqual({ galaxyId: LISTED, name: 'satelliteFinder', label: '0.12', revision: 0 }))
@@ -189,6 +227,7 @@ describe('the publish dialog\'s revision picker', () => {
     await mountDialog({ workflowId: LISTED })
     await revisionsListed()
 
+    await publishable()
     submitButton().click()
 
     await vi.waitFor(() => expect(lastBody).toEqual({ galaxyId: LISTED, name: 'satelliteFinder', label: '0.12', revision: 2 }))
@@ -200,6 +239,69 @@ describe('the publish dialog\'s revision picker', () => {
     await vi.waitFor(() => expect(dialog()?.querySelector('[data-testid="publish-revisions-error"]')).not.toBeNull())
     expect(dialog()!.querySelector('[data-testid="publish-revisions-error"]')!.textContent).toContain('could not be listed')
     expect(listedRevisions()).toHaveLength(0)
+    expect(submitButton().disabled).toBe(true)
+
+    submitButton().click()
+    await nextTick()
+    expect(lastBody).toBeNull()
+  })
+})
+
+/**
+ * #75, ADR 0004. Galaxy refuses to run a revision whose tools are not
+ * installed at their exact pinned version, and the server refuses to publish
+ * one; the dialog runs the same check for the revision it has selected, so
+ * the administrator reads which tools are missing before clicking Publish.
+ */
+describe('the tool check of the selected revision', () => {
+  it('says the tools are installed and lets Publish through for a revision Galaxy holds whole', async () => {
+    await mountDialog({ workflowId: LISTED })
+    await revisionsListed()
+
+    await publishable()
+
+    expect(toolsCheck()).toBe('All 4 tools are installed at their pinned version.')
+    expect(missingToolsAlert()).toBeNull()
+  })
+
+  it('names the missing tools with their versions and keeps Publish disabled while any is missing', async () => {
+    await mountDialog({ workflowId: LISTED })
+    await revisionsListed()
+
+    await choose(1)
+
+    await vi.waitFor(() => expect(missingToolsAlert()).not.toBeNull())
+    const alert = missingToolsAlert()!.textContent!
+    expect(alert).toContain(`${FOO} 1.2.3+galaxy0`)
+    expect(alert).toContain(`${BAR} 2.0`)
+    expect(alert).toMatch(/missing in Galaxy at their pinned version/i)
+    expect(submitButton().disabled).toBe(true)
+
+    submitButton().click()
+    await nextTick()
+    expect(lastBody).toBeNull()
+  })
+
+  it('runs the check for the revision chosen, so choosing a whole one after a broken one lets Publish through again', async () => {
+    await mountDialog({ workflowId: LISTED })
+    await revisionsListed()
+    await choose(1)
+    await vi.waitFor(() => expect(missingToolsAlert()).not.toBeNull())
+
+    await choose(0)
+
+    await publishable()
+    expect(missingToolsAlert()).toBeNull()
+    expect(toolsCheck()).toBe('All 3 tools are installed at their pinned version.')
+  })
+
+  it('keeps Publish disabled and says the tools could not be checked when the check itself fails', async () => {
+    await mountDialog({ workflowId: UNCHECKED })
+    await revisionsListed()
+
+    await vi.waitFor(() => expect(dialog()?.querySelector('[data-testid="publish-tools-error"]')).not.toBeNull())
+    expect(dialog()!.querySelector('[data-testid="publish-tools-error"]')!.textContent).toContain('could not be checked')
+    expect(missingToolsAlert()).toBeNull()
     expect(submitButton().disabled).toBe(true)
 
     submitButton().click()
