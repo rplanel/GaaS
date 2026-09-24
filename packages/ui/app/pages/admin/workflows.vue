@@ -299,7 +299,8 @@ const versionsByStoredWorkflow = computed(() => {
  * Every stored workflow of the account, in three groups: first the ones
  * Galaxy no longer lists but versions were published for (#76), since they
  * need the administrator's decision; then the published ones; then the rest,
- * each group in the order Galaxy lists them.
+ * each group in the order Galaxy lists them. One kind is left out: a stored
+ * workflow hidden in Galaxy that carries no version.
  */
 const storedWorkflows = computed<StoredWorkflowRow[]>(() => {
   const allWorkflowsVal = toValue(allWorkflows)
@@ -321,10 +322,18 @@ const storedWorkflows = computed<StoredWorkflowRow[]>(() => {
     // about it any more; every version of a stored workflow shares that name
     gone.push({ id: galaxyId, name: versions[0]!.row.name ?? versions[0]!.row.name_key, versions })
   }
+  // Galaxy hides a stored workflow to keep it out of its own list, and does
+  // it by itself for one embedded as a step in another, so the hidden ones
+  // are mostly pieces of other workflows. This page never offered them,
+  // since it listed what Galaxy listed, and an administrator has no reason
+  // to publish one. A hidden workflow earns a row once it carries a version:
+  // that is the one case this page would otherwise read as a stored workflow
+  // Galaxy no longer has.
+  const shown = listed.filter(row => !row.galaxy?.hidden || row.versions.length > 0)
   return [
     ...gone,
-    ...listed.filter(row => row.versions.length > 0),
-    ...listed.filter(row => row.versions.length === 0),
+    ...shown.filter(row => row.versions.length > 0),
+    ...shown.filter(row => row.versions.length === 0),
   ]
 })
 
