@@ -19,6 +19,7 @@
       "roleName": "admin",
       "permissions": [
         "workflows.insert",
+        "workflows.update",
         "workflows.delete",
         "instances.insert",
         "instances.delete",

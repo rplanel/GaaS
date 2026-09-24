@@ -30,6 +30,24 @@ export class WorkflowNotFoundError extends Data.TaggedError('WorkflowNotFoundErr
 }> {}
 
 /**
+ * The version is retired (ADR 0004): it stays a version, its past analyses
+ * keep their pages, but no analysis may be started on it. The users' list
+ * hides it, so only a client that kept a stale id, or never read the list,
+ * reaches this; the sentence names the version so that client can say which.
+ */
+export class WorkflowRetiredError extends Data.TaggedError('WorkflowRetiredError')<{
+  readonly message: string
+}> {}
+
+/**
+ * The update the database answered with something that is neither a refusal
+ * nor a row: a fault, cause attached, since the caller can do nothing about it.
+ */
+export class UpdateWorkflowError extends Data.TaggedError('UpdateWorkflowError')<{
+  readonly message: string
+}> {}
+
+/**
  * A label already used for this name. The pair names the results view
  * directory (ADR 0003), so it is unique across the application, whichever
  * stored workflow carries the name: a name may span stored workflows (ADR
@@ -103,6 +121,59 @@ export function getWorkflowEffect(workflowId: number) {
       }))
     }
     return workflow
+  })
+}
+
+/**
+ * Retire a version, or make a retired one active again (ADR 0004). `active`
+ * means startable by users and nothing else: the users' list hides a retired
+ * version, analysis start refuses it, and everything it already has, its
+ * analyses, their results views and its usage statistics, is untouched.
+ *
+ * The version is read first through the service role, which reveals nothing
+ * since the select policy lets every authenticated user read versions, so an
+ * id nobody can act on is a 404 before anything is written. The update then
+ * goes through the caller's own session, so the database decides who may
+ * retire: the `workflows.update` policy, and the column-level grant that
+ * leaves `active` the only column an update may touch. An UPDATE policy hides
+ * the rows it refuses rather than raising, so a caller without the permission
+ * gets zero rows back; the row was read a moment ago, so zero rows can only
+ * mean the policy, and it is answered as the refusal it is.
+ */
+export function setVersionActive(
+  workflowId: number,
+  active: boolean,
+  event: H3Event<EventHandlerRequest>,
+) {
+  return Effect.gen(function* () {
+    const createServerSupabaseClaims = yield* ServerSupabaseClaims
+    const supabaseClaims = yield* createServerSupabaseClaims(event)
+    if (!supabaseClaims) {
+      return yield* Effect.fail(new GetSupabaseUserError({ message: 'Unauthorized' }))
+    }
+    const createServerSupabaseClient = yield* ServerSupabaseClient
+    const supabaseClient = yield* createServerSupabaseClient(event)
+
+    yield* getWorkflowEffect(workflowId)
+
+    const { error, data } = yield* Effect.promise(() => supabaseClient
+      .schema('galaxy')
+      .from('workflows')
+      .update({ active })
+      .eq('id', workflowId)
+      .select(),
+    )
+    if (error) {
+      if (error.code === '42501') {
+        return yield* Effect.fail(new ForbiddenError({ message: 'Permission denied' }))
+      }
+      return yield* Effect.fail(new UpdateWorkflowError({ message: `supabase error: ${error.message}\ncode : ${error.code}` }))
+    }
+    const row = data[0]
+    if (!row) {
+      return yield* Effect.fail(new ForbiddenError({ message: 'Permission denied' }))
+    }
+    return row
   })
 }
 

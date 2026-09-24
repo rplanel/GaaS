@@ -4,6 +4,8 @@ import type { GalaxyWorkflowsItem } from 'blendtype'
 import type { Database, WorkflowRow } from 'nuxt-galaxy'
 import type { ResultsViewReading } from '../../utils/resultsViews'
 import { resultsViews } from '#build/gaas/results-views.mjs'
+import { log } from 'evlog/client'
+import { describeActiveSwitchFailure } from '../../utils/activeSwitchFailure'
 import { matchResultsView, resultsViewReading } from '../../utils/resultsViews'
 
 /**
@@ -34,6 +36,10 @@ const breadcrumbsItems = toRef(() => props.breadcrumbsItems)
 const toast = useToast()
 const UBadge = resolveComponent('UBadge')
 const UButton = resolveComponent('UButton')
+const USwitch = resolveComponent('USwitch')
+
+/** The versions whose Active switch is waiting for the server's answer. */
+const pendingVersions = reactive(new Set<number>())
 
 /** The reading at a glance: a view of the version's own, something wider, or nothing. */
 const resultsViewReadingColor = {
@@ -76,6 +82,10 @@ const columns = ref<TableColumn<StoredWorkflowRow>[]>([
     // match the results page runs (ADR 0003), handed the name and the label
     // stored at publish, so the two agree. A developer sees here whether the
     // view directory they wrote is picked up for the version it is meant for.
+    // Beside it, the Active switch: retiring a version hides it from users
+    // and refuses new analyses on it, and nothing else (ADR 0004); the match
+    // is made from the name and the label, so a retired version reads as it
+    // did.
     accessorKey: 'versions',
     header: 'Versions',
     cell: ({ row }) => {
@@ -91,6 +101,14 @@ const columns = ref<TableColumn<StoredWorkflowRow>[]>([
             'variant': 'subtle',
             'color': resultsViewReadingColor[version.resultsView],
           }, () => version.resultsView),
+          h(USwitch, {
+            'data-testid': 'version-active',
+            'label': 'Active',
+            'size': 'sm',
+            'modelValue': version.row.active,
+            'loading': pendingVersions.has(version.row.id),
+            'onUpdate:modelValue': (active: boolean) => setActive(version.row, active),
+          }),
         ])))
     },
   },
@@ -149,9 +167,60 @@ const { data: galaxyInstance } = useQuery(() =>
   }),
 )
 
+// every version, retired ones included: the users' list query hides retired
+// versions, and this page is where they are retired and made active again
 const { data: dbWorkflows, refresh: refreshVersions } = useQuery(() => {
-  return workflowsListQuery({ supabase })
+  return adminWorkflowsListQuery({ supabase })
 })
+
+/**
+ * Retire a version, or make it active again. The switch stays where the row
+ * says until the server has said yes and the list has been refetched, so what
+ * the administrator reads is always what the database holds; a refusal is a
+ * toast with the server's sentence, and the switch does not move.
+ */
+async function setActive(version: WorkflowRow, active: boolean) {
+  pendingVersions.add(version.id)
+  try {
+    await $fetch<WorkflowRow>(`/api/db/workflows/${version.id}`, {
+      method: 'PATCH',
+      body: { active },
+    })
+    toast.add({
+      title: active ? 'Version active again' : 'Version retired',
+      description: active
+        ? `${version.name_key} ${version.version_key} can be started again.`
+        : `${version.name_key} ${version.version_key} is hidden from users; its past analyses are untouched.`,
+      color: 'success',
+      icon: 'i-lucide-circle-check',
+    })
+    await refreshVersions()
+  }
+  catch (error) {
+    // the cause itself is only ever worth a log, at `warn` when the
+    // administrator can act on it and at `error` when the server could not
+    // say why
+    const status = toValue(useErrorStatus(error).errorStatus)
+    const recoverable = status !== undefined && status >= 400 && status < 500
+    log[recoverable ? 'warn' : 'error']({
+      action: active ? 'workflow:make_active_failed' : 'workflow:retire_failed',
+      tag: 'admin/workflows',
+      versionId: version.id,
+      status,
+      error: String(error),
+    })
+    const failure = describeActiveSwitchFailure(error, active)
+    toast.add({
+      title: failure.title,
+      description: failure.description,
+      color: 'error',
+      icon: 'i-lucide-circle-x',
+    })
+  }
+  finally {
+    pendingVersions.delete(version.id)
+  }
+}
 
 /** The versions published so far, grouped by the stored workflow they label. */
 const versionsByStoredWorkflow = computed(() => {

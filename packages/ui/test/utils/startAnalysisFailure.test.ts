@@ -138,4 +138,28 @@ describe('describeStartAnalysisFailure', () => {
       expect(described.description).not.toBe('')
     })
   })
+
+  // #71, ADR 0004. An administrator retired the version after the reader
+  // loaded the page, so the server refuses with a sentence naming it.
+  describe('a version retired since the page was loaded', () => {
+    const words = 'Version "0.11" of "satelliteFinder" is retired; no analysis can be started on it.'
+
+    it('shows the server\'s sentence, under a title that says what happened', () => {
+      const described = describeStartAnalysisFailure(
+        fetchError(409, { statusCode: 409, statusMessage: words }),
+      )
+
+      expect(described.title).toBe('This version has been retired')
+      expect(described.description).toBe(words)
+      expect(described.signIn).toBe(false)
+    })
+
+    it('still sends the reader back to the list when the words did not arrive', () => {
+      const described = describeStartAnalysisFailure(fetchError(409, { statusCode: 409, statusMessage: '' }, 'Conflict'))
+
+      expect(described.title).toBe('This version has been retired')
+      expect(described.description).toContain('Reload the page')
+      expect(described.description).not.toContain('Conflict')
+    })
+  })
 })

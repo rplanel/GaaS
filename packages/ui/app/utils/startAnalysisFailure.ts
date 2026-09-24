@@ -76,6 +76,16 @@ export function describeStartAnalysisFailure(refusal: unknown): StartAnalysisFai
       signIn: false,
     }
   }
+  // #71. The version exists but an administrator retired it since the page
+  // was loaded; the server's sentence names the version, so it is shown as
+  // written, and the fixed copy stands in only if the words did not arrive.
+  if (statusCode === 409) {
+    return {
+      title: 'This version has been retired',
+      description: serverWordsOf(refusal) ?? 'No analysis can be started on it. Reload the page to see the workflows you can still start.',
+      signIn: false,
+    }
+  }
   if (statusCode === 503) {
     return {
       title: 'Galaxy is unavailable right now',

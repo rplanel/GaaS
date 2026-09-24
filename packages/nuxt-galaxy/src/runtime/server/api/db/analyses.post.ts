@@ -13,7 +13,7 @@ import { uploadDatasetsEffect } from '../../utils/grizzle/datasets'
 import { addHistoryEffect, discardPreparedHistoryEffect } from '../../utils/grizzle/histories'
 import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase.js'
 import { requireDatamapDeclaresInputs } from '../../utils/grizzle/workflowInputs'
-import { getWorkflowEffect } from '../../utils/grizzle/workflows'
+import { getWorkflowEffect, WorkflowRetiredError } from '../../utils/grizzle/workflows'
 import { checkGalaxyHealthEffect, CheckGalaxyHealthError } from '../../utils/health.js'
 import { toHttpError } from '../../utils/httpError'
 
@@ -50,6 +50,18 @@ export default defineEventHandler<{ body: AnalysisBody }>(
       // decide. The workflow is resolved first, so an identifier nobody can
       // act on is refused before anything exists on Galaxy.
       const workflow = yield* getWorkflowEffect(workflowId)
+
+      // `active` means startable by users (ADR 0004, #71). The users' list
+      // hides a retired version, so only a client holding a stale id gets
+      // here; it is refused with the version's name and label, and before
+      // anything is prepared, for the same ordering reason as the two checks
+      // around it. A retired version's past analyses are untouched: this is
+      // the only place the flag is read.
+      if (!workflow.active) {
+        return yield* Effect.fail(new WorkflowRetiredError({
+          message: `Version "${workflow.versionKey}" of "${workflow.nameKey}" is retired; no analysis can be started on it.`,
+        }))
+      }
 
       // `getWorkflowEffect` does `select()`, so `definition` — every step
       // with its type — is already in scope here, one line before the first
@@ -142,6 +154,10 @@ export default defineEventHandler<{ body: AnalysisBody }>(
           // that names no workflow they may run, and a datamap that cannot
           // start the one it names
           WorkflowNotFoundError: 404,
+          // the version exists and the request was well formed; what it
+          // asks for conflicts with the version's state, which only an
+          // administrator can change, so the sentence names the version
+          WorkflowRetiredError: 409,
           DatamapMismatchError: 400,
           // Galaxy accepted the request and gave back nothing to run against,
           // which is Galaxy being unwell rather than this server being wrong

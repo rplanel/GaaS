@@ -45,4 +45,4 @@ export { uploadedDatasetsViewQuery } from './uploadedDatasetsView'
 
 // Workflows
 export { SUPABASE_WORKFLOWS_QUERY_KEYS } from './workflows'
-export { workflowByIdQuery, workflowsListQuery } from './workflows'
+export { adminWorkflowsListQuery, workflowByIdQuery, workflowsListQuery } from './workflows'

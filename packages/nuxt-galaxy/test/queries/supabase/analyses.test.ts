@@ -96,4 +96,18 @@ describe('analysis for a results view', () => {
 
     await expect(supabaseAnalysisByIdForResultsViewQuery(supabase, 404)).rejects.toThrow('row not found')
   })
+
+  // #71, ADR 0004. A retired version's past analyses keep their results
+  // views: the analysis is narrowed on its id and nothing else, so the
+  // version it embeds comes back whether or not it is still active, and the
+  // name and the label the view is matched by come with it.
+  it('opens an analysis of a retired version too: it narrows on the analysis alone, never on the version being active', async () => {
+    const retired = { ...analysisRow, workflows: { ...analysisRow.workflows, active: false } }
+    const { chain, supabase } = createChainMock(retired)
+
+    const analysis = await supabaseAnalysisByIdForResultsViewQuery(supabase, 7)
+
+    expect(chain.eq.mock.calls).toEqual([['id', 7]])
+    expect(analysis.workflows).toEqual(retired.workflows)
+  })
 })

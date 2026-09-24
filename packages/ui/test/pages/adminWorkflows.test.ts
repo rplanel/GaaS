@@ -96,6 +96,27 @@ mockNuxtImport('workflowsListQuery', () => () => ({
   ],
 }))
 
+/**
+ * The same three versions as the admin page reads them, retired ones
+ * included (#71): fresh for every test, since the PATCH endpoints below flip
+ * `active` in place, and keyed per test so that a mount reads its own cache
+ * entry rather than the one the previous test's refetch filled.
+ */
+function publishedVersions() {
+  return [
+    version(1, 'wf-satellite', 'satelliteFinder', '0.11', 3),
+    version(2, 'wf-satellite', 'satelliteFinder', '0.10', 1),
+    version(3, 'wf-defense', 'defenseFinder', '2.0.0', 0),
+  ]
+}
+let adminVersions = publishedVersions()
+let adminRun = 0
+
+mockNuxtImport('adminWorkflowsListQuery', () => () => ({
+  key: ['test', 'db', 'workflows', 'admin', adminRun],
+  query: async () => adminVersions,
+}))
+
 /** The body of the last publish request that reached the endpoint. */
 let lastBody: Record<string, unknown> | null = null
 /** The sentence the endpoint refuses the next publish with, or none to accept it. */
@@ -201,6 +222,35 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
+/** The last retire or reactivate request that reached the endpoint: the version's id and the body. */
+let lastActiveRequest: { id: number, body: Record<string, unknown> } | null = null
+/** The sentence the endpoint refuses the next retire or reactivate with, or none to accept it. */
+let refuseActiveWith: { statusCode: number, statusMessage: string } | null = null
+
+// the endpoint registry matches whole URLs, so each version's route is registered on its own
+for (const id of [1, 2, 3]) {
+  registerEndpoint(`/api/db/workflows/${id}`, {
+    method: 'PATCH',
+    handler: async (event) => {
+      const body = await readBody(event)
+      lastActiveRequest = { id, body }
+      if (refuseActiveWith) {
+        throw createError(refuseActiveWith)
+      }
+      const row = adminVersions.find(candidate => candidate.id === id)!
+      row.active = Boolean(body.active)
+      return row
+    },
+  })
+}
+
+beforeEach(() => {
+  adminVersions = publishedVersions()
+  adminRun += 1
+  lastActiveRequest = null
+  refuseActiveWith = null
+})
+
 describe('admin workflows', () => {
   // The first mount is the only cold-cache one in this file (the query cache is
   // shared by every mount), so the load-on-entry path is proven here.
@@ -299,6 +349,79 @@ describe('admin workflows', () => {
       await vi.waitFor(() => expect(dialog()?.querySelector('[data-testid="publish-refusal"]')?.textContent).toContain('Version "0.11" of "satelliteFinder" already exists.'))
       expect(dialog()).not.toBeNull()
       expect(document.body.textContent).not.toContain('Version published')
+    })
+  })
+
+  // #71, ADR 0004. Active means startable by users and nothing else; the
+  // switch beside each version is where an administrator retires it and
+  // makes it active again. The page reads every version, retired ones
+  // included, which is why it has a list query of its own.
+  describe('the Active switch beside each version', () => {
+    /** The switch of that version on that row, found by the label beside it. */
+    function switchOf(wrapper: Page, name: string, label: string) {
+      const entry = rowOf(wrapper, name)
+        .findAll('[data-testid="workflow-version"]')
+        .find(candidate => candidate.find('[data-testid="version-label"]').text() === label)
+      if (!entry)
+        throw new Error(`no version "${label}" is listed for "${name}"`)
+      return entry.find('[role="switch"]')
+    }
+
+    it('lists every version with a switch reading its state, retired ones included, and reads their results view as before', async () => {
+      adminVersions[0]!.active = false
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Satellite Finder')).toBeDefined())
+
+      expect(switchOf(wrapper, 'Satellite Finder', '0.11').attributes('aria-checked')).toBe('false')
+      expect(switchOf(wrapper, 'Satellite Finder', '0.10').attributes('aria-checked')).toBe('true')
+      expect(switchOf(wrapper, 'Defense Finder', '2.0.0').attributes('aria-checked')).toBe('true')
+      expect(rowOf(wrapper, 'Satellite Finder').text()).toContain('Active')
+      // the match is made from the name and the label, never from the flag,
+      // so a retired version's past analyses keep the view they had
+      expect(versionsOf(wrapper, 'Satellite Finder')).toEqual([
+        { label: '0.11', reading: 'exact' },
+        { label: '0.10', reading: 'none' },
+      ])
+      expect(wrapper.text()).not.toMatch(/deactivat|inactive|unpublish/i)
+    })
+
+    it('retires a version: asks the server for active false, says so, and the switch reads retired once the list refetched', async () => {
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Satellite Finder')).toBeDefined())
+
+      await switchOf(wrapper, 'Satellite Finder', '0.10').trigger('click')
+
+      await vi.waitFor(() => expect(lastActiveRequest).toEqual({ id: 2, body: { active: false } }))
+      await vi.waitFor(() => expect(document.body.textContent).toContain('Version retired'))
+      expect(document.body.textContent).toContain('satelliteFinder 0.10')
+      await vi.waitFor(() => expect(switchOf(wrapper, 'Satellite Finder', '0.10').attributes('aria-checked')).toBe('false'))
+      expect(switchOf(wrapper, 'Satellite Finder', '0.11').attributes('aria-checked')).toBe('true')
+    })
+
+    it('makes a retired version active again the same way', async () => {
+      adminVersions[1]!.active = false
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Satellite Finder')).toBeDefined())
+
+      await switchOf(wrapper, 'Satellite Finder', '0.10').trigger('click')
+
+      await vi.waitFor(() => expect(lastActiveRequest).toEqual({ id: 2, body: { active: true } }))
+      await vi.waitFor(() => expect(document.body.textContent).toContain('Version active again'))
+      await vi.waitFor(() => expect(switchOf(wrapper, 'Satellite Finder', '0.10').attributes('aria-checked')).toBe('true'))
+    })
+
+    it('shows the server\'s sentence when it refuses, and leaves the switch as it was', async () => {
+      refuseActiveWith = { statusCode: 404, statusMessage: 'No workflow 2 is available' }
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Satellite Finder')).toBeDefined())
+
+      await switchOf(wrapper, 'Satellite Finder', '0.10').trigger('click')
+
+      await vi.waitFor(() => expect(lastActiveRequest).toEqual({ id: 2, body: { active: false } }))
+      await vi.waitFor(() => expect(document.body.textContent).toContain('Version not retired'))
+      expect(document.body.textContent).toContain('No workflow 2 is available')
+      expect(document.body.textContent).not.toContain('Version retired')
+      expect(switchOf(wrapper, 'Satellite Finder', '0.10').attributes('aria-checked')).toBe('true')
     })
   })
 })
