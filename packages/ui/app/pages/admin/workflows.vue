@@ -18,10 +18,20 @@ interface PublishedVersion {
 }
 
 /**
- * A stored workflow of the Galaxy account GaaS runs as, with the versions
- * published for it (ADR 0004). Tags play no part in whether it is listed.
+ * A row of the table: a stored workflow of the Galaxy account GaaS runs as,
+ * with the versions published for it (ADR 0004). Tags play no part in whether
+ * it is listed. `galaxy` is the stored workflow as Galaxy lists it, and is
+ * absent when Galaxy no longer lists it (#76): the versions published for it
+ * still get a row, named from the snapshot taken at publish, so a stored
+ * workflow deleted on the Galaxy side does not drop out of the page silently
+ * and its versions can be retired from here. Nothing can be published for it.
  */
-interface StoredWorkflowRow extends GalaxyWorkflowsItem {
+interface StoredWorkflowRow {
+  /** The stored workflow's Galaxy id, whether or not Galaxy still lists it. */
+  id: string
+  /** Galaxy's display name, or the snapshot's when Galaxy no longer lists the workflow. */
+  name: string
+  galaxy?: GalaxyWorkflowsItem
   versions: PublishedVersion[]
 }
 
@@ -37,6 +47,7 @@ const toast = useToast()
 const UBadge = resolveComponent('UBadge')
 const UButton = resolveComponent('UButton')
 const USwitch = resolveComponent('USwitch')
+const AdminVersionStateBadge = resolveComponent('AdminVersionStateBadge')
 
 /** The versions whose Active switch is waiting for the server's answer. */
 const pendingVersions = reactive(new Set<number>())
@@ -85,9 +96,11 @@ const columns = ref<TableColumn<StoredWorkflowRow>[]>([
     // Beside it, the Active switch: retiring a version hides it from users
     // and refuses new analyses on it, and nothing else (ADR 0004); the match
     // is made from the name and the label, so a retired version reads as it
-    // did. Last, Delete, for the mistaken publish (#72): it opens a
-    // confirmation naming the version, and the database refuses a version
-    // that has analyses.
+    // did. Then the state of the version (#76): whether it can still run,
+    // read live from Galaxy once per version and never stored; nothing is
+    // retired from it, the administrator reads it and decides. Last, Delete,
+    // for the mistaken publish (#72): it opens a confirmation naming the
+    // version, and the database refuses a version that has analyses.
     accessorKey: 'versions',
     header: 'Versions',
     cell: ({ row }) => {
@@ -103,6 +116,7 @@ const columns = ref<TableColumn<StoredWorkflowRow>[]>([
             'variant': 'subtle',
             'color': resultsViewReadingColor[version.resultsView],
           }, () => version.resultsView),
+          h(AdminVersionStateBadge, { version: version.row }),
           h(USwitch, {
             'data-testid': 'version-active',
             'label': 'Active',
@@ -124,18 +138,26 @@ const columns = ref<TableColumn<StoredWorkflowRow>[]>([
     },
   },
   {
-    accessorKey: 'number_of_steps',
+    // what Galaxy says about the stored workflow, blank when Galaxy no
+    // longer lists it (#76): the snapshot holds the steps, but as they were
+    // at publish, which is not what this column reads
+    id: 'number_of_steps',
+    accessorFn: row => row.galaxy?.number_of_steps,
     header: 'Number of steps',
     cell: ({ row }) => {
-      return h(UBadge, { class: 'capitalize', variant: 'subtle' }, () =>
-        row.getValue('number_of_steps'))
+      const steps = row.original.galaxy?.number_of_steps
+      return steps === undefined ? null : h(UBadge, { class: 'capitalize', variant: 'subtle' }, () => steps)
     },
   },
   {
-    accessorKey: 'create_time',
+    id: 'create_time',
+    accessorFn: row => row.galaxy?.create_time,
     header: 'Create time',
     cell: ({ row }) => {
-      return new Date(row.getValue('create_time')).toLocaleString('en-US', {
+      const createTime = row.original.galaxy?.create_time
+      if (createTime === undefined)
+        return null
+      return new Date(createTime).toLocaleString('en-US', {
         day: 'numeric',
         month: 'short',
         hour: '2-digit',
@@ -148,6 +170,10 @@ const columns = ref<TableColumn<StoredWorkflowRow>[]>([
     id: 'publish',
     header: '',
     cell: ({ row }) => {
+      // nothing can be published for a stored workflow Galaxy no longer
+      // lists: there is no revision to export
+      if (!row.original.galaxy)
+        return null
       return h(UButton, {
         'data-testid': 'publish-version',
         'label': 'Publish',
@@ -249,21 +275,35 @@ const versionsByStoredWorkflow = computed(() => {
 })
 
 /**
- * Every stored workflow of the account, the published ones first, otherwise
- * in the order Galaxy lists them.
+ * Every stored workflow of the account, in three groups: first the ones
+ * Galaxy no longer lists but versions were published for (#76), since they
+ * need the administrator's decision; then the published ones; then the rest,
+ * each group in the order Galaxy lists them.
  */
 const storedWorkflows = computed<StoredWorkflowRow[]>(() => {
   const allWorkflowsVal = toValue(allWorkflows)
   if (!allWorkflowsVal) {
     return []
   }
-  const rows = (allWorkflowsVal as GalaxyWorkflowsItem[]).map(workflow => ({
-    ...workflow,
+  const listed = (allWorkflowsVal as GalaxyWorkflowsItem[]).map<StoredWorkflowRow>(workflow => ({
+    id: workflow.id,
+    name: workflow.name,
+    galaxy: workflow,
     versions: versionsByStoredWorkflow.value.get(workflow.id) ?? [],
   }))
+  const listedIds = new Set(listed.map(row => row.id))
+  const gone: StoredWorkflowRow[] = []
+  for (const [galaxyId, versions] of versionsByStoredWorkflow.value) {
+    if (listedIds.has(galaxyId))
+      continue
+    // named from the snapshot taken at publish, Galaxy having nothing to say
+    // about it any more; every version of a stored workflow shares that name
+    gone.push({ id: galaxyId, name: versions[0]!.row.name ?? versions[0]!.row.name_key, versions })
+  }
   return [
-    ...rows.filter(row => row.versions.length > 0),
-    ...rows.filter(row => row.versions.length === 0),
+    ...gone,
+    ...listed.filter(row => row.versions.length > 0),
+    ...listed.filter(row => row.versions.length === 0),
   ]
 })
 
@@ -342,10 +382,10 @@ const pageHeaderProps = computed(() => {
         </template>
       </NuxtErrorBoundary>
       <AdminPublishVersionModal
-        v-if="workflowToPublish"
+        v-if="workflowToPublish?.galaxy"
         :key="workflowToPublish.id"
         v-model:open="dialogOpen"
-        :workflow="workflowToPublish"
+        :workflow="workflowToPublish.galaxy"
         :lineage-name="workflowToPublish.versions[0]?.row.name_key"
         :published-versions="workflowToPublish.versions.map(version => ({ revision: version.row.revision, label: version.row.version_key }))"
         @published="onPublished"
