@@ -100,10 +100,10 @@ export default defineEventHandler<{ body: AnalysisBody }>(
         return yield* runAnalysis(
           name,
           historyDb.galaxyId,
-          // the revision that was activated is the one that runs (#48);
-          // `auto_version` is the export's `version` at activation, a 0-based
+          // the revision the row is pinned to is the one that runs (#48);
+          // `revision` is the export's `version` at activation, a 0-based
           // revision index Galaxy resolves with `get_internal_version`
-          { galaxyId: workflow.galaxyId, revision: workflow.autoVersion },
+          { galaxyId: workflow.galaxyId, revision: workflow.revision },
           historyDb.id,
           workflow.id,
           supabaseUser.id,

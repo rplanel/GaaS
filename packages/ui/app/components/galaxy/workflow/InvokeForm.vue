@@ -329,7 +329,7 @@ const workflowGalaxyId = computed(() => {
 // (#48). Asked for by name so the inputs shown are the inputs that will run;
 // Galaxy's latest revision, which the proxy describes when asked for none,
 // moves with every save in its editor.
-const workflowRevision = computed(() => toValue(dbWorkflow)?.auto_version)
+const workflowRevision = computed(() => toValue(dbWorkflow)?.revision)
 
 const {
   workflowSteps,

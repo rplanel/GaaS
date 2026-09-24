@@ -22,7 +22,7 @@ export { isInvocationTerminalState } from './analysisMonitoring'
  * names one, and every save in its editor appends a revision, so before #48 a
  * save after activation changed what the next analysis ran, under the same
  * name and version. The revision is the `version` the export carried at
- * activation, stored on the workflow row as `auto_version`.
+ * activation, stored on the workflow row as `revision`.
  */
 export interface GalaxyWorkflowToRun {
   readonly galaxyId: string

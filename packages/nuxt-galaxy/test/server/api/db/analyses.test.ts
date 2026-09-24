@@ -22,7 +22,7 @@ const mockDbWorkflow = {
   versionKey: '1.0',
   // The Galaxy revision that was activated: the 0-based index the export's
   // `version` carried, which #48 hands back to Galaxy as the one to run.
-  autoVersion: 3,
+  revision: 3,
   // The column the refusal in #43 is read off. It declares the two inputs the
   // default datamap below supplies, so the happy path stays the happy path.
   definition: workflowDefinition({
@@ -245,7 +245,7 @@ describe('post /api/db/analyses', () => {
   // invocation names one, so every save in Galaxy's editor after activation
   // changed what the next analysis ran, under the same name and version. The
   // activated revision is the `version` the export carried at activation,
-  // stored as `auto_version` and read by nothing until now.
+  // stored as `revision` and read by nothing until now.
   it('starts the revision that was activated, not whatever Galaxy has latest', async () => {
     const handler = await loadHandler()
     await handler(event)
@@ -253,7 +253,7 @@ describe('post /api/db/analyses', () => {
     const [, , workflow] = mocks.runAnalysis.mock.calls[0]!
     expect(workflow).toEqual({
       galaxyId: mockDbWorkflow.galaxyId,
-      revision: mockDbWorkflow.autoVersion,
+      revision: mockDbWorkflow.revision,
     })
   })
 

@@ -15,7 +15,7 @@ import { ServerSupabaseClaims, ServerSupabaseClient } from '../../../utils/grizz
  * `version` names one, and until #48 this proxy never named one: the form
  * described Galaxy's latest while the server compared the datamap against,
  * and now starts, the revision that was activated. The form sends that row's
- * `auto_version`, an integer by construction. Galaxy's `get_internal_version`
+ * `revision`, an integer by construction. Galaxy's `get_internal_version`
  * indexes a list, so only a non-negative integer can name a revision, and
  * anything else — a word, a negative, a fraction, a repeated parameter — is
  * refused here rather than handed to Galaxy to answer for: a caller reaching

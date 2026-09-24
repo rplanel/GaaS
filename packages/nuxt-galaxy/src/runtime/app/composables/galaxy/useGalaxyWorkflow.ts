@@ -6,7 +6,7 @@ import { computed, createError, ref, toValue, watch } from '#imports'
  * One Galaxy workflow as the proxy describes it, with the readings the form
  * and the analysis panel take off it.
  *
- * `revision` is the revision to describe: the workflow row's `auto_version`,
+ * `revision` is the revision to describe: the workflow row's `revision` column,
  * the one an analysis of that row starts (#48). Left out, Galaxy describes
  * its latest revision, which is what every caller got before and which a save
  * in Galaxy's editor moves.

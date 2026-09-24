@@ -67,7 +67,7 @@ const workflowGalaxyId = computed(() => {
 const workflowRevision = computed(() => {
   const detailedAnalysisVal = toValue(detailedAnalysis)
   if (detailedAnalysisVal) {
-    return detailedAnalysisVal.workflow_revision ?? detailedAnalysisVal.workflows.auto_version
+    return detailedAnalysisVal.workflow_revision ?? detailedAnalysisVal.workflows.revision
   }
   return undefined
 })

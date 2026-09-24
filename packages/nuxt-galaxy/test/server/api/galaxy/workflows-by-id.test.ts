@@ -160,7 +160,7 @@ describe('get /api/galaxy/workflows/:workflowId', () => {
 
     // Galaxy's `get_internal_version` indexes a list, so anything but a
     // non-negative integer is refused here rather than handed to Galaxy to
-    // answer for; the form only ever sends the row's `auto_version`, so a
+    // answer for; the form only ever sends the row's `revision`, so a
     // caller reaching this has a bug worth being told about.
     it.each([
       ['a word', 'abc'],

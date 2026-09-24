@@ -631,34 +631,34 @@ export type Database = {
       workflows: {
         Row: {
           annotation: string | null
-          auto_version: number
           definition: Json
           galaxy_id: string
           id: number
           name: string
           name_key: string
+          revision: number
           user_id: number
           version_key: string
         }
         Insert: {
           annotation?: string | null
-          auto_version?: number
           definition: Json
           galaxy_id: string
           id?: number
           name: string
           name_key: string
+          revision: number
           user_id: number
           version_key: string
         }
         Update: {
           annotation?: string | null
-          auto_version?: number
           definition?: Json
           galaxy_id?: string
           id?: number
           name?: string
           name_key?: string
+          revision?: number
           user_id?: number
           version_key?: string
         }

@@ -282,7 +282,7 @@ describe('insertWorkflow', () => {
     it.each([
       ['0, the only revision of an imported workflow', 0],
       ['1, the first save after creating in the editor', 1],
-    ])('activates a workflow whose export carries %s and stores it as auto_version', async (_label, version) => {
+    ])('activates a workflow whose export carries %s and stores it as revision', async (_label, version) => {
       const galaxyLayer = createMockGalaxyLayer({ ...mockGalaxyWorkflowExport, version })
       const drizzle = createMockDrizzle()
       drizzle.setResult([mockDbUser])
@@ -301,7 +301,7 @@ describe('insertWorkflow', () => {
         Effect.runPromise,
       )
 
-      expect(insertedRow(mockClient)).toMatchObject({ auto_version: version })
+      expect(insertedRow(mockClient)).toMatchObject({ revision: version })
     })
 
     it.each([

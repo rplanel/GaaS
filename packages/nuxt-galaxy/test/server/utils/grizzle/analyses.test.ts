@@ -77,7 +77,7 @@ function createBodyRecordingGalaxyLayer<T>(response: T): { requests: RecordedReq
  * request names one, and until now the request named none: a save in Galaxy's
  * editor after activation changed what the next analysis ran, under the same
  * name and version. The revision that was activated is the `version` the
- * export carried, stored as `auto_version`, and it now travels in two places:
+ * export carried, stored as `revision`, and it now travels in two places:
  * the invocation, so that it is what runs, and the analysis row, so that it
  * is known afterwards.
  */

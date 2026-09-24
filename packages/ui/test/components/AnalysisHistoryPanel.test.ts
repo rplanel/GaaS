@@ -7,7 +7,7 @@ import AnalysisHistoryPanel from '../../app/components/analysis/AnalysisHistoryP
 
 /** The Galaxy identifier of the stored workflow every analysis here ran. */
 const GALAXY_WORKFLOW_ID = 'galaxy-wf-1'
-/** The revision the workflow row was activated at, its `auto_version`. */
+/** The Galaxy revision the workflow row is pinned to, its `revision` column. */
 const ACTIVATED_REVISION = 5
 /** The revision analysis 7 was started against and recorded (#48), a later save having moved the row on since. */
 const RAN_REVISION = 3
@@ -37,7 +37,7 @@ function analysisRow(id: number) {
     invocation: {},
     workflow_id: 1,
     workflow_revision: id === 7 ? RAN_REVISION : null,
-    workflows: { id: 1, name: 'A workflow', galaxy_id: GALAXY_WORKFLOW_ID, auto_version: ACTIVATED_REVISION, name_key: 'aWorkflow', version_key: '1.0' },
+    workflows: { id: 1, name: 'A workflow', galaxy_id: GALAXY_WORKFLOW_ID, revision: ACTIVATED_REVISION, name_key: 'aWorkflow', version_key: '1.0' },
     histories: { id: 1, state: 'ok', galaxy_id: 'galaxy-history-1' },
     jobs: [],
     analysis_outputs: [],
@@ -84,7 +84,7 @@ beforeEach(() => {
   workflowFetches = 0
 })
 
-// #48 pinned what an analysis runs to the workflow row's `auto_version` and
+// #48 pinned what an analysis runs to the workflow row's `revision` and
 // recorded the revision on the analysis; the panel went on describing the
 // analysis with whatever revision Galaxy had latest, so a save in Galaxy's
 // editor could relabel a job's tool or its step under an analysis that never
