@@ -68,14 +68,26 @@ export const workflows = galaxy.table(
       using: sql`(SELECT galaxy_rbac.authorize('workflows.update')) = TRUE`,
       withCheck: sql`(SELECT galaxy_rbac.authorize('workflows.update')) = TRUE`,
     }),
+    // Deleting a version no analysis references (ADR 0004, #72): the
+    // mistaken publish. The policy says who may delete; which versions may
+    // go is the foreign key's decision, since `analyses.workflow_id` carries
+    // no ON DELETE clause and refuses while an analysis references the row.
+    pgPolicy('Admin can delete workflows', {
+      for: 'delete',
+      to: authenticatedRole,
+      using: sql`(SELECT galaxy_rbac.authorize('workflows.delete')) = TRUE`,
+    }),
   ],
 )
 
 /**
- * workflowsToTags
+ * workflowsToTags. Nothing has written this table since ADR 0004 made tags a
+ * pre-fill, but a development database may still hold associations from
+ * before; they go with the version they were attached to (#72), so that a
+ * stale one never stands in the way of a delete the way an analysis does.
  */
 export const workflowsToTags = galaxy.table('workflows_to_tags', {
-  workflowId: integer('workflow_id').notNull().references(() => workflows.id),
+  workflowId: integer('workflow_id').notNull().references(() => workflows.id, { onDelete: 'cascade' }),
   tagId: integer('tag_id').notNull().references(() => tags.id),
 }, t => [
   primaryKey({ columns: [t.workflowId, t.tagId] }),

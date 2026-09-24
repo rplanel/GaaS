@@ -48,6 +48,25 @@ export class UpdateWorkflowError extends Data.TaggedError('UpdateWorkflowError')
 }> {}
 
 /**
+ * An analysis references the version, so the database refused to delete it
+ * (ADR 0004): `analyses.workflow_id` carries no ON DELETE clause, and that
+ * foreign key is the rule. The sentence names the version and points at the
+ * act that is allowed instead, retiring, since that is what the administrator
+ * who reads it can do.
+ */
+export class WorkflowReferencedError extends Data.TaggedError('WorkflowReferencedError')<{
+  readonly message: string
+}> {}
+
+/**
+ * The delete the database answered with something that is neither a refusal
+ * nor a row: a fault, cause attached, since the caller can do nothing about it.
+ */
+export class DeleteWorkflowError extends Data.TaggedError('DeleteWorkflowError')<{
+  readonly message: string
+}> {}
+
+/**
  * A label already used for this name. The pair names the results view
  * directory (ADR 0003), so it is unique across the application, whichever
  * stored workflow carries the name: a name may span stored workflows (ADR
@@ -169,6 +188,63 @@ export function setVersionActive(
         return yield* Effect.fail(new ForbiddenError({ message: 'Permission denied' }))
       }
       return yield* Effect.fail(new UpdateWorkflowError({ message: `supabase error: ${error.message}\ncode : ${error.code}` }))
+    }
+    const row = data[0]
+    if (!row) {
+      return yield* Effect.fail(new ForbiddenError({ message: 'Permission denied' }))
+    }
+    return row
+  })
+}
+
+/**
+ * Delete a version no analysis references (ADR 0004): the mistaken publish,
+ * a wrong label or a wrong revision. Nothing is asked of Galaxy, and once the
+ * row is gone the revision can be published again under another label, since
+ * the unique on the revision was what refused it.
+ *
+ * The version is read first through the service role (a 404 for an id nobody
+ * can act on, and the name and the label the refusal below is worded with),
+ * then deleted through the caller's own session, so the database decides who
+ * may delete: the `workflows.delete` policy. Whether the version *can* be
+ * deleted is the database's too: `analyses.workflow_id` references it with
+ * no ON DELETE clause, so a version with analyses is refused by the foreign
+ * key, and that refusal is answered as a sentence pointing at retiring. A
+ * DELETE policy hides the rows it refuses rather than raising, so zero rows
+ * back means the policy, and it is answered as the refusal it is.
+ */
+export function deleteVersion(
+  workflowId: number,
+  event: H3Event<EventHandlerRequest>,
+) {
+  return Effect.gen(function* () {
+    const createServerSupabaseClaims = yield* ServerSupabaseClaims
+    const supabaseClaims = yield* createServerSupabaseClaims(event)
+    if (!supabaseClaims) {
+      return yield* Effect.fail(new GetSupabaseUserError({ message: 'Unauthorized' }))
+    }
+    const createServerSupabaseClient = yield* ServerSupabaseClient
+    const supabaseClient = yield* createServerSupabaseClient(event)
+
+    const version = yield* getWorkflowEffect(workflowId)
+
+    const { error, data } = yield* Effect.promise(() => supabaseClient
+      .schema('galaxy')
+      .from('workflows')
+      .delete()
+      .eq('id', workflowId)
+      .select(),
+    )
+    if (error) {
+      if (error.code === '42501') {
+        return yield* Effect.fail(new ForbiddenError({ message: 'Permission denied' }))
+      }
+      if (error.code === '23503') {
+        return yield* Effect.fail(new WorkflowReferencedError({
+          message: `Version "${version.versionKey}" of "${version.nameKey}" has analyses and cannot be deleted; retire it instead.`,
+        }))
+      }
+      return yield* Effect.fail(new DeleteWorkflowError({ message: `supabase error: ${error.message}\ncode : ${error.code}` }))
     }
     const row = data[0]
     if (!row) {

@@ -262,6 +262,32 @@ beforeEach(() => {
   refuseActiveWith = null
 })
 
+/** The ids the delete endpoint was asked for, in order. */
+let deleteRequests: number[] = []
+/** The sentence the endpoint refuses the next delete with, or none to accept it. */
+let refuseDeleteWith: { statusCode: number, statusMessage: string } | null = null
+
+// the endpoint registry matches whole URLs, so each version's route is registered on its own (#72)
+for (const id of [1, 2, 3]) {
+  registerEndpoint(`/api/db/workflows/${id}`, {
+    method: 'DELETE',
+    handler: () => {
+      deleteRequests.push(id)
+      if (refuseDeleteWith) {
+        throw createError(refuseDeleteWith)
+      }
+      const row = adminVersions.find(candidate => candidate.id === id)!
+      adminVersions = adminVersions.filter(candidate => candidate.id !== id)
+      return row
+    },
+  })
+}
+
+beforeEach(() => {
+  deleteRequests = []
+  refuseDeleteWith = null
+})
+
 describe('admin workflows', () => {
   // The first mount is the only cold-cache one in this file (the query cache is
   // shared by every mount), so the load-on-entry path is proven here.
@@ -434,6 +460,86 @@ describe('admin workflows', () => {
       expect(document.body.textContent).toContain('No workflow 2 is available')
       expect(document.body.textContent).not.toContain('Version retired')
       expect(switchOf(wrapper, 'Satellite Finder', '0.10').attributes('aria-checked')).toBe('true')
+    })
+  })
+
+  // #72, ADR 0004. The mistaken publish: a version no analysis references can
+  // be deleted, after a confirmation that names it. The database refuses a
+  // version with analyses, and the administrator reads that retiring is the
+  // alternative.
+  describe('the Delete control beside each version', () => {
+    /** The Delete control of that version on that row, found by the label beside it. */
+    function deleteControlOf(wrapper: Page, name: string, label: string) {
+      const entry = rowOf(wrapper, name)
+        .findAll('[data-testid="workflow-version"]')
+        .find(candidate => candidate.find('[data-testid="version-label"]').text() === label)
+      if (!entry)
+        throw new Error(`no version "${label}" is listed for "${name}"`)
+      return entry.find('[data-testid="version-delete"]')
+    }
+
+    function confirmButton() {
+      const found = dialog()?.querySelector<HTMLButtonElement>('[data-testid="delete-confirm"]')
+      if (!found)
+        throw new Error('the dialog has no delete button')
+      return found
+    }
+
+    it('lists a Delete control beside every version', async () => {
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Satellite Finder')).toBeDefined())
+
+      expect(deleteControlOf(wrapper, 'Satellite Finder', '0.11').exists()).toBe(true)
+      expect(deleteControlOf(wrapper, 'Satellite Finder', '0.10').exists()).toBe(true)
+      expect(deleteControlOf(wrapper, 'Defense Finder', '2.0.0').exists()).toBe(true)
+    })
+
+    it('asks for confirmation naming the version, and sends nothing until confirmed or when cancelled', async () => {
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Satellite Finder')).toBeDefined())
+
+      await deleteControlOf(wrapper, 'Satellite Finder', '0.10').trigger('click')
+      await vi.waitFor(() => expect(dialog()).not.toBeNull())
+
+      expect(dialog()!.textContent).toContain('satelliteFinder')
+      expect(dialog()!.textContent).toContain('0.10')
+      expect(deleteRequests).toEqual([])
+
+      dialog()!.querySelector<HTMLButtonElement>('[data-testid="delete-cancel"]')!.click()
+
+      await vi.waitFor(() => expect(dialog()).toBeNull())
+      expect(deleteRequests).toEqual([])
+      expect(versionsOf(wrapper, 'Satellite Finder')).toHaveLength(2)
+    })
+
+    it('deletes the version once confirmed, says so, and the version is gone once the list refetched', async () => {
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Satellite Finder')).toBeDefined())
+
+      await deleteControlOf(wrapper, 'Satellite Finder', '0.10').trigger('click')
+      await vi.waitFor(() => expect(dialog()).not.toBeNull())
+      confirmButton().click()
+
+      await vi.waitFor(() => expect(deleteRequests).toEqual([2]))
+      await vi.waitFor(() => expect(document.body.textContent).toContain('Version deleted'))
+      expect(document.body.textContent).toContain('satelliteFinder 0.10')
+      await vi.waitFor(() => expect(versionsOf(wrapper, 'Satellite Finder')).toEqual([{ label: '0.11', reading: 'exact' }]))
+      await vi.waitFor(() => expect(dialog()).toBeNull())
+    })
+
+    it('shows the server\'s sentence pointing at retiring when the version has analyses, deletes nothing, and stays open', async () => {
+      refuseDeleteWith = { statusCode: 409, statusMessage: 'Version "0.10" of "satelliteFinder" has analyses and cannot be deleted; retire it instead.' }
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Satellite Finder')).toBeDefined())
+
+      await deleteControlOf(wrapper, 'Satellite Finder', '0.10').trigger('click')
+      await vi.waitFor(() => expect(dialog()).not.toBeNull())
+      confirmButton().click()
+
+      await vi.waitFor(() => expect(dialog()?.querySelector('[data-testid="delete-refusal"]')?.textContent).toContain('has analyses and cannot be deleted; retire it instead.'))
+      expect(dialog()).not.toBeNull()
+      expect(document.body.textContent).not.toContain('Version deleted')
+      expect(versionsOf(wrapper, 'Satellite Finder')).toHaveLength(2)
     })
   })
 })

@@ -406,6 +406,18 @@ export default defineNuxtModule<ModuleOptions>({
       handler: resolver.resolve('./runtime/server/api/db/workflows.post'),
       method: 'post',
     })
+    // one version row (ADR 0004): retire it or make it active again (#71),
+    // or delete it while no analysis references it (#72)
+    addServerHandler({
+      route: '/api/db/workflows/:workflowId',
+      handler: resolver.resolve('./runtime/server/api/db/workflows/[workflowId].patch'),
+      method: 'patch',
+    })
+    addServerHandler({
+      route: '/api/db/workflows/:workflowId',
+      handler: resolver.resolve('./runtime/server/api/db/workflows/[workflowId].delete'),
+      method: 'delete',
+    })
 
     /*********************/
     // Add server plugin

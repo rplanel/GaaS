@@ -85,7 +85,9 @@ const columns = ref<TableColumn<StoredWorkflowRow>[]>([
     // Beside it, the Active switch: retiring a version hides it from users
     // and refuses new analyses on it, and nothing else (ADR 0004); the match
     // is made from the name and the label, so a retired version reads as it
-    // did.
+    // did. Last, Delete, for the mistaken publish (#72): it opens a
+    // confirmation naming the version, and the database refuses a version
+    // that has analyses.
     accessorKey: 'versions',
     header: 'Versions',
     cell: ({ row }) => {
@@ -108,6 +110,15 @@ const columns = ref<TableColumn<StoredWorkflowRow>[]>([
             'modelValue': version.row.active,
             'loading': pendingVersions.has(version.row.id),
             'onUpdate:modelValue': (active: boolean) => setActive(version.row, active),
+          }),
+          h(UButton, {
+            'data-testid': 'version-delete',
+            'aria-label': `Delete version ${version.row.version_key}`,
+            'icon': 'i-lucide-trash-2',
+            'size': 'xs',
+            'color': 'error',
+            'variant': 'ghost',
+            'onClick': () => openDeleteDialog(version.row),
           }),
         ])))
     },
@@ -168,8 +179,11 @@ const { data: galaxyInstance } = useQuery(() =>
 )
 
 // every version, retired ones included: the users' list query hides retired
-// versions, and this page is where they are retired and made active again
-const { data: dbWorkflows, refresh: refreshVersions } = useQuery(() => {
+// versions, and this page is where they are retired and made active again.
+// `refetch`, not `refresh`: refresh honours the stale window, so a publish, a
+// retire or a delete within five seconds of the last read would show the
+// list as it was (#72); after a write the list is read again, whatever its age
+const { data: dbWorkflows, refetch: refetchVersions } = useQuery(() => {
   return adminWorkflowsListQuery({ supabase })
 })
 
@@ -194,7 +208,7 @@ async function setActive(version: WorkflowRow, active: boolean) {
       color: 'success',
       icon: 'i-lucide-circle-check',
     })
-    await refreshVersions()
+    await refetchVersions()
   }
   catch (error) {
     // the cause itself is only ever worth a log, at `warn` when the
@@ -269,6 +283,31 @@ watch(dialogOpen, (isOpen) => {
     workflowToPublish.value = undefined
 })
 
+/** The version the delete confirmation is open for, if any. */
+const versionToDelete = ref<WorkflowRow | undefined>()
+const deleteDialogOpen = ref(false)
+
+function openDeleteDialog(version: WorkflowRow) {
+  versionToDelete.value = version
+  deleteDialogOpen.value = true
+}
+
+// keyed on the version, so closing it forgets any refusal it showed
+watch(deleteDialogOpen, (isOpen) => {
+  if (!isOpen)
+    versionToDelete.value = undefined
+})
+
+function onDeleted(version: WorkflowRow) {
+  toast.add({
+    title: 'Version deleted',
+    description: `${version.name_key} ${version.version_key} is gone; revision ${version.revision} can be published again under another label.`,
+    color: 'success',
+    icon: 'i-lucide-circle-check',
+  })
+  refetchVersions()
+}
+
 function onPublished(version: WorkflowRow) {
   toast.add({
     title: 'Version published',
@@ -276,7 +315,7 @@ function onPublished(version: WorkflowRow) {
     color: 'success',
     icon: 'i-lucide-circle-check',
   })
-  refreshVersions()
+  refetchVersions()
 }
 
 const pageHeaderProps = computed(() => {
@@ -310,6 +349,13 @@ const pageHeaderProps = computed(() => {
         :lineage-name="workflowToPublish.versions[0]?.row.name_key"
         :published-versions="workflowToPublish.versions.map(version => ({ revision: version.row.revision, label: version.row.version_key }))"
         @published="onPublished"
+      />
+      <AdminDeleteVersionModal
+        v-if="versionToDelete"
+        :key="versionToDelete.id"
+        v-model:open="deleteDialogOpen"
+        :version="versionToDelete"
+        @deleted="onDeleted"
       />
     </div>
     <div v-else>
