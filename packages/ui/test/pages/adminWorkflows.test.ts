@@ -58,6 +58,17 @@ mockNuxtImport('galaxyWorkflowsListQuery', () => () => ({
   query: async () => GALAXY_WORKFLOWS,
 }))
 
+/**
+ * The revisions Galaxy lists for any stored workflow the dialog opens for:
+ * four saves, the last the latest (#73). One mock for every id rather than a
+ * `registerEndpoint` per stored workflow, since the harness matches a
+ * registered path literally and three stored workflows open the dialog here.
+ */
+mockNuxtImport('galaxyWorkflowRevisionsQuery', () => ({ workflowId }: { workflowId: string }) => ({
+  key: ['test', 'galaxy', 'revisions', workflowId],
+  query: async () => [0, 1, 2, 3].map(version => ({ version, update_time: `2026-09-0${version + 1}T10:00:00`, steps: 3 })),
+}))
+
 mockNuxtImport('instanceByUrlQuery', () => () => ({
   key: ['test', 'instance'],
   query: async () => ({ id: 1, name: 'Test Galaxy', url: 'https://galaxy.example.com' }),

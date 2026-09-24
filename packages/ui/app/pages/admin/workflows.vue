@@ -239,6 +239,7 @@ const pageHeaderProps = computed(() => {
         v-model:open="dialogOpen"
         :workflow="workflowToPublish"
         :lineage-name="workflowToPublish.versions[0]?.row.name_key"
+        :published-versions="workflowToPublish.versions.map(version => ({ revision: version.row.revision, label: version.row.version_key }))"
         @published="onPublished"
       />
     </div>
