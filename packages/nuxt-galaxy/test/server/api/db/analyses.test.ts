@@ -23,6 +23,9 @@ const mockDbWorkflow = {
   // The Galaxy revision the row is pinned to: the 0-based index the export's
   // `version` carried, which #48 hands back to Galaxy as the one to run.
   revision: 3,
+  // Published means active (#71); a retired version is refused before
+  // anything below the workflow lookup runs.
+  active: true,
   // The column the refusal in #43 is read off. It declares the two inputs the
   // default datamap below supplies, so the happy path stays the happy path.
   definition: workflowDefinition({
@@ -48,6 +51,7 @@ const mockDbHistory = {
 class GetSupabaseUserError extends Data.TaggedError('GetSupabaseUserError')<{ readonly message: string }> {}
 class GalaxyUserNotFoundError extends Data.TaggedError('GalaxyUserNotFoundError')<{ readonly message: string }> {}
 class WorkflowNotFoundError extends Data.TaggedError('WorkflowNotFoundError')<{ readonly message: string }> {}
+class WorkflowRetiredError extends Data.TaggedError('WorkflowRetiredError')<{ readonly message: string }> {}
 class CreateGalaxyHistoryError extends Data.TaggedError('CreateGalaxyHistoryError')<{ readonly message: string }> {}
 class GalaxyServiceUnavailable extends Data.TaggedError('GalaxyServiceUnavailable')<{ readonly message: string }> {}
 class CheckGalaxyHealthError extends Data.TaggedError('CheckGalaxyHealthError')<{ readonly message: string }> {}
@@ -158,6 +162,7 @@ vi.mock('../../../../src/runtime/server/utils/grizzle/supabase.js', () => ({
 // Mock grizzle utilities
 vi.mock('../../../../src/runtime/server/utils/grizzle/workflows', () => ({
   getWorkflowEffect: mocks.getWorkflowEffect,
+  WorkflowRetiredError,
 }))
 
 vi.mock('../../../../src/runtime/server/utils/grizzle/histories', () => ({
@@ -790,6 +795,44 @@ describe('post /api/db/analyses', () => {
       expect(name).toBe('  Test Analysis  ')
       expect(passedParameters).toEqual(parameters)
       expect(passedDatamap).toEqual(datamap)
+    })
+  })
+
+  // #71, ADR 0004. `active` means startable by users. The users' list hides a
+  // retired version, but the API still lets a client name its id, so the
+  // refusal is the server's: a sentence naming the version, before anything
+  // exists on Galaxy or in the database.
+  describe('a version that is retired', () => {
+    /** The row as `getWorkflowEffect` answers it once an administrator retired the version. */
+    const retiredWorkflow = { ...mockDbWorkflow, nameKey: 'satelliteFinder', versionKey: '0.11', active: false }
+
+    it('is refused with a 4xx and a sentence naming the version', async () => {
+      mocks.getWorkflowEffect.mockReturnValue(Effect.succeed(retiredWorkflow))
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({
+        statusCode: 409,
+        statusMessage: 'Version "0.11" of "satelliteFinder" is retired; no analysis can be started on it.',
+      })
+    })
+
+    it('is refused before anything is prepared on Galaxy or in the database, so nothing is left behind', async () => {
+      mocks.getWorkflowEffect.mockReturnValue(Effect.succeed(retiredWorkflow))
+      const handler = await loadHandler()
+
+      await expect(handler(event)).rejects.toMatchObject({ statusCode: 409 })
+      expect(mocks.addHistoryEffect).not.toHaveBeenCalled()
+      expect(mocks.uploadDatasetsEffect).not.toHaveBeenCalled()
+      expect(mocks.runAnalysis).not.toHaveBeenCalled()
+      // nothing was prepared, so there is nothing to take back out either
+      expect(mocks.discardPreparedHistoryEffect).not.toHaveBeenCalled()
+    })
+
+    it('starts an active version as before', async () => {
+      mocks.getWorkflowEffect.mockReturnValue(Effect.succeed({ ...retiredWorkflow, active: true }))
+      const handler = await loadHandler()
+
+      expect(await handler(event)).toEqual(mockAnalysisResult)
     })
   })
 })

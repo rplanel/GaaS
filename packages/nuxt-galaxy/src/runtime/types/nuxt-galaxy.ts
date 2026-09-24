@@ -137,6 +137,7 @@ export interface UpdatedAnalysisLog extends Sync {
  */
 export type { AnalysisBody } from '../server/utils/analysisBody'
 export type { PublishVersionBody } from '../server/utils/publishBody'
+export type { VersionActiveBody } from '../server/utils/versionActiveBody'
 
 export interface AnalysisMonitoringCounts {
   total: number

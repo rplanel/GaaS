@@ -56,6 +56,18 @@ export const workflows = galaxy.table(
       to: authenticatedRole,
       withCheck: sql`(SELECT galaxy_rbac.authorize('workflows.insert')) = TRUE`,
     }),
+    // Retiring a version and making it active again (ADR 0004, #71). The
+    // policy says who may update; the column-level grant in the migration
+    // that carries it says what: `active`, and nothing else, so that even an
+    // administrator writing through the API cannot move a label or a
+    // revision. Drizzle has no declaration for a column grant, so the
+    // migration is hand-written after this policy is generated.
+    pgPolicy('Admin can update workflows', {
+      for: 'update',
+      to: authenticatedRole,
+      using: sql`(SELECT galaxy_rbac.authorize('workflows.update')) = TRUE`,
+      withCheck: sql`(SELECT galaxy_rbac.authorize('workflows.update')) = TRUE`,
+    }),
   ],
 )
 

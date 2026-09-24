@@ -227,3 +227,21 @@ describe('per-workflow usage ignores the workflow selection', () => {
     expect(params).toEqual([OWNER, FROM_PARAM, TO_PARAM])
   })
 })
+
+describe('usage statistics ignore whether a version is active', () => {
+  // #71, ADR 0004. Retiring a version leaves its usage statistics untouched:
+  // they are history over monitoring records, which carry their own snapshot
+  // of the workflow, so nothing emitted here reads the workflows table, let
+  // alone its `active` flag.
+  it.each([
+    ['the counts', () => selectCounts(OWNER, {})],
+    ['the trend', () => selectTrendBuckets(OWNER, 'day')],
+    ['the trend span', () => selectTrendRange(OWNER)],
+    ['per-workflow usage', () => selectWorkflowUsage(OWNER, {})],
+  ])('emits no read of the workflows table or of active for %s', (_label, query) => {
+    const { sql } = emitted(query())
+
+    expect(sql).not.toMatch(/"workflows"/)
+    expect(sql).not.toMatch(/\bactive\b/)
+  })
+})
