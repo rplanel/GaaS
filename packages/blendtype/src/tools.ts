@@ -7,6 +7,15 @@ import { GalaxyFetch, toGalaxyServiceUnavailable, withRetry } from './galaxy'
 /**
  * Retrieves a tool by ID and version using Effect-based error handling.
  *
+ * Galaxy reads the version to describe from the `tool_version` query
+ * parameter (`GET /api/tools/{id}`, `show` in `api/tools.py`); until #75 this
+ * sent `version`, which Galaxy ignores, so the tool came back at whatever
+ * version the id alone resolved to. Note what Galaxy does when it lacks the
+ * version asked for: `get_tool` is called without `exact`, so it answers
+ * **200 with another installed version of the same tool** when it has one,
+ * and 404 only when it has none. A caller that needs the exact version has to
+ * read the answer's `version`, not the status.
+ *
  * @param toolId - The unique identifier of the tool to retrieve
  * @param version - The version of the tool to retrieve
  * @returns An Effect that yields the GalaxyTool or fails with a ToolError
@@ -24,7 +33,7 @@ export function getToolEffect(toolId: string, version: string) {
     const fetchApi = yield* GalaxyFetch
     const tool = Effect.tryPromise({
       try: () => fetchApi<GalaxyTool>(
-        `api/tools/${toolId}?io_details=true&version=${version}`,
+        `api/tools/${toolId}?io_details=true&tool_version=${version}`,
         {
           method: 'GET',
         },
