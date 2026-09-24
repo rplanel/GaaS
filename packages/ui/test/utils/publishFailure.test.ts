@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeActivationFailure } from '../../app/utils/activationFailure'
+import { describePublishFailure } from '../../app/utils/publishFailure'
 
 /**
  * What `$fetch` rejects with: the status, and the h3 JSON body under `data`,
@@ -32,101 +32,97 @@ function reasonPhraseOnly(statusCode: number, reasonPhrase: string, body: Record
   }
 }
 
-describe('describeActivationFailure', () => {
-  it('repeats the server\'s words for a tag value that cannot name a directory', () => {
-    const message = 'The `name:` tag value `nf-core/epitopeprediction` cannot name a results view directory.'
+describe('describePublishFailure', () => {
+  // Every refusal the publish endpoint answers names what the administrator
+  // can change in the dialog, so its words are shown as the server wrote them.
+  it.each([
+    ['a label already used for this name', 409, 'Version "0.11" of "satelliteFinder" already exists.'],
+    ['a revision already published', 409, 'Revision 3 is already published as version "0.10" of "satelliteFinder".'],
+    ['a name that differs from the lineage', 409, 'This workflow is published as "satelliteFinder"; a new version keeps that name.'],
+    ['a name that cannot name a results view directory', 400, '`name` cannot name a results view directory. Use letters, digits, dots, hyphens and underscores, starting with a letter or digit.'],
+  ])('repeats the server\'s words for %s', (_label, statusCode, message) => {
+    const described = describePublishFailure(fetchError(statusCode, message))
 
-    const described = describeActivationFailure(fetchError(422, message))
-
-    expect(described.title).toBe('Workflow not activated')
+    expect(described.title).toBe('Version not published')
     expect(described.description).toBe(message)
   })
 
   it('reads the words from the body when the reason phrase was dropped, as it is over HTTP/2', () => {
-    const message = 'The `version:` tag value `1.0+galaxy1` cannot name a results view directory.'
+    const message = '`label` cannot name a results view directory. Use letters, digits, dots, hyphens and underscores, starting with a letter or digit.'
 
-    const described = describeActivationFailure({
-      statusCode: 422,
+    const described = describePublishFailure({
+      statusCode: 400,
       statusMessage: '',
-      data: { statusCode: 422, statusMessage: message },
+      data: { statusCode: 400, statusMessage: message },
     })
 
     expect(described.description).toBe(message)
   })
 
-  it('repeats the server\'s words for any other refusal it can act on, such as a duplicate', () => {
-    const described = describeActivationFailure(fetchError(409, 'Workflow galaxy-wf-1 already exists in the database'))
-
-    expect(described.title).toBe('Workflow not activated')
-    expect(described.description).toBe('Workflow galaxy-wf-1 already exists in the database')
-  })
-
   it('tells a caller whose session has gone to sign in again', () => {
-    const described = describeActivationFailure(fetchError(401, 'Unauthorized'))
+    const described = describePublishFailure(fetchError(401, 'Unauthorized'))
 
     expect(described.title).toBe('Your session expired')
-    expect(described.description).toBe('Sign in again to activate this workflow.')
+    expect(described.description).toBe('Sign in again to publish this version.')
   })
 
   it('does not blame the reader\'s words for a permission refusal', () => {
-    const described = describeActivationFailure(fetchError(403, 'Permission denied'))
+    const described = describePublishFailure(fetchError(403, 'Permission denied'))
 
-    expect(described.title).toBe('You are not allowed to activate workflows')
+    expect(described.title).toBe('You are not allowed to publish versions')
     expect(described.description).toBe('Ask an administrator for the permission.')
   })
 
   it('points at Galaxy rather than the reader when Galaxy is unwell', () => {
-    const described = describeActivationFailure(fetchError(503, 'Galaxy is unavailable'))
+    const described = describePublishFailure(fetchError(503, 'Galaxy is unavailable'))
 
     expect(described.title).toBe('Galaxy is unavailable right now')
-    expect(described.description).toBe('Nothing was activated. Try again in a few minutes.')
+    expect(described.description).toBe('Nothing was published. Try again in a few minutes.')
   })
 
   // `toHttpError` logs the cause and sends a bare 500, so there is nothing
   // here the reader can act on beyond trying again
   it('owns the failure when the server would not say why', () => {
-    const described = describeActivationFailure(fetchError(500, 'Internal Server Error'))
+    const described = describePublishFailure(fetchError(500, 'Internal Server Error'))
 
-    expect(described.title).toBe('Could not activate the workflow')
+    expect(described.title).toBe('Could not publish the version')
     expect(described.description).toBe('Something went wrong on our side. Please try again.')
   })
 
   it('owns a refusal that arrived with no words at all', () => {
-    const described = describeActivationFailure(fetchError(400))
+    const described = describePublishFailure(fetchError(400))
 
-    expect(described.title).toBe('Could not activate the workflow')
+    expect(described.title).toBe('Could not publish the version')
     expect(described.description).toBe('Something went wrong on our side. Please try again.')
   })
 
   // #63. The reason phrase is never the server's sentence: absent over
   // HTTP/2, Node's default for the status over HTTP/1.1 when the server set
-  // none, and a copy of the body's `statusMessage` when it did. This util used
-  // to fall back to it; `startAnalysisFailure.ts` never did, and now both
-  // read the same way.
+  // none, and a copy of the body's `statusMessage` when it did.
   describe('a refusal whose reason phrase says more than its body', () => {
     it('does not show the administrator the reason phrase when the body carried no words', () => {
-      const described = describeActivationFailure(reasonPhraseOnly(409, 'Conflict'))
+      const described = describePublishFailure(reasonPhraseOnly(409, 'Conflict'))
 
       expect(described.description).not.toBe('Conflict')
-      expect(described.title).toBe('Could not activate the workflow')
+      expect(described.title).toBe('Could not publish the version')
       expect(described.description).toBe('Something went wrong on our side. Please try again.')
     })
 
     it('still shows the body\'s words when they differ from the reason phrase', () => {
       // the positive control for the case above: it is the body that is read,
       // not the phrase, so words in the body win over a phrase that disagrees
-      const words = 'Workflow galaxy-wf-1 already exists in the database'
-      const described = describeActivationFailure(
+      const words = 'Version "0.11" of "satelliteFinder" already exists.'
+      const described = describePublishFailure(
         reasonPhraseOnly(409, 'Conflict', { statusCode: 409, statusMessage: words }),
       )
 
-      expect(described.title).toBe('Workflow not activated')
+      expect(described.title).toBe('Version not published')
       expect(described.description).toBe(words)
     })
 
     it('reads words that arrived in the body\'s `message` alone', () => {
-      const words = 'Workflow galaxy-wf-1 already exists in the database'
-      const described = describeActivationFailure(
+      const words = 'Version "0.11" of "satelliteFinder" already exists.'
+      const described = describePublishFailure(
         reasonPhraseOnly(409, 'Conflict', { statusCode: 409, message: words }),
       )
 
@@ -135,9 +131,9 @@ describe('describeActivationFailure', () => {
   })
 
   it('still says something for an error that carries no status', () => {
-    const described = describeActivationFailure(new TypeError('Failed to fetch'))
+    const described = describePublishFailure(new TypeError('Failed to fetch'))
 
-    expect(described.title).toBe('Could not activate the workflow')
+    expect(described.title).toBe('Could not publish the version')
     expect(described.description).not.toBe('')
   })
 })
