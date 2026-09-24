@@ -187,7 +187,7 @@ export const mockDbWorkflow = {
   userId: 1,
   versionKey: '1.0',
   nameKey: 'test-workflow',
-  autoVersion: 1,
+  revision: 1,
   definition: {},
   createdAt: new Date('2024-01-01'),
 }

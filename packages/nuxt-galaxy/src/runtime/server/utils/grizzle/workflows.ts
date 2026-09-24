@@ -165,7 +165,7 @@ export function insertWorkflow(
         .insert({
           version_key: tagVersion,
           name_key: tagName,
-          auto_version: galaxyWorkflow.version,
+          revision: galaxyWorkflow.version,
           name: galaxyWorkflow.name,
           galaxy_id: galaxyWorkflowId,
           user_id: galaxyUser.user.id,

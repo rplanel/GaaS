@@ -25,7 +25,7 @@ let lastBody: Record<string, unknown> | null = null
 
 /** The Galaxy identifier the workflow row the form is started for carries. */
 const GALAXY_WORKFLOW_ID = 'galaxy-wf-1'
-/** The Galaxy revision that row was activated at, its `auto_version`. */
+/** The Galaxy revision that row is pinned to, its `revision` column. */
 const WORKFLOW_REVISION = 3
 /** The `version` the form asked Galaxy for on its last workflow fetch, `null` when it asked for none. */
 let requestedRevision: string | null = null
@@ -54,7 +54,7 @@ function anInput(label: string, uuid: string): WorkflowInput {
 function servedRows(relation: string) {
   switch (relation) {
     case 'workflows':
-      return { id: 1, name: 'A workflow', galaxy_id: GALAXY_WORKFLOW_ID, auto_version: WORKFLOW_REVISION, definition: null }
+      return { id: 1, name: 'A workflow', galaxy_id: GALAXY_WORKFLOW_ID, revision: WORKFLOW_REVISION, definition: null }
     case 'uploaded_datasets_with_storage_path':
       if (datasetsUnavailable) {
         throw new Error('the dataset list is unavailable')
@@ -279,11 +279,11 @@ describe('an input whose pickable datasets never arrived', () => {
 
 describe('invokeForm component', () => {
   // #48. The proxy answered with Galaxy's latest revision while the server
-  // compares the datamap against, and now invokes, the activated one; a save
-  // in Galaxy's editor that added an input would have shown a field the
-  // server then refused. The form asks for the revision the row was
-  // activated at, which is the one that will run.
-  it('asks Galaxy for the revision that was activated, not the latest', async () => {
+  // compares the datamap against, and now invokes, the one the row is pinned
+  // to; a save in Galaxy's editor that added an input would have shown a
+  // field the server then refused. The form asks for the revision the row is
+  // pinned to, which is the one that will run.
+  it('asks Galaxy for the revision the row is pinned to, not the latest', async () => {
     await mountForm()
 
     await vi.waitFor(() => {

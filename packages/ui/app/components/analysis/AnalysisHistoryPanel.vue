@@ -61,13 +61,13 @@ const workflowGalaxyId = computed(() => {
 // the jobs ran; Galaxy's latest revision, which the proxy describes when
 // asked for none, moves with every save in its editor (#68). An analysis
 // started before #48 recorded none: it ran whatever was latest at the time,
-// which nothing here can recover, and the revision its workflow row was
-// activated at is the closest description this server holds. #67 lists the
+// which nothing here can recover, and the revision its workflow row is
+// pinned to is the closest description this server holds. #67 lists the
 // backfill that would retire the fallback.
 const workflowRevision = computed(() => {
   const detailedAnalysisVal = toValue(detailedAnalysis)
   if (detailedAnalysisVal) {
-    return detailedAnalysisVal.workflow_revision ?? detailedAnalysisVal.workflows.auto_version
+    return detailedAnalysisVal.workflow_revision ?? detailedAnalysisVal.workflows.revision
   }
   return undefined
 })

@@ -32,7 +32,7 @@ export const analyses = galaxy.table(
     workflowId: integer('workflow_id').notNull().references(() => workflows.id),
     // The Galaxy revision this analysis was started against: the 0-based index
     // `POST /api/workflows/{id}/invocations` took as `version`, read off the
-    // workflow row's `auto_version` at start (#48). Nullable because analyses
+    // workflow row's `revision` at start (#48). Nullable because analyses
     // started before #48 ran whatever revision was latest at the time, and
     // `NULL` says so rather than guessing.
     workflowRevision: integer('workflow_revision'),

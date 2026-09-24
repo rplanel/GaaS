@@ -13,7 +13,7 @@ export const workflows = galaxy.table(
   'workflows',
   {
     id: serial('id').primaryKey(),
-    autoVersion: integer('auto_version').notNull().default(1),
+    revision: integer('revision').notNull(),
     versionKey: varchar('version_key', { length: 255 }).notNull(),
     nameKey: varchar('name_key', { length: 255 }).notNull(),
     userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
