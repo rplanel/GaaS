@@ -66,11 +66,12 @@ type SharedTag = 'GetSupabaseUserError' | keyof typeof SHARED_STATUSES
  * what an `Effect.all` over a Galaxy that is down needs in order to keep
  * answering 503.
  *
- * Exported because a handler that reads the failure itself has to make the
- * same judgement — `workflows.post` does, for the status its 409 carries —
- * and a second copy of this rule is a second chance to disagree with it.
+ * Module-private since #70: `workflows.post` used to read the failure itself,
+ * for the status its 409 carried on the error, and made this judgement
+ * through here so that no second copy of the rule could disagree with it.
+ * That 409 now travels through the typed map like every other status.
  */
-export function answerableFailure<E extends TaggedFailure>(cause: Cause.Cause<E>): Option.Option<E> {
+function answerableFailure<E extends TaggedFailure>(cause: Cause.Cause<E>): Option.Option<E> {
   return Option.isSome(Cause.dieOption(cause)) ? Option.none() : Cause.failureOption(cause)
 }
 
@@ -93,8 +94,8 @@ export function answerableFailure<E extends TaggedFailure>(cause: Cause.Cause<E>
  * typed map rather than a `Record<string, number>`. The shared tags are
  * excluded from it too, so "answer 403 differently here" is a compile error
  * rather than a silent correction. A handler that really needs its own answer
- * for one keeps a branch at the call site, as `workflows.post` does for the
- * status its 409 carries on the error.
+ * for one keeps a branch at the call site; none does today, since #70 folded
+ * the last one, the 409 `workflows.post` read off its error, into this map.
  *
  * `handler` names the endpoint in the 500 log, as "<handler> handler failed".
  * `options.context` adds fields to that log, for a handler with something

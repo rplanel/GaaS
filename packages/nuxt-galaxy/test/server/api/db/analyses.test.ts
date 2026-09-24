@@ -424,9 +424,9 @@ describe('post /api/db/analyses', () => {
       expect(mocks.discardPreparedHistoryEffect).not.toHaveBeenCalled()
     })
 
-    // #48. Pinning the invocation to the activated revision makes this
+    // #48. Pinning the invocation to the revision the version pins makes this
     // reachable: Galaxy's `require_exact_tool_versions` defaults to true, so
-    // a tool upgraded in Galaxy since activation leaves the revision naming a
+    // a tool upgraded in Galaxy since publish leaves the revision naming a
     // version that is no longer installed, and Galaxy refuses to start it.
     // Nothing the reader can do fixes an uninstalled tool, so they keep the
     // generic copy; the tool names, the whole answer for an administrator, go

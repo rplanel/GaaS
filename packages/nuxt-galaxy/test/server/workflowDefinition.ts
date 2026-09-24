@@ -1,8 +1,8 @@
 import type { GalaxyWorkflowExport, WorkflowStepExport } from 'blendtype'
 
 /**
- * Builders for a stored `definition` — the `json` column `insertWorkflow`
- * fills with `bt.exportWorkflowEffect` (style `export`) after
+ * Builders for a stored `definition` — the `json` column publishing fills
+ * with `bt.exportWorkflowEffect` (style `export`) after
  * `galaxyWorkflowExportSchema` has parsed it.
  *
  * Typed against `GalaxyWorkflowExport` on purpose: the endpoint's refusal in
@@ -50,5 +50,6 @@ export function workflowDefinition(steps: Record<string, WorkflowStepExport>): G
     'tags': ['name:test-workflow', 'version:1.0'],
     steps,
     'version': 1,
+    'uuid': 'fa95ecd4-ed11-49e2-b3d6-8f178b807256',
   }
 }

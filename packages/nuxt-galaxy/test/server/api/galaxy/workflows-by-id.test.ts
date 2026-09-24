@@ -132,7 +132,7 @@ describe('get /api/galaxy/workflows/:workflowId', () => {
   // #48. Galaxy answers `GET /api/workflows/{id}` with the latest revision
   // unless `version` names one, and the form built its inputs from this
   // proxy while the server compared the datamap against, and now invokes,
-  // the activated revision. The proxy forwards the one it is asked for.
+  // the revision the version pins. The proxy forwards the one it is asked for.
   describe('the revision the caller asks for', () => {
     it('forwards a revision index to Galaxy', async () => {
       mocks.getQuery.mockReturnValue({ version: '3' })

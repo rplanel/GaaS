@@ -1,44 +1,30 @@
+import type { PublishVersionBody } from '../../utils/publishBody'
 import { useRuntimeConfig } from '#imports'
 import { toGalaxyServiceUnavailable } from 'blendtype'
-import { Effect, Exit, Layer, Option } from 'effect'
-import { createError, defineEventHandler, readBody } from 'h3'
+import { Effect, Exit, Layer } from 'effect'
+import { defineEventHandler, readBody } from 'h3'
 import { Drizzle } from '../../utils/drizzle'
 import { runGalaxyEffect } from '../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../utils/galaxy'
 import { ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase'
-import { insertWorkflow } from '../../utils/grizzle/workflows'
-import { answerableFailure, toHttpError } from '../../utils/httpError'
+import { publishVersion } from '../../utils/grizzle/workflows'
+import { toHttpError } from '../../utils/httpError'
+import { readPublishVersionBody } from '../../utils/publishBody'
 
 /**
- * The one thing this endpoint needs from a request body, read rather than
- * assumed.
- *
- * The handler's type annotation is erased at build time, so nothing checked
- * that a body arrived at all: destructuring `undefined` threw a `TypeError`
- * into a 500, and any other shape reached the Galaxy export as-is.
+ * Publish a version (ADR 0004): label the latest revision of a Galaxy stored
+ * workflow for the web application. The admin page's publish dialog calls it,
+ * but the dialog is not the only client, so what it accepts and refuses is
+ * written down in the server docs rather than left to be read off the dialog.
  */
-function readGalaxyId(body: unknown): string {
-  const galaxyId = body !== null && typeof body === 'object'
-    ? (body as { galaxyId?: unknown }).galaxyId
-    : undefined
-
-  if (typeof galaxyId !== 'string' || galaxyId.trim().length === 0) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: '`galaxyId` must be a non-empty string',
-    })
-  }
-
-  return galaxyId
-}
-
-export default defineEventHandler<{ body: { galaxyId: string } }>(
+export default defineEventHandler<{ body: PublishVersionBody }>(
   async (event) => {
-    // read before any work is done, so a body nobody can act on costs a round
-    // trip and nothing more. `readBody` throws on a body it cannot parse, which
-    // is the same class of mistake and gets the same answer.
+    // read and checked before any work is done, so a body nobody can act on
+    // costs a round trip and nothing more. `readBody` throws on a body it
+    // cannot parse, which is the same class of mistake and gets the same
+    // answer, in this handler's words rather than h3's.
     const body = await readBody(event).catch(() => undefined)
-    const galaxyId = readGalaxyId(body)
+    const version = readPublishVersionBody(body)
 
     const { public: { galaxy: { url } }, galaxy: { email } } = useRuntimeConfig()
     const finalLayer = Layer.mergeAll(
@@ -49,7 +35,7 @@ export default defineEventHandler<{ body: { galaxyId: string } }>(
 
     const result = await runGalaxyEffect(
       event,
-      insertWorkflow(galaxyId, url, email, event).pipe(
+      publishVersion(version, url, email, event).pipe(
         toGalaxyServiceUnavailable,
         Effect.provide(finalLayer),
         Effect.provide(useGalaxyLayer()),
@@ -58,29 +44,19 @@ export default defineEventHandler<{ body: { galaxyId: string } }>(
     )
 
     return Exit.match(result, {
-      onFailure: (cause) => {
-        // the one status this endpoint answers that travels on the error
-        // rather than being decided here, so it stays at the call site. The
-        // failure is unwrapped for the tag check only, and through
-        // `answerableFailure` rather than `Cause.failureOption`: a 409 that
-        // arrived paired with a defect is not a 409 worth answering, and
-        // reading the failure directly here would have walked this one branch
-        // past the logged 500 the rest of the module routes it to.
-        const failure = Option.getOrUndefined(answerableFailure(cause))
-        if (failure?._tag === 'WorkflowAlreadyExistsError') {
-          throw createError({ statusCode: failure.statusCode, statusMessage: failure.message })
-        }
-        return toHttpError(event, cause, 'insert workflow', {
-          statuses: {
-            // The request was well formed and named a real workflow; what is
-            // refused is the workflow as tagged, which the administrator fixes
-            // in Galaxy. Hence 422 rather than the 400 the body checks above
-            // answer, and the error's own words, since they name the tag and
-            // the value (ADR 0003).
-            InvalidWorkflowTagError: 422,
-          },
-        })
-      },
+      onFailure: cause => toHttpError(event, cause, 'publish version', {
+        statuses: {
+          // The request was well formed; what it asks for conflicts with a
+          // version that exists, or with the lineage this stored workflow
+          // already has. Each carries its own sentence, which the dialog
+          // shows as written, since it names what the administrator can
+          // change.
+          VersionLabelTakenError: 409,
+          RevisionAlreadyPublishedError: 409,
+          WorkflowNameLockedError: 409,
+          ConcurrentPublishError: 409,
+        },
+      }),
       onSuccess: value => value,
     })
   },

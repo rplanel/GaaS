@@ -5,7 +5,7 @@
  * status, `data` is the parsed JSON body, and `statusMessage` is the
  * response's reason phrase (`response.statusText`), mapped straight across.
  * Two utils in this layer turn such a rejection into words for a reader,
- * `describeActivationFailure` and `describeStartAnalysisFailure`, and each
+ * `describePublishFailure` and `describeStartAnalysisFailure`, and each
  * used to carry its own copy of these readers. The copies disagreed on one
  * point, which is the point this module settles (#63): the reason phrase is
  * never read.
@@ -36,7 +36,7 @@ export function statusCodeOf(error: unknown): number | undefined {
  * "Conflict" — when the server set none, so it can say something nobody wrote
  * for the reader; and when the server did set one, Nitro put the same words
  * in the body, so the phrase never carries anything the body does not.
- * `describeActivationFailure` used to fall back to it and could show an
+ * `describePublishFailure` used to fall back to it and could show an
  * administrator Node's default phrase for a wordless 4xx; it now shows its
  * own fixed copy instead, a case no error this server renders can reach.
  */

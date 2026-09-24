@@ -630,35 +630,47 @@ export type Database = {
       }
       workflows: {
         Row: {
+          active: boolean
           annotation: string | null
           definition: Json
           galaxy_id: string
           id: number
           name: string
           name_key: string
+          published_at: string
+          published_by: string | null
           revision: number
+          revision_uuid: string
           user_id: number
           version_key: string
         }
         Insert: {
+          active?: boolean
           annotation?: string | null
           definition: Json
           galaxy_id: string
           id?: number
           name: string
           name_key: string
+          published_at?: string
+          published_by?: string | null
           revision: number
+          revision_uuid: string
           user_id: number
           version_key: string
         }
         Update: {
+          active?: boolean
           annotation?: string | null
           definition?: Json
           galaxy_id?: string
           id?: number
           name?: string
           name_key?: string
+          published_at?: string
+          published_by?: string | null
           revision?: number
+          revision_uuid?: string
           user_id?: number
           version_key?: string
         }

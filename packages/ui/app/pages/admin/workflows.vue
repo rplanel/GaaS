@@ -1,37 +1,28 @@
 <script setup lang="ts">
-// import type { SupabaseTypes } from '#build/types/database'
 import type { BadgeProps, BreadcrumbItem, TableColumn } from '@nuxt/ui'
-
 import type { GalaxyWorkflowsItem } from 'blendtype'
 import type { Database, WorkflowRow } from 'nuxt-galaxy'
-import type { ResultsViewKey, ResultsViewReading } from '../../utils/resultsViews'
+import type { ResultsViewReading } from '../../utils/resultsViews'
 import { resultsViews } from '#build/gaas/results-views.mjs'
-import { USwitch } from '#components'
-import { getWorkflowTagName, getWorkflowTagVersion } from 'blendtype'
-import { log } from 'evlog/client'
-import { describeActivationFailure } from '../../utils/activationFailure'
 import { matchResultsView, resultsViewReading } from '../../utils/resultsViews'
-// type Database = SupabaseTypes.Database
 
-interface ComputedGalaxyWorklowItem extends GalaxyWorkflowsItem {
-  /** The `version:` tag value, as Galaxy carries it now. */
-  version: string
-  /** The `name:` tag value, as Galaxy carries it now. */
-  tagName: string
-  activated: boolean
-  /**
-   * Whether a results view names this workflow, something wider stands in, or
-   * none does. Read from the keys stored at activation once there are any,
-   * from the live tags before.
-   */
+/**
+ * One version published for a stored workflow, with how its results view
+ * reads to an administrator: a view of its own, something wider, or nothing.
+ */
+interface PublishedVersion {
+  row: WorkflowRow
   resultsView: ResultsViewReading
-  /**
-   * Set when the workflow was retagged in Galaxy after activation: the keys
-   * activation stored, which every analysis of it is matched with, beside
-   * the tags Galaxy carries now, which no analysis will ever be matched with.
-   */
-  retagged?: { stored: ResultsViewKey, live: ResultsViewKey }
 }
+
+/**
+ * A stored workflow of the Galaxy account GaaS runs as, with the versions
+ * published for it (ADR 0004). Tags play no part in whether it is listed.
+ */
+interface StoredWorkflowRow extends GalaxyWorkflowsItem {
+  versions: PublishedVersion[]
+}
+
 interface Props {
   breadcrumbsItems?: BreadcrumbItem[] | undefined
 }
@@ -42,8 +33,9 @@ const breadcrumbsItems = toRef(() => props.breadcrumbsItems)
 
 const toast = useToast()
 const UBadge = resolveComponent('UBadge')
+const UButton = resolveComponent('UButton')
 
-/** The reading at a glance: a view of the workflow's own, something wider, or nothing. */
+/** The reading at a glance: a view of the version's own, something wider, or nothing. */
 const resultsViewReadingColor = {
   exact: 'success',
   fallback: 'info',
@@ -56,8 +48,6 @@ const {
     galaxy: { url: galaxyInstanceUrl },
   },
 } = useRuntimeConfig()
-
-const router = useRouter()
 
 const { userRole } = useUserRole(supabase)
 
@@ -79,13 +69,31 @@ const computedBreadcrumbsItems = computed(() => {
   return breadcrumbsItemsVal
 })
 
-const galaxyWorkflowGalaxyColumns = ref<
-  TableColumn<ComputedGalaxyWorklowItem>[]
->([
+const columns = ref<TableColumn<StoredWorkflowRow>[]>([
   { accessorKey: 'name', header: 'Name' },
-  // The live tag, even once activation has stored another: this column says
-  // what Galaxy carries, and the Results view cell says when the two differ.
-  { accessorKey: 'version', header: 'Version' },
+  {
+    // Every version published for this stored workflow, each with the same
+    // match the results page runs (ADR 0003), handed the name and the label
+    // stored at publish, so the two agree. A developer sees here whether the
+    // view directory they wrote is picked up for the version it is meant for.
+    accessorKey: 'versions',
+    header: 'Versions',
+    cell: ({ row }) => {
+      const { versions } = row.original
+      if (versions.length === 0) {
+        return h('span', { 'data-testid': 'workflow-no-version', 'class': 'text-sm text-muted' }, 'No version yet')
+      }
+      return h('ul', { 'data-testid': 'workflow-versions', 'class': 'flex flex-col gap-1' }, versions.map(version =>
+        h('li', { 'data-testid': 'workflow-version', 'class': 'flex items-center gap-2' }, [
+          h(UBadge, { 'data-testid': 'version-label', 'variant': 'subtle', 'color': 'neutral' }, () => version.row.version_key),
+          h(UBadge, {
+            'data-testid': 'workflow-results-view',
+            'variant': 'subtle',
+            'color': resultsViewReadingColor[version.resultsView],
+          }, () => version.resultsView),
+        ])))
+    },
+  },
   {
     accessorKey: 'number_of_steps',
     header: 'Number of steps',
@@ -107,83 +115,21 @@ const galaxyWorkflowGalaxyColumns = ref<
       })
     },
   },
-
   {
-    // The same match the results page runs, handed the same keys, so the two
-    // agree (ADR 0003). Once activated, those are the `name_key` and
-    // `version_key` stored then, which every analysis is matched with even
-    // after the workflow is retagged in Galaxy; before activation there are
-    // none, so the live tags stand in and a developer sees here whether the
-    // view directory they wrote will be picked up. A row whose tags moved says
-    // so, naming both values, since the reading otherwise looks wrong.
-    accessorKey: 'resultsView',
-    header: 'Results view',
+    id: 'publish',
+    header: '',
     cell: ({ row }) => {
-      const { resultsView: reading, retagged } = row.original
-      const badge = h(UBadge, {
-        'data-testid': 'workflow-results-view',
+      return h(UButton, {
+        'data-testid': 'publish-version',
+        'label': 'Publish',
+        'icon': 'i-lucide-upload',
+        'size': 'sm',
         'variant': 'subtle',
-        'color': resultsViewReadingColor[reading],
-      }, () => reading)
-      if (!retagged)
-        return badge
-      return h('div', { class: 'flex flex-col items-start gap-1' }, [
-        badge,
-        h('p', { 'data-testid': 'workflow-tag-drift', 'class': 'text-xs text-warning' }, describeRetag(retagged)),
-      ])
-    },
-  },
-  {
-    header: 'Activated',
-    cell: ({ row }) => {
-      return h(USwitch, {
-        class: 'text-right',
-        modelValue: row.original.activated,
-        disabled: row.original.activated,
-        onChange() {
-          addToDb({ id: row.original.id })
-        },
+        'onClick': () => openPublishDialog(row.original),
       })
     },
   },
 ])
-
-async function addToDb(workflow: { id: string }) {
-  const { id: galaxyId } = workflow
-  try {
-    await $fetch('/api/db/workflows', {
-      method: 'POST',
-      body: {
-        galaxyId,
-      },
-    })
-    // only once the server has said yes: this used to fire from the switch
-    // before the request was even sent, so a refusal still read as a success
-    toast.add({
-      title: 'Workflow activated',
-      color: 'success',
-      icon: 'i-lucide-circle-check',
-    })
-    router.push('/workflows')
-  }
-  catch (error) {
-    // a refusal names what to fix in Galaxy, so the administrator reads it
-    // here, next to the switch, rather than on the error page; the cause
-    // itself is only ever worth a log
-    const { errorStatus } = useErrorStatus(error)
-    log.error({
-      action: 'workflow:activate_failed',
-      tag: 'admin/workflows',
-      status: toValue(errorStatus),
-      error: String(error),
-    })
-    toast.add({
-      ...describeActivationFailure(error),
-      color: 'error',
-      icon: 'i-lucide-circle-x',
-    })
-  }
-}
 
 const { data: allWorkflows, error: errorWorkflows } = useQuery(() => galaxyWorkflowsListQuery())
 
@@ -196,18 +142,6 @@ if (toValue(errorWorkflows)) {
   })
 }
 
-// const { data: allWorkflows, error: errorWorklows } = await useFetch<
-//   GalaxyWorkflowsItem[]
-// >('/api/galaxy/workflows')
-// if (toValue(errorWorklows)) {
-//   const { errorStatus } = useErrorStatus(errorWorklows)
-//   const { errorMessage } = useErrorMessage(errorWorklows)
-//   throw createError({
-//     statusCode: toValue(errorStatus),
-//     statusMessage: toValue(errorMessage),
-//   })
-// }
-
 const { data: galaxyInstance } = useQuery(() =>
   instanceByUrlQuery({
     supabase,
@@ -215,71 +149,73 @@ const { data: galaxyInstance } = useQuery(() =>
   }),
 )
 
-const { data: dbWorkflows } = useQuery(() => {
+const { data: dbWorkflows, refresh: refreshVersions } = useQuery(() => {
   return workflowsListQuery({ supabase })
 })
 
-/** The activated workflows by Galaxy id, each carrying the keys activation stored. */
-const dbWorkflowsMap = computed(() => {
-  const dbWorkflowsVal = toValue(dbWorkflows)
-  if (dbWorkflowsVal) {
-    return new Map<string, WorkflowRow>(
-      dbWorkflowsVal.map(workflow => [workflow.galaxy_id, workflow]),
-    )
+/** The versions published so far, grouped by the stored workflow they label. */
+const versionsByStoredWorkflow = computed(() => {
+  const groups = new Map<string, PublishedVersion[]>()
+  for (const row of toValue(dbWorkflows) ?? []) {
+    const { rung } = matchResultsView(resultsViews, { name: row.name_key, version: row.version_key })
+    const versions = groups.get(row.galaxy_id) ?? []
+    versions.push({ row, resultsView: resultsViewReading(rung) })
+    groups.set(row.galaxy_id, versions)
   }
-  return new Map<string, WorkflowRow>()
+  return groups
 })
 
 /**
- * The one line an administrator reads on a retagged row: what activation
- * stored, then what Galaxy carries now, each as `name/version`, so a
- * developer can see which directory the analyses are matched against.
+ * Every stored workflow of the account, the published ones first, otherwise
+ * in the order Galaxy lists them.
  */
-function describeRetag({ stored, live }: NonNullable<ComputedGalaxyWorklowItem['retagged']>) {
-  return `Activated as ${stored.name}/${stored.version}; Galaxy now tags it ${live.name}/${live.version}.`
-}
-
-const computedWorkflows = computed<ComputedGalaxyWorklowItem[]>(() => {
+const storedWorkflows = computed<StoredWorkflowRow[]>(() => {
   const allWorkflowsVal = toValue(allWorkflows)
-
   if (!allWorkflowsVal) {
     return []
   }
-
-  // Only a workflow carrying both tags can be activated or have a results
-  // view, so the others are left out rather than shown with blanks.
-  return (allWorkflowsVal as GalaxyWorkflowsItem[]).flatMap((workflow) => {
-    const version = getWorkflowTagVersion(workflow.tags)
-    const tagName = getWorkflowTagName(workflow.tags)
-    if (version === null || tagName === null)
-      return []
-    const live: ResultsViewKey = { name: tagName, version }
-    // Activation stores the tag values once and nothing updates them, so an
-    // analysis is matched with the stored keys whatever Galaxy tags now.
-    const stored = dbWorkflowsMap.value.get(workflow.id)
-    const key: ResultsViewKey = stored ? { name: stored.name_key, version: stored.version_key } : live
-    const { rung } = matchResultsView(resultsViews, key)
-    const retagged = stored && (key.name !== live.name || key.version !== live.version)
-      ? { stored: key, live }
-      : undefined
-    return [{
-      ...workflow,
-      version,
-      tagName,
-      activated: stored !== undefined,
-      resultsView: resultsViewReading(rung),
-      retagged,
-    }]
-  })
+  const rows = (allWorkflowsVal as GalaxyWorkflowsItem[]).map(workflow => ({
+    ...workflow,
+    versions: versionsByStoredWorkflow.value.get(workflow.id) ?? [],
+  }))
+  return [
+    ...rows.filter(row => row.versions.length > 0),
+    ...rows.filter(row => row.versions.length === 0),
+  ]
 })
+
+/** The stored workflow the publish dialog is open for, if any. */
+const workflowToPublish = ref<StoredWorkflowRow | undefined>()
+const dialogOpen = ref(false)
+
+function openPublishDialog(workflow: StoredWorkflowRow) {
+  workflowToPublish.value = workflow
+  dialogOpen.value = true
+}
+
+// the dialog is keyed on the stored workflow, so closing it forgets what was
+// typed and the next one opens with its own pre-fill
+watch(dialogOpen, (isOpen) => {
+  if (!isOpen)
+    workflowToPublish.value = undefined
+})
+
+function onPublished(version: WorkflowRow) {
+  toast.add({
+    title: 'Version published',
+    description: `${version.name_key} ${version.version_key} is now available to users.`,
+    color: 'success',
+    icon: 'i-lucide-circle-check',
+  })
+  refreshVersions()
+}
 
 const pageHeaderProps = computed(() => {
   return {
     title: 'Workflows',
     description:
-      'Manage the workflows that are available for this web application',
+      'Publish versions of the Galaxy workflows this web application offers',
     headline: galaxyInstance.value?.name ?? 'Galaxy Instance',
-
   }
 })
 </script>
@@ -290,13 +226,21 @@ const pageHeaderProps = computed(() => {
       <PageHeader :page-header-props icon="i-lucide:workflow" :breadcrumbs-items="computedBreadcrumbsItems" />
       <NuxtErrorBoundary>
         <UTable
-          v-if="allWorkflows" sticky :data="computedWorkflows" :columns="galaxyWorkflowGalaxyColumns"
+          v-if="allWorkflows" sticky :data="storedWorkflows" :columns="columns"
           class="flex-1 max-h-125"
         />
         <template #error="error">
           <pre>{{ error }}</pre>
         </template>
       </NuxtErrorBoundary>
+      <AdminPublishVersionModal
+        v-if="workflowToPublish"
+        :key="workflowToPublish.id"
+        v-model:open="dialogOpen"
+        :workflow="workflowToPublish"
+        :lineage-name="workflowToPublish.versions[0]?.row.name_key"
+        @published="onPublished"
+      />
     </div>
     <div v-else>
       <UAlert title="No Galaxy instance defined" />

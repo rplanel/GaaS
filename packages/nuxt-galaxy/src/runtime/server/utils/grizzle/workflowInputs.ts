@@ -92,7 +92,7 @@ function labelOf(step: Record<string, unknown>): string | null {
  * The definition's steps, or `null` when there is no reading them.
  *
  * `definition` is a `json` column Drizzle does not type, holding whatever
- * Galaxy exported when the workflow was activated, so "declares no inputs"
+ * Galaxy exported when the version was published, so "declares no inputs"
  * and "cannot be read at all" are two different answers and only one of them
  * is a reason to refuse anything.
  */

@@ -72,7 +72,7 @@ export function describeStartAnalysisFailure(refusal: unknown): StartAnalysisFai
   if (statusCode === 404) {
     return {
       title: 'That workflow is no longer available',
-      description: 'It may have been deactivated. Reload the page to see the workflows you can still start.',
+      description: 'It may have been retired. Reload the page to see the workflows you can still start.',
       signIn: false,
     }
   }

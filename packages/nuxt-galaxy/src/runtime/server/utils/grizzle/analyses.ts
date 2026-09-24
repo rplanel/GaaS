@@ -70,8 +70,8 @@ export function runAnalysis(
       historyId,
       workflowId,
       // kept on the row beside `workflow_id`: the row it points at says which
-      // revision was activated, this says which one this analysis ran, and
-      // the two stop agreeing the day the workflow row moves on
+      // revision the version pins, this says which one this analysis ran, and
+      // the two stop agreeing the day the version row moves on
       workflowRevision: workflow.revision,
       state: galaxyInvocation.state,
       galaxyId: galaxyInvocation.id,

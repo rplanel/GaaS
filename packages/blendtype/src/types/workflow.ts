@@ -242,6 +242,14 @@ export const workflowStepExportSchema = z.object({
 
 })
 
+/**
+ * A stored workflow as `GET /api/workflows/{id}/download` exports it, at one
+ * revision. Two fields name that revision (ADR 0004): `version`, the 0-based
+ * index Galaxy adds to every downloaded dict and the integer an invocation
+ * takes (#48), and `uuid`, the identifier Galaxy gave the revision when it was
+ * saved. A published version keeps both; the index alone could not tell a
+ * rewritten history from a stable one.
+ */
 export interface rawGalaxyWorkflowExport {
   'a_galaxy_workflow': string
   'format-version': string
@@ -250,6 +258,7 @@ export interface rawGalaxyWorkflowExport {
   'annotation': string
   'steps': { [key: string]: WorkflowStepExport }
   'version': number
+  'uuid': string
 }
 
 export interface GalaxyWorkflowExport extends Omit<rawGalaxyWorkflowExport, 'a_galaxy_workflow'> {
@@ -263,5 +272,6 @@ export const galaxyWorkflowExportSchema = z.object({
   'tags': z.array(z.string()),
   'annotation': z.string(),
   'version': z.number(),
+  'uuid': z.string(),
   'steps': z.record(z.string(), workflowStepExportSchema),
 })
