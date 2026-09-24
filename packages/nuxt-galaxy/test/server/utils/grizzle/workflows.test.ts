@@ -473,7 +473,9 @@ describe('publishVersion', () => {
         const match = /^api\/tools\/(.+)\?io_details=true&tool_version=(.+)$/.exec(url)
         if (!match)
           throw new Error(`unexpected Galaxy call: ${url}`)
-        return except(match[1]!) ?? { model_class: 'Tool', id: match[1], version: match[2] }
+        // read the way Galaxy reads a query value: decoded, a raw `+` being a space
+        const toolVersion = decodeURIComponent(match[2]!.replaceAll('+', ' '))
+        return except(match[1]!) ?? { model_class: 'Tool', id: match[1], version: toolVersion }
       })
     }
 
@@ -506,7 +508,8 @@ describe('publishVersion', () => {
       expect(Exit.isSuccess(await exit)).toBe(true)
       expect(toolLookups(recording.calls).map(call => call.url).sort()).toEqual([
         `api/tools/${BAR}?io_details=true&tool_version=2.0`,
-        `api/tools/${FOO}?io_details=true&tool_version=1.2.3+galaxy0`,
+        // encoded, since a raw `+` would reach Galaxy as a space
+        `api/tools/${FOO}?io_details=true&tool_version=1.2.3%2Bgalaxy0`,
       ])
       expect(insertedRow(mockClient)).toMatchObject({ revision: 3, definition: withTools })
     })

@@ -31,12 +31,17 @@ function galaxyAnswers(statusCode: number) {
   return Object.assign(new Error(`[GET] "api/tools/…": ${statusCode}`), { statusCode })
 }
 
-/** The tool an `api/tools/<id>?io_details=true&tool_version=<v>` call asks for. */
+/**
+ * The tool an `api/tools/<id>?io_details=true&tool_version=<v>` call asks for,
+ * read the way Galaxy reads it: the query value URL-decoded, so an encoded
+ * `%2B` is the `+` a toolshed version carries. A raw `+` would decode to a
+ * space here, as it does in Galaxy.
+ */
 function asked(url: string) {
   const match = /^api\/tools\/(.+)\?io_details=true&tool_version=(.+)$/.exec(url)
   if (!match)
     throw new Error(`not a tool lookup: ${url}`)
-  return { toolId: match[1]!, toolVersion: match[2]! }
+  return { toolId: match[1]!, toolVersion: decodeURIComponent(match[2]!.replaceAll('+', ' ')) }
 }
 
 /** A Galaxy that holds every tool at the version asked for, except where `except` says otherwise. */
@@ -77,9 +82,11 @@ describe('missingToolsEffect', () => {
     const missing = await missingToolsEffect(twoTools).pipe(Effect.provide(galaxy.layer), Effect.runPromise)
 
     expect(missing).toEqual([])
+    // the pinned version travels URL-encoded: a raw `+` is a space to Galaxy,
+    // which then holds no such version and answers another one
     expect(galaxy.calls.map(call => call.url).sort()).toEqual([
       `api/tools/${BAR}?io_details=true&tool_version=2.0`,
-      `api/tools/${FOO}?io_details=true&tool_version=1.2.3+galaxy0`,
+      `api/tools/${FOO}?io_details=true&tool_version=1.2.3%2Bgalaxy0`,
     ])
   })
 
