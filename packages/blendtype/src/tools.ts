@@ -16,6 +16,12 @@ import { GalaxyFetch, toGalaxyServiceUnavailable, withRetry } from './galaxy'
  * and 404 only when it has none. A caller that needs the exact version has to
  * read the answer's `version`, not the status.
  *
+ * The version is URL-encoded: toolshed versions carry a `+` (`1.2.3+galaxy0`),
+ * and a raw `+` in a query string is a space to the server that decodes it,
+ * so Galaxy read `1.2.3 galaxy0`, held no such version and answered another.
+ * The id is sent as is: its slashes are the path Galaxy's route expects, and a
+ * `+` in a path segment is literal.
+ *
  * @param toolId - The unique identifier of the tool to retrieve
  * @param version - The version of the tool to retrieve
  * @returns An Effect that yields the GalaxyTool or fails with a ToolError
@@ -33,7 +39,7 @@ export function getToolEffect(toolId: string, version: string) {
     const fetchApi = yield* GalaxyFetch
     const tool = Effect.tryPromise({
       try: () => fetchApi<GalaxyTool>(
-        `api/tools/${toolId}?io_details=true&tool_version=${version}`,
+        `api/tools/${toolId}?io_details=true&tool_version=${encodeURIComponent(version)}`,
         {
           method: 'GET',
         },

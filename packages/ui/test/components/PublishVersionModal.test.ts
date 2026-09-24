@@ -177,13 +177,13 @@ describe('the publish dialog\'s revision picker', () => {
     const listed = await revisionsListed()
 
     expect(listed.map(item => item.text)).toEqual([
-      'Revision 0 Sep 1, 10:00 · 3 steps',
-      'Revision 1 Sep 10, 08:30 · 4 steps',
-      'Revision 2, the latest Sep 20, 16:45 · 4 steps',
+      'Revision 1 Sep 1, 10:00 · 3 steps',
+      'Revision 2 Sep 10, 08:30 · 4 steps',
+      'Revision 3, the latest Sep 20, 16:45 · 4 steps',
     ])
     expect(listed.map(item => item.selected)).toEqual([false, false, true])
     expect(listed.every(item => !item.disabled)).toBe(true)
-    expect(summary()).toMatch(/Revision 2, the latest/)
+    expect(summary()).toMatch(/Revision 3, the latest/)
   })
 
   it('disables the revisions already published, shows their label, and selects the newest that is not', async () => {
@@ -198,11 +198,11 @@ describe('the publish dialog\'s revision picker', () => {
     const listed = await revisionsListed()
 
     expect(listed.map(item => item.disabled)).toEqual([true, false, true])
-    expect(listed[0]!.text).toBe('Revision 0 Sep 1, 10:00 · 3 steps · published as 0.9')
-    expect(listed[2]!.text).toBe('Revision 2, the latest Sep 20, 16:45 · 4 steps · published as 0.11')
+    expect(listed[0]!.text).toBe('Revision 1 Sep 1, 10:00 · 3 steps · published as 0.9')
+    expect(listed[2]!.text).toBe('Revision 3, the latest Sep 20, 16:45 · 4 steps · published as 0.11')
     expect(listed[1]!.text).not.toContain('published as')
     expect(listed.map(item => item.selected)).toEqual([false, true, false])
-    expect(summary()).toMatch(/Revision 1, older than the latest \(2\)/)
+    expect(summary()).toMatch(/Revision 2, older than the latest \(3\)/)
   })
 
   it('publishes an older unpublished revision when it is chosen, naming it in the body', async () => {
@@ -211,7 +211,7 @@ describe('the publish dialog\'s revision picker', () => {
 
     await choose(0)
     expect(listedRevisions().map(item => item.selected)).toEqual([true, false, false])
-    expect(summary()).toMatch(/Revision 0, older than the latest \(2\)/)
+    expect(summary()).toMatch(/Revision 1, older than the latest \(3\)/)
 
     // Publish waits for the chosen revision's tool check (#75)
     await publishable()
@@ -231,6 +231,26 @@ describe('the publish dialog\'s revision picker', () => {
     submitButton().click()
 
     await vi.waitFor(() => expect(lastBody).toEqual({ galaxyId: LISTED, name: 'satelliteFinder', label: '0.12', revision: 2 }))
+  })
+
+  // Galaxy's editor labels a revision `version + 1`, while the API, the
+  // export, the download and an invocation carry the 0-based index. The
+  // picker shows the editor's number, so the administrator reads what Galaxy
+  // shows them; the body carries the index, which is what the server takes.
+  it('shows Galaxy\'s number for a revision and sends its index', async () => {
+    await mountDialog({ workflowId: LISTED })
+    const listed = await revisionsListed()
+
+    // the entry Galaxy indexes 1 reads "Revision 2", the one it indexes 0 reads "Revision 1"
+    expect(listed.map(item => item.text.split(' ').slice(0, 2).join(' '))).toEqual(['Revision 1', 'Revision 2', 'Revision 3,'])
+    await choose(0)
+    expect(summary()).toMatch(/^Revision 1, older than the latest \(3\)/)
+
+    await publishable()
+    submitButton().click()
+
+    // what travels is the index
+    await vi.waitFor(() => expect(lastBody).toEqual({ galaxyId: LISTED, name: 'satelliteFinder', label: '0.12', revision: 0 }))
   })
 
   it('says the revisions could not be listed and publishes nothing when Galaxy is down', async () => {

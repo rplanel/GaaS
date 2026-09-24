@@ -4,6 +4,7 @@ import type { GalaxyWorkflowsItem } from 'blendtype'
 import type { Database, WorkflowRow } from 'nuxt-galaxy'
 import type { ResultsViewReading } from '../../utils/resultsViews'
 import { resultsViews } from '#build/gaas/results-views.mjs'
+import { galaxyRevisionNumber } from 'blendtype'
 import { log } from 'evlog/client'
 import { describeActiveSwitchFailure } from '../../utils/activeSwitchFailure'
 import { matchResultsView, resultsViewReading } from '../../utils/resultsViews'
@@ -87,7 +88,27 @@ const computedBreadcrumbsItems = computed(() => {
 })
 
 const columns = ref<TableColumn<StoredWorkflowRow>[]>([
-  { accessorKey: 'name', header: 'Name' },
+  {
+    accessorKey: 'name',
+    header: 'Name',
+    // Galaxy's own list can hide a stored workflow; the list this page reads
+    // includes those, since hidden says nothing about publishing or running,
+    // and says so beside the name so the administrator knows why Galaxy's
+    // list does not show it.
+    cell: ({ row }) => h('span', { class: 'inline-flex items-center gap-2' }, [
+      h('span', { 'data-testid': 'workflow-name' }, row.original.name),
+      ...(row.original.galaxy?.hidden
+        ? [h(UBadge, {
+            'data-testid': 'workflow-hidden',
+            'label': 'hidden in Galaxy',
+            'color': 'neutral',
+            'variant': 'subtle',
+            'size': 'sm',
+            'title': 'Hidden in Galaxy\'s own workflow list; it can still be published and run.',
+          })]
+        : []),
+    ]),
+  },
   {
     // Every version published for this stored workflow, each with the same
     // match the results page runs (ADR 0003), handed the name and the label
@@ -278,7 +299,8 @@ const versionsByStoredWorkflow = computed(() => {
  * Every stored workflow of the account, in three groups: first the ones
  * Galaxy no longer lists but versions were published for (#76), since they
  * need the administrator's decision; then the published ones; then the rest,
- * each group in the order Galaxy lists them.
+ * each group in the order Galaxy lists them. One kind is left out: a stored
+ * workflow hidden in Galaxy that carries no version.
  */
 const storedWorkflows = computed<StoredWorkflowRow[]>(() => {
   const allWorkflowsVal = toValue(allWorkflows)
@@ -300,10 +322,18 @@ const storedWorkflows = computed<StoredWorkflowRow[]>(() => {
     // about it any more; every version of a stored workflow shares that name
     gone.push({ id: galaxyId, name: versions[0]!.row.name ?? versions[0]!.row.name_key, versions })
   }
+  // Galaxy hides a stored workflow to keep it out of its own list, and does
+  // it by itself for one embedded as a step in another, so the hidden ones
+  // are mostly pieces of other workflows. This page never offered them,
+  // since it listed what Galaxy listed, and an administrator has no reason
+  // to publish one. A hidden workflow earns a row once it carries a version:
+  // that is the one case this page would otherwise read as a stored workflow
+  // Galaxy no longer has.
+  const shown = listed.filter(row => !row.galaxy?.hidden || row.versions.length > 0)
   return [
     ...gone,
-    ...listed.filter(row => row.versions.length > 0),
-    ...listed.filter(row => row.versions.length === 0),
+    ...shown.filter(row => row.versions.length > 0),
+    ...shown.filter(row => row.versions.length === 0),
   ]
 })
 
@@ -341,7 +371,7 @@ watch(deleteDialogOpen, (isOpen) => {
 function onDeleted(version: WorkflowRow) {
   toast.add({
     title: 'Version deleted',
-    description: `${version.name_key} ${version.version_key} is gone; revision ${version.revision} can be published again under another label.`,
+    description: `${version.name_key} ${version.version_key} is gone; revision ${galaxyRevisionNumber(version.revision)} can be published again under another label.`,
     color: 'success',
     icon: 'i-lucide-circle-check',
   })

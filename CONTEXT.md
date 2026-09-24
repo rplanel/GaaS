@@ -17,7 +17,7 @@ The label an administrator gives one revision of a Galaxy workflow when publishi
 _Avoid_: Galaxy version, auto version, revision, version tag
 
 **Revision**:
-One save of a workflow on the Galaxy side. Every save appends a revision with its own identifier, while the workflow keeps its name. A version pins exactly one revision, and an analysis runs the revision its version pins.
+One save of a workflow on the Galaxy side. Every save appends a revision with its own identifier, while the workflow keeps its name. A version pins exactly one revision, and an analysis runs the revision its version pins. Galaxy's editor numbers a revision from 1, so GaaS shows that number to administrators, while the API and the `revision` column carry the 0-based index.
 _Avoid_: Galaxy version, version index, workflow instance
 
 **Publish**:

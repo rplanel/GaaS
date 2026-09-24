@@ -3,7 +3,7 @@ import type { FormSubmitEvent, RadioGroupItem } from '@nuxt/ui'
 import type { GalaxyWorkflowRevision, GalaxyWorkflowsItem } from 'blendtype'
 import type { WorkflowRow } from 'nuxt-galaxy'
 import type { PublishFailure } from '../../utils/publishFailure'
-import { getWorkflowTagName, getWorkflowTagVersion } from 'blendtype'
+import { galaxyRevisionNumber, getWorkflowTagName, getWorkflowTagVersion } from 'blendtype'
 import { log } from 'evlog/client'
 import * as z from 'zod'
 import { describePublishFailure } from '../../utils/publishFailure'
@@ -167,7 +167,9 @@ const revisionItems = computed<RadioGroupItem[]>(() => (revisions.value ?? []).m
   ]
   return {
     value: revision.version,
-    label: revision.version === latestRevision.value ? `Revision ${revision.version}, the latest` : `Revision ${revision.version}`,
+    // Galaxy's number, index + 1, is what the editor shows; the radio's
+    // value stays the index, which is what the body sends
+    label: revision.version === latestRevision.value ? `Revision ${galaxyRevisionNumber(revision.version)}, the latest` : `Revision ${galaxyRevisionNumber(revision.version)}`,
     description: facts.join(' · '),
     disabled: label !== undefined,
   }
@@ -186,8 +188,8 @@ const revisionSummary = computed(() => {
   if (chosen === undefined)
     return 'Every revision is published already.'
   if (chosen === latestRevision.value)
-    return `Revision ${chosen}, the latest saved in Galaxy.`
-  return `Revision ${chosen}, older than the latest (${latestRevision.value}).`
+    return `Revision ${galaxyRevisionNumber(chosen)}, the latest saved in Galaxy.`
+  return `Revision ${galaxyRevisionNumber(chosen)}, older than the latest (${galaxyRevisionNumber(latestRevision.value!)}).`
 })
 
 /**

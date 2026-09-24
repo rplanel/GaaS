@@ -52,6 +52,27 @@ describe('getToolEffect', () => {
         Effect.runPromise,
       ))
 
+    // Toolshed versions carry a `+` (`1.2.3+galaxy0`), and a `+` in a query
+    // string is a space to the server that decodes it: sent raw, Galaxy read
+    // `1.2.3 galaxy0`, held no such version and fell back to the newest one,
+    // so every tool pinned at an older `+galaxyN` version read as missing.
+    // The version is encoded; the id is not, since its slashes are the path
+    // Galaxy's route expects and a `+` in a path segment is literal.
+    it('encodes the version so a plus reaches Galaxy as a plus', () =>
+      pipe(
+        Effect.gen(function* () {
+          const trackingLayer = createUrlTrackingLayer(mockGalaxyTool)
+          yield* getToolEffect('toolshed.g2.bx.psu.edu/repos/iuc/foo/foo/1.2.3+galaxy0', '1.2.3+galaxy0').pipe(
+            Effect.provide(trackingLayer),
+          )
+
+          expect(trackingLayer.getLastUrl()).toBe(
+            'api/tools/toolshed.g2.bx.psu.edu/repos/iuc/foo/foo/1.2.3+galaxy0?io_details=true&tool_version=1.2.3%2Bgalaxy0',
+          )
+        }),
+        Effect.runPromise,
+      ))
+
     it('should handle tools with complex inputs and outputs', () =>
       pipe(
         Effect.gen(function* () {

@@ -32,13 +32,14 @@ mockNuxtImport('useUserRole', () => () => ({ userRole }))
 mockNuxtImport('useSupabaseClient', () => () => ({} as never))
 
 /** Only the fields the page reads off a Galaxy stored workflow are filled in. */
-function galaxyWorkflow(id: string, name: string, tags: string[]): GalaxyWorkflowsItem {
+function galaxyWorkflow(id: string, name: string, tags: string[], overrides: Partial<GalaxyWorkflowsItem> = {}): GalaxyWorkflowsItem {
   return {
     id,
     name,
     tags,
     number_of_steps: 3,
     create_time: new Date('2026-09-01T10:00:00Z'),
+    ...overrides,
   } as unknown as GalaxyWorkflowsItem
 }
 
@@ -52,6 +53,12 @@ const GALAXY_WORKFLOWS = [
   galaxyWorkflow('wf-cas', 'Cas Finder', ['name:casFinder', 'version:1.0']),
   galaxyWorkflow('wf-satellite', 'Satellite Finder', ['name:satelliteFinder', 'version:0.11']),
   galaxyWorkflow('wf-defense', 'Defense Finder', ['name:defenseFinder', 'version:2.0.0']),
+  // hidden in Galaxy's own list, which the proxy asks for too: it carries a
+  // version, so it keeps a row here and says why Galaxy's list omits it
+  galaxyWorkflow('wf-hidden', 'Hidden Finder', [], { hidden: true }),
+  // hidden and with no version: the shape Galaxy hides by itself for a
+  // workflow embedded as a step in another, which this page leaves out
+  galaxyWorkflow('wf-subworkflow', 'Trim And QC', [], { hidden: true }),
 ]
 
 mockNuxtImport('galaxyWorkflowsListQuery', () => () => ({
@@ -134,7 +141,8 @@ mockNuxtImport('workflowsListQuery', () => () => ({
 }))
 
 /**
- * The same three versions as the admin page reads them, retired ones
+ * The versions as the admin page reads them, the users' three plus one for
+ * the stored workflow Galaxy hides, retired ones
  * included (#71): fresh for every test, since the PATCH endpoints below flip
  * `active` in place, and keyed per test so that a mount reads its own cache
  * entry rather than the one the previous test's refetch filled.
@@ -144,6 +152,7 @@ function publishedVersions() {
     version(1, 'wf-satellite', 'satelliteFinder', '0.11', 3),
     version(2, 'wf-satellite', 'satelliteFinder', '0.10', 1),
     version(3, 'wf-defense', 'defenseFinder', '2.0.0', 0),
+    version(5, 'wf-hidden', 'hiddenFinder', '1.0', 0),
   ]
 }
 let adminVersions = publishedVersions()
@@ -188,7 +197,7 @@ type Page = Awaited<ReturnType<typeof mountPage>>
 
 /** The table row for the stored workflow of that name, found by its name cell alone. */
 function row(wrapper: Page, name: string) {
-  return wrapper.findAll('tbody tr').find(candidate => candidate.find('td').text() === name)
+  return wrapper.findAll('tbody tr').find(candidate => candidate.find('[data-testid="workflow-name"]').text() === name)
 }
 
 /** The table row for the stored workflow of that name, or a failure naming it. */
@@ -201,7 +210,7 @@ function rowOf(wrapper: Page, name: string) {
 
 /** The names of the stored workflows, in the order the table lists them. */
 function listedNames(wrapper: Page) {
-  return wrapper.findAll('tbody tr').map(candidate => candidate.find('td').text())
+  return wrapper.findAll('tbody tr').map(candidate => candidate.find('[data-testid="workflow-name"]').text())
 }
 
 /** Each version on that row: its label and what the Results view badge beside it says. */
@@ -344,7 +353,24 @@ describe('admin workflows', () => {
     const wrapper = await mountPage()
     await vi.waitFor(() => expect(row(wrapper, 'Untagged')).toBeDefined())
 
-    expect(listedNames(wrapper)).toEqual(['Satellite Finder', 'Defense Finder', 'Untagged', 'Cas Finder'])
+    expect(listedNames(wrapper)).toEqual(['Satellite Finder', 'Defense Finder', 'Hidden Finder', 'Untagged', 'Cas Finder'])
+  })
+
+  // Galaxy hides a stored workflow to keep it out of its own list, and does
+  // it by itself for one embedded as a step in another, so most hidden ones
+  // are pieces of other workflows that nobody would publish. A hidden one
+  // that already carries a version is the case worth a row: it stays
+  // publishable and says why Galaxy's list omits it, rather than reading as
+  // a stored workflow Galaxy no longer has. Absent from Galaxy altogether is
+  // what the vanished rows below are for.
+  it('keeps a hidden stored workflow that carries a version, and leaves out the hidden ones that carry none', async () => {
+    const wrapper = await mountPage()
+    await vi.waitFor(() => expect(row(wrapper, 'Hidden Finder')).toBeDefined())
+
+    expect(rowOf(wrapper, 'Hidden Finder').find('[data-testid="workflow-hidden"]').text()).toBe('hidden in Galaxy')
+    expect(rowOf(wrapper, 'Hidden Finder').find('[data-testid="publish-version"]').exists()).toBe(true)
+    expect(row(wrapper, 'Trim And QC')).toBeUndefined()
+    expect(wrapper.findAll('[data-testid="workflow-hidden"]')).toHaveLength(1)
   })
 
   it('lists each published version on its row with its results view reading', async () => {
@@ -651,7 +677,7 @@ describe('admin workflows', () => {
       const wrapper = await mountPage()
       await vi.waitFor(() => expect(row(wrapper, 'Gone Finder')).toBeDefined())
 
-      expect(listedNames(wrapper)).toEqual(['Gone Finder', 'Satellite Finder', 'Defense Finder', 'Untagged', 'Cas Finder'])
+      expect(listedNames(wrapper)).toEqual(['Gone Finder', 'Satellite Finder', 'Defense Finder', 'Hidden Finder', 'Untagged', 'Cas Finder'])
       expect(rowOf(wrapper, 'Gone Finder').find('[data-testid="publish-version"]').exists()).toBe(false)
       expect(rowOf(wrapper, 'Satellite Finder').find('[data-testid="publish-version"]').exists()).toBe(true)
       // what Galaxy says about a stored workflow, blank when Galaxy no longer says anything

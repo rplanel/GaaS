@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { BadgeProps } from '@nuxt/ui'
 import type { PinnedTool, WorkflowRow } from 'nuxt-galaxy'
+import { galaxyRevisionNumber } from 'blendtype'
 import { log } from 'evlog/client'
 
 /**
@@ -88,8 +89,9 @@ const reading = computed<Reading>(() => {
     icon: 'i-lucide-git-compare',
     notes: [
       current.galaxyRevisionUuid === undefined
-        ? `Galaxy holds no revision at index ${props.version.revision} any more: the history was rewritten or shortened.`
-        : `The revision Galaxy holds at index ${props.version.revision} is not the one this version pinned: the history was rewritten.`,
+        // Galaxy's number, index + 1, the one the editor shows
+        ? `Galaxy holds no revision ${galaxyRevisionNumber(props.version.revision)} any more: the history was rewritten or shortened.`
+        : `Revision ${galaxyRevisionNumber(props.version.revision)} in Galaxy is not the one this version pinned any more: the history was rewritten.`,
       'Retiring the version is the remedy; nothing is retired automatically.',
     ],
     uuids: { pinned: props.version.revision_uuid, galaxy: current.galaxyRevisionUuid },
@@ -133,7 +135,7 @@ const hasDetails = computed(() => reading.value.notes !== undefined)
             </dt>
             <dd>
               <code v-if="reading.uuids.galaxy">{{ reading.uuids.galaxy }}</code>
-              <span v-else>no revision at that index</span>
+              <span v-else>no revision with that number</span>
             </dd>
           </dl>
         </div>

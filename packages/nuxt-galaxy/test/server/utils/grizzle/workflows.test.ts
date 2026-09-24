@@ -9,6 +9,7 @@ import {
   GetWorkflowError,
   publishVersion,
   RevisionAlreadyPublishedError,
+  RevisionNotFoundError,
   VersionLabelTakenError,
   WorkflowNameLockedError,
   WorkflowNotFoundError,
@@ -269,7 +270,8 @@ describe('publishVersion', () => {
       })
 
       expectFailureOf(await exit, RevisionAlreadyPublishedError, (error) => {
-        expect(error.message).toBe('Revision 1 is already published as version "0.10" of "satelliteFinder".')
+        // Galaxy's number, index + 1: the export carries index 1
+        expect(error.message).toBe('Revision 2 is already published as version "0.10" of "satelliteFinder".')
       })
       expect(mockClient.schema).not.toHaveBeenCalled()
     })
@@ -418,7 +420,7 @@ describe('publishVersion', () => {
       })
 
       expectFailureOf(await exit, RevisionAlreadyPublishedError, (error) => {
-        expect(error.message).toBe('Revision 1 is already published as version "0.10" of "satelliteFinder".')
+        expect(error.message).toBe('Revision 2 is already published as version "0.10" of "satelliteFinder".')
       })
       expect(mockClient.schema).not.toHaveBeenCalled()
     })
@@ -473,7 +475,9 @@ describe('publishVersion', () => {
         const match = /^api\/tools\/(.+)\?io_details=true&tool_version=(.+)$/.exec(url)
         if (!match)
           throw new Error(`unexpected Galaxy call: ${url}`)
-        return except(match[1]!) ?? { model_class: 'Tool', id: match[1], version: match[2] }
+        // read the way Galaxy reads a query value: decoded, a raw `+` being a space
+        const toolVersion = decodeURIComponent(match[2]!.replaceAll('+', ' '))
+        return except(match[1]!) ?? { model_class: 'Tool', id: match[1], version: toolVersion }
       })
     }
 
@@ -492,7 +496,8 @@ describe('publishVersion', () => {
 
       expectFailureOf(await exit, WorkflowToolsMissingError, (error) => {
         expect(error.message).toBe(
-          `Revision 3 of "Satellite Finder" uses tools missing in Galaxy at their pinned version: ${FOO} 1.2.3+galaxy0, ${BAR} 2.0. Install them or choose another revision.`,
+          // Galaxy's number for the revision the export indexes as 3
+          `Revision 4 of "Satellite Finder" uses tools missing in Galaxy at their pinned version: ${FOO} 1.2.3+galaxy0, ${BAR} 2.0. Install them or choose another revision.`,
         )
       })
       expect(mockClient.schema).not.toHaveBeenCalled()
@@ -506,7 +511,8 @@ describe('publishVersion', () => {
       expect(Exit.isSuccess(await exit)).toBe(true)
       expect(toolLookups(recording.calls).map(call => call.url).sort()).toEqual([
         `api/tools/${BAR}?io_details=true&tool_version=2.0`,
-        `api/tools/${FOO}?io_details=true&tool_version=1.2.3+galaxy0`,
+        // encoded, since a raw `+` would reach Galaxy as a space
+        `api/tools/${FOO}?io_details=true&tool_version=1.2.3%2Bgalaxy0`,
       ])
       expect(insertedRow(mockClient)).toMatchObject({ revision: 3, definition: withTools })
     })
@@ -599,5 +605,50 @@ describe('publishVersion', () => {
     })
     // the insert path opens with .schema('galaxy'), so this proves it was never walked
     expect(mockClient.schema).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The body may name a revision Galaxy has no such index for, or a stored
+   * workflow Galaxy no longer has. Galaxy answers 400 for an index past the
+   * end of the history and 404 for an id it does not know; both used to
+   * propagate as blendtype's `WorkflowError`, which no status map knows, so
+   * the caller read `500 Internal Server Error` for a value it can fix.
+   */
+  describe('a revision or a stored workflow Galaxy does not have', () => {
+    /** What ofetch throws for a Galaxy answer with that status, as far as blendtype reads it. */
+    function galaxyAnswers(statusCode: number) {
+      return createRecordingGalaxyLayer(() => Object.assign(new Error(`[GET] "api/workflows/…": ${statusCode}`), { statusCode }))
+    }
+
+    it('refuses a revision Galaxy has no such index for, naming it', async () => {
+      const { exit, mockClient } = publish({ body: { ...body, revision: 999 }, galaxyLayer: galaxyAnswers(400).layer })
+
+      expectFailure(await exit, (error) => {
+        expect(error).toBeInstanceOf(RevisionNotFoundError)
+        // the body carries the index 999; the administrator reads Galaxy's number
+        expect((error as RevisionNotFoundError).message).toBe('Galaxy has no revision 1000 of stored workflow galaxy-workflow-1.')
+      })
+      expect(mockClient.schema).not.toHaveBeenCalled()
+    })
+
+    it('refuses a stored workflow Galaxy no longer has, when no revision was named', async () => {
+      const { exit, mockClient } = publish({ galaxyLayer: galaxyAnswers(404).layer })
+
+      expectFailure(await exit, (error) => {
+        expect(error).toBeInstanceOf(RevisionNotFoundError)
+        expect((error as RevisionNotFoundError).message).toBe('Galaxy no longer has stored workflow galaxy-workflow-1.')
+      })
+      expect(mockClient.schema).not.toHaveBeenCalled()
+    })
+
+    it('lets any other failure of the export through as blendtype\'s own, not as a refusal', async () => {
+      // a 500 from Galaxy says nothing about the revision; it stays a fault
+      const { exit, mockClient } = publish({ body: { ...body, revision: 3 }, galaxyLayer: galaxyAnswers(500).layer })
+
+      expectFailure(await exit, (error) => {
+        expect(error).toMatchObject({ _tag: 'WorkflowError', statusCode: 500 })
+      })
+      expect(mockClient.schema).not.toHaveBeenCalled()
+    })
   })
 })

@@ -94,14 +94,34 @@ export function exportWorkflow(workflowId: string, layer: Layer.Layer<GalaxyFetc
   )
 }
 
-export function getWorkflowsEffect() {
+/** What `getWorkflowsEffect` lists beyond Galaxy's default answer. */
+export interface GetWorkflowsOptions {
+  /**
+   * Also list the stored workflows the account hid in Galaxy's own list.
+   * Galaxy's `GET /api/workflows` applies `hidden == show_hidden`: the
+   * default answers the visible ones only, and `show_hidden=true` answers
+   * only the hidden ones, so both are asked and the visible ones come first.
+   * Hidden is a display flag of Galaxy's list and says nothing about whether
+   * a workflow can be published or run.
+   */
+  readonly includeHidden?: boolean
+}
+
+/**
+ * The stored workflows of the account, as Galaxy lists them: the visible
+ * ones, and with `includeHidden` the hidden ones after them. Deleted ones are
+ * never listed; Galaxy deletes softly and describes a deleted stored workflow
+ * by id, `deleted: true`, which is how a reader tells one that is gone.
+ */
+export function getWorkflowsEffect(options: GetWorkflowsOptions = {}) {
   return Effect.gen(function* () {
     const fetchApi = yield* GalaxyFetch
-    const workflow = Effect.tryPromise({
+    const list = (query?: { show_hidden: true }) => Effect.tryPromise({
       try: () => fetchApi<GalaxyWorkflowsItem[]>(
         'api/workflows',
         {
           method: 'GET',
+          ...(query === undefined ? {} : { query }),
         },
       ),
       catch: caughtError => new WorkflowError({
@@ -110,12 +130,16 @@ export function getWorkflowsEffect() {
         cause: caughtError,
       }),
     })
-    return yield* workflow
+    if (!options.includeHidden) {
+      return yield* list()
+    }
+    const [visible, hidden] = yield* Effect.all([list(), list({ show_hidden: true })], { concurrency: 2 })
+    return [...visible, ...hidden]
   }).pipe(withRetry)
 }
 
-export function getWorkflows(layer: Layer.Layer<GalaxyFetch>) {
-  return getWorkflowsEffect().pipe(
+export function getWorkflows(layer: Layer.Layer<GalaxyFetch>, options: GetWorkflowsOptions = {}) {
+  return getWorkflowsEffect(options).pipe(
     toGalaxyServiceUnavailable,
     Effect.provide(layer),
     Effect.runPromise,
@@ -202,6 +226,22 @@ export function invokeWorkflow(historyGalaxyId: string, workflowId: string, inpu
     Effect.provide(layer),
     Effect.runPromise,
   )
+}
+
+/**
+ * The number Galaxy's editor gives a revision, from the 0-based index the API
+ * carries.
+ *
+ * Galaxy indexes a stored workflow's revisions from 0: that index is what
+ * `GET api/workflows/{id}/versions` lists as `version`, what the export
+ * carries as `version`, what `download?version=` and an invocation take, and
+ * what GaaS stores as a version's `revision`. Galaxy's editor shows the same
+ * revision to a person as `version + 1` (`WorkflowVersionSelector.vue`), so
+ * "Revision 3" to the API is "4" in the editor. Everything a person reads
+ * goes through this; everything that travels keeps the index.
+ */
+export function galaxyRevisionNumber(index: number): number {
+  return index + 1
 }
 
 export function getWorkflowTagVersion(tags: TagCollection): string | null {
