@@ -32,6 +32,10 @@ _Avoid_: Enabled, live, visible
 A version that is no longer active. It stays a version: its analyses, their results views and its usage statistics are untouched.
 _Avoid_: Unpublished, deactivated, deleted, archived, inactive
 
+**State of a version**:
+The live reading the admin page takes from Galaxy of whether a version can still run: runnable; tools missing, naming the tools Galaxy does not hold at their pinned version; missing in Galaxy, when the stored workflow no longer exists there; revision mismatch, when the revision Galaxy holds at that index is not the one the version pinned. A reading, never stored, and nothing is retired from it: the administrator reads it and decides.
+_Avoid_: Health, status, broken, outdated
+
 **Results view**:
 The component a developer writes to display the results of an analysis, matched to the analysis's workflow by name and version. When no view matches the version, the view for the workflow name alone applies; when there is none either, the view for every workflow of the app applies.
 _Avoid_: Result page, workflow component, custom result display

@@ -424,6 +424,12 @@ export default defineNuxtModule<ModuleOptions>({
       handler: resolver.resolve('./runtime/server/api/db/workflows/[workflowId].delete'),
       method: 'delete',
     })
+    // the state of one version, read live from Galaxy for the admin page (#76)
+    addServerHandler({
+      route: '/api/db/workflows/:workflowId/state',
+      handler: resolver.resolve('./runtime/server/api/db/workflows/[workflowId]/state.get'),
+      method: 'get',
+    })
 
     /*********************/
     // Add server plugin

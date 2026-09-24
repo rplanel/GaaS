@@ -137,6 +137,12 @@ export interface UpdatedAnalysisLog extends Sync {
  */
 export type { AnalysisBody } from '../server/utils/analysisBody'
 /**
+ * The state of a version (#76): whether it can still run, as
+ * `GET /api/db/workflows/:id/state` reads it live from Galaxy and the admin
+ * workflows page shows it beside each version.
+ */
+export type { PinnedRevision, VersionState } from '../server/utils/grizzle/versionState'
+/**
  * What the tool check of a revision answers (#75), as
  * `GET /api/galaxy/workflows/:id/revisions/:revision/tools` serves it and the
  * publish dialog reads it.

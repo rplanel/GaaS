@@ -1,4 +1,5 @@
 import type { GalaxyWorkflowsItem } from 'blendtype'
+import type { VersionState } from 'nuxt-galaxy'
 import { UApp } from '#components'
 import { useToast } from '#imports'
 import { mockNuxtImport, mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
@@ -73,6 +74,25 @@ mockNuxtImport('galaxyWorkflowRevisionsQuery', () => ({ workflowId }: { workflow
 mockNuxtImport('galaxyRevisionToolsQuery', () => ({ workflowId, revision }: { workflowId: string, revision: number }) => ({
   key: ['test', 'galaxy', 'revisions', workflowId, 'tools', revision],
   query: async () => ({ missing: [], checked: 3 }),
+}))
+
+/**
+ * The state of each version as Galaxy answers it (#76): runnable unless a
+ * test says otherwise, per version id, and `failure` for a reading Galaxy
+ * could not give. Keyed per test so that a mount reads its own cache entry.
+ */
+let versionStates: Record<number, VersionState | { failure: true }> = {}
+let stateRun = 0
+
+mockNuxtImport('versionStateQuery', () => ({ id }: { id: number }) => ({
+  key: ['test', 'version-state', id, stateRun],
+  query: async () => {
+    const state = versionStates[id]
+    if (state && 'failure' in state) {
+      throw createError({ statusCode: 503, statusMessage: 'Galaxy service is unavailable' })
+    }
+    return state ?? { state: 'runnable' }
+  },
 }))
 
 mockNuxtImport('instanceByUrlQuery', () => () => ({
@@ -295,6 +315,26 @@ for (const id of [1, 2, 3]) {
 beforeEach(() => {
   deleteRequests = []
   refuseDeleteWith = null
+})
+
+/** The version of a stored workflow Galaxy no longer lists (#76), when a test adds it. */
+const GONE_VERSION_ID = 9
+
+// the version whose stored workflow is gone can still be retired from the page
+registerEndpoint(`/api/db/workflows/${GONE_VERSION_ID}`, {
+  method: 'PATCH',
+  handler: async (event) => {
+    const body = await readBody(event)
+    lastActiveRequest = { id: GONE_VERSION_ID, body }
+    const row = adminVersions.find(candidate => candidate.id === GONE_VERSION_ID)!
+    row.active = Boolean(body.active)
+    return row
+  },
+})
+
+beforeEach(() => {
+  versionStates = {}
+  stateRun += 1
 })
 
 describe('admin workflows', () => {
@@ -549,6 +589,103 @@ describe('admin workflows', () => {
       expect(dialog()).not.toBeNull()
       expect(document.body.textContent).not.toContain('Version deleted')
       expect(versionsOf(wrapper, 'Satellite Finder')).toHaveLength(2)
+    })
+  })
+
+  // #76, ADR 0004. Beside each version, its state read live from Galaxy:
+  // runnable, tools missing, missing in Galaxy, revision mismatch. A
+  // reading, never stored; nothing is retired from it, the administrator
+  // reads it and decides. A stored workflow Galaxy no longer lists keeps a
+  // row for its versions, so they can be retired from here.
+  describe('the state of each version', () => {
+    /** The version entry of that label on that row. */
+    function entryOf(wrapper: Page, name: string, label: string) {
+      const entry = rowOf(wrapper, name)
+        .findAll('[data-testid="workflow-version"]')
+        .find(candidate => candidate.find('[data-testid="version-label"]').text() === label)
+      if (!entry)
+        throw new Error(`no version "${label}" is listed for "${name}"`)
+      return entry
+    }
+
+    /** What the state badge of that version says once the reading arrived. */
+    async function stateOf(wrapper: Page, name: string, label: string) {
+      const badge = () => entryOf(wrapper, name, label).find('[data-testid="version-state"]')
+      await vi.waitFor(() => expect(badge().text()).not.toBe('checking'))
+      return badge().text()
+    }
+
+    it('reads every version\'s state beside it, runnable when Galaxy holds everything the version pinned', async () => {
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Satellite Finder')).toBeDefined())
+
+      expect(await stateOf(wrapper, 'Satellite Finder', '0.11')).toBe('runnable')
+      expect(await stateOf(wrapper, 'Satellite Finder', '0.10')).toBe('runnable')
+      expect(await stateOf(wrapper, 'Defense Finder', '2.0.0')).toBe('runnable')
+      // the reading changes nothing else the row says
+      expect(versionsOf(wrapper, 'Satellite Finder')).toEqual([
+        { label: '0.11', reading: 'exact' },
+        { label: '0.10', reading: 'none' },
+      ])
+    })
+
+    it('names the missing tools of a version in the details of its badge', async () => {
+      versionStates[1] = {
+        state: 'tools-missing',
+        missingTools: [{ toolId: 'toolshed.g2.bx.psu.edu/repos/iuc/foo/foo/1.2.3+galaxy0', toolVersion: '1.2.3+galaxy0' }],
+      }
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Satellite Finder')).toBeDefined())
+
+      expect(await stateOf(wrapper, 'Satellite Finder', '0.11')).toBe('tools missing')
+      expect(await stateOf(wrapper, 'Satellite Finder', '0.10')).toBe('runnable')
+
+      await entryOf(wrapper, 'Satellite Finder', '0.11').find('[data-testid="version-state"]').trigger('click')
+
+      await vi.waitFor(() => expect(document.body.querySelector('[data-testid="version-state-details"]')?.textContent).toContain('toolshed.g2.bx.psu.edu/repos/iuc/foo/foo/1.2.3+galaxy0'))
+    })
+
+    it('lists a version whose stored workflow Galaxy no longer lists first, named from its snapshot, without Publish, reading missing in Galaxy', async () => {
+      adminVersions.push({ ...version(GONE_VERSION_ID, 'wf-gone', 'goneFinder', '1.0', 2), name: 'Gone Finder' })
+      versionStates[GONE_VERSION_ID] = { state: 'missing-in-galaxy' }
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Gone Finder')).toBeDefined())
+
+      expect(listedNames(wrapper)).toEqual(['Gone Finder', 'Satellite Finder', 'Defense Finder', 'Untagged', 'Cas Finder'])
+      expect(rowOf(wrapper, 'Gone Finder').find('[data-testid="publish-version"]').exists()).toBe(false)
+      expect(rowOf(wrapper, 'Satellite Finder').find('[data-testid="publish-version"]').exists()).toBe(true)
+      // what Galaxy says about a stored workflow, blank when Galaxy no longer says anything
+      const cells = (name: string) => rowOf(wrapper, name).findAll('td').map(cell => cell.text())
+      expect(cells('Satellite Finder')[2]).toBe('3')
+      expect(cells('Gone Finder')[2]).toBe('')
+      expect(cells('Gone Finder')[3]).toBe('')
+      expect(versionsOf(wrapper, 'Gone Finder')).toEqual([{ label: '1.0', reading: 'none' }])
+      expect(await stateOf(wrapper, 'Gone Finder', '1.0')).toBe('missing in Galaxy')
+    })
+
+    it('lets a version whose stored workflow is gone be retired from its row', async () => {
+      adminVersions.push({ ...version(GONE_VERSION_ID, 'wf-gone', 'goneFinder', '1.0', 2), name: 'Gone Finder' })
+      versionStates[GONE_VERSION_ID] = { state: 'missing-in-galaxy' }
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Gone Finder')).toBeDefined())
+
+      const toggle = () => entryOf(wrapper, 'Gone Finder', '1.0').find('[role="switch"]')
+      expect(toggle().attributes('aria-checked')).toBe('true')
+      await toggle().trigger('click')
+
+      await vi.waitFor(() => expect(lastActiveRequest).toEqual({ id: GONE_VERSION_ID, body: { active: false } }))
+      await vi.waitFor(() => expect(document.body.textContent).toContain('Version retired'))
+      await vi.waitFor(() => expect(toggle().attributes('aria-checked')).toBe('false'))
+    })
+
+    it('says a version was not checked when Galaxy could not answer, and reads nothing else into it', async () => {
+      versionStates[3] = { failure: true }
+      const wrapper = await mountPage()
+      await vi.waitFor(() => expect(row(wrapper, 'Defense Finder')).toBeDefined())
+
+      expect(await stateOf(wrapper, 'Defense Finder', '2.0.0')).toBe('not checked')
+      expect(await stateOf(wrapper, 'Satellite Finder', '0.11')).toBe('runnable')
+      expect(wrapper.text()).not.toMatch(/health|status|broken|outdated/i)
     })
   })
 })
