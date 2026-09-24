@@ -58,6 +58,17 @@ mockNuxtImport('galaxyWorkflowsListQuery', () => () => ({
   query: async () => GALAXY_WORKFLOWS,
 }))
 
+/**
+ * The revisions Galaxy lists for any stored workflow the dialog opens for:
+ * four saves, the last the latest (#73). One mock for every id rather than a
+ * `registerEndpoint` per stored workflow, since the harness matches a
+ * registered path literally and three stored workflows open the dialog here.
+ */
+mockNuxtImport('galaxyWorkflowRevisionsQuery', () => ({ workflowId }: { workflowId: string }) => ({
+  key: ['test', 'galaxy', 'revisions', workflowId],
+  query: async () => [0, 1, 2, 3].map(version => ({ version, update_time: `2026-09-0${version + 1}T10:00:00`, steps: 3 })),
+}))
+
 mockNuxtImport('instanceByUrlQuery', () => () => ({
   key: ['test', 'instance'],
   query: async () => ({ id: 1, name: 'Test Galaxy', url: 'https://galaxy.example.com' }),
@@ -333,7 +344,8 @@ describe('admin workflows', () => {
       await type(dialogInput('label'), '4.2')
       await submitDialog()
 
-      await vi.waitFor(() => expect(lastBody).toEqual({ galaxyId: 'wf-untagged', name: 'crisprFinder', label: '4.2' }))
+      // the latest listed revision travels with the body, so the row pins what was on screen (#73)
+      await vi.waitFor(() => expect(lastBody).toEqual({ galaxyId: 'wf-untagged', name: 'crisprFinder', label: '4.2', revision: 3 }))
       await vi.waitFor(() => expect(document.body.textContent).toContain('Version published'))
       await vi.waitFor(() => expect(dialog()).toBeNull())
     })

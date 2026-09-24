@@ -12,8 +12,9 @@ import { toHttpError } from '../../utils/httpError'
 import { readPublishVersionBody } from '../../utils/publishBody'
 
 /**
- * Publish a version (ADR 0004): label the latest revision of a Galaxy stored
- * workflow for the web application. The admin page's publish dialog calls it,
+ * Publish a version (ADR 0004): label one revision of a Galaxy stored
+ * workflow for the web application, the one the body names or the latest
+ * when it names none (#73). The admin page's publish dialog calls it,
  * but the dialog is not the only client, so what it accepts and refuses is
  * written down in the server docs rather than left to be read off the dialog.
  */

@@ -155,11 +155,13 @@ describe('publishVersion', () => {
   function publish(options: {
     body?: PublishVersionBody
     galaxyExport?: unknown
+    /** A Galaxy layer of the test's own, when the calls made to Galaxy are what it asserts. */
+    galaxyLayer?: ReturnType<typeof createRecordingGalaxyLayer>['layer']
     published?: ReturnType<typeof version>[]
     insert?: { data: unknown, error: unknown }
     claims?: typeof mockSupabaseUser | null
   } = {}) {
-    const galaxyLayer = createMockGalaxyLayer(options.galaxyExport ?? mockGalaxyWorkflowExport)
+    const galaxyLayer = options.galaxyLayer ?? createMockGalaxyLayer(options.galaxyExport ?? mockGalaxyWorkflowExport)
     const drizzle = createMockDrizzle()
     drizzle.setResult(options.published ?? [])
     const { layer: supabaseClientLayer, mockClient } = createMockServerSupabaseClientLayer({
@@ -348,6 +350,91 @@ describe('publishVersion', () => {
         expect(error).toMatchObject({ _tag: 'InsertWorkflowError' })
         expect((error as { message: string }).message).toContain('connection reset')
       })
+    })
+  })
+
+  /**
+   * ADR 0004, #73. A version pins one revision, and the dialog lets the
+   * administrator choose it: the export is asked for that revision, and the
+   * row's revision, uuid and snapshot are that export's rather than the
+   * latest's. Labels are not ordered, so an older revision can be published
+   * after a newer one.
+   */
+  describe('the revision the body names', () => {
+    /** The export Galaxy answers for revision 1, told apart from the latest by its uuid. */
+    const olderExport = { ...mockGalaxyWorkflowExport, version: 1, uuid: '0b9a6ad1-6a6e-4d43-8c65-6a1f7e4a2c10' }
+
+    it('exports the named revision and writes its index, uuid and snapshot', async () => {
+      const galaxy = createRecordingGalaxyLayer(() => olderExport)
+      const inserted = { id: 3, revision: 1 }
+
+      const { exit, mockClient } = publish({
+        body: { ...body, label: '0.10', revision: 1 },
+        galaxyLayer: galaxy.layer,
+        insert: { data: inserted, error: null },
+      })
+
+      expect(await exit).toEqual(Exit.succeed(inserted))
+      expect(galaxy.calls).toEqual([{ method: 'GET', url: 'api/workflows/galaxy-workflow-1/download?style=export&version=1' }])
+      expect(insertedRow(mockClient)).toMatchObject({
+        revision: 1,
+        revision_uuid: '0b9a6ad1-6a6e-4d43-8c65-6a1f7e4a2c10',
+        definition: olderExport,
+        version_key: '0.10',
+      })
+    })
+
+    it('publishes an older revision while a newer one is already published, since labels are not ordered', async () => {
+      const { exit, mockClient } = publish({
+        body: { ...body, label: '0.10', revision: 1 },
+        galaxyExport: olderExport,
+        published: [version({ versionKey: '0.11', revision: 3 })],
+        insert: { data: { id: 3 }, error: null },
+      })
+
+      expect(Exit.isSuccess(await exit)).toBe(true)
+      expect(insertedRow(mockClient)).toMatchObject({ revision: 1, version_key: '0.10' })
+    })
+
+    it('exports the latest when the body names none, as before', async () => {
+      const galaxy = createRecordingGalaxyLayer(() => ({ ...mockGalaxyWorkflowExport, version: 3 }))
+
+      const { exit } = publish({ body, galaxyLayer: galaxy.layer })
+
+      expect(Exit.isSuccess(await exit)).toBe(true)
+      expect(galaxy.calls).toEqual([{ method: 'GET', url: 'api/workflows/galaxy-workflow-1/download?style=export' }])
+    })
+
+    it('refuses the named revision when it is already published, naming its label', async () => {
+      // the check reads the revision off the export, which is the one asked
+      // for, so choosing a published revision explicitly is refused the same
+      // way the latest is when it already carries a label
+      const { exit, mockClient } = publish({
+        body: { ...body, label: '0.12', revision: 1 },
+        galaxyExport: olderExport,
+        published: [version({ versionKey: '0.10', revision: 1 })],
+      })
+
+      expectFailureOf(await exit, RevisionAlreadyPublishedError, (error) => {
+        expect(error.message).toBe('Revision 1 is already published as version "0.10" of "satelliteFinder".')
+      })
+      expect(mockClient.schema).not.toHaveBeenCalled()
+    })
+
+    it('fails as a fault when Galaxy exports another revision than the one asked for', async () => {
+      // Galaxy answered, but not with the revision named: the export is not
+      // what it claims to be, so nothing is written and the cause is logged
+      // rather than shown as something the administrator could change
+      const { exit, mockClient } = publish({
+        body: { ...body, revision: 1 },
+        galaxyExport: { ...mockGalaxyWorkflowExport, version: 2 },
+      })
+
+      expectFailureOf(await exit, GetWorkflowError, (error) => {
+        expect(error.message).toContain('revision 1')
+        expect(error.message).toContain('2')
+      })
+      expect(mockClient.schema).not.toHaveBeenCalled()
     })
   })
 

@@ -71,9 +71,10 @@ export class RevisionAlreadyPublishedError extends Data.TaggedError('RevisionAlr
  * that name: the name is the lineage (ADR 0004). A handler rule rather than a
  * constraint, since the dialog locks the field and this only refuses a client
  * that did not. No constraint backs it, so two publishes racing on the same
- * stored workflow could split a lineage; today they cannot, since both name
- * the latest revision and the unique on the revision refuses the second, but
- * #73, which lets an older revision be chosen, is where that changes.
+ * stored workflow, each naming a different revision (#73) and a different
+ * name, could split a lineage. Both would have to ignore the lock the dialog
+ * puts on the name, and the window is the two round trips between the checks
+ * and the insert, so that is accepted rather than constrained.
  */
 export class WorkflowNameLockedError extends Data.TaggedError('WorkflowNameLockedError')<{
   readonly message: string
@@ -182,16 +183,18 @@ export function setVersionActive(
  * workflow (ADR 0004). Nothing is copied in Galaxy; the only thing asked of
  * it is the export of the revision being published.
  *
- * The revision is the latest, since Galaxy exports the latest unless asked
- * for another; choosing an older one is #73. Every refusal happens before
- * anything is written, in the order the dialog reads them: the label, the
- * revision, the name, and last the permission, which the database decides on
- * the insert itself. The reads before it go through the service role, which
- * reveals nothing: the select policy lets every authenticated user read
- * versions anyway.
+ * The revision is the one the body names, by the 0-based index Galaxy lists
+ * it under, or the latest when it names none (#73): Galaxy exports the latest
+ * unless asked for another. The row's revision, uuid and snapshot are all
+ * read off that export, so they cannot disagree with one another. Every
+ * refusal happens before anything is written, in the order the dialog reads
+ * them: the label, the revision, the name, and last the permission, which the
+ * database decides on the insert itself. The reads before it go through the
+ * service role, which reveals nothing: the select policy lets every
+ * authenticated user read versions anyway.
  */
 export function publishVersion(
-  { galaxyId, name, label }: PublishVersionBody,
+  { galaxyId, name, label, revision }: PublishVersionBody,
   galaxyUrl: string,
   galaxyEmail: string,
   event: H3Event<EventHandlerRequest>,
@@ -208,7 +211,7 @@ export function publishVersion(
       return yield* Effect.fail(new GetSupabaseUserError({ message: 'Unauthorized' }))
     }
 
-    const galaxyWorkflow = yield* bt.exportWorkflowEffect(galaxyId)
+    const galaxyWorkflow = yield* bt.exportWorkflowEffect(galaxyId, 'export', revision)
     const galaxyUser = yield* getCurrentUserEffect(galaxyUrl, galaxyEmail)
 
     // The export's `version` is not a version and does not start at 1. It is
@@ -224,6 +227,16 @@ export function publishVersion(
     if (!Number.isInteger(galaxyWorkflow.version) || galaxyWorkflow.version < 0) {
       return yield* Effect.fail(new GetWorkflowError({
         message: `The export's \`version\` (the revision index) is invalid (${galaxyWorkflow.version}). It must be an integer of at least 0.`,
+      }))
+    }
+    // Galaxy was asked for one revision and answered with an export of
+    // another: not a refusal the administrator can act on but an export that
+    // is not what it claims to be, so nothing is written and the cause goes
+    // to the log. Galaxy indexes a list, so this should not happen; it is
+    // checked because the row would otherwise pin a revision nobody chose.
+    if (revision !== undefined && galaxyWorkflow.version !== revision) {
+      return yield* Effect.fail(new GetWorkflowError({
+        message: `Asked Galaxy for revision ${revision} of stored workflow ${galaxyId} and got an export of revision ${galaxyWorkflow.version}.`,
       }))
     }
 

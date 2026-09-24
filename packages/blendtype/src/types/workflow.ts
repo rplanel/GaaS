@@ -265,6 +265,20 @@ export interface GalaxyWorkflowExport extends Omit<rawGalaxyWorkflowExport, 'a_g
   a_galaxy_workflow: boolean
 }
 
+/**
+ * One revision of a stored workflow as `GET /api/workflows/{id}/versions`
+ * lists it. `version` is the 0-based index Galaxy indexes the revision by:
+ * the same integer the export carries as `version`, `download?version=` takes
+ * and an invocation runs (#48). It is read off the entry, never off the
+ * entry's position in the list. `update_time` is when that revision was saved
+ * and `steps` how many steps it has.
+ */
+export interface GalaxyWorkflowRevision {
+  version: number
+  update_time: string
+  steps: number
+}
+
 export const galaxyWorkflowExportSchema = z.object({
   'a_galaxy_workflow': z.coerce.boolean(),
   'format-version': z.string(),

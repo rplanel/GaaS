@@ -1,12 +1,14 @@
 /**
  * The body `POST /api/db/workflows` accepts, read rather than assumed.
  *
- * Publishing a version (ADR 0004) takes three things from the administrator:
+ * Publishing a version (ADR 0004) takes three things from the administrator,
  * the Galaxy stored workflow, the name of the lineage it joins and the label
- * the version carries. The handler's `defineEventHandler<{ body }>` annotation
- * is erased at build time, so the body is checked here, in the shape
- * `analysisBody.ts` established: the schema is the type, and a body nobody
- * can act on costs a round trip and nothing more.
+ * the version carries, and one more they may leave out: which revision of the
+ * stored workflow the version pins, the latest when none is named (#73). The
+ * handler's `defineEventHandler<{ body }>` annotation is erased at build time,
+ * so the body is checked here, in the shape `analysisBody.ts` established:
+ * the schema is the type, and a body nobody can act on costs a round trip and
+ * nothing more.
  */
 import { createError } from 'h3'
 import { z } from 'zod'
@@ -27,6 +29,7 @@ const MESSAGES = {
   label: '`label` must be a non-empty string of at most 255 characters',
   nameDirectory: `\`name\` cannot name a results view directory. ${DIRECTORY_RULE}`,
   labelDirectory: `\`label\` cannot name a results view directory. ${DIRECTORY_RULE}`,
+  revision: '`revision` must be a non-negative integer',
 } as const
 
 /**
@@ -47,6 +50,13 @@ export const publishVersionBodySchema = z.object({
   galaxyId: z.string(MESSAGES.galaxyId).refine(value => value.trim().length > 0, MESSAGES.galaxyId),
   name: directoryName(MESSAGES.name, MESSAGES.nameDirectory),
   label: directoryName(MESSAGES.label, MESSAGES.labelDirectory),
+  // The revision to publish, by the 0-based index Galaxy lists it under,
+  // which is the integer `download?version=` and an invocation take (#48).
+  // Only a non-negative integer can name one, so anything else is refused
+  // here rather than handed to Galaxy to answer for. Left out, the latest is
+  // published; the dialog always names the revision it shows, so only another
+  // client, or a publish before the list arrived, leaves it out.
+  revision: z.int(MESSAGES.revision).min(0, MESSAGES.revision).optional(),
 }, { error: MESSAGES.body })
 
 export type PublishVersionBody = z.infer<typeof publishVersionBodySchema>
