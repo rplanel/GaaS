@@ -359,7 +359,7 @@ describe('invokeWorkflowEffect', () => {
     ))
 
   // #48. Without `version` Galaxy invokes the latest revision of the stored
-  // workflow, so a save in its editor after activation changed what the next
+  // workflow, so a save in its editor after publish changed what the next
   // analysis ran. `InvokeWorkflowPayload.version` names the revision to run.
   it('names the revision to run when given one', () =>
     pipe(

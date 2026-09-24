@@ -220,10 +220,12 @@ return Exit.match(result, {
 })
 ```
 
-Hand the whole cause over. A handler that needs the failure itself — as
-`workflows.post` does, for the status its 409 carries — reads it with
-`Cause.failureOption` for that one check and passes the cause on regardless.
-Unwrapping it on the way in throws away the reason for reaching for `Exit`.
+Hand the whole cause over. No handler reads the failure itself today:
+`workflows.post` used to, for the status its 409 carried on the error, until
+#70 folded that 409 into `toHttpError`'s typed map. One that ever needs to
+reads it with `Cause.failureOption` for that one check and passes the cause on
+regardless. Unwrapping it on the way in throws away the reason for reaching
+for `Exit`.
 
 ### Configuration Options
 ```typescript

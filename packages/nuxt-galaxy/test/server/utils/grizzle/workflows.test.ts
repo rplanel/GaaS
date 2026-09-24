@@ -223,7 +223,7 @@ describe('publishVersion', () => {
   it('publishes a second label for the same stored workflow and copies nothing in Galaxy', async () => {
     // one revision is already published as 0.10; a later save is published as
     // 0.11 under the same name. Galaxy is only ever asked for the export: no
-    // copy, no retag, no write of any kind
+    // copy, no tag written, no write of any kind
     const galaxy = createRecordingGalaxyLayer(() => ({ ...mockGalaxyWorkflowExport, version: 1 }))
     const drizzle = createMockDrizzle()
     drizzle.setResult([version({ versionKey: '0.10', revision: 0 })])
@@ -335,7 +335,7 @@ describe('publishVersion', () => {
       })
 
       expectFailureOf(await exit, ConcurrentPublishError, (error) => {
-        expect(error.message).toBe('A version of this workflow was published meanwhile. Reload the page and try again.')
+        expect(error.message).toBe('Another version was published meanwhile. Reload the page and try again.')
       })
     })
 

@@ -37,8 +37,6 @@ export class WorkflowNotFoundError extends Data.TaggedError('WorkflowNotFoundErr
  */
 export class VersionLabelTakenError extends Data.TaggedError('VersionLabelTakenError')<{
   readonly message: string
-  readonly name: string
-  readonly label: string
 }> {}
 
 /**
@@ -48,19 +46,19 @@ export class VersionLabelTakenError extends Data.TaggedError('VersionLabelTakenE
  */
 export class RevisionAlreadyPublishedError extends Data.TaggedError('RevisionAlreadyPublishedError')<{
   readonly message: string
-  readonly revision: number
-  readonly label: string
 }> {}
 
 /**
  * The stored workflow already carries a name, and every version of it keeps
  * that name: the name is the lineage (ADR 0004). A handler rule rather than a
  * constraint, since the dialog locks the field and this only refuses a client
- * that did not.
+ * that did not. No constraint backs it, so two publishes racing on the same
+ * stored workflow could split a lineage; today they cannot, since both name
+ * the latest revision and the unique on the revision refuses the second, but
+ * #73, which lets an older revision be chosen, is where that changes.
  */
 export class WorkflowNameLockedError extends Data.TaggedError('WorkflowNameLockedError')<{
   readonly message: string
-  readonly name: string
 }> {}
 
 /**
@@ -174,16 +172,13 @@ export function publishVersion(
         .where(or(
           and(eq(workflows.userId, galaxyUser.user.id), eq(workflows.galaxyId, galaxyId)),
           and(eq(workflows.nameKey, name), eq(workflows.versionKey, label)),
-        ))
-        .then(rows => rows),
+        )),
       catch: error => new GetWorkflowError({ message: `Error reading the published versions: ${error}` }),
     })
 
     const labelTaken = published.find(version => version.nameKey === name && version.versionKey === label)
     if (labelTaken) {
       return yield* Effect.fail(new VersionLabelTakenError({
-        name,
-        label,
         message: `Version "${label}" of "${name}" already exists.`,
       }))
     }
@@ -193,15 +188,12 @@ export function publishVersion(
     const sameRevision = ofThisStoredWorkflow.find(version => version.revision === galaxyWorkflow.version)
     if (sameRevision) {
       return yield* Effect.fail(new RevisionAlreadyPublishedError({
-        revision: galaxyWorkflow.version,
-        label: sameRevision.versionKey,
         message: `Revision ${galaxyWorkflow.version} is already published as version "${sameRevision.versionKey}" of "${sameRevision.nameKey}".`,
       }))
     }
     const lineageName = ofThisStoredWorkflow[0]?.nameKey
     if (lineageName !== undefined && lineageName !== name) {
       return yield* Effect.fail(new WorkflowNameLockedError({
-        name: lineageName,
         message: `This workflow is published as "${lineageName}"; a new version keeps that name.`,
       }))
     }
@@ -236,9 +228,12 @@ export function publishVersion(
       if (error.code === '42501') {
         return yield* Effect.fail(new ForbiddenError({ message: 'Permission denied' }))
       }
+      // either unique can be the one that fired, the revision's or the
+      // name-and-label's, and the second may belong to another stored
+      // workflow sharing the name, so the sentence names neither
       if (error.code === '23505') {
         return yield* Effect.fail(new ConcurrentPublishError({
-          message: 'A version of this workflow was published meanwhile. Reload the page and try again.',
+          message: 'Another version was published meanwhile. Reload the page and try again.',
         }))
       }
       return yield* Effect.fail(new InsertWorkflowError({ message: `supabase error: ${error.message}\ncode : ${error.code}` }))

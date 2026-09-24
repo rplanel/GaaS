@@ -23,8 +23,8 @@ import { describePublishFailure } from '../../utils/publishFailure'
 const props = defineProps<{
   /** The stored workflow, as Galaxy lists it. */
   workflow: GalaxyWorkflowsItem
-  /** The versions already published for it, whose name the new one keeps. */
-  versions: WorkflowRow[]
+  /** The name the stored workflow's versions carry, once it has one; the new version keeps it. */
+  lineageName?: string
 }>()
 
 const emit = defineEmits<{
@@ -34,8 +34,7 @@ const emit = defineEmits<{
 
 const open = defineModel<boolean>('open', { default: false })
 
-const lineageName = computed(() => props.versions[0]?.name_key)
-const nameLocked = computed(() => lineageName.value !== undefined)
+const nameLocked = computed(() => props.lineageName !== undefined)
 
 // The directory rule (ADR 0003) is the server's to state, in its own
 // sentence; the form only refuses what could not be sent at all.
@@ -46,7 +45,7 @@ const schema = z.object({
 type Schema = z.output<typeof schema>
 
 const state = reactive<Partial<Schema>>({
-  name: lineageName.value ?? getWorkflowTagName(props.workflow.tags) ?? undefined,
+  name: props.lineageName ?? getWorkflowTagName(props.workflow.tags) ?? undefined,
   label: getWorkflowTagVersion(props.workflow.tags) ?? undefined,
 })
 
@@ -72,12 +71,14 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   catch (error) {
     // a refusal names what to change, so the administrator reads it here,
     // next to the fields, rather than on the error page; the cause itself is
-    // only ever worth a log
-    const { errorStatus } = useErrorStatus(error)
-    log.error({
+    // only ever worth a log, at `warn` when the administrator can fix it by
+    // retyping and at `error` when the server could not say why
+    const status = toValue(useErrorStatus(error).errorStatus)
+    const recoverable = status !== undefined && status >= 400 && status < 500
+    log[recoverable ? 'warn' : 'error']({
       action: 'workflow:publish_failed',
       tag: 'admin/PublishVersionModal',
-      status: toValue(errorStatus),
+      status,
       error: String(error),
     })
     refusal.value = describePublishFailure(error)

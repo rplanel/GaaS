@@ -178,7 +178,7 @@ describe('post /api/db/workflows', () => {
     ['a label already used for this name', new VersionLabelTakenError({ message: 'Version "0.11" of "satelliteFinder" already exists.' })],
     ['a revision already published', new RevisionAlreadyPublishedError({ message: 'Revision 3 is already published as version "0.10" of "satelliteFinder".' })],
     ['a name that differs from the lineage', new WorkflowNameLockedError({ message: 'This workflow is published as "satelliteFinder"; a new version keeps that name.' })],
-    ['a version published meanwhile', new ConcurrentPublishError({ message: 'A version of this workflow was published meanwhile. Reload the page and try again.' })],
+    ['a version published meanwhile', new ConcurrentPublishError({ message: 'Another version was published meanwhile. Reload the page and try again.' })],
   ])('answers 409 with the error\'s own words for %s', async (_label, error) => {
     mocks.publishVersion.mockReturnValue(Effect.fail(error))
     const handler = await loadHandler()

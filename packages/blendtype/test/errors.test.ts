@@ -14,7 +14,7 @@ function galaxyRefusal(errMsg: unknown) {
 }
 
 describe('formatErrorMessage', () => {
-  // #48. Pinning an invocation to the activated revision makes Galaxy's
+  // #48. Pinning an invocation to the revision the version pins makes Galaxy's
   // missing-tools refusal reachable, and the tool names are the whole answer.
   it('carries what Galaxy said over the status line ofetch wrote', () => {
     const message = formatErrorMessage(

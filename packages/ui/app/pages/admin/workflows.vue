@@ -185,11 +185,11 @@ const storedWorkflows = computed<StoredWorkflowRow[]>(() => {
 })
 
 /** The stored workflow the publish dialog is open for, if any. */
-const publishing = ref<StoredWorkflowRow | undefined>()
+const workflowToPublish = ref<StoredWorkflowRow | undefined>()
 const dialogOpen = ref(false)
 
 function openPublishDialog(workflow: StoredWorkflowRow) {
-  publishing.value = workflow
+  workflowToPublish.value = workflow
   dialogOpen.value = true
 }
 
@@ -197,7 +197,7 @@ function openPublishDialog(workflow: StoredWorkflowRow) {
 // typed and the next one opens with its own pre-fill
 watch(dialogOpen, (isOpen) => {
   if (!isOpen)
-    publishing.value = undefined
+    workflowToPublish.value = undefined
 })
 
 function onPublished(version: WorkflowRow) {
@@ -234,11 +234,11 @@ const pageHeaderProps = computed(() => {
         </template>
       </NuxtErrorBoundary>
       <AdminPublishVersionModal
-        v-if="publishing"
-        :key="publishing.id"
+        v-if="workflowToPublish"
+        :key="workflowToPublish.id"
         v-model:open="dialogOpen"
-        :workflow="publishing"
-        :versions="publishing.versions.map(version => version.row)"
+        :workflow="workflowToPublish"
+        :lineage-name="workflowToPublish.versions[0]?.row.name_key"
         @published="onPublished"
       />
     </div>

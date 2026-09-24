@@ -10,6 +10,10 @@ UPDATE "galaxy"."workflows" SET "revision_uuid" = ("definition"->>'uuid')::uuid;
 ALTER TABLE "galaxy"."workflows" ALTER COLUMN "revision_uuid" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "galaxy"."workflows" ADD COLUMN "published_at" timestamp with time zone DEFAULT now() NOT NULL;--> statement-breakpoint
 ALTER TABLE "galaxy"."workflows" ADD COLUMN "published_by" uuid;--> statement-breakpoint
+-- Published means active. ADR 0004's immutability rule, an admin update policy with a column-level
+-- grant leaving "active" the only updatable column and the workflows.update seed, is the retire
+-- ticket's (#71); until then the table has no UPDATE policy at all, so no row can be changed
+-- through the API.
 ALTER TABLE "galaxy"."workflows" ADD COLUMN "active" boolean DEFAULT true NOT NULL;--> statement-breakpoint
 ALTER TABLE "galaxy"."workflows" ADD CONSTRAINT "workflows_user_id_galaxy_id_revision_unique" UNIQUE("user_id","galaxy_id","revision");--> statement-breakpoint
 ALTER TABLE "galaxy"."workflows" ADD CONSTRAINT "workflows_published_by_users_id_fkey" FOREIGN KEY ("published_by") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
