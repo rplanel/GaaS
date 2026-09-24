@@ -44,7 +44,15 @@ describe('workflows RLS policies', () => {
     expect(sqlToString(update!.withCheck)).toBe('(SELECT galaxy_rbac.authorize(\'workflows.update\')) = TRUE')
   })
 
-  it('declares no delete policy here: deleting a version is another ticket', () => {
-    expect(policies.find(policy => policy.for === 'delete')).toBeUndefined()
+  // #72. An administrator may delete a version no analysis references; the
+  // policy says who, and the foreign key from `analyses` says which, so no
+  // column grant is needed here.
+  it('lets an administrator delete a version, and nobody else', () => {
+    const remove = policies.find(policy => policy.for === 'delete')
+
+    expect(remove).toBeDefined()
+    expect(remove!.name).toBe('Admin can delete workflows')
+    expect(remove!.to).toMatchObject({ name: 'authenticated' })
+    expect(sqlToString(remove!.using)).toBe('(SELECT galaxy_rbac.authorize(\'workflows.delete\')) = TRUE')
   })
 })
