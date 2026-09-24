@@ -172,10 +172,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   refusal.value = undefined
   publishing.value = true
   try {
-    // `revision` travels only when a revision other than the latest listed is
-    // chosen: absent means the latest, which is what the default selection
-    // says and what the server publishes when none is named, so a default
-    // publish sends the body it sent before the picker existed
+    // the revision on screen is the one the body names, the latest included:
+    // a save in Galaxy between listing and publishing would otherwise move
+    // "latest" under the administrator, and the row would pin a revision
+    // nobody chose. Only a publish before the list arrived names none, and
+    // then the server publishes the latest, as this dialog always did
     const chosen = chosenRevision.value
     const version = await $fetch<WorkflowRow>('/api/db/workflows', {
       method: 'POST',
@@ -183,7 +184,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         galaxyId: props.workflow.id,
         name: event.data.name,
         label: event.data.label,
-        ...(chosen !== undefined && chosen !== latestRevision.value ? { revision: chosen } : {}),
+        ...(chosen === undefined ? {} : { revision: chosen }),
       },
     })
     // only once the server has said yes does the dialog close

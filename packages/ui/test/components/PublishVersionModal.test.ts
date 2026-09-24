@@ -183,15 +183,15 @@ describe('the publish dialog\'s revision picker', () => {
     await vi.waitFor(() => expect(dialog()).toBeNull())
   })
 
-  it('sends no revision when the latest is the one chosen, so the body is the one it sent before', async () => {
-    // absent means the latest, which is what the default selection says; the
-    // server exports the latest when none is named
+  it('names the latest revision in the body too when it is the one chosen', async () => {
+    // a save in Galaxy between listing and publishing would otherwise move
+    // "latest" under the administrator; naming what was on screen pins it
     await mountDialog({ workflowId: LISTED })
     await revisionsListed()
 
     submitButton().click()
 
-    await vi.waitFor(() => expect(lastBody).toEqual({ galaxyId: LISTED, name: 'satelliteFinder', label: '0.12' }))
+    await vi.waitFor(() => expect(lastBody).toEqual({ galaxyId: LISTED, name: 'satelliteFinder', label: '0.12', revision: 2 }))
   })
 
   it('says the revisions could not be listed and publishes nothing when Galaxy is down', async () => {

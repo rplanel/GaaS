@@ -294,7 +294,8 @@ describe('admin workflows', () => {
       await type(dialogInput('label'), '4.2')
       await submitDialog()
 
-      await vi.waitFor(() => expect(lastBody).toEqual({ galaxyId: 'wf-untagged', name: 'crisprFinder', label: '4.2' }))
+      // the latest listed revision travels with the body, so the row pins what was on screen (#73)
+      await vi.waitFor(() => expect(lastBody).toEqual({ galaxyId: 'wf-untagged', name: 'crisprFinder', label: '4.2', revision: 3 }))
       await vi.waitFor(() => expect(document.body.textContent).toContain('Version published'))
       await vi.waitFor(() => expect(dialog()).toBeNull())
     })

@@ -54,7 +54,8 @@ export const publishVersionBodySchema = z.object({
   // which is the integer `download?version=` and an invocation take (#48).
   // Only a non-negative integer can name one, so anything else is refused
   // here rather than handed to Galaxy to answer for. Left out, the latest is
-  // published, which is what the dialog sends when the latest is chosen.
+  // published; the dialog always names the revision it shows, so only another
+  // client, or a publish before the list arrived, leaves it out.
   revision: z.int(MESSAGES.revision).min(0, MESSAGES.revision).optional(),
 }, { error: MESSAGES.body })
 
