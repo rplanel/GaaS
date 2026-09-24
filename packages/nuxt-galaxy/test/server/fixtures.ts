@@ -188,8 +188,11 @@ export const mockDbWorkflow = {
   versionKey: '1.0',
   nameKey: 'test-workflow',
   revision: 1,
+  revisionUuid: 'fa95ecd4-ed11-49e2-b3d6-8f178b807256',
   definition: {},
-  createdAt: new Date('2024-01-01'),
+  publishedAt: new Date('2024-01-01'),
+  publishedBy: 'owner-uuid-1',
+  active: true,
 }
 
 export const mockDbAnalysis = {

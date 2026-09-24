@@ -13,20 +13,19 @@ class ForbiddenError extends Data.TaggedError('ForbiddenError')<{ readonly messa
 class GalaxyServiceUnavailable extends Data.TaggedError('GalaxyServiceUnavailable')<{ readonly message: string }> {}
 class InsertWorkflowError extends Data.TaggedError('InsertWorkflowError')<{ readonly message: string }> {}
 class GalaxyUserNotFoundError extends Data.TaggedError('GalaxyUserNotFoundError')<{ readonly message: string }> {}
-class WorkflowAlreadyExistsError extends Data.TaggedError('WorkflowAlreadyExistsError')<{
-  readonly message: string
-  readonly statusCode: number
-}> {}
-class InvalidWorkflowTagError extends Data.TaggedError('InvalidWorkflowTagError')<{
-  readonly message: string
-  readonly tag: 'name' | 'version'
-  readonly value: string
-}> {}
+class VersionLabelTakenError extends Data.TaggedError('VersionLabelTakenError')<{ readonly message: string }> {}
+class RevisionAlreadyPublishedError extends Data.TaggedError('RevisionAlreadyPublishedError')<{ readonly message: string }> {}
+class WorkflowNameLockedError extends Data.TaggedError('WorkflowNameLockedError')<{ readonly message: string }> {}
+class ConcurrentPublishError extends Data.TaggedError('ConcurrentPublishError')<{ readonly message: string }> {}
 
-const mockInsertedWorkflow = [{ id: 1, name: 'Test Workflow', galaxy_id: 'galaxy-wf-1' }]
+/** The version row the insert answers with, which is the endpoint's 200 body. */
+const publishedVersion = { id: 1, name: 'Satellite Finder', galaxy_id: 'galaxy-wf-1', name_key: 'satelliteFinder', version_key: '0.11', revision: 3, active: true }
+
+/** What the publish dialog sends. */
+const body = { galaxyId: 'galaxy-wf-1', name: 'satelliteFinder', label: '0.11' }
 
 const mocks = vi.hoisted(() => ({
-  insertWorkflow: vi.fn(),
+  publishVersion: vi.fn(),
   readBody: vi.fn(),
 }))
 
@@ -65,9 +64,9 @@ vi.mock('../../../../src/runtime/server/utils/grizzle/supabase', () => ({
   ServerSupabaseClaims: MockServerSupabaseClaims,
 }))
 
-// Mock insertWorkflow
+// Mock publishVersion
 vi.mock('../../../../src/runtime/server/utils/grizzle/workflows', () => ({
-  insertWorkflow: mocks.insertWorkflow,
+  publishVersion: mocks.publishVersion,
 }))
 
 // Mock h3
@@ -87,25 +86,26 @@ async function loadHandler() {
 
 describe('post /api/db/workflows', () => {
   beforeEach(() => {
-    // call history outlives a test otherwise, so "inserts nothing" would pass
-    // on the calls an earlier test made
+    // call history outlives a test otherwise, so "publishes nothing" would
+    // pass on the calls an earlier test made
     vi.clearAllMocks()
-    mocks.insertWorkflow.mockReturnValue(Effect.succeed(mockInsertedWorkflow))
-    mocks.readBody.mockResolvedValue({ galaxyId: 'galaxy-wf-1' })
+    mocks.publishVersion.mockReturnValue(Effect.succeed(publishedVersion))
+    mocks.readBody.mockResolvedValue(body)
   })
 
-  it('should read body and insert workflow', async () => {
+  it('reads the body, publishes, and answers with the version row', async () => {
     const handler = await loadHandler()
 
-    expect(await handler(event)).toEqual(mockInsertedWorkflow)
+    expect(await handler(event)).toEqual(publishedVersion)
   })
 
-  it('passes only the galaxy identifier on, no longer reading a userId', async () => {
+  it('passes the checked body on, and nothing it did not check', async () => {
+    mocks.readBody.mockResolvedValue({ ...body, revision: 4 })
     const handler = await loadHandler()
     await handler(event)
 
-    expect(mocks.insertWorkflow).toHaveBeenCalledWith(
-      'galaxy-wf-1',
+    expect(mocks.publishVersion).toHaveBeenCalledWith(
+      body,
       expect.any(String),
       expect.any(String),
       event,
@@ -113,12 +113,10 @@ describe('post /api/db/workflows', () => {
   })
 
   it('refuses an unauthenticated caller with 401, as its siblings do', async () => {
-    // the claims branch failing is what "no session" looks like from here; it
-    // used to fall through to a 200 with an empty body
-    // the message is the shape `getSupabaseUser` really produces on a failed
+    // the message is the shape the claims lookup really produces on a failed
     // lookup, so the assertion below proves the 401 body is fixed rather than
     // taken from the error -- it would leak the reason otherwise
-    mocks.insertWorkflow.mockReturnValue(
+    mocks.publishVersion.mockReturnValue(
       Effect.fail(new GetSupabaseUserError({ message: 'Failed to get auth user: token expired' })),
     )
     const handler = await loadHandler()
@@ -132,15 +130,29 @@ describe('post /api/db/workflows', () => {
   it.each([
     ['no body at all', undefined],
     ['a body that is not an object', 'galaxy-wf-1'],
-    ['a body with no galaxyId', { userId: 1 }],
-    ['a galaxyId that is not a string', { galaxyId: 7 }],
-    ['an empty galaxyId', { galaxyId: '   ' }],
-  ])('refuses %s with 400 and inserts nothing', async (_label, body) => {
-    mocks.readBody.mockResolvedValue(body)
+    ['a body with no galaxyId', { name: 'satelliteFinder', label: '0.11' }],
+    ['a body with no name', { galaxyId: 'galaxy-wf-1', label: '0.11' }],
+    ['a body with no label', { galaxyId: 'galaxy-wf-1', name: 'satelliteFinder' }],
+    ['an empty galaxyId', { ...body, galaxyId: '   ' }],
+  ])('refuses %s with 400 and publishes nothing', async (_label, input) => {
+    mocks.readBody.mockResolvedValue(input)
     const handler = await loadHandler()
 
     await expect(handler(event)).rejects.toMatchObject({ statusCode: 400 })
-    expect(mocks.insertWorkflow).not.toHaveBeenCalled()
+    expect(mocks.publishVersion).not.toHaveBeenCalled()
+  })
+
+  it('refuses a name or a label that cannot name a results view directory with 400, before anything else', async () => {
+    // the rule used to be checked against Galaxy tags and answered 422; the
+    // value is typed in the dialog now, so it is a body the caller can fix
+    mocks.readBody.mockResolvedValue({ ...body, label: '0.11+galaxy2' })
+    const handler = await loadHandler()
+
+    await expect(handler(event)).rejects.toMatchObject({
+      statusCode: 400,
+      statusMessage: expect.stringContaining('`label` cannot name a results view directory'),
+    })
+    expect(mocks.publishVersion).not.toHaveBeenCalled()
   })
 
   it('refuses a body that cannot be read at all with 400', async () => {
@@ -148,11 +160,11 @@ describe('post /api/db/workflows', () => {
     const handler = await loadHandler()
 
     await expect(handler(event)).rejects.toMatchObject({ statusCode: 400 })
-    expect(mocks.insertWorkflow).not.toHaveBeenCalled()
+    expect(mocks.publishVersion).not.toHaveBeenCalled()
   })
 
   it('answers 403 when the database refuses the insert', async () => {
-    mocks.insertWorkflow.mockReturnValue(
+    mocks.publishVersion.mockReturnValue(
       Effect.fail(new ForbiddenError({ message: 'Permission denied' })),
     )
     const handler = await loadHandler()
@@ -160,58 +172,45 @@ describe('post /api/db/workflows', () => {
     await expect(handler(event)).rejects.toMatchObject({ statusCode: 403 })
   })
 
-  it('answers 409 when the workflow is already in the database', async () => {
-    // the status travels on the error rather than being restated here
-    mocks.insertWorkflow.mockReturnValue(
-      Effect.fail(new WorkflowAlreadyExistsError({ message: 'already exists', statusCode: 409 })),
-    )
-    const handler = await loadHandler()
-
-    await expect(handler(event)).rejects.toMatchObject({ statusCode: 409 })
-  })
-
-  it('answers 422 with the error\'s own words when a tag value cannot name a directory', async () => {
-    // the request was well formed and named a real workflow; what is refused
-    // is the workflow as tagged, which the administrator fixes in Galaxy. The
-    // message is what tells them which tag and which value, so it has to
-    // reach them rather than be swapped for a reason phrase (#26)
-    const message = 'The `name:` tag value `nf-core/epitopeprediction` cannot name a results view directory.'
-    mocks.insertWorkflow.mockReturnValue(
-      Effect.fail(new InvalidWorkflowTagError({ message, tag: 'name', value: 'nf-core/epitopeprediction' })),
-    )
+  // Each refusal names what the administrator can change, so its words have
+  // to reach the dialog rather than be swapped for a reason phrase (#26).
+  it.each([
+    ['a label already used for this name', new VersionLabelTakenError({ message: 'Version "0.11" of "satelliteFinder" already exists.' })],
+    ['a revision already published', new RevisionAlreadyPublishedError({ message: 'Revision 3 is already published as version "0.10" of "satelliteFinder".' })],
+    ['a name that differs from the lineage', new WorkflowNameLockedError({ message: 'This workflow is published as "satelliteFinder"; a new version keeps that name.' })],
+    ['a version published meanwhile', new ConcurrentPublishError({ message: 'A version of this workflow was published meanwhile. Reload the page and try again.' })],
+  ])('answers 409 with the error\'s own words for %s', async (_label, error) => {
+    mocks.publishVersion.mockReturnValue(Effect.fail(error))
     const handler = await loadHandler()
 
     await expect(handler(event)).rejects.toMatchObject({
-      statusCode: 422,
-      statusMessage: message,
+      statusCode: 409,
+      statusMessage: error.message,
     })
   })
 
-  it('logs and answers 500 when a bug travels with the 409, rather than answering the 409', async () => {
-    // This endpoint is the only one that reads the failure itself, for the
-    // status its 409 carries — so it is the only one that could walk a defect
-    // past the logged 500 the rest of the module routes it to. It reads
-    // through `answerableFailure`, which refuses a failure that arrived
-    // paired with a defect, so the bug is what gets answered and recorded.
+  it('logs and answers 500 when a bug travels with a refusal, rather than answering the refusal', async () => {
+    // `toHttpError` refuses a failure that arrived paired with a defect, so
+    // the bug is what gets answered and recorded (#40)
     const requestLog = createMockRequestLogger()
     vi.mocked(useLogger).mockReturnValue(requestLog)
-    mocks.insertWorkflow.mockReturnValue(Effect.failCause(Cause.sequential(
-      Cause.fail(new WorkflowAlreadyExistsError({ message: 'already exists', statusCode: 409 })),
+    mocks.publishVersion.mockReturnValue(Effect.failCause(Cause.sequential(
+      Cause.fail(new VersionLabelTakenError({ message: 'Version "0.11" of "satelliteFinder" already exists.' })),
       Cause.die(new TypeError('boom: a real bug')),
     )))
     const handler = await loadHandler()
 
     await expect(handler(event)).rejects.toMatchObject({ statusCode: 500 })
     expect(requestLog.error).toHaveBeenCalledWith(
-      'insert workflow handler failed',
+      'publish version handler failed',
       expect.objectContaining({ cause: expect.stringContaining('boom: a real bug') }),
     )
   })
 
   it('answers 503 when Galaxy is unavailable, as the galaxy endpoints do', async () => {
-    // insertWorkflow exports the workflow from Galaxy first, so Galaxy being
+    // publishing exports the revision from Galaxy first, so Galaxy being
     // down is a live outcome here and not a fault of this server
-    mocks.insertWorkflow.mockReturnValue(
+    mocks.publishVersion.mockReturnValue(
       Effect.fail(new GalaxyServiceUnavailable({ message: 'Galaxy is unavailable' })),
     )
     const handler = await loadHandler()
@@ -219,16 +218,12 @@ describe('post /api/db/workflows', () => {
     await expect(handler(event)).rejects.toMatchObject({ statusCode: 503 })
   })
 
-  // #33 moved this failure out of `insertWorkflow`'s own guard, where it was
-  // tagged `GetWorkflowError`, into `getCurrentUserEffect`. The status did
-  // not move: an unseeded database is nothing the caller can act on, so the
-  // tag stays unmapped here and falls to the logged 500 it always answered.
-  // Pinned rather than assumed, because a renamed tag is the kind of change
-  // that quietly turns a 500 into something else.
+  // #33. An unseeded database is nothing the caller can act on, so the tag
+  // stays unmapped here and falls to the logged 500 it always answered.
   it('answers 500 when this deployment has no Galaxy user row, and says so in the log', async () => {
     const requestLog = createMockRequestLogger()
     vi.mocked(useLogger).mockReturnValue(requestLog)
-    mocks.insertWorkflow.mockReturnValue(
+    mocks.publishVersion.mockReturnValue(
       Effect.fail(new GalaxyUserNotFoundError({
         message: 'No Galaxy user registered for admin@example.org at https://galaxy.example.com',
       })),
@@ -240,7 +235,7 @@ describe('post /api/db/workflows', () => {
       statusMessage: 'Internal Server Error',
     })
     expect(requestLog.error).toHaveBeenCalledWith(
-      'insert workflow handler failed',
+      'publish version handler failed',
       expect.objectContaining({ cause: expect.stringContaining('No Galaxy user registered') }),
     )
   })
@@ -248,14 +243,14 @@ describe('post /api/db/workflows', () => {
   it('answers 500 for anything else, and says so in the log', async () => {
     const requestLog = createMockRequestLogger()
     vi.mocked(useLogger).mockReturnValue(requestLog)
-    mocks.insertWorkflow.mockReturnValue(
+    mocks.publishVersion.mockReturnValue(
       Effect.fail(new InsertWorkflowError({ message: 'supabase fell over' })),
     )
     const handler = await loadHandler()
 
     await expect(handler(event)).rejects.toMatchObject({ statusCode: 500 })
     expect(requestLog.error).toHaveBeenCalledWith(
-      'insert workflow handler failed',
+      'publish version handler failed',
       expect.objectContaining({ cause: expect.stringContaining('supabase fell over') }),
     )
   })

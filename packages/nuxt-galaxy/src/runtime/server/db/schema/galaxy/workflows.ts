@@ -1,28 +1,51 @@
 import { sql } from 'drizzle-orm'
-import { integer, json, pgPolicy, primaryKey, serial, unique, varchar } from 'drizzle-orm/pg-core'
+import { boolean, integer, json, pgPolicy, primaryKey, serial, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core'
 import { authenticatedRole } from 'drizzle-orm/supabase'
 
+import { users as owners } from '../auth/users'
 import { galaxy, galaxyItem } from '../galaxy'
 import { tags } from './tags'
 import { users } from './users'
 
 /**
- * Workflows
+ * Versions: one row per label an administrator has published for one revision
+ * of one Galaxy stored workflow (ADR 0004). `galaxy_id` names the stored
+ * workflow, `name_key` and `version_key` are the name and the label a results
+ * view directory is found by (ADR 0003), and `definition` is the export taken
+ * at publish, never refreshed.
  */
 export const workflows = galaxy.table(
   'workflows',
   {
     id: serial('id').primaryKey(),
+    // The revision this version pins: the 0-based index the export carries as
+    // `version`, which is the integer an invocation takes to run it (#48).
     revision: integer('revision').notNull(),
+    // The identifier Galaxy gave that revision when it was saved, as the
+    // export carries it. Galaxy neither rewrites a revision nor reuses an id,
+    // so this is what tells a stable history from one that was replaced;
+    // the index alone cannot.
+    revisionUuid: uuid('revision_uuid').notNull(),
     versionKey: varchar('version_key', { length: 255 }).notNull(),
     nameKey: varchar('name_key', { length: 255 }).notNull(),
     userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     definition: json('definition').notNull(),
+    publishedAt: timestamp('published_at', { withTimezone: true }).defaultNow().notNull(),
+    // Who published, as the auth user the server read off the session. Set
+    // to null rather than cascading if that account is ever deleted: a
+    // version outlives the administrator who published it.
+    publishedBy: uuid('published_by').references(() => owners.id, { onDelete: 'set null' }),
+    // Whether users may start an analysis on this version; false is retired.
+    // Published means active, and nothing but an administrator changes it.
+    active: boolean('active').notNull().default(true),
     ...galaxyItem,
   },
   t => [
     unique().on(t.versionKey, t.nameKey),
-    unique().on(t.galaxyId),
+    // One row per revision of one stored workflow: `user_id` names the Galaxy
+    // service user, hence the instance, so the same stored workflow id on two
+    // instances could still both be published.
+    unique().on(t.userId, t.galaxyId, t.revision),
     pgPolicy('Users can query workflows', {
       for: 'select',
       to: authenticatedRole,
