@@ -101,8 +101,9 @@ export default defineEventHandler<{ body: AnalysisBody }>(
           name,
           historyDb.galaxyId,
           // the revision the row is pinned to is the one that runs (#48);
-          // `revision` is the export's `version` at activation, a 0-based
-          // revision index Galaxy resolves with `get_internal_version`
+          // `revision` is the 0-based index the export carried as `version`
+          // when the row was written, which Galaxy resolves with
+          // `get_internal_version`
           { galaxyId: workflow.galaxyId, revision: workflow.revision },
           historyDb.id,
           workflow.id,

@@ -8,7 +8,7 @@ import AnalysisHistoryPanel from '../../app/components/analysis/AnalysisHistoryP
 /** The Galaxy identifier of the stored workflow every analysis here ran. */
 const GALAXY_WORKFLOW_ID = 'galaxy-wf-1'
 /** The Galaxy revision the workflow row is pinned to, its `revision` column. */
-const ACTIVATED_REVISION = 5
+const PINNED_REVISION = 5
 /** The revision analysis 7 was started against and recorded (#48), a later save having moved the row on since. */
 const RAN_REVISION = 3
 
@@ -25,7 +25,7 @@ mockNuxtImport('useSupabaseRealtime', () => () => {})
  * The analysis as `analysisByIdWithDetailsQuery` serves it, reduced to what
  * the panel reads. Analysis 7 recorded the revision it ran; analysis 8 was
  * started before #48 and recorded nothing, which is the one case where the
- * row's activated revision has to stand in.
+ * row's pinned revision has to stand in.
  */
 function analysisRow(id: number) {
   return {
@@ -37,7 +37,7 @@ function analysisRow(id: number) {
     invocation: {},
     workflow_id: 1,
     workflow_revision: id === 7 ? RAN_REVISION : null,
-    workflows: { id: 1, name: 'A workflow', galaxy_id: GALAXY_WORKFLOW_ID, revision: ACTIVATED_REVISION, name_key: 'aWorkflow', version_key: '1.0' },
+    workflows: { id: 1, name: 'A workflow', galaxy_id: GALAXY_WORKFLOW_ID, revision: PINNED_REVISION, name_key: 'aWorkflow', version_key: '1.0' },
     histories: { id: 1, state: 'ok', galaxy_id: 'galaxy-history-1' },
     jobs: [],
     analysis_outputs: [],
@@ -101,13 +101,13 @@ describe('the workflow the analysis history panel describes', () => {
 
   // An analysis started before #48 recorded no revision: it ran whatever was
   // latest at the time, which nothing here can recover, and the revision its
-  // workflow row was activated at is the closest description this server holds.
-  it('falls back to the revision the workflow was activated at when the analysis recorded none', async () => {
+  // workflow row is pinned to is the closest description this server holds.
+  it('falls back to the revision the workflow row is pinned to when the analysis recorded none', async () => {
     await mountPanel(8)
 
     await vi.waitFor(() => {
       expect(workflowFetches).toBeGreaterThan(0)
-      expect(requestedRevision).toBe(String(ACTIVATED_REVISION))
+      expect(requestedRevision).toBe(String(PINNED_REVISION))
     })
   })
 })

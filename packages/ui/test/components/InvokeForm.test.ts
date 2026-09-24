@@ -279,11 +279,11 @@ describe('an input whose pickable datasets never arrived', () => {
 
 describe('invokeForm component', () => {
   // #48. The proxy answered with Galaxy's latest revision while the server
-  // compares the datamap against, and now invokes, the activated one; a save
-  // in Galaxy's editor that added an input would have shown a field the
-  // server then refused. The form asks for the revision the row was
-  // activated at, which is the one that will run.
-  it('asks Galaxy for the revision that was activated, not the latest', async () => {
+  // compares the datamap against, and now invokes, the one the row is pinned
+  // to; a save in Galaxy's editor that added an input would have shown a
+  // field the server then refused. The form asks for the revision the row is
+  // pinned to, which is the one that will run.
+  it('asks Galaxy for the revision the row is pinned to, not the latest', async () => {
     await mountForm()
 
     await vi.waitFor(() => {

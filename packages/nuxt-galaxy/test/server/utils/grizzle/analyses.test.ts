@@ -75,11 +75,11 @@ function createBodyRecordingGalaxyLayer<T>(response: T): { requests: RecordedReq
 /**
  * #48. Galaxy invokes the latest revision of a stored workflow unless the
  * request names one, and until now the request named none: a save in Galaxy's
- * editor after activation changed what the next analysis ran, under the same
- * name and version. The revision that was activated is the `version` the
- * export carried, stored as `revision`, and it now travels in two places:
- * the invocation, so that it is what runs, and the analysis row, so that it
- * is known afterwards.
+ * editor after the row was written changed what the next analysis ran, under
+ * the same name and version. The revision the row is pinned to is the
+ * `version` its export carried, stored as `revision`, and it now travels in
+ * two places: the invocation, so that it is what runs, and the analysis row,
+ * so that it is known afterwards.
  */
 describe('runAnalysis', () => {
   const galaxyWorkflow = { galaxyId: 'galaxy-wf-1', revision: 3 }
@@ -102,7 +102,7 @@ describe('runAnalysis', () => {
     )
   }
 
-  it('names the activated revision in the invocation it asks Galaxy for', async () => {
+  it('names the revision the row is pinned to in the invocation it asks Galaxy for', async () => {
     const drizzle = createMockDrizzle()
     drizzle.setResult([{ insertedId: 1 }])
     const galaxy = createBodyRecordingGalaxyLayer(mockGalaxyInvocation)

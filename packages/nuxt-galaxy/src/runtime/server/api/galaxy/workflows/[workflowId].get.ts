@@ -14,7 +14,7 @@ import { ServerSupabaseClaims, ServerSupabaseClient } from '../../../utils/grizz
  * Galaxy answers `GET /api/workflows/{id}` with the latest revision unless
  * `version` names one, and until #48 this proxy never named one: the form
  * described Galaxy's latest while the server compared the datamap against,
- * and now starts, the revision that was activated. The form sends that row's
+ * and now starts, the revision the row is pinned to. The form sends that row's
  * `revision`, an integer by construction. Galaxy's `get_internal_version`
  * indexes a list, so only a non-negative integer can name a revision, and
  * anything else — a word, a negative, a fraction, a repeated parameter — is

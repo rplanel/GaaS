@@ -282,7 +282,7 @@ describe('insertWorkflow', () => {
     it.each([
       ['0, the only revision of an imported workflow', 0],
       ['1, the first save after creating in the editor', 1],
-    ])('activates a workflow whose export carries %s and stores it as revision', async (_label, version) => {
+    ])('stores an export carrying %s as the row\'s revision', async (_label, version) => {
       const galaxyLayer = createMockGalaxyLayer({ ...mockGalaxyWorkflowExport, version })
       const drizzle = createMockDrizzle()
       drizzle.setResult([mockDbUser])

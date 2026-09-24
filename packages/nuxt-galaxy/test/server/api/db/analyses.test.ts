@@ -20,7 +20,7 @@ const mockDbWorkflow = {
   name: 'Test Workflow',
   galaxyId: 'galaxy-wf-1',
   versionKey: '1.0',
-  // The Galaxy revision that was activated: the 0-based index the export's
+  // The Galaxy revision the row is pinned to: the 0-based index the export's
   // `version` carried, which #48 hands back to Galaxy as the one to run.
   revision: 3,
   // The column the refusal in #43 is read off. It declares the two inputs the
@@ -242,11 +242,11 @@ describe('post /api/db/analyses', () => {
   })
 
   // #48. Galaxy runs the latest revision of a stored workflow unless the
-  // invocation names one, so every save in Galaxy's editor after activation
-  // changed what the next analysis ran, under the same name and version. The
-  // activated revision is the `version` the export carried at activation,
-  // stored as `revision` and read by nothing until now.
-  it('starts the revision that was activated, not whatever Galaxy has latest', async () => {
+  // invocation names one, so every save in Galaxy's editor after the row was
+  // written changed what the next analysis ran, under the same name and
+  // version. The revision the row is pinned to is the `version` its export
+  // carried, stored as `revision` and read by nothing until now.
+  it('starts the revision the row is pinned to, not whatever Galaxy has latest', async () => {
     const handler = await loadHandler()
     await handler(event)
 

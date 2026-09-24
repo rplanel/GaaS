@@ -20,9 +20,10 @@ export { isInvocationTerminalState } from './analysisMonitoring'
  *
  * Galaxy runs the latest revision of a stored workflow unless the invocation
  * names one, and every save in its editor appends a revision, so before #48 a
- * save after activation changed what the next analysis ran, under the same
- * name and version. The revision is the `version` the export carried at
- * activation, stored on the workflow row as `revision`.
+ * save after the row was written changed what the next analysis ran, under
+ * the same name and version. The revision is the one the workflow row is
+ * pinned to, stored on it as `revision`: the `version` its export carried
+ * when the row was written.
  */
 export interface GalaxyWorkflowToRun {
   readonly galaxyId: string
