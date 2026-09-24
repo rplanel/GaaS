@@ -41,6 +41,38 @@ export function dataInputStep(
   }
 }
 
+/**
+ * A tool step pinned to one tool at one version, as the export names them:
+ * `tool_id` is the id Galaxy knows the tool by (a toolshed guid carries the
+ * version inside it, a built-in id does not) and `tool_version` the version
+ * the revision was saved with. Galaxy refuses to run a revision whose tools
+ * are not installed at exactly these versions (#75).
+ */
+export function toolStep(
+  id: number,
+  toolId: string,
+  toolVersion: string,
+  overrides: Partial<WorkflowStepExport> = {},
+): WorkflowStepExport {
+  return {
+    annotation: '',
+    content_id: toolId,
+    id,
+    input_connections: {},
+    inputs: [],
+    label: null,
+    name: toolId.split('/').at(-2) ?? toolId,
+    outputs: [],
+    tool_id: toolId,
+    tool_state: '{}',
+    tool_version: toolVersion,
+    type: 'tool',
+    uuid: `uuid-${id}`,
+    workflow_outputs: [],
+    ...overrides,
+  }
+}
+
 export function workflowDefinition(steps: Record<string, WorkflowStepExport>): GalaxyWorkflowExport {
   return {
     'a_galaxy_workflow': true,

@@ -35,4 +35,11 @@ describe('module server routes', () => {
     expect(routes).toContainEqual({ route: '/api/db/workflows/:workflowId', method: 'patch' })
     expect(routes).toContainEqual({ route: '/api/db/workflows/:workflowId', method: 'delete' })
   })
+
+  it('registers the Galaxy proxies the publish dialog reads: the revisions, and the tool check of one revision (#73, #75)', async () => {
+    const routes = await registeredRoutes()
+
+    expect(routes).toContainEqual({ route: '/api/galaxy/workflows/:workflowId/versions', method: 'get' })
+    expect(routes).toContainEqual({ route: '/api/galaxy/workflows/:workflowId/revisions/:revision/tools', method: 'get' })
+  })
 })

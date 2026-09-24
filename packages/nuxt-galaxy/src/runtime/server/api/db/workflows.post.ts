@@ -56,6 +56,13 @@ export default defineEventHandler<{ body: PublishVersionBody }>(
           RevisionAlreadyPublishedError: 409,
           WorkflowNameLockedError: 409,
           ConcurrentPublishError: 409,
+          // The same shape (#75): the request was well formed and the caller
+          // may publish, but Galaxy lacks a tool of the revision at its
+          // pinned version, which the administrator changes by installing it
+          // or choosing another revision. A 409 rather than a 422 or 400,
+          // because every publish refusal the dialog shows as written is one,
+          // and nothing in the body was wrong.
+          WorkflowToolsMissingError: 409,
         },
       }),
       onSuccess: value => value,
