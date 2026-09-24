@@ -108,6 +108,45 @@ watch(defaultRevision, (fallback) => {
     chosenRevision.value = fallback
 }, { immediate: true })
 
+// The tools of the selected revision, checked as soon as one is selected
+// (ADR 0004, #75): Galaxy refuses to run a revision whose tools are not
+// installed at their pinned version, and the server refuses to publish one,
+// so the administrator reads which tools are missing here, before clicking
+// Publish, rather than in a refusal after. One check per revision selected;
+// nothing is asked while no revision is.
+const { data: toolCheck, error: toolCheckError } = useQuery(() => ({
+  ...galaxyRevisionToolsQuery({ workflowId: props.workflow.id, revision: chosenRevision.value ?? -1 }),
+  enabled: chosenRevision.value !== undefined,
+}))
+const { errorMessage: toolCheckErrorMessage } = useErrorMessage(toolCheckError)
+
+watch(toolCheckError, (error) => {
+  if (error) {
+    log.warn({
+      action: 'workflow:tool_check_failed',
+      tag: 'admin/PublishVersionModal',
+      workflowId: props.workflow.id,
+      revision: chosenRevision.value,
+      error: String(error),
+    })
+  }
+})
+
+/** The tools Galaxy does not hold at their pinned version, once the check has answered. */
+const missingTools = computed(() => toolCheck.value?.missing ?? [])
+
+/** What the dialog says about the tools when none is missing: checking, none to check, or all installed. */
+const toolsSummary = computed(() => {
+  if (chosenRevision.value === undefined)
+    return ''
+  const check = toolCheck.value
+  if (check === undefined)
+    return 'Checking that the tools of this revision are installed at their pinned version…'
+  if (check.checked === 0)
+    return 'This revision has no tool steps.'
+  return `All ${check.checked} tool${check.checked === 1 ? '' : 's'} are installed at their pinned version.`
+})
+
 /** When a revision was saved, in the words the admin page uses for a stored workflow's create time. */
 function savedAt(updateTime: string) {
   return new Date(updateTime).toLocaleString('en-US', {
@@ -154,15 +193,20 @@ const revisionSummary = computed(() => {
 /**
  * Whether there is something to publish. While the list is on its way the
  * latest can be published, as this dialog always did; once it is there a
- * revision has to be chosen; and when it could not be listed nothing can be
- * reviewed, so nothing is published.
+ * revision has to be chosen, and its tool check has to have answered that
+ * nothing is missing (#75): not while the check is in flight, not when it
+ * failed, since nothing can be reviewed then, and not while a tool is
+ * missing, since the server would refuse. When the revisions could not be
+ * listed nothing can be reviewed either, so nothing is published.
  */
 const canPublish = computed(() => {
   if (revisionsError.value)
     return false
   if (revisions.value === undefined)
     return true
-  return chosenRevision.value !== undefined
+  if (chosenRevision.value === undefined || toolCheckError.value)
+    return false
+  return toolCheck.value !== undefined && missingTools.value.length === 0
 })
 
 const refusal = ref<PublishFailure | undefined>()
@@ -255,6 +299,38 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           />
           <p data-testid="publish-revision" class="text-sm text-muted mt-2">
             {{ revisionSummary }}
+          </p>
+
+          <UAlert
+            v-if="toolCheckError"
+            data-testid="publish-tools-error"
+            class="mt-2"
+            color="error"
+            variant="subtle"
+            icon="i-lucide-circle-x"
+            title="The tools could not be checked"
+            :description="`Nothing is published until they have been. ${toolCheckErrorMessage ?? ''}`"
+          />
+          <UAlert
+            v-else-if="missingTools.length > 0"
+            data-testid="publish-missing-tools"
+            class="mt-2"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-triangle-alert"
+            title="Tools missing in Galaxy at their pinned version"
+          >
+            <template #description>
+              <p>Galaxy would refuse to run this revision. Install them, or choose another revision.</p>
+              <ul class="mt-1 list-disc pl-4">
+                <li v-for="tool in missingTools" :key="`${tool.toolId} ${tool.toolVersion}`">
+                  <code>{{ tool.toolId }}</code> {{ tool.toolVersion }}
+                </li>
+              </ul>
+            </template>
+          </UAlert>
+          <p v-else-if="toolsSummary" data-testid="publish-tools-check" class="text-sm text-muted mt-1">
+            {{ toolsSummary }}
           </p>
         </UFormField>
 

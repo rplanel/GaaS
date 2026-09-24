@@ -69,6 +69,12 @@ mockNuxtImport('galaxyWorkflowRevisionsQuery', () => ({ workflowId }: { workflow
   query: async () => [0, 1, 2, 3].map(version => ({ version, update_time: `2026-09-0${version + 1}T10:00:00`, steps: 3 })),
 }))
 
+/** The tool check of any revision of any stored workflow here: whole, three tools checked (#75). */
+mockNuxtImport('galaxyRevisionToolsQuery', () => ({ workflowId, revision }: { workflowId: string, revision: number }) => ({
+  key: ['test', 'galaxy', 'revisions', workflowId, 'tools', revision],
+  query: async () => ({ missing: [], checked: 3 }),
+}))
+
 mockNuxtImport('instanceByUrlQuery', () => () => ({
   key: ['test', 'instance'],
   query: async () => ({ id: 1, name: 'Test Galaxy', url: 'https://galaxy.example.com' }),
@@ -216,6 +222,9 @@ async function submitDialog() {
   const submit = dialog()?.querySelector<HTMLButtonElement>('[data-testid="publish-submit"]')
   if (!submit)
     throw new Error('the dialog has no publish button')
+  // Publish stays disabled until the selected revision's tool check has come
+  // back (#75), which the mocked query answers a tick after the dialog opens
+  await vi.waitFor(() => expect(submit.disabled).toBe(false))
   submit.click()
 }
 
