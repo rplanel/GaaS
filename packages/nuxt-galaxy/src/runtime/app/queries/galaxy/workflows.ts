@@ -1,6 +1,6 @@
 import type { GalaxyWorkflowRevision } from 'blendtype'
 import type { Tables } from '../../../types/database'
-import type { RevisionToolCheck } from '../../../types/nuxt-galaxy'
+import type { RevisionToolCheck, WorkflowDescription } from '../../../types/nuxt-galaxy'
 import { defineQueryOptions } from '@pinia/colada'
 
 export const GALAXY_WORKFLOWS_QUERY_KEYS = {
@@ -9,6 +9,13 @@ export const GALAXY_WORKFLOWS_QUERY_KEYS = {
   byId: (id: number) => [...GALAXY_WORKFLOWS_QUERY_KEYS.root, 'byId', id] as const,
   revisions: (workflowId: string) => [...GALAXY_WORKFLOWS_QUERY_KEYS.root, 'revisions', workflowId] as const,
   revisionTools: (workflowId: string, revision: number) => [...GALAXY_WORKFLOWS_QUERY_KEYS.root, 'revisions', workflowId, 'tools', revision] as const,
+  /**
+   * Deliberately not under `revisions`. Colada matches a key by prefix, so
+   * nesting it there would let an `invalidateQueries` of the revisions
+   * list* — which the publish dialog refreshes — refetch the full
+   * description for every open screen, undoing the caching this exists for.
+   */
+  revisionDescription: (workflowId: string, revision: number) => [...GALAXY_WORKFLOWS_QUERY_KEYS.root, 'descriptions', workflowId, revision] as const,
 }
 
 export const galaxyWorkflowsListQuery = defineQueryOptions(() => ({
@@ -49,4 +56,27 @@ export const galaxyRevisionToolsQuery = defineQueryOptions(({ workflowId, revisi
     }
     return data
   },
+}))
+
+/**
+ * One revision described in one call (#87): its steps, its inputs, the
+ * definitions of the tools it pins, and every tool that came back as
+ * something other than itself. The key matches the endpoint's own — the
+ * workflow's Galaxy id and the revision — so two screens reading the same
+ * revision share one answer instead of fetching 1+N times each.
+ *
+ * No envelope to unwrap: the endpoint answers the description itself and
+ * uses real statuses, so a refusal is an `$fetch` rejection and Colada
+ * reports it as the query's error.
+ *
+ * `staleTime` is forever, and the contract is what makes that correct: a
+ * pinned revision is immutable, and Galaxy treats a tool's version string as
+ * the tool's identity. The one part of the answer that can change is
+ * `unavailable` — a tool installed since, or a Galaxy that has come back —
+ * and that is what the retry beside an unavailable step refetches.
+ */
+export const galaxyWorkflowDescriptionQuery = defineQueryOptions(({ workflowId, revision }: { workflowId: string, revision: number }) => ({
+  key: GALAXY_WORKFLOWS_QUERY_KEYS.revisionDescription(workflowId, revision),
+  query: () => $fetch<WorkflowDescription>(`/api/galaxy/workflows/${workflowId}/revisions/${revision}/description`),
+  staleTime: Number.POSITIVE_INFINITY,
 }))

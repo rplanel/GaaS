@@ -5,8 +5,8 @@
  * Should live in the same package as the components (i.e. gaas-ui)
  */
 
-import type { GalaxyToolParameters } from 'blendtype'
-import type { ComputedRef, MaybeRef } from 'vue'
+import type { GalaxyTool, GalaxyToolParameters } from 'blendtype'
+import type { ComputedRef, MaybeRef, MaybeRefOrGetter } from 'vue'
 
 import {
   GalaxyBooleanToolParameter,
@@ -67,4 +67,33 @@ export function useGalaxyToolInputComponent(toolParameters: MaybeRef<GalaxyToolP
   })
 
   return { inputComponents, inputComponentsObject }
+}
+
+/**
+ * The same mapping for every tool of a workflow at once: which component
+ * renders each parameter, by tool id and then by parameter name.
+ *
+ * One copy of a derivation that #87 found in two screens — `InvokeForm`'s
+ * `toolInputParameterComponent` and `AnalysisHistoryPanel`'s
+ * `useAnalysisTools` — built the same way from the same `toolsObj` and
+ * differing only in how each destructured the reduce. It lives here rather
+ * than in `useGalaxyWorkflowDescription` because it resolves `#components`,
+ * which belongs to this layer: the fetching moved to `nuxt-galaxy`, the
+ * mapping to Vue components could not follow it.
+ */
+export function useGalaxyToolsInputComponents(
+  tools: MaybeRefOrGetter<Record<string, GalaxyTool> | undefined>,
+): ComputedRef<Record<string, Record<string, GalaxyToolInputComponent>>> {
+  return computed(() => {
+    return Object.entries(toValue(tools) ?? {}).reduce<Record<string, Record<string, GalaxyToolInputComponent>>>(
+      (acc, [toolId, tool]) => {
+        const { inputComponentsObject } = useGalaxyToolInputComponent(tool.inputs)
+        if (inputComponentsObject.value) {
+          acc[toolId] = inputComponentsObject.value
+        }
+        return acc
+      },
+      {},
+    )
+  })
 }

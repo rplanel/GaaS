@@ -14,7 +14,7 @@ useless. If a payload needs to change, re-record it.
 
 | File | Galaxy call |
 |---|---|
-| `workflow.live.json` | `GET /api/workflows/{id}` — what `useGalaxyWorkflow` reads today |
+| `workflow.live.json` | `GET /api/workflows/{id}` — what the description endpoint reads and serves as its `steps` and `inputs` |
 | `workflow.export.json` | `GET /api/workflows/{id}/download?style=export` — what publishing stores in `galaxy.workflows.definition` |
 | `revisions.json` | `GET /api/workflows/{id}/versions` |
 | `tools/*.json` | `GET /api/tools/{id}?io_details=true&tool_version=…`, one per distinct `toolId@version` |

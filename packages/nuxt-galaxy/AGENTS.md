@@ -120,7 +120,7 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Register composables
-    addImports({ name: 'useGalaxyTool', from: resolver.resolve() })
+    addImports({ name: 'useGalaxyWorkflowDescription', from: resolver.resolve() })
     addImportsDir(resolver.resolve('./runtime/app/queries'))
 
     // Server API

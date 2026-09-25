@@ -177,8 +177,7 @@ SUPABASE_KEY="your-supabase-anon-key"
 
 #### Galaxy Integration Composables
 
-- **`useGalaxyWorkflow(workflowId)`** - Galaxy workflow data and operations
-- **`useGalaxyTool(toolQueries)`** - Galaxy tool information and parameters
+- **`useGalaxyWorkflowDescription(workflowId, revision)`** - one workflow revision, its steps, its inputs and its tool definitions, in one cached request
 - **`useGalaxyHint(help, argument)`** - Contextual hints for Galaxy operations
 
 #### Utility Composables

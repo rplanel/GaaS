@@ -3,11 +3,10 @@ import type { AccordionItem } from '@nuxt/ui'
 import type { GalaxyTool } from 'blendtype'
 import type { AnalysisDetail, Database, JobRow } from 'nuxt-galaxy'
 import type { EncodedGalaxyWorkflowParameter } from '../../composables/galaxy/types'
-import type { GalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 import { useSupabaseClient } from '#imports'
 // import { analysisByIdWithDetailsQuery, analysisInputsViewByIdQuery, analysisOutputsViewByIdQuery } from ''
 import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDecodeParameters'
-import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
+import { useGalaxyToolsInputComponents } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
 const props = withDefaults(defineProps<{
   analysisId: number
@@ -79,14 +78,20 @@ useSupabaseRealtime(`galaxy:jobs:${props.analysisId}`, 'jobs', refresh)
 // Display-only refresh: this subscription re-fetches displayed rows and must not trigger Galaxy sync.
 useSupabaseRealtime(`galaxy:analysis_outputs:${props.analysisId}`, 'analysis_outputs', refresh)
 
+// One request for the revision and every tool it pins (#87), shared through
+// Pinia Colada: the invoke form for the same revision reuses this answer
+// rather than fetching 1+N times of its own.
 const {
   workflowSteps,
-  workflowToolIds,
   stepToTool,
+  toolsObj,
+  toolInputParameters,
+  unavailableByStep,
+  isLoading: describingWorkflow,
+  retry: retryDescription,
   error: workflowError,
-} = useGalaxyWorkflow(workflowGalaxyId, workflowRevision)
+} = useGalaxyWorkflowDescription(workflowGalaxyId, workflowRevision)
 
-const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
 const { getToolParameters, getParametersInputComponent } = useAnalysisTools(toolsObj)
 const { jobs, jobsAccordionItems, jobsMap, jobDetailsAccordionItems } = useAnalysisJob(detailedAnalysis, toolsObj)
 
@@ -160,28 +165,8 @@ function useAnalysisTools(tools: Ref<Record<string, GalaxyTool>>) {
     }
   }
 
-  const toolInputParameterComponent = computed(() => {
-    const toolsVal = toValue(tools)
-    if (toolsVal) {
-      return Object.entries(toolsVal).reduce(
-        (
-          acc: Record<string, Record<string, GalaxyToolInputComponent>>,
-          curr,
-        ) => {
-        // toolInput.
-          const [toolId, tool] = curr as [string, GalaxyTool]
-          const { inputComponentsObject } = useGalaxyToolInputComponent(
-            tool.inputs,
-          )
-          if (inputComponentsObject.value)
-            acc[toolId] = inputComponentsObject.value
-          return acc
-        },
-        {} as Record<string, Record<string, GalaxyToolInputComponent>>,
-      )
-    }
-    return undefined
-  })
+  // Shared with `InvokeForm`, which built the identical map (#87).
+  const toolInputParameterComponent = useGalaxyToolsInputComponents(tools)
   function getParametersInputComponent(stepId: string) {
     const toolName = toValue(stepToTool)[stepId]
     const computedParameterInputComponentObjectVal = toValue(toolInputParameterComponent)
@@ -266,69 +251,141 @@ const sortedOutputs = computed(() => {
   </template>
 
   <slot v-else>
+    <!--
+      Shown *beside* the analysis, never instead of it. Everything below —
+      the inputs, the jobs and their states, stdout, stderr, the outputs —
+      comes from this server's own database and needs Galaxy for nothing;
+      only the tool names and parameter labels do. Replacing the page with
+      this alert would cost a reader the whole analysis because a proxy was
+      briefly unwell, and the branch reached here for the first time when
+      #87 gave the composable a real `error` — the pair it replaced declared
+      one and never assigned it, so this was dead code that had never run.
+    -->
     <UAlert
-      v-if="workflowError" :description="workflowError.message" color="error" variant="soft"
+      v-if="workflowError"
+      data-testid="workflow-description-error"
+      :description="`${workflowError.message} — tool names and parameter labels are unavailable.`"
+      color="warning"
+      variant="soft"
       icon="i-mdi:alert-circle-outline"
-    />
-    <template v-else>
-      <USeparator label="Inputs" />
-      <UPageCard variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-        <GalaxyAnalysisIoDatasetsList :items="inputs" />
-      </UPageCard>
+      class="mb-3"
+    >
+      <template #actions>
+        <UButton
+          data-testid="retry-workflow-description"
+          size="xs"
+          color="warning"
+          variant="outline"
+          :loading="describingWorkflow"
+          @click="retryDescription()"
+        >
+          Retry
+        </UButton>
+      </template>
+    </UAlert>
+    <USeparator label="Inputs" />
+    <UPageCard variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+      <GalaxyAnalysisIoDatasetsList :items="inputs" />
+    </UPageCard>
 
-      <USeparator label="Jobs" />
+    <USeparator label="Jobs" />
 
-      <UPageCard v-if="jobs && toolsObj" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-        <UAccordion :default-value="[jobsAccordionItems?.[0]?.value ?? '0']" :items="jobsAccordionItems">
-          <template #leading="{ item }">
-            <div>
-              <GalaxyStatus :state="item?.value && jobsMap ? jobsMap[item.value]?.state : undefined" size="25" />
-            </div>
-          </template>
-          <template #body="{ item }">
-            <div v-if="jobDetailsAccordionItems && item.value" class="p-4">
-              <UAccordion :items="jobDetailsAccordionItems[item.value]?.details">
-                <template #parameters>
-                  <div
-                    v-if="
-                      workflowSteps
-                        && workflowParametersModel
-                        && item.value
-                    " class="p-2"
-                  >
-                    <GalaxyWorkflowStep
-                      variant="display" :workflow-step="workflowSteps[item.value]"
-                      :tool-parameters="getToolParameters(item.value)"
-                      :parameters-inputs-component="getParametersInputComponent(item.value)"
-                      :workflow-parameters-model=" workflowParametersModel[item.value] "
-                    />
+    <UPageCard v-if="jobs && toolsObj" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+      <UAccordion :default-value="[jobsAccordionItems?.[0]?.value ?? '0']" :items="jobsAccordionItems">
+        <template #leading="{ item }">
+          <div>
+            <GalaxyStatus :state="item?.value && jobsMap ? jobsMap[item.value]?.state : undefined" size="25" />
+          </div>
+        </template>
+        <template #body="{ item }">
+          <div v-if="jobDetailsAccordionItems && item.value" class="p-4">
+            <UAccordion :items="jobDetailsAccordionItems[item.value]?.details">
+              <template #parameters>
+                <div
+                  v-if="
+                    workflowSteps
+                      && workflowParametersModel
+                      && item.value
+                  " class="p-2"
+                >
+                  <!--
+                      This panel blocks nothing — it has no submit, and the
+                      job it describes has already run. Where the tool
+                      definition could not be read there are no labels and no
+                      widgets, so what was sent is shown by its raw parameter
+                      names rather than not at all (#96): a tool that failed
+                      is never indistinguishable from a tool with no
+                      parameters.
+                    -->
+                  <div v-if="unavailableByStep[item.value]" data-testid="step-parameters-unlabelled">
+                    <p class="text-sm opacity-60 px-4 py-2">
+                      {{ describeUnavailableTool(unavailableByStep[item.value]!) }}, so these are its raw parameter names.
+                      <!--
+                          The description is cached without expiry, so a
+                          Galaxy that was briefly unreachable when this
+                          analysis was first opened would show unlabelled
+                          for the life of the tab. This is the only way back.
+                        -->
+                      <UButton
+                        data-testid="retry-workflow-description-step"
+                        size="xs"
+                        color="neutral"
+                        variant="link"
+                        :loading="describingWorkflow"
+                        @click="retryDescription()"
+                      >
+                        Retry
+                      </UButton>
+                    </p>
+                    <dl class="grid grid-cols-[auto_1fr] gap-x-4 px-4 py-2 text-sm">
+                      <template v-for="(value, name) in workflowParametersModel[item.value]" :key="name">
+                        <dt class="font-medium break-all">
+                          {{ name }}
+                        </dt>
+                        <dd class="break-all opacity-80">
+                          <!--
+                              Stringified rather than interpolated: a
+                              conditional's value is an object, and Vue
+                              renders one as `[object Object]`.
+                            -->
+                          {{ typeof value === 'object' && value !== null ? JSON.stringify(value) : value }}
+                        </dd>
+                      </template>
+                    </dl>
                   </div>
-                </template>
-                <template #stdout>
-                  <div class="p-1">
-                    <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
-                      <pre v-if="jobsMap" class="text-nowrap"> {{ jobsMap[item.value]?.stdout }}</pre>
-                    </div>
+                  <GalaxyWorkflowStep
+                    v-else
+                    variant="display" :workflow-step="workflowSteps[item.value]"
+                    :tool-parameters="getToolParameters(item.value)"
+                    :parameters-inputs-component="getParametersInputComponent(item.value)"
+                    :workflow-parameters-model=" workflowParametersModel[item.value] "
+                  />
+                </div>
+              </template>
+              <template #stdout>
+                <div class="p-1">
+                  <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
+                    <pre v-if="jobsMap" class="text-nowrap"> {{ jobsMap[item.value]?.stdout }}</pre>
                   </div>
-                </template>
-                <template #stderr>
-                  <div class="p-1">
-                    <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
-                      <pre v-if="jobsMap"> {{ jobsMap[item.value]?.stderr }}</pre>
-                    </div>
+                </div>
+              </template>
+              <template #stderr>
+                <div class="p-1">
+                  <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
+                    <pre v-if="jobsMap"> {{ jobsMap[item.value]?.stderr }}</pre>
                   </div>
-                </template>
-              </UAccordion>
-            </div>
-          </template>
-        </UAccordion>
-      </UPageCard>
+                </div>
+              </template>
+            </UAccordion>
+          </div>
+        </template>
+      </UAccordion>
+    </UPageCard>
 
-      <USeparator label="Outputs" />
+    <USeparator label="Outputs" />
 
-      <UPageCard variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-        <GalaxyAnalysisIoDatasetsList :items="sortedOutputs" />
-      </UPageCard>
-    </template>
+    <UPageCard variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+      <GalaxyAnalysisIoDatasetsList :items="sortedOutputs" />
+    </UPageCard>
   </slot>
 </template>

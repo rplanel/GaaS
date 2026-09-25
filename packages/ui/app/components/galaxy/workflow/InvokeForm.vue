@@ -3,14 +3,12 @@
 import type { AccordionItem, FormSubmitEvent } from '@nuxt/ui'
 
 import type {
-  GalaxyTool,
   WorkflowToolParameters,
 } from 'blendtype'
 // import type { SupabaseTypes } from '#build/types/database'
 import type { Database } from 'nuxt-galaxy'
 import type { Props as WorkflowStepProps } from '../../../components/galaxy/workflow/Step.vue'
 import type { EncodedGalaxyWorkflowParameter } from '../../../composables/galaxy/types'
-import type { GalaxyToolInputComponent } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 import type { AnalysesListProvide } from '../../../layouts/default.vue'
 import type { StartAnalysisFailure } from '../../../utils/startAnalysisFailure'
 import { NuxtErrorBoundary } from '#components'
@@ -20,10 +18,7 @@ import { log } from 'evlog/client'
 import * as z from 'zod'
 import { useGalaxyDecodeParameters } from '../../../composables/galaxy/useGalaxyDecodeParameters'
 import { useGalaxyEncodeParameters } from '../../../composables/galaxy/useGalaxyEncodeParameters'
-import {
-
-  useGalaxyToolInputComponent,
-} from '../../../composables/galaxy/useGalaxyToolInputComponent'
+import { useGalaxyToolsInputComponents } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 import { describeStartAnalysisFailure, unexplainedStartAnalysisFailure } from '../../../utils/startAnalysisFailure'
 
 // type Database = SupabaseTypes.Database
@@ -128,27 +123,12 @@ function inputFieldName(stepId: string) {
   return `inputs.${stepId}`
 }
 
-const toolInputParameterComponent = computed(() => {
-  const toolsVal = toValue(toolsObj)
-  if (toolsVal) {
-    return Object.entries(toolsVal).reduce(
-      (
-        acc: Record<string, Record<string, GalaxyToolInputComponent>>,
-        [toolId, tool]: [string, GalaxyTool],
-      ) => {
-        // toolInput.
-        const { inputComponentsObject } = useGalaxyToolInputComponent(
-          tool.inputs,
-        )
-        if (inputComponentsObject.value)
-          acc[toolId] = inputComponentsObject.value
-        return acc
-      },
-      {} as Record<string, Record<string, GalaxyToolInputComponent>>,
-    )
-  }
-  return undefined
-})
+// Which component renders each parameter, by tool and then by name. Shared
+// with `AnalysisHistoryPanel`, which built the identical map (#87).
+// Passed as a getter: `toolsObj` is declared further down, with the rest of
+// the data fetching, and this file reads it from up here on purpose (see the
+// `ts/no-use-before-define` disable at the top).
+const toolInputParameterComponent = useGalaxyToolsInputComponents(() => toolsObj.value)
 
 const workflowStepsItems = computed<AccordionItem[] | undefined>(() => {
   const workflowStepsVal = toValue(workflowToolSteps)
@@ -263,6 +243,28 @@ function rememberThisPage() {
  * asks for exactly what it showed.
  */
 async function runAnalysis(event: FormSubmitEvent<Schema>) {
+  // Cleared first, so a refusal still on screen from an earlier attempt is
+  // never read as this one's answer.
+  submitError.value = null
+  // Galaxy refuses to run a revision whose tools are not installed at the
+  // versions it pins, so the submission is refused here rather than by
+  // Galaxy after the datasets have been uploaded. The alert above the button
+  // has already named them; Run is disabled too, and this is the refusal
+  // that does not depend on the button.
+  //
+  // A description that *failed* refuses too: the form then knows neither
+  // the inputs nor the tools, so what it would send is whatever the reader
+  // could see, which is nothing. The alert above the button says so.
+  //
+  // A description still *in flight* deliberately does not refuse. It would
+  // silently reject a reader who types a name and presses Enter before the
+  // answer lands — Enter submits a form whatever the button's disabled state
+  // — and the worst it risks is the submission Galaxy would have refused
+  // anyway, which is where this stood before #87. Refusing without being
+  // able to say why is worse than refusing late.
+  if (toValue(blockingTools).length > 0 || toValue(describeError)) {
+    return
+  }
   const analysesNameVal = event.data.analysisName
   const workflowIdVal = toValue(props.workflowId)
   const workflowParametersModelVal = toValue(invokeWorkflowParameterModel)
@@ -277,7 +279,6 @@ async function runAnalysis(event: FormSubmitEvent<Schema>) {
     workflowId: workflowIdVal,
   }
   startingAnalysis.value = true
-  submitError.value = null
   // Only the request is guarded, so a failed submission is the only thing
   // this handler can claim.
   const created = await $fetch('/api/db/analyses', {
@@ -343,18 +344,43 @@ const workflowGalaxyId = computed(() => {
 // moves with every save in its editor.
 const workflowRevision = computed(() => toValue(dbWorkflow)?.revision)
 
+// One request for the revision and every tool it pins (#87), shared through
+// Pinia Colada with anything else reading the same revision. It replaced
+// `useGalaxyWorkflow` + `useGalaxyTool`, which fetched 1+N times per mount
+// over raw `$fetch` and so deduplicated nothing.
 const {
   workflowSteps,
   stepToTool,
   workflowInputs,
   workflowToolSteps,
-  workflowToolIds,
   workflowParametersModel,
-} = useGalaxyWorkflow(workflowGalaxyId, workflowRevision)
+  toolsObj,
+  toolInputParameters,
+  blockingTools,
+  unavailableByStep,
+  isLoading: describingWorkflow,
+  retry: retryDescription,
+  error: describeError,
+} = useGalaxyWorkflowDescription(workflowGalaxyId, workflowRevision)
 
-const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
+/**
+ * What the editable parameter model is *of*: the analysis being copied, and
+ * the set of steps the revision declares.
+ *
+ * The seeding below is keyed on this rather than on the model object,
+ * because the model is rebuilt whenever the description is — and the Retry
+ * beside an unavailable step refetches it on purpose. Re-seeding then would
+ * throw away everything the reader had typed, with nothing on screen to say
+ * so. A pinned revision is immutable, so the same steps mean the same saved
+ * values and there is nothing new to seed from.
+ */
+const parameterModelSource = computed(() => [
+  toValue(analysisId) ?? 'none',
+  toValue(dbAnalysis) ? 'loaded' : 'pending',
+  Object.keys(toValue(workflowParametersModel)).join(','),
+].join('|'))
 
-watchEffect(() => {
+watch(parameterModelSource, () => {
   // Named rather than `Record<string, any>`: `datamap` is a nullable `Json`
   // column, and only a type that says so makes the `?? {}` below something
   // the compiler enforces instead of something a comment promises.
@@ -381,7 +407,7 @@ watchEffect(() => {
   else {
     invokeWorkflowParameterModel.value = workflowParametersModel.value
   }
-})
+}, { immediate: true })
 </script>
 
 <template>
@@ -462,8 +488,39 @@ watchEffect(() => {
           <template #body="{ item: { value: stepId } }">
             <div class="p-2">
               <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)]">
+                <!--
+                  A step whose tool could not be read is un-editable and says
+                  so, rather than rendering an empty panel that looks like a
+                  tool with no parameters (#96). The retry is the only way
+                  back: the description is cached without expiry, so a tool
+                  installed since, or a Galaxy that has come back, is picked
+                  up when the reader asks for it.
+                -->
+                <UAlert
+                  v-if="stepId !== undefined && unavailableByStep[stepId]"
+                  :data-testid="`step-unavailable-${stepId}`"
+                  role="status"
+                  variant="subtle"
+                  color="warning"
+                  icon="i-lucide:unplug"
+                  title="This step cannot be edited"
+                  :description="describeUnavailableTool(unavailableByStep[stepId]!)"
+                >
+                  <template #actions>
+                    <UButton
+                      data-testid="retry-workflow-description"
+                      size="xs"
+                      color="warning"
+                      variant="outline"
+                      :loading="describingWorkflow"
+                      @click="retryDescription()"
+                    >
+                      Retry
+                    </UButton>
+                  </template>
+                </UAlert>
                 <GalaxyWorkflowStep
-                  v-if="stepId !== undefined && galaxyWorkflowStepProps?.[stepId]"
+                  v-else-if="stepId !== undefined && galaxyWorkflowStepProps?.[stepId]"
                   v-bind="galaxyWorkflowStepProps[stepId]" variant="form"
                 />
               </div>
@@ -496,7 +553,68 @@ watchEffect(() => {
           </UButton>
         </template>
       </UAlert>
-      <UButton type="submit" :loading="startingAnalysis">
+      <!--
+        A description that never arrived leaves the form with no inputs and
+        no steps, which is indistinguishable from a workflow that declares
+        none — so it says so, and offers the only way back. The retry beside
+        an unavailable step cannot serve here: there are no steps to render
+        it in.
+      -->
+      <UAlert
+        v-if="describeError"
+        data-testid="workflow-description-error"
+        role="alert"
+        variant="subtle"
+        color="error"
+        icon="i-lucide:alert-octagon"
+        title="This workflow could not be read"
+        :description="describeError.message"
+        class="mb-3"
+      >
+        <template #actions>
+          <UButton
+            data-testid="retry-workflow-description"
+            size="xs"
+            color="error"
+            variant="outline"
+            :loading="describingWorkflow"
+            @click="retryDescription()"
+          >
+            Retry
+          </UButton>
+        </template>
+      </UAlert>
+      <!--
+        Marked before submit, and only what would refuse it (Q10): Galaxy
+        will not run a revision whose tools are not installed at the versions
+        it pins, so this analysis cannot start until they are. A tool merely
+        unreachable is not here — Galaxy may be well again by the time the
+        reader submits, and the values that will be sent come from the
+        workflow's saved parameters rather than from the tool definition.
+      -->
+      <UAlert
+        v-if="blockingTools.length > 0"
+        data-testid="blocking-tools"
+        role="alert"
+        variant="subtle"
+        color="error"
+        icon="i-lucide:alert-octagon"
+        title="This version cannot be run"
+        class="mb-3"
+      >
+        <template #description>
+          <ul class="list-disc ps-5">
+            <li v-for="tool in blockingTools" :key="`${tool.toolId}@${tool.toolVersion}`">
+              {{ describeUnavailableTool(tool) }}
+            </li>
+          </ul>
+        </template>
+      </UAlert>
+      <UButton
+        type="submit"
+        :loading="startingAnalysis"
+        :disabled="blockingTools.length > 0 || Boolean(describeError)"
+      >
         Run
       </UButton>
     </UForm>
