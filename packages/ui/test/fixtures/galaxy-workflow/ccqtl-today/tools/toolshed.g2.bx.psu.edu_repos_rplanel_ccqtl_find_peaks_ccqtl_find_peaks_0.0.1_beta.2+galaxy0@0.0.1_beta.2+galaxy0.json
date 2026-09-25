@@ -1,0 +1,499 @@
+{
+  "model_class": "Tool",
+  "id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_find_peaks/ccqtl_find_peaks/0.0.1_beta.2+galaxy0",
+  "name": "CCQTL: Retrieves QTL intervals",
+  "version": "0.0.1_beta.2+galaxy0",
+  "description": "around LOD peaks that pass permutation-derived significance thresholds",
+  "labels": [],
+  "edam_operations": [
+    "operation_3232"
+  ],
+  "edam_topics": [
+    "topic_0625",
+    "topic_0160",
+    "topic_3338"
+  ],
+  "hidden": "",
+  "is_workflow_compatible": true,
+  "xrefs": [],
+  "tool_shed_repository": {
+    "name": "ccqtl_find_peaks",
+    "owner": "rplanel",
+    "changeset_revision": "1c6f4f574a6d",
+    "tool_shed": "toolshed.g2.bx.psu.edu"
+  },
+  "inputs": [
+    {
+      "model_class": "SelectToolParameter",
+      "name": "level",
+      "argument": "--level",
+      "type": "select",
+      "label": "User-defined level of significance",
+      "help": "",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": "95",
+      "options": [
+        [
+          "80%",
+          "80",
+          false
+        ],
+        [
+          "90%",
+          "90",
+          false
+        ],
+        [
+          "95%",
+          "95",
+          true
+        ],
+        [
+          "99%",
+          "99",
+          false
+        ]
+      ],
+      "display": null,
+      "multiple": false,
+      "textable": false
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "crossdata",
+      "argument": "--crossdata",
+      "type": "data",
+      "label": "crossdata rds file",
+      "help": "The cross rds file output from make_inputs",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "clean_pr",
+      "argument": "--clean_pr",
+      "type": "data",
+      "label": "clean_pr ds file",
+      "help": "The cleaned genotype probabilities rds file output from make_inputs",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "kloco",
+      "argument": "--kloco",
+      "type": "data",
+      "label": "kloco rds file",
+      "help": "the LOCO kinship rds file output from make_inputs",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "nrep",
+      "argument": "--nrep",
+      "type": "data",
+      "label": "Object containing the number of permutations performed (rds)",
+      "help": "",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "BooleanToolParameter",
+      "name": "adjust",
+      "argument": "--adjust",
+      "type": "boolean",
+      "label": "Multi-trait analysis: adjust for multiple testing across variables (default: no)",
+      "help": "",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": "false",
+      "truevalue": "true",
+      "falsevalue": "false"
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "apr",
+      "argument": "--apr",
+      "type": "data",
+      "label": "apr",
+      "help": "",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "out",
+      "argument": "--out",
+      "type": "data",
+      "label": "out",
+      "help": "",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "operm_lmm",
+      "argument": "--operm_lmm",
+      "type": "data",
+      "label": "operm_lmm",
+      "help": "",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "SelectToolParameter",
+      "name": "user_drop",
+      "argument": "--user_drop",
+      "type": "select",
+      "label": "Select the drop-off value for support interval calculation (default: 1.5)",
+      "help": "",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": "1.5",
+      "options": [
+        [
+          "1",
+          "1",
+          false
+        ],
+        [
+          "1.5",
+          "1.5",
+          true
+        ],
+        [
+          "1.8",
+          "1.8",
+          false
+        ],
+        [
+          "2",
+          "2",
+          false
+        ]
+      ],
+      "display": null,
+      "multiple": false,
+      "textable": false
+    }
+  ],
+  "outputs": [
+    {
+      "model_class": "ToolOutputCollection",
+      "name": "coefficients",
+      "format": null,
+      "label": "${tool.name} on ${on_string}: coefficients",
+      "hidden": false,
+      "output_type": "collection",
+      "default_format": "csv",
+      "default_format_source": null,
+      "default_metadata_source": null,
+      "inherit_format": false,
+      "inherit_metadata": false,
+      "structure": {
+        "collection_type": "list",
+        "collection_type_source": null,
+        "collection_type_from_rules": null,
+        "structured_like": null,
+        "discover_datasets": [
+          {
+            "discover_via": "pattern",
+            "dbkey": "__input__",
+            "format": "csv",
+            "visible": false,
+            "assign_primary_output": false,
+            "directory": "outfiles/peaks/coef",
+            "recurse": false,
+            "match_relative_path": false,
+            "sort_key": "filename",
+            "sort_comp": "lexical",
+            "pattern": "(?P<designation>.*)",
+            "sort_by": "filename"
+          }
+        ]
+      }
+    },
+    {
+      "model_class": "ToolOutputCollection",
+      "name": "haplotypes",
+      "format": null,
+      "label": "${tool.name} on ${on_string}: haplotypes",
+      "hidden": false,
+      "output_type": "collection",
+      "default_format": "csv",
+      "default_format_source": null,
+      "default_metadata_source": null,
+      "inherit_format": false,
+      "inherit_metadata": false,
+      "structure": {
+        "collection_type": "list",
+        "collection_type_source": null,
+        "collection_type_from_rules": null,
+        "structured_like": null,
+        "discover_datasets": [
+          {
+            "discover_via": "pattern",
+            "dbkey": "__input__",
+            "format": "csv",
+            "visible": false,
+            "assign_primary_output": false,
+            "directory": "outfiles/peaks/haplo",
+            "recurse": false,
+            "match_relative_path": false,
+            "sort_key": "filename",
+            "sort_comp": "lexical",
+            "pattern": "(?P<designation>.*)",
+            "sort_by": "filename"
+          }
+        ]
+      }
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "peaks_csv",
+      "format": "csv",
+      "label": "${tool.name} on ${on_string}: peaks.csv",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/peaks/peaks.csv",
+      "edam_format": "format_3475",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "peaks_rds",
+      "format": "rds",
+      "label": "${tool.name} on ${on_string}: peaks.rds",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/Rdata/peaks.rds",
+      "edam_format": "format_2333",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "significance_threshold",
+      "format": "csv",
+      "label": "${tool.name} on ${on_string}: significance-threshold.csv",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/peaks/significance-threshold.csv",
+      "edam_format": "format_3475",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    }
+  ],
+  "panel_section_id": "phenotype_association",
+  "panel_section_name": "Phenotype Association",
+  "form_style": "regular"
+}

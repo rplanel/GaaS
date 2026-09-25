@@ -1,0 +1,566 @@
+{
+  "model_class": "Tool",
+  "id": "toolshed.g2.bx.psu.edu/repos/iuc/integron_finder/integron_finder/2.0.5+galaxy1",
+  "name": "Integron Finder",
+  "version": "2.0.5+galaxy1",
+  "description": "is a program that detects integrons in DNA sequences",
+  "labels": [],
+  "icon": null,
+  "edam_operations": [
+    "operation_0239",
+    "operation_3430",
+    "operation_3087",
+    "operation_0362"
+  ],
+  "edam_topics": [
+    "topic_0085",
+    "topic_0798",
+    "topic_3047",
+    "topic_0091",
+    "topic_0080"
+  ],
+  "hidden": "",
+  "is_workflow_compatible": true,
+  "xrefs": [
+    {
+      "value": "integron_finder",
+      "type": "bio.tools"
+    }
+  ],
+  "versions": [
+    "2.0.2+galaxy0",
+    "2.0.2+galaxy1",
+    "2.0.3+galaxy0",
+    "2.0.5+galaxy0",
+    "2.0.5+galaxy1"
+  ],
+  "hidden_versions": [],
+  "tool_shed_repository": {
+    "name": "integron_finder",
+    "owner": "iuc",
+    "changeset_revision": "5429646e486d",
+    "tool_shed": "toolshed.g2.bx.psu.edu"
+  },
+  "inputs": [
+    {
+      "model_class": "DataToolParameter",
+      "name": "sequence",
+      "argument": null,
+      "type": "data",
+      "label": "Replicon file",
+      "help": "Replicon can be entire chromosome, contif, PCR fragments...",
+      "help_format": "html",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "fasta"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_1929"
+        ],
+        "edam_data": [
+          "data_2044"
+        ]
+      },
+      "multiple": false,
+      "tag": null,
+      "options": {
+        "dce": [],
+        "ldda": [],
+        "hda": [],
+        "hdca": []
+      },
+      "pinned": {
+        "dce": [],
+        "ldda": [],
+        "hda": [],
+        "hdca": []
+      },
+      "options_meta": {}
+    },
+    {
+      "model_class": "BooleanToolParameter",
+      "name": "local_max",
+      "argument": "--local-max",
+      "type": "boolean",
+      "label": "Thorough local detection",
+      "help": "This option allows a more sensitive search. I will be slower (dependant on the number of hits) if integrons are found, but will be as fast if nothing is detected and will not increase the false positive rate.",
+      "help_format": "html",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": false,
+      "truevalue": "--local-max",
+      "falsevalue": ""
+    },
+    {
+      "model_class": "SelectToolParameter",
+      "name": "type_replicon",
+      "argument": null,
+      "type": "select",
+      "label": "Default replicons topology",
+      "help": "Set the default topology for replicons, linear, circular (deault: no topology)",
+      "help_format": "html",
+      "refresh_on_change": false,
+      "optional": true,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "options": [
+        [
+          "linear (--linear)",
+          "--linear",
+          false
+        ],
+        [
+          "circular (--circ)",
+          "--circ",
+          false
+        ]
+      ],
+      "display": null,
+      "multiple": false,
+      "textable": false
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "topology_file",
+      "argument": "--topology-file",
+      "type": "data",
+      "label": "Select a topology file from your history",
+      "help": "",
+      "help_format": "html",
+      "refresh_on_change": true,
+      "optional": true,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "txt"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2330"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "tag": null,
+      "options": {
+        "dce": [],
+        "ldda": [],
+        "hda": [],
+        "hdca": []
+      },
+      "pinned": {
+        "dce": [],
+        "ldda": [],
+        "hda": [],
+        "hdca": []
+      },
+      "options_meta": {}
+    },
+    {
+      "model_class": "BooleanToolParameter",
+      "name": "promoter_attI",
+      "argument": "--promoter-attI",
+      "type": "boolean",
+      "label": "Search also for promoter and attI sites?",
+      "help": "",
+      "help_format": "html",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": false,
+      "truevalue": "--promoter-attI",
+      "falsevalue": ""
+    },
+    {
+      "model_class": "BooleanToolParameter",
+      "name": "gbk",
+      "argument": "--gbk",
+      "type": "boolean",
+      "label": "Genbank output?",
+      "help": "Generate a GenBank file with the sequence annotated with the same annotations than .integrons file.",
+      "help_format": "html",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": false,
+      "truevalue": "--gbk",
+      "falsevalue": ""
+    },
+    {
+      "model_class": "BooleanToolParameter",
+      "name": "pdf",
+      "argument": "--pdf",
+      "type": "boolean",
+      "label": "PDF output?",
+      "help": "For each complete integron, a simple graphic of the region is depicted (in pdf format)",
+      "help_format": "html",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": false,
+      "truevalue": "--pdf",
+      "falsevalue": ""
+    },
+    {
+      "model_class": "Section",
+      "name": "settings",
+      "type": "section",
+      "title": "Advanced Parameters",
+      "help": null,
+      "expanded": false,
+      "inputs": [
+        {
+          "model_class": "Section",
+          "name": "attc_settings",
+          "type": "section",
+          "title": "Attc options",
+          "help": null,
+          "expanded": false,
+          "inputs": [
+            {
+              "model_class": "IntegerToolParameter",
+              "name": "dist_thresh",
+              "argument": "--distance-thresh",
+              "type": "integer",
+              "label": "Threshold for clustering (in base)",
+              "help": "By default, to cluster an array of attC sites and an integron integrase, they must be less than 4 kb apart. You can here change this value.",
+              "help_format": "html",
+              "refresh_on_change": false,
+              "min": 0,
+              "max": null,
+              "optional": false,
+              "hidden": false,
+              "is_dynamic": false,
+              "value": "4000",
+              "area": false,
+              "datalist": []
+            },
+            {
+              "model_class": "IntegerToolParameter",
+              "name": "calin_threshold",
+              "argument": null,
+              "type": "integer",
+              "label": "Threshold to filter CALIN",
+              "help": "Keep 'CALIN' only if attC sites number >= calin-threshold",
+              "help_format": "html",
+              "refresh_on_change": false,
+              "min": 0,
+              "max": null,
+              "optional": false,
+              "hidden": false,
+              "is_dynamic": false,
+              "value": "2",
+              "area": false,
+              "datalist": []
+            },
+            {
+              "model_class": "IntegerToolParameter",
+              "name": "max_attc_size",
+              "argument": null,
+              "type": "integer",
+              "label": "Maximum value for attC size",
+              "help": "",
+              "help_format": "html",
+              "refresh_on_change": false,
+              "min": 0,
+              "max": null,
+              "optional": false,
+              "hidden": false,
+              "is_dynamic": false,
+              "value": "200",
+              "area": false,
+              "datalist": []
+            },
+            {
+              "model_class": "IntegerToolParameter",
+              "name": "min_attc_size",
+              "argument": null,
+              "type": "integer",
+              "label": "Minimum value for attC size",
+              "help": "",
+              "help_format": "html",
+              "refresh_on_change": false,
+              "min": 0,
+              "max": null,
+              "optional": false,
+              "hidden": false,
+              "is_dynamic": false,
+              "value": "40",
+              "area": false,
+              "datalist": []
+            },
+            {
+              "model_class": "BooleanToolParameter",
+              "name": "keep_palindromes",
+              "argument": "--keep-palindromes",
+              "type": "boolean",
+              "label": "Keep palindromes with the highest evalue",
+              "help": "For a given hit, if the palindromic version is found, don't remove the one with highest evalue",
+              "help_format": "html",
+              "refresh_on_change": false,
+              "optional": false,
+              "hidden": false,
+              "is_dynamic": false,
+              "value": false,
+              "truevalue": "--keep-palindromes",
+              "falsevalue": ""
+            },
+            {
+              "model_class": "DataToolParameter",
+              "name": "covar_matrix",
+              "argument": "--attc-model",
+              "type": "data",
+              "label": "Covariance Matrix",
+              "help": "",
+              "help_format": "html",
+              "refresh_on_change": true,
+              "optional": true,
+              "hidden": false,
+              "is_dynamic": false,
+              "value": null,
+              "extensions": [
+                "txt"
+              ],
+              "edam": {
+                "edam_formats": [
+                  "format_2330"
+                ],
+                "edam_data": [
+                  "data_0006"
+                ]
+              },
+              "multiple": false,
+              "tag": null,
+              "options": {
+                "dce": [],
+                "ldda": [],
+                "hda": [],
+                "hdca": []
+              },
+              "pinned": {
+                "dce": [],
+                "ldda": [],
+                "hda": [],
+                "hdca": []
+              },
+              "options_meta": {}
+            }
+          ]
+        },
+        {
+          "model_class": "Section",
+          "name": "protein_settings",
+          "type": "section",
+          "title": "Protein options",
+          "help": null,
+          "expanded": false,
+          "inputs": [
+            {
+              "model_class": "BooleanToolParameter",
+              "name": "no_proteins",
+              "argument": "--no-proteins",
+              "type": "boolean",
+              "label": "Just look for attC sites",
+              "help": "When enabled, it does not annotate CDS and does not find integrase.",
+              "help_format": "html",
+              "refresh_on_change": false,
+              "optional": false,
+              "hidden": false,
+              "is_dynamic": false,
+              "value": false,
+              "truevalue": "--no-proteins",
+              "falsevalue": ""
+            },
+            {
+              "model_class": "BooleanToolParameter",
+              "name": "union_integrases",
+              "argument": "--union-integrases",
+              "type": "boolean",
+              "label": "Use the union of the hits",
+              "help": "Instead of taking intersection of hits from Phage_int profile (Tyr recombinases) and integron_integrase profile, use the union of the hits",
+              "help_format": "html",
+              "refresh_on_change": false,
+              "optional": false,
+              "hidden": false,
+              "is_dynamic": false,
+              "value": false,
+              "truevalue": "--union-integrases",
+              "falsevalue": ""
+            },
+            {
+              "model_class": "BooleanToolParameter",
+              "name": "func_annot",
+              "argument": "--func-annot",
+              "type": "boolean",
+              "label": "Annotate cassettes given HMM profiles",
+              "help": "",
+              "help_format": "html",
+              "refresh_on_change": false,
+              "optional": false,
+              "hidden": false,
+              "is_dynamic": false,
+              "value": false,
+              "truevalue": "--func-annot",
+              "falsevalue": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "model_class": "BooleanToolParameter",
+      "name": "no_logfile",
+      "argument": null,
+      "type": "boolean",
+      "label": "Remove log file",
+      "help": "",
+      "help_format": "html",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": false,
+      "truevalue": "true",
+      "falsevalue": "false"
+    }
+  ],
+  "outputs": [
+    {
+      "model_class": "ToolOutputCollection",
+      "name": "genbank_out",
+      "format": null,
+      "label": "${tool.name} on ${on_string}: Genbank ",
+      "hidden": false,
+      "output_type": "collection",
+      "default_format": "data",
+      "format_source": null,
+      "metadata_source": null,
+      "inherit_format": false,
+      "inherit_metadata": false,
+      "structure": {
+        "collection_type": "list",
+        "collection_type_source": null,
+        "collection_type_from_rules": null,
+        "structured_like": null,
+        "discover_datasets": [
+          {
+            "discover_via": "pattern",
+            "format": "genbank",
+            "visible": false,
+            "assign_primary_output": false,
+            "directory": "Results_Integron_Finder/",
+            "recurse": false,
+            "match_relative_path": false,
+            "sort_key": "filename",
+            "sort_comp": "lexical",
+            "sort_reverse": false,
+            "pattern": "(?P<designation>.+)\\.gbk"
+          }
+        ]
+      }
+    },
+    {
+      "model_class": "ToolOutputCollection",
+      "name": "pdf_out",
+      "format": null,
+      "label": "${tool.name} on ${on_string}: Graphic",
+      "hidden": false,
+      "output_type": "collection",
+      "default_format": "data",
+      "format_source": null,
+      "metadata_source": null,
+      "inherit_format": false,
+      "inherit_metadata": false,
+      "structure": {
+        "collection_type": "list",
+        "collection_type_source": null,
+        "collection_type_from_rules": null,
+        "structured_like": null,
+        "discover_datasets": [
+          {
+            "discover_via": "pattern",
+            "format": "pdf",
+            "visible": false,
+            "assign_primary_output": false,
+            "directory": "Results_Integron_Finder/",
+            "recurse": false,
+            "match_relative_path": false,
+            "sort_key": "filename",
+            "sort_comp": "lexical",
+            "sort_reverse": false,
+            "pattern": "(?P<designation>.+)\\.pdf"
+          }
+        ]
+      }
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "integron_log",
+      "format": "txt",
+      "label": "${tool.name} on ${on_string}: Log",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": null,
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "Results_Integron_Finder/integron_finder.out",
+      "edam_format": "format_2330",
+      "edam_data": "data_0006",
+      "discover_datasets": []
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "integrons_table",
+      "format": "tsv",
+      "label": "${tool.name} on ${on_string}: Integron annotations",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": null,
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "Results_Integron_Finder/*.integrons",
+      "edam_format": "format_3475",
+      "edam_data": "data_0006",
+      "discover_datasets": []
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "summary",
+      "format": "tsv",
+      "label": "${tool.name} on ${on_string}: Summary",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": null,
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "Results_Integron_Finder/*.summary",
+      "edam_format": "format_3475",
+      "edam_data": "data_0006",
+      "discover_datasets": []
+    }
+  ],
+  "has_parameters": true,
+  "panel_section_id": "annotation",
+  "panel_section_name": "Annotation",
+  "form_style": "regular"
+}

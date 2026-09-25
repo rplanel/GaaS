@@ -1,0 +1,265 @@
+{
+  "model_class": "StoredWorkflow",
+  "id": "95dfc6403c0edd08",
+  "create_time": "2026-08-07T15:33:06.989626",
+  "update_time": "2026-08-28T20:55:03.492867",
+  "name": "Integron finder",
+  "url": "/api/workflows/95dfc6403c0edd08",
+  "published": true,
+  "annotations": null,
+  "tags": [],
+  "deleted": false,
+  "hidden": false,
+  "owner": "nicola_falcioni",
+  "latest_workflow_uuid": "fe679b21-ab4b-4b35-9f7c-12cccd4e3fc7",
+  "number_of_steps": null,
+  "show_in_tool_panel": null,
+  "annotation": "",
+  "license": null,
+  "version": 1,
+  "inputs": {
+    "0": {
+      "label": "genoma",
+      "value": "",
+      "uuid": "14edf856-f439-446a-8013-2b6a086e77d7"
+    }
+  },
+  "creator": null,
+  "creator_deleted": false,
+  "doi": null,
+  "steps": {
+    "0": {
+      "id": 0,
+      "annotation": null,
+      "input_steps": {},
+      "when": null,
+      "tool_id": null,
+      "tool_uuid": null,
+      "tool_version": null,
+      "tool_inputs": {
+        "optional": false,
+        "tag": null
+      },
+      "type": "data_input"
+    },
+    "1": {
+      "id": 1,
+      "annotation": null,
+      "input_steps": {
+        "sequence": {
+          "source_step": 0,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/integron_finder/integron_finder/2.0.5+galaxy1",
+      "tool_uuid": null,
+      "tool_version": "2.0.5+galaxy1",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "gbk": true,
+        "local_max": true,
+        "no_logfile": false,
+        "pdf": true,
+        "promoter_attI": true,
+        "sequence": {
+          "__class__": "ConnectedValue"
+        },
+        "settings": {
+          "attc_settings": {
+            "calin_threshold": "2",
+            "covar_matrix": {
+              "__class__": "RuntimeValue"
+            },
+            "dist_thresh": "4000",
+            "keep_palindromes": false,
+            "max_attc_size": "200",
+            "min_attc_size": "40"
+          },
+          "protein_settings": {
+            "func_annot": false,
+            "no_proteins": false,
+            "union_integrases": false
+          }
+        },
+        "topology_file": {
+          "__class__": "RuntimeValue"
+        },
+        "type_replicon": null
+      },
+      "type": "tool"
+    },
+    "2": {
+      "id": 2,
+      "annotation": null,
+      "input_steps": {
+        "datasets_1|input": {
+          "source_step": 1,
+          "step_output": "integrons_table"
+        },
+        "datasets_0|input": {
+          "source_step": 1,
+          "step_output": "integron_log"
+        },
+        "datasets_2|input": {
+          "source_step": 1,
+          "step_output": "summary"
+        }
+      },
+      "when": null,
+      "tool_id": "__BUILD_LIST__",
+      "tool_uuid": null,
+      "tool_version": "1.2.0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "datasets": [
+          {
+            "__index__": 0,
+            "id_cond": {
+              "__current_case__": 1,
+              "id_select": "identifier"
+            },
+            "input": {
+              "__class__": "ConnectedValue"
+            }
+          },
+          {
+            "__index__": 1,
+            "id_cond": {
+              "__current_case__": 1,
+              "id_select": "identifier"
+            },
+            "input": {
+              "__class__": "ConnectedValue"
+            }
+          },
+          {
+            "__index__": 2,
+            "id_cond": {
+              "__current_case__": 1,
+              "id_select": "identifier"
+            },
+            "input": {
+              "__class__": "ConnectedValue"
+            }
+          },
+          {
+            "__index__": 3,
+            "id_cond": {
+              "__current_case__": 1,
+              "id_select": "identifier"
+            },
+            "input": {
+              "__class__": "ConnectedValue"
+            }
+          },
+          {
+            "__index__": 4,
+            "id_cond": {
+              "__current_case__": 0,
+              "id_select": "idx"
+            },
+            "input": {
+              "__class__": "ConnectedValue"
+            }
+          }
+        ]
+      },
+      "type": "tool"
+    },
+    "3": {
+      "id": 3,
+      "annotation": null,
+      "input_steps": {
+        "inputs_1|input": {
+          "source_step": 1,
+          "step_output": "pdf_out"
+        },
+        "inputs_0|input": {
+          "source_step": 1,
+          "step_output": "genbank_out"
+        }
+      },
+      "when": null,
+      "tool_id": "__MERGE_COLLECTION__",
+      "tool_uuid": null,
+      "tool_version": "1.0.0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "advanced": {
+          "conflict": {
+            "__current_case__": 3,
+            "duplicate_options": "keep_first"
+          }
+        },
+        "inputs": [
+          {
+            "__index__": 0,
+            "input": {
+              "__class__": "RuntimeValue"
+            }
+          },
+          {
+            "__index__": 1,
+            "input": {
+              "__class__": "RuntimeValue"
+            }
+          }
+        ]
+      },
+      "type": "tool"
+    },
+    "4": {
+      "id": 4,
+      "annotation": null,
+      "input_steps": {
+        "inputs_0|input": {
+          "source_step": 2,
+          "step_output": "output"
+        },
+        "inputs_1|input": {
+          "source_step": 3,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "__MERGE_COLLECTION__",
+      "tool_uuid": null,
+      "tool_version": "1.0.0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "advanced": {
+          "conflict": {
+            "__current_case__": 3,
+            "duplicate_options": "keep_first"
+          }
+        },
+        "inputs": [
+          {
+            "__index__": 0,
+            "input": {
+              "__class__": "RuntimeValue"
+            }
+          },
+          {
+            "__index__": 1,
+            "input": {
+              "__class__": "RuntimeValue"
+            }
+          }
+        ]
+      },
+      "type": "tool"
+    }
+  },
+  "importable": true,
+  "email_hash": "9d2e70a6cf98b4fcb8a78ef7a15a5d54",
+  "readme": null,
+  "help": null,
+  "slug": "integron-finder",
+  "source_metadata": null
+}

@@ -1,0 +1,174 @@
+{
+  "model_class": "BuildListCollectionTool",
+  "id": "__BUILD_LIST__",
+  "name": "Build list",
+  "version": "1.2.0",
+  "description": "from individual datasets or existing collections",
+  "labels": [],
+  "icon": null,
+  "edam_operations": [
+    "operation_2409"
+  ],
+  "edam_topics": [],
+  "hidden": "",
+  "is_workflow_compatible": true,
+  "xrefs": [],
+  "versions": [
+    "1.1.0",
+    "1.2.0"
+  ],
+  "hidden_versions": [],
+  "inputs": [
+    {
+      "model_class": "Repeat",
+      "name": "datasets",
+      "type": "repeat",
+      "title": "Dataset(s)",
+      "help": "If collections are provided they should contain the same number of items (see case 'c' in the figure below).",
+      "default": 0,
+      "min": 0,
+      "max": null,
+      "inputs": [
+        {
+          "model_class": "DataToolParameter",
+          "name": "input",
+          "argument": null,
+          "type": "data",
+          "label": "Input Dataset",
+          "help": "If you are using this tool to combine multiple collections, they need to contain the same number of datasets (see case 'c' in the figure below)",
+          "help_format": "html",
+          "refresh_on_change": true,
+          "optional": true,
+          "hidden": false,
+          "is_dynamic": false,
+          "value": null,
+          "extensions": [
+            "data"
+          ],
+          "edam": {
+            "edam_formats": [
+              "format_1915"
+            ],
+            "edam_data": [
+              "data_0006"
+            ]
+          },
+          "multiple": false,
+          "tag": null,
+          "options": {
+            "dce": [],
+            "ldda": [],
+            "hda": [],
+            "hdca": []
+          },
+          "pinned": {
+            "dce": [],
+            "ldda": [],
+            "hda": [],
+            "hdca": []
+          },
+          "options_meta": {}
+        },
+        {
+          "model_class": "Conditional",
+          "name": "id_cond",
+          "type": "conditional",
+          "cases": [
+            {
+              "model_class": "ConditionalWhen",
+              "value": "idx",
+              "inputs": []
+            },
+            {
+              "model_class": "ConditionalWhen",
+              "value": "identifier",
+              "inputs": []
+            },
+            {
+              "model_class": "ConditionalWhen",
+              "value": "manual",
+              "inputs": [
+                {
+                  "model_class": "TextToolParameter",
+                  "name": "identifier",
+                  "argument": null,
+                  "type": "text",
+                  "label": "Identifier",
+                  "help": "",
+                  "help_format": "html",
+                  "refresh_on_change": false,
+                  "optional": true,
+                  "hidden": false,
+                  "is_dynamic": false,
+                  "value": null,
+                  "area": false,
+                  "datalist": []
+                }
+              ]
+            }
+          ],
+          "test_param": {
+            "model_class": "SelectToolParameter",
+            "name": "id_select",
+            "argument": null,
+            "type": "select",
+            "label": "Label to use",
+            "help": "",
+            "help_format": "html",
+            "refresh_on_change": true,
+            "optional": false,
+            "hidden": false,
+            "is_dynamic": false,
+            "value": "idx",
+            "options": [
+              [
+                "Index",
+                "idx",
+                true
+              ],
+              [
+                "Identifier",
+                "identifier",
+                false
+              ],
+              [
+                "Manual",
+                "manual",
+                false
+              ]
+            ],
+            "display": null,
+            "multiple": false,
+            "textable": false
+          }
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "model_class": "ToolOutputCollection",
+      "name": "output",
+      "format": null,
+      "label": "${on_string} (as list)",
+      "hidden": false,
+      "output_type": "collection",
+      "default_format": "data",
+      "format_source": null,
+      "metadata_source": null,
+      "inherit_format": false,
+      "inherit_metadata": false,
+      "structure": {
+        "collection_type": "list",
+        "collection_type_source": null,
+        "collection_type_from_rules": null,
+        "structured_like": null,
+        "discover_datasets": []
+      }
+    }
+  ],
+  "has_parameters": true,
+  "panel_section_id": "collection_operations",
+  "panel_section_name": "Collection Operations",
+  "form_style": "regular"
+}

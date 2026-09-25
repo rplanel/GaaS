@@ -1,0 +1,317 @@
+{
+  "model_class": "Tool",
+  "id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_permutations/ccqtl_permutations/0.0.1_beta.2+galaxy1",
+  "name": "CCQTL: Run permutations",
+  "version": "0.0.1_beta.2+galaxy1",
+  "description": "to define significance thresholds",
+  "labels": [],
+  "edam_operations": [
+    "operation_3232"
+  ],
+  "edam_topics": [
+    "topic_0625",
+    "topic_0160",
+    "topic_3338"
+  ],
+  "hidden": "",
+  "is_workflow_compatible": true,
+  "xrefs": [
+    {
+      "value": "ccqtl",
+      "reftype": "bio.tools"
+    }
+  ],
+  "tool_shed_repository": {
+    "name": "ccqtl_permutations",
+    "owner": "rplanel",
+    "changeset_revision": "2df37db680ad",
+    "tool_shed": "toolshed.g2.bx.psu.edu"
+  },
+  "inputs": [
+    {
+      "model_class": "DataToolParameter",
+      "name": "crossdata",
+      "argument": "--crossdata",
+      "type": "data",
+      "label": "crossdata rds file",
+      "help": "The cross rds file output from make_inputs",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "clean_pr",
+      "argument": "--clean_pr",
+      "type": "data",
+      "label": "clean_pr ds file",
+      "help": "The cleaned genotype probabilities rds file output from make_inputs",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "kloco",
+      "argument": "--kloco",
+      "type": "data",
+      "label": "kloco rds file",
+      "help": "the LOCO kinship rds file output from make_inputs",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "IntegerToolParameter",
+      "name": "n_perm",
+      "argument": "--n_perm",
+      "type": "integer",
+      "label": "Number of permutations (recommended minimum: 100)",
+      "help": "",
+      "refresh_on_change": false,
+      "min": 2,
+      "max": 20000,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": "100",
+      "area": false,
+      "datalist": []
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "covar_modmat",
+      "argument": "--covar_modmat",
+      "type": "data",
+      "label": "covar_modmat object (rds)",
+      "help": "",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "TextToolParameter",
+      "name": "strat_covar",
+      "argument": "--strat_covar",
+      "type": "text",
+      "label": "List of covariates used to stratify permutations on.",
+      "help": "At most three covariates, all must be categorical and previously passed as covariate at the genome_scan step. Typical stratification covariate is sex.",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": "",
+      "area": false,
+      "datalist": []
+    }
+  ],
+  "outputs": [
+    {
+      "model_class": "ToolOutput",
+      "name": "operm_lmm",
+      "format": "rds",
+      "label": "${tool.name} on ${on_string}: operm_lmm.rds",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/Rdata/operm_lmm.rds",
+      "edam_format": "format_2333",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "covar_permstrata",
+      "format": "rds",
+      "label": "${tool.name} on ${on_string}: covar_permstrata.rds",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/Rdata/covar_permstrata.rds",
+      "edam_format": "format_2333",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "stratcovar_modmat",
+      "format": "rds",
+      "label": "${tool.name} on ${on_string}: stratcovar_modmat.rds",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/Rdata/stratcovar_modmat.rds",
+      "edam_format": "format_2333",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "nrep_rds",
+      "format": "rds",
+      "label": "${tool.name} on ${on_string}: nrep.rds",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/Rdata/nrep.rds",
+      "edam_format": "format_2333",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    }
+  ],
+  "panel_section_id": "phenotype_association",
+  "panel_section_name": "Phenotype Association",
+  "form_style": "regular"
+}

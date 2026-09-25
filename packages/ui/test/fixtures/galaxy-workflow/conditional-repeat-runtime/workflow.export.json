@@ -1,0 +1,259 @@
+{
+  "a_galaxy_workflow": "true",
+  "annotation": "",
+  "comments": [],
+  "format-version": "0.1",
+  "name": "Integron finder",
+  "report": {
+    "markdown": "\n# Workflow Execution Report\n\n## Workflow Inputs\n```galaxy\ninvocation_inputs()\n```\n\n## Workflow Outputs\n```galaxy\ninvocation_outputs()\n```\n\n## Workflow\n```galaxy\nworkflow_display()\n```\n"
+  },
+  "steps": {
+    "0": {
+      "annotation": "",
+      "content_id": null,
+      "errors": null,
+      "id": 0,
+      "input_connections": {},
+      "inputs": [
+        {
+          "description": "",
+          "name": "genoma"
+        }
+      ],
+      "label": "genoma",
+      "name": "Input dataset",
+      "outputs": [],
+      "position": {
+        "left": 0,
+        "top": 61.145918186877196
+      },
+      "tool_id": null,
+      "tool_state": "{\"optional\": false, \"tag\": null}",
+      "tool_version": null,
+      "type": "data_input",
+      "uuid": "14edf856-f439-446a-8013-2b6a086e77d7",
+      "when": null,
+      "workflow_outputs": []
+    },
+    "1": {
+      "annotation": "",
+      "content_id": "toolshed.g2.bx.psu.edu/repos/iuc/integron_finder/integron_finder/2.0.5+galaxy1",
+      "errors": null,
+      "id": 1,
+      "input_connections": {
+        "sequence": {
+          "id": 0,
+          "output_name": "output"
+        }
+      },
+      "inputs": [
+        {
+          "description": "runtime parameter for tool Integron Finder",
+          "name": "topology_file"
+        }
+      ],
+      "label": null,
+      "name": "Integron Finder",
+      "outputs": [
+        {
+          "name": "genbank_out",
+          "type": "input"
+        },
+        {
+          "name": "pdf_out",
+          "type": "input"
+        },
+        {
+          "name": "integron_log",
+          "type": "txt"
+        },
+        {
+          "name": "integrons_table",
+          "type": "tsv"
+        },
+        {
+          "name": "summary",
+          "type": "tsv"
+        }
+      ],
+      "position": {
+        "left": 303.6480899695307,
+        "top": 29.31847067375881
+      },
+      "post_job_actions": {
+        "HideDatasetActiongenbank_out": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "genbank_out"
+        },
+        "HideDatasetActionintegron_log": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "integron_log"
+        },
+        "HideDatasetActionintegrons_table": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "integrons_table"
+        },
+        "HideDatasetActionpdf_out": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "pdf_out"
+        },
+        "HideDatasetActionsummary": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "summary"
+        }
+      },
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/integron_finder/integron_finder/2.0.5+galaxy1",
+      "tool_shed_repository": {
+        "changeset_revision": "5429646e486d",
+        "name": "integron_finder",
+        "owner": "iuc",
+        "tool_shed": "toolshed.g2.bx.psu.edu"
+      },
+      "tool_state": "{\"gbk\": true, \"local_max\": true, \"no_logfile\": false, \"pdf\": true, \"promoter_attI\": true, \"sequence\": {\"__class__\": \"ConnectedValue\"}, \"settings\": {\"attc_settings\": {\"dist_thresh\": \"4000\", \"calin_threshold\": \"2\", \"max_attc_size\": \"200\", \"min_attc_size\": \"40\", \"keep_palindromes\": false, \"covar_matrix\": {\"__class__\": \"RuntimeValue\"}}, \"protein_settings\": {\"no_proteins\": false, \"union_integrases\": false, \"func_annot\": false}}, \"topology_file\": {\"__class__\": \"RuntimeValue\"}, \"type_replicon\": null, \"__page__\": 0, \"__rerun_remap_job_id__\": null}",
+      "tool_uuid": null,
+      "tool_version": "2.0.5+galaxy1",
+      "type": "tool",
+      "uuid": "166759ac-ff9c-4ffc-a816-b6e4d72a1798",
+      "when": null,
+      "workflow_outputs": []
+    },
+    "2": {
+      "annotation": "",
+      "content_id": "__BUILD_LIST__",
+      "errors": null,
+      "id": 2,
+      "input_connections": {
+        "datasets_0|input": {
+          "id": 1,
+          "output_name": "integron_log"
+        },
+        "datasets_1|input": {
+          "id": 1,
+          "output_name": "integrons_table"
+        },
+        "datasets_2|input": {
+          "id": 1,
+          "output_name": "summary"
+        }
+      },
+      "inputs": [],
+      "label": null,
+      "name": "Build list",
+      "outputs": [
+        {
+          "name": "output",
+          "type": "input"
+        }
+      ],
+      "position": {
+        "left": 1041.9157707616687,
+        "top": 0
+      },
+      "post_job_actions": {
+        "HideDatasetActionoutput": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "output"
+        }
+      },
+      "tool_id": "__BUILD_LIST__",
+      "tool_state": "{\"datasets\": [{\"__index__\": 0, \"input\": {\"__class__\": \"ConnectedValue\"}, \"id_cond\": {\"id_select\": \"identifier\", \"__current_case__\": 1}}, {\"__index__\": 1, \"input\": {\"__class__\": \"ConnectedValue\"}, \"id_cond\": {\"id_select\": \"identifier\", \"__current_case__\": 1}}, {\"__index__\": 2, \"input\": {\"__class__\": \"ConnectedValue\"}, \"id_cond\": {\"id_select\": \"identifier\", \"__current_case__\": 1}}, {\"__index__\": 3, \"input\": {\"__class__\": \"ConnectedValue\"}, \"id_cond\": {\"id_select\": \"identifier\", \"__current_case__\": 1}}, {\"__index__\": 4, \"input\": {\"__class__\": \"ConnectedValue\"}, \"id_cond\": {\"id_select\": \"idx\", \"__current_case__\": 0}}], \"__page__\": 0, \"__rerun_remap_job_id__\": null}",
+      "tool_uuid": null,
+      "tool_version": "1.2.0",
+      "type": "tool",
+      "uuid": "b01a759f-5a28-48a6-8b30-1c9a4b516a86",
+      "when": null,
+      "workflow_outputs": []
+    },
+    "3": {
+      "annotation": "",
+      "content_id": "__MERGE_COLLECTION__",
+      "errors": null,
+      "id": 3,
+      "input_connections": {
+        "inputs_0|input": {
+          "id": 1,
+          "output_name": "genbank_out"
+        },
+        "inputs_1|input": {
+          "id": 1,
+          "output_name": "pdf_out"
+        }
+      },
+      "inputs": [],
+      "label": null,
+      "name": "Merge collections",
+      "outputs": [
+        {
+          "name": "output",
+          "type": "input"
+        }
+      ],
+      "position": {
+        "left": 1045.6555483946577,
+        "top": 221.30435214191675
+      },
+      "post_job_actions": {
+        "HideDatasetActionoutput": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "output"
+        }
+      },
+      "tool_id": "__MERGE_COLLECTION__",
+      "tool_state": "{\"advanced\": {\"conflict\": {\"duplicate_options\": \"keep_first\", \"__current_case__\": 3}}, \"inputs\": [{\"__index__\": 0, \"input\": {\"__class__\": \"RuntimeValue\"}}, {\"__index__\": 1, \"input\": {\"__class__\": \"RuntimeValue\"}}], \"__page__\": 0, \"__rerun_remap_job_id__\": null}",
+      "tool_uuid": null,
+      "tool_version": "1.0.0",
+      "type": "tool",
+      "uuid": "8ddeb635-89de-458b-af03-d236c7d1e440",
+      "when": null,
+      "workflow_outputs": []
+    },
+    "4": {
+      "annotation": "",
+      "content_id": "__MERGE_COLLECTION__",
+      "errors": null,
+      "id": 4,
+      "input_connections": {
+        "inputs_0|input": {
+          "id": 2,
+          "output_name": "output"
+        },
+        "inputs_1|input": {
+          "id": 3,
+          "output_name": "output"
+        }
+      },
+      "inputs": [],
+      "label": null,
+      "name": "Merge collections",
+      "outputs": [
+        {
+          "name": "output",
+          "type": "input"
+        }
+      ],
+      "position": {
+        "left": 1339.7283503189683,
+        "top": 106.54890689998865
+      },
+      "post_job_actions": {},
+      "tool_id": "__MERGE_COLLECTION__",
+      "tool_state": "{\"advanced\": {\"conflict\": {\"duplicate_options\": \"keep_first\", \"__current_case__\": 3}}, \"inputs\": [{\"__index__\": 0, \"input\": {\"__class__\": \"RuntimeValue\"}}, {\"__index__\": 1, \"input\": {\"__class__\": \"RuntimeValue\"}}], \"__page__\": 0, \"__rerun_remap_job_id__\": null}",
+      "tool_uuid": null,
+      "tool_version": "1.0.0",
+      "type": "tool",
+      "uuid": "e8d5f3d9-00d4-4980-9a18-e659833e74f8",
+      "when": null,
+      "workflow_outputs": []
+    }
+  },
+  "tags": [],
+  "uuid": "fe679b21-ab4b-4b35-9f7c-12cccd4e3fc7",
+  "version": 1
+}

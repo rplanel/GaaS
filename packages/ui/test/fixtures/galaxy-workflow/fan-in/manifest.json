@@ -1,0 +1,183 @@
+{
+  "recordedAt": "2026-09-25",
+  "instance": "usegalaxy.eu",
+  "toolsRecorded": false,
+  "galaxyVersion": "26.1.2.dev0",
+  "workflowId": "5a30e01ff719f396",
+  "workflowName": "wastewater-pathogen-profiling",
+  "revision": 34,
+  "command": "node scripts/record-workflow-fixtures.mts 5a30e01ff719f396 --name fan-in",
+  "datasetOptionsRedacted": true,
+  "shapes": {
+    "live": {
+      "0": [],
+      "1": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "2": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "3": [
+        "ConnectedValue"
+      ],
+      "4": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "5": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "6": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "7": [
+        "ConnectedValue"
+      ],
+      "8": [
+        "ConnectedValue"
+      ],
+      "9": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "10": [
+        "ConnectedValue"
+      ],
+      "11": [
+        "ConnectedValue"
+      ],
+      "12": [
+        "ConnectedValue"
+      ],
+      "13": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "14": [
+        "ConnectedValue"
+      ],
+      "15": [
+        "ConnectedValue"
+      ],
+      "16": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "17": [
+        "ConnectedValue"
+      ],
+      "18": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "19": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "20": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "21": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "22": [
+        "ConnectedValue"
+      ]
+    },
+    "export": {
+      "0": [],
+      "1": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "2": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "3": [
+        "ConnectedValue"
+      ],
+      "4": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "5": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "6": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "7": [
+        "ConnectedValue"
+      ],
+      "8": [
+        "ConnectedValue"
+      ],
+      "9": [
+        "ConnectedValue",
+        "conditional",
+        "fan-in"
+      ],
+      "10": [
+        "ConnectedValue"
+      ],
+      "11": [
+        "ConnectedValue"
+      ],
+      "12": [
+        "ConnectedValue"
+      ],
+      "13": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "14": [
+        "ConnectedValue"
+      ],
+      "15": [
+        "ConnectedValue"
+      ],
+      "16": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "17": [
+        "ConnectedValue"
+      ],
+      "18": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "19": [
+        "ConnectedValue",
+        "conditional",
+        "fan-in"
+      ],
+      "20": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "21": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "22": [
+        "ConnectedValue"
+      ]
+    }
+  },
+  "missingShapes": [
+    "data_input",
+    "repeat",
+    "RuntimeValue"
+  ],
+  "tools": {}
+}
