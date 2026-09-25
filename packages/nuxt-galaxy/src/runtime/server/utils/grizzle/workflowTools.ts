@@ -153,17 +153,34 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * A tool definition with `options.hda` and `options.hdca` removed from every
- * data parameter, at any depth.
+ * The parameter types whose `options` Galaxy fills from a history.
  *
- * They are not part of the tool. `io_details=true` fills them from whichever
- * history the API account touched last, so they are a per-user, per-request
- * snapshot of somebody else's datasets; nothing on the client reads them, and
- * caching them would pin one account's history into every later answer.
+ * A select parameter also has `options`, and those are the tool's own
+ * choices — an array, and the whole point of the parameter — so the rule is
+ * scoped by type rather than by key name.
+ */
+const HISTORY_SOURCED_OPTIONS: ReadonlySet<string> = new Set(['data', 'data_collection'])
+
+/**
+ * A tool definition with the `options` of every data and data collection
+ * parameter emptied, at any depth.
+ *
+ * They are not part of the tool. `io_details=true` — which is also what
+ * makes Galaxy send `inputs` at all, so it cannot simply be dropped — fills
+ * them from whichever history the API account touched last, so they are a
+ * per-user, per-request snapshot of somebody else's datasets; nothing on the
+ * client reads them, and caching them would pin one account's history into
+ * every later answer.
+ *
+ * The whole object goes rather than named keys. Real payloads carry `hda`,
+ * `hdca`, `dce` and `ldda` under one parameter, all four drawn from the same
+ * snapshot, and a list of keys is a list that the next Galaxy release can
+ * add to without anyone noticing.
  *
  * The walk is structural rather than typed because the nesting is: a data
- * parameter can sit inside a conditional's case, a repeat block or a section,
- * and only the first of those three is in `GalaxyToolParameters` at all.
+ * parameter can sit inside a conditional's case, a repeat block or a
+ * section, and only the first of those three is in `GalaxyToolParameters` at
+ * all.
  */
 export function withoutDatasetOptions<T>(node: T): T {
   if (Array.isArray(node)) {
@@ -174,9 +191,8 @@ export function withoutDatasetOptions<T>(node: T): T {
   }
   const stripped: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(node)) {
-    if (key === 'options' && node.type === 'data' && isPlainObject(value)) {
-      const { hda: _hda, hdca: _hdca, ...rest } = value
-      stripped[key] = rest
+    if (key === 'options' && typeof node.type === 'string' && HISTORY_SOURCED_OPTIONS.has(node.type) && isPlainObject(value)) {
+      stripped[key] = {}
       continue
     }
     stripped[key] = withoutDatasetOptions(value)
@@ -201,7 +217,11 @@ export function withoutDatasetOptions<T>(node: T): T {
  *
  * `cache` is read before Galaxy and filled after it, keyed by the version
  * Galaxy **served**; see `toolCacheKey`. A failure is never written, so a
- * retry refetches only what failed.
+ * retry refetches only what failed — and neither is a mismatch written under
+ * the version asked for, so a tool Galaxy answers at the wrong version is
+ * looked up again on the next request rather than being answered for ever
+ * from a poisoned key. That is the cost of having no TTL, and it is paid by
+ * exactly the tools that are already broken.
  */
 export function resolvePinnedToolsEffect(
   pinned: readonly PinnedTool[],
@@ -210,21 +230,29 @@ export function resolvePinnedToolsEffect(
 ): Effect.Effect<ResolvedTools, never, GalaxyFetch> {
   const resolveOne = (
     tool: PinnedTool,
-  ): Effect.Effect<{ definition?: GalaxyTool, unavailable?: UnavailableTool }, never, GalaxyFetch> =>
+  ): Effect.Effect<{ key: string, definition?: GalaxyTool, unavailable?: UnavailableTool }, never, GalaxyFetch> =>
     Effect.gen(function* () {
+      const key = toolKey(tool.toolId, tool.toolVersion)
       const cached = yield* cache.tool(galaxyUrl, tool.toolId, tool.toolVersion)
-      if (cached) {
-        return { definition: cached }
+      // The key promises the value is that version, and only the write below
+      // ever keeps that promise. A store shared with an older build, another
+      // application, or half a rollout could hold anything, and serving a
+      // definition at the wrong version is the one thing this endpoint must
+      // not do — so the promise is checked rather than trusted, and an entry
+      // that breaks it is treated as a miss.
+      if (cached?.version === tool.toolVersion) {
+        return { key, definition: cached }
       }
       const answer = yield* bt.getToolEffect(tool.toolId, tool.toolVersion)
       const served = withoutDatasetOptions(answer)
       yield* cache.writeTool(galaxyUrl, tool.toolId, served.version, served)
       if (served.version !== tool.toolVersion) {
-        return { unavailable: { ...tool, reason: 'version_mismatch' as const, servedVersion: served.version } }
+        return { key, unavailable: { ...tool, reason: 'version_mismatch' as const, servedVersion: served.version } }
       }
-      return { definition: served }
+      return { key, definition: served }
     }).pipe(
       Effect.catchAll(error => Effect.succeed({
+        key: toolKey(tool.toolId, tool.toolVersion),
         unavailable: {
           ...tool,
           reason: (holdsNoVersion(error) ? 'not_installed' : 'unreachable') as UnavailableToolReason,
@@ -236,10 +264,9 @@ export function resolvePinnedToolsEffect(
     Effect.map((answers) => {
       const tools: Record<string, GalaxyTool> = {}
       const unavailable: UnavailableTool[] = []
-      for (const [index, answer] of answers.entries()) {
+      for (const answer of answers) {
         if (answer.definition) {
-          const asked = pinned[index]!
-          tools[toolKey(asked.toolId, asked.toolVersion)] = answer.definition
+          tools[answer.key] = answer.definition
         }
         else if (answer.unavailable) {
           unavailable.push(answer.unavailable)

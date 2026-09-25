@@ -159,7 +159,13 @@ describe('missingToolsEffect', () => {
  * answers means, what is cached and under which key, and what never fails.
  */
 
-/** A tool definition with one data parameter, as `io_details=true` fills it. */
+/**
+ * A tool definition as `io_details=true` fills it, with every shape the
+ * recorded fixtures carry: a data parameter whose `options` holds all four
+ * of `hda`, `hdca`, `dce` and `ldda`, a data *collection* parameter with
+ * options of its own, a select parameter whose `options` are the tool's own
+ * choices, and a data parameter nested inside a conditional's case.
+ */
 function installedWithDatasetOptions(toolId: string, version: string) {
   return {
     ...installed(toolId, version),
@@ -168,9 +174,24 @@ function installedWithDatasetOptions(toolId: string, version: string) {
         name: 'input',
         type: 'data',
         options: {
-          hda: [{ id: 'hda-1', hid: 3, name: 'somebody else\'s dataset', src: 'hda', keep: false }],
-          hdca: [{ id: 'hdca-1', hid: 4, name: 'somebody else\'s collection', src: 'hdca', keep: false }],
+          hda: [{ id: 'hda-1', hid: 3, name: 'a dataset of the account\'s', src: 'hda', keep: false }],
+          hdca: [{ id: 'hdca-1', hid: 4, name: 'a collection of the account\'s', src: 'hdca', keep: false }],
+          dce: [{ id: 'dce-1', name: 'an element of one of them' }],
+          ldda: [{ id: 'ldda-1', name: 'a library dataset' }],
         },
+      },
+      {
+        name: 'collection',
+        type: 'data_collection',
+        options: {
+          hdca: [{ id: 'hdca-2', hid: 5, name: 'a collection of the account\'s' }],
+          dce: [{ id: 'dce-2' }],
+        },
+      },
+      {
+        name: 'mode',
+        type: 'select',
+        options: [['Fast', 'fast', true], ['Thorough', 'thorough', false]],
       },
       {
         name: 'advanced',
@@ -273,23 +294,47 @@ describe('resolvePinnedToolsEffect', () => {
     expect(galaxy.calls).toHaveLength(2)
   })
 
-  it('strips the history-dependent dataset options from every data parameter, at any depth', async () => {
-    // `io_details=true` fills `options.hda`/`options.hdca` from whichever
-    // history the API account touched last. They are a per-user snapshot of
-    // somebody else's datasets, nothing on the client reads them, and
-    // caching them would pin one account's history into every later answer.
-    const galaxy = galaxyHolding(toolId => installedWithDatasetOptions(toolId, '1.2.3+galaxy0'))
+  describe('the history-dependent options of a data parameter', () => {
+    // `io_details=true` fills them from whichever history the API account
+    // touched last. They are a per-user snapshot of somebody else's
+    // datasets, nothing on the client reads them, and caching them — this
+    // cache never expires — would pin one account's history into every
+    // later answer. `io_details` is also what makes Galaxy send `inputs` at
+    // all, so it cannot simply be left off.
+    async function servedDefinition() {
+      const galaxy = galaxyHolding(toolId => installedWithDatasetOptions(toolId, '1.2.3+galaxy0'))
+      const resolved = await resolvePinnedToolsEffect(
+        [{ toolId: FOO, toolVersion: '1.2.3+galaxy0' }],
+        noGalaxyCache,
+        GALAXY,
+      ).pipe(Effect.provide(galaxy.layer), Effect.runPromise)
+      return resolved.tools[`${FOO}@1.2.3+galaxy0`]!
+    }
 
-    const resolved = await resolvePinnedToolsEffect(
-      [{ toolId: FOO, toolVersion: '1.2.3+galaxy0' }],
-      noGalaxyCache,
-      GALAXY,
-    ).pipe(Effect.provide(galaxy.layer), Effect.runPromise)
+    it('go entirely, not key by key: a real payload carries four of them', async () => {
+      // `hda`, `hdca`, `dce` and `ldda` all come from the same snapshot, and
+      // a list of key names is a list the next Galaxy release can add to
+      // without anyone noticing.
+      expect((await servedDefinition()).inputs[0]).toEqual({ name: 'input', type: 'data', options: {} })
+    })
 
-    const served = resolved.tools[`${FOO}@1.2.3+galaxy0`]!
-    expect(served.inputs[0]).toEqual({ name: 'input', type: 'data', options: {} })
-    const nested = (served.inputs[1] as unknown as { cases: { inputs: unknown[] }[] }).cases[0]!.inputs[0]
-    expect(nested).toEqual({ name: 'nested', type: 'data', options: {} })
+    it('go from a data collection parameter too, which has its own', async () => {
+      expect((await servedDefinition()).inputs[1]).toEqual({ name: 'collection', type: 'data_collection', options: {} })
+    })
+
+    it('go at any depth, a conditional\'s case included', async () => {
+      const served = await servedDefinition()
+      const nested = (served.inputs[3] as unknown as { cases: { inputs: unknown[] }[] }).cases[0]!.inputs[0]
+      expect(nested).toEqual({ name: 'nested', type: 'data', options: {} })
+    })
+
+    it('leave a select parameter\'s options alone, which are the tool\'s own choices', async () => {
+      expect((await servedDefinition()).inputs[2]).toEqual({
+        name: 'mode',
+        type: 'select',
+        options: [['Fast', 'fast', true], ['Thorough', 'thorough', false]],
+      })
+    })
   })
 
   it('caches a definition under the version Galaxy served, never the version asked for', async () => {
@@ -336,6 +381,25 @@ describe('resolvePinnedToolsEffect', () => {
     )
 
     expect([...cache.entries.keys()]).toEqual([toolCacheKey(GALAXY, FOO, '1.2.3+galaxy0')])
+  })
+
+  it('treats a cached definition at the wrong version as a miss rather than serving it', async () => {
+    // The key promises the value is that version, and only this module's
+    // own write keeps that promise. A store shared with an older build or
+    // another application could hold anything, and serving a definition at
+    // the wrong version is the one thing this endpoint must not do.
+    const cache = recordingCache()
+    cache.entries.set(toolCacheKey(GALAXY, FOO, '1.2.3+galaxy0'), installed(FOO, '9.9.9') as unknown as GalaxyTool)
+    const galaxy = galaxyHolding()
+
+    const resolved = await resolvePinnedToolsEffect(
+      [{ toolId: FOO, toolVersion: '1.2.3+galaxy0' }],
+      cache,
+      GALAXY,
+    ).pipe(Effect.provide(galaxy.layer), Effect.runPromise)
+
+    expect(galaxy.calls, 'Galaxy was asked rather than the bad entry served').toHaveLength(1)
+    expect(resolved.tools[`${FOO}@1.2.3+galaxy0`]).toMatchObject({ version: '1.2.3+galaxy0' })
   })
 
   it('asks Galaxy nothing, and answers empty, for a revision that pins no tool', async () => {

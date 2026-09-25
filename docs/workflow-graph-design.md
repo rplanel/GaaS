@@ -144,10 +144,11 @@ be published" rather than "describe this workflow so it can be invoked".
 revision is a mandatory path segment, which is what makes Q15's rule
 structural rather than conditional: the unpinned read must not be cached, so
 it is given no route and an unpinned caller has no way to ask for it. A
-revision that is not a non-negative integer is refused with 400 before Galaxy
-is asked; a Galaxy that holds no such workflow or revision is a 404, and every
-other way the workflow read can fail is a logged 500, as for the sibling
-proxies. Galaxy being down is 503.
+revision that is not a non-negative integer of at most nine digits is refused
+with 400 before Galaxy is asked; a 400 or a 404 from Galaxy is a 404 here,
+since Galaxy answers 400 for a revision index past the end of the history, as
+`versionState` already knew; and every other way the workflow read can fail is
+a logged 500, as for the sibling proxies. Galaxy answering 503 is 503.
 
 The answer is `{ steps, inputs, tools, unavailable }` with no envelope —
 `steps` and `inputs` are the live payload's own, verbatim, since #88
@@ -160,20 +161,28 @@ that failed is never merely absent (#96). Its `reason` is one of
 which also names the `servedVersion`) or `unreachable` (anything else Galaxy
 did). The first two would refuse the submission; the third would not.
 
-`options.hda` / `options.hdca` are stripped from every data parameter at any
+The `options` of every data and data collection parameter are emptied at any
 depth, before the definition is cached: `io_details=true` fills them from
 whichever history the API account touched last, so they are a per-user
-snapshot that nothing on the client reads and that no cache should hold.
+snapshot that nothing on the client reads and that no cache should hold. The
+whole object goes rather than the two keys the ticket named — a real payload
+carries `hda`, `hdca`, `dce` and `ldda` under one parameter, all from the same
+snapshot, and a list of key names is one the next Galaxy release can add to
+unnoticed. `io_details` itself cannot be dropped: it is also what makes Galaxy
+send `inputs` at all.
 
 The cache is the Nitro storage mount `galaxy-cache`, mounted by the module on
 the memory driver and configurable through the `galaxy.cache` module option —
 `storage` for the mount's own options (`{ driver: 'redis', … }` for a
 deployment with several replicas) and `enabled` to turn the whole thing off,
-which is the only escape hatch there is. Keys are percent-encoded part by
-part, because unstorage normalises a key before it reaches the driver — it
-truncates at the first `?` and turns `/` into `:` — and a Galaxy URL and a
-toolshed guid carry both separators. Nothing is written for a tool that
-failed, so a retry refetches only what failed.
+which is the only escape hatch there is. Keys carry their family (`tool|`,
+`workflow|`) so that a tool and a workflow revision cannot name one entry, and
+are percent-encoded part by part, because unstorage normalises a key before it
+reaches the driver — it truncates at the first `?` and turns `/` into `:` —
+and a Galaxy URL and a toolshed guid carry both separators. Nothing is written
+for a tool that failed, so a retry refetches only what failed. A hit is
+checked against the version its key promises before it is served, since a
+store shared with another build is not this module's to trust.
 
 Q22's fold is `resolvePinnedToolsEffect`, the sibling of `missingToolsEffect`
 in the same module: it takes the pinned tools rather than an export, so the

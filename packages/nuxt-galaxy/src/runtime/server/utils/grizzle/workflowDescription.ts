@@ -6,8 +6,7 @@ import { Data, Effect } from 'effect'
 import { pinnedToolsOfSteps, resolvePinnedToolsEffect } from './workflowTools'
 
 /**
- * Galaxy holds no such workflow, or no such revision of it: a 404 on the
- * read of the workflow itself.
+ * Galaxy holds no such workflow, or no such revision of it.
  *
  * Told apart from every other way that read can fail because it is the one
  * the caller can act on. Galaxy answering 500 for a workflow it does hold is
@@ -16,6 +15,20 @@ import { pinnedToolsOfSteps, resolvePinnedToolsEffect } from './workflowTools'
 export class WorkflowRevisionNotFound extends Data.TaggedError('WorkflowRevisionNotFound')<{
   readonly message: string
 }> {}
+
+/**
+ * A 4xx from Galaxy on this read is Galaxy saying "no such thing": 404 for
+ * an id it does not know, 400 for one it cannot decode **or a revision index
+ * past the end of the history** — "Version does not exist" is a
+ * `MessageException`, which Galaxy answers 400, so reading 404 alone would
+ * report the commonest way to name a revision that is not there as a fault
+ * of this server's. The same rule `versionState` reads, and for the same
+ * reason. Anything else (a 503, a 500, a network error) says nothing about
+ * the revision.
+ */
+function galaxyHasNoSuchThing(error: WorkflowError): boolean {
+  return error.statusCode === 400 || error.statusCode === 404
+}
 
 /**
  * Everything a client needs to draw one revision of one workflow and offer
@@ -60,12 +73,9 @@ export function workflowDescriptionEffect(
   return Effect.gen(function* () {
     const cached = yield* cache.workflow(galaxyUrl, workflowId, revision)
     const workflow = cached ?? (yield* bt.getWorkflowEffect(workflowId, revision).pipe(
-      Effect.catchIf(
-        error => error.statusCode === 404,
-        () => Effect.fail(new WorkflowRevisionNotFound({
-          message: `Galaxy holds no revision ${revision} of workflow ${workflowId}`,
-        })),
-      ),
+      Effect.catchIf(galaxyHasNoSuchThing, () => Effect.fail(new WorkflowRevisionNotFound({
+        message: `Galaxy holds no revision ${revision} of workflow ${workflowId}`,
+      }))),
     ))
     if (!cached) {
       yield* cache.writeWorkflow(galaxyUrl, workflowId, revision, workflow)

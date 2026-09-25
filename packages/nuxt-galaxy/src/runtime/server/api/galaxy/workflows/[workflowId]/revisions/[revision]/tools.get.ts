@@ -1,35 +1,14 @@
-import type { H3Event } from 'h3'
 import type { RevisionToolCheck } from '../../../../../../utils/grizzle/workflowTools'
 import { useRuntimeConfig } from '#imports'
 import * as bt from 'blendtype'
 import { Cause, Effect, Option } from 'effect'
-import { createError, defineEventHandler, getRouterParam } from 'h3'
+import { defineEventHandler, getRouterParam } from 'h3'
 import { Drizzle } from '../../../../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../../../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../../../../../utils/galaxy'
 import { ServerSupabaseClaims, ServerSupabaseClient } from '../../../../../../utils/grizzle/supabase'
 import { missingToolsEffect, pinnedTools } from '../../../../../../utils/grizzle/workflowTools'
-
-/**
- * The revision the caller asks about, by the 0-based index Galaxy lists it
- * under. Galaxy's `get_internal_version` indexes a list, so only a
- * non-negative integer can name a revision; anything else, a word, a
- * negative, a fraction, an empty middle segment, is refused here rather than
- * handed to Galaxy to answer for, as the by-id proxy refuses its `version`.
- * The publish dialog only ever sends a revision Galaxy listed, so a caller
- * reaching this has a bug worth being told about. Thrown outside the effect
- * on purpose: h3 reads a status off a throw in ordinary async code only.
- */
-function requestedRevision(event: H3Event): number {
-  const revision = getRouterParam(event, 'revision') ?? ''
-  if (!/^\d+$/.test(revision)) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: '`revision` must be a non-negative integer',
-    })
-  }
-  return Number(revision)
-}
+import { requestedRevisionParam } from '../../../../../../utils/revisionParam'
 
 /**
  * The tool check of one revision of a stored workflow (ADR 0004, #75).
@@ -48,7 +27,7 @@ export default defineEventHandler(async (event) => {
 
   // read before anything is asked of Galaxy, so a revision nobody can use
   // costs a round trip and nothing more
-  const revision = requestedRevision(event)
+  const revision = requestedRevisionParam(event)
   const workflowId = getRouterParam(event, 'workflowId')
   if (workflowId) {
     const program = Effect.gen(function* () {

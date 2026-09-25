@@ -55,6 +55,14 @@ describe('cache keys', () => {
     expect(workflowCacheKey(GALAXY, 'wf-1', 3)).not.toBe(workflowCacheKey(GALAXY, 'wf-2', 3))
   })
 
+  it('cannot name a tool and a workflow revision with one key', () => {
+    // A tool called `wf-7` at version `3`, and revision 3 of workflow
+    // `wf-7`: without a family prefix these are the same string, and a
+    // workflow read answered with a tool describes a revision with no steps
+    // — cached for ever, since nothing here expires.
+    expect(toolCacheKey(GALAXY, 'wf-7', '3')).not.toBe(workflowCacheKey(GALAXY, 'wf-7', 3))
+  })
+
   it('survives unstorage normalising the key', () => {
     // `normalizeKey` truncates at the first `?`, turns `/` into `:` and
     // collapses runs of `:`. A Galaxy URL and a toolshed guid carry both

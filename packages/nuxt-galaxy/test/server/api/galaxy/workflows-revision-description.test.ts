@@ -121,6 +121,10 @@ describe('get /api/galaxy/workflows/:workflowId/revisions/:revision/description'
     ['a negative index', '-1'],
     ['a fraction', '1.5'],
     ['an empty segment', ''],
+    // `Number('10000000000000000001')` is 1e19: not an integer Galaxy can
+    // index a list with, and two such requests one apart would build the
+    // same cache key and share one permanent entry.
+    ['an index past what a number holds exactly', '10000000000000000001'],
   ])('refuses %s as a revision with 400 before asking Galaxy', async (_label, revision) => {
     mocks.params = { workflowId: 'galaxy-workflow-1', revision }
 

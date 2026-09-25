@@ -43,11 +43,17 @@ function part(value: string): string {
  * them apart.
  */
 export function toolCacheKey(galaxyUrl: string, toolId: string, servedVersion: string): string {
-  return `${part(galaxyUrl)}|${part(toolId)}@${part(servedVersion)}`
+  return `tool|${part(galaxyUrl)}|${part(toolId)}@${part(servedVersion)}`
 }
 
 /**
  * Where one revision of one workflow is cached (Q15).
+ *
+ * The `workflow|` prefix is what keeps the two families apart: without it a
+ * tool called `wf-7` at version `3` and revision 3 of workflow `wf-7` name
+ * the same entry, and a workflow read would be answered with a tool — whose
+ * `steps` is `undefined`, so it would describe a revision with no steps and
+ * cache that for ever.
  *
  * A pinned revision is immutable, which is what makes caching it for ever
  * correct. There is deliberately no key for the unpinned read: it answers
@@ -55,7 +61,7 @@ export function toolCacheKey(galaxyUrl: string, toolId: string, servedVersion: s
  * in the editor, and the endpoint gives it no route.
  */
 export function workflowCacheKey(galaxyUrl: string, workflowId: string, revision: number): string {
-  return `${part(galaxyUrl)}|${part(workflowId)}@${revision}`
+  return `workflow|${part(galaxyUrl)}|${part(workflowId)}@${revision}`
 }
 
 /**

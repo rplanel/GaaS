@@ -128,8 +128,17 @@ describe('workflowDescriptionEffect', () => {
     expect(Object.keys(description.tools)).toEqual([`${FOO}@1.2.3+galaxy0`])
   })
 
-  it('answers WorkflowRevisionNotFound when Galaxy holds no such workflow or revision', async () => {
-    const galaxy = createRecordingGalaxyLayer(() => galaxyAnswers(404))
+  // A 4xx is Galaxy saying "no such thing": 404 for an id it does not know,
+  // and 400 for a revision index past the end of the history — "Version does
+  // not exist" is a `MessageException`, which Galaxy answers 400. Reading
+  // 404 alone would report the commonest way to name a revision that is not
+  // there as a fault of this server's, which is the mistake `versionState`
+  // already avoids.
+  it.each([
+    ['an id it does not know', 404],
+    ['a revision index past the end of the history', 400],
+  ])('answers WorkflowRevisionNotFound for %s', async (_label, statusCode) => {
+    const galaxy = createRecordingGalaxyLayer(() => galaxyAnswers(statusCode))
 
     const exit = await workflowDescriptionEffect('galaxy-workflow-1', 3, mapCache().cache, GALAXY).pipe(
       Effect.provide(galaxy.layer),
