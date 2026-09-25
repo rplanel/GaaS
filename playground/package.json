@@ -11,8 +11,12 @@
     "cleandep": "rm -rf node_modules && rm -rf .nuxt && rm -rf .output && rm -rf .data"
   },
   "dependencies": {
+    "@dagrejs/dagre": "catalog:",
     "@nuxt/content": "catalog:nuxt",
     "@nuxt/ui": "catalog:nuxt",
+    "@vue-flow/background": "catalog:",
+    "@vue-flow/controls": "catalog:",
+    "@vue-flow/core": "catalog:",
     "@vueuse/core": "catalog:",
     "nuxt": "catalog:nuxt",
     "nuxt-studio": "catalog:nuxt",

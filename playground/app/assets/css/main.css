@@ -1,4 +1,10 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
+/* Vue Flow ships its layout in CSS, so the canvas on /test/workflow-graph is
+   unusable without these; the theme file is what draws the edges. */
+@import '@vue-flow/core/dist/style.css';
+@import '@vue-flow/core/dist/theme-default.css';
+@import '@vue-flow/controls/dist/style.css';
+
 @source "../../../../node_modules/@gaas/ui";
