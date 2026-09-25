@@ -36,6 +36,8 @@ let describedRevision: number | null = null
 let descriptionsServed = 0
 /** The tools the description reports as unusable, and why. */
 let unavailableTools: UnavailableTool[] = []
+/** The status the description endpoint refuses with, or `null` to answer it. */
+let describeWith: number | null = null
 
 /** The inputs the workflow declares, as Galaxy describes them. */
 let workflowInputs: Record<string, WorkflowInput> = {}
@@ -211,9 +213,13 @@ mockNuxtImport('useSupabaseClient', () => () => supabase)
  */
 registerEndpoint(
   `/api/galaxy/workflows/${GALAXY_WORKFLOW_ID}/revisions/${WORKFLOW_REVISION}/description`,
-  () => {
+  (event) => {
     describedRevision = WORKFLOW_REVISION
     descriptionsServed += 1
+    if (describeWith !== null) {
+      event.node.res.statusCode = describeWith
+      return { statusCode: describeWith, statusMessage: 'Galaxy service is unavailable' }
+    }
     const unusable = new Set(unavailableTools.map(tool => `${tool.toolId}@${tool.toolVersion}`))
     const tools: Record<string, GalaxyTool> = {}
     for (const tool of [TOOL_A, TOOL_B]) {
@@ -455,6 +461,7 @@ beforeEach(async () => {
   describedRevision = null
   descriptionsServed = 0
   unavailableTools = []
+  describeWith = null
   serveEmptyBody = false
   requestsMade = 0
   lastBody = null
@@ -465,9 +472,13 @@ beforeEach(async () => {
   await forgetCachedAnswers()
 })
 
-// First in the file on purpose: the query for the dataset list is shared by
-// every mount, so only the first one meets a cold cache and can observe it
-// failing rather than being served an earlier test's answer.
+// This used to have to be first in the file: every mount shares one Colada
+// cache, so only the first met a cold one and could observe the dataset
+// query failing rather than being served an earlier test's answer. #87's
+// description query is cached with no expiry at all, which made that
+// ordering rule insufficient rather than merely fragile, so `beforeEach`
+// now empties the cache outright — and every test, this one included, meets
+// a cold cache wherever it sits.
 describe('an input whose pickable datasets never arrived', () => {
   // The fields are where the errors for those inputs render. Gating them on
   // the list having arrived would hide both, and Run would go back to doing
@@ -955,5 +966,133 @@ describe('a revision described a second time', () => {
     await toolStepsReady(second, [TOOL_A])
 
     expect(descriptionsServed).toBe(1)
+  })
+})
+
+/**
+ * #87. One shared, never-expiring Colada entry is the point of the
+ * refactor, and it is also the new hazard: whatever the form hands a widget
+ * to write into must not be the cached description itself. The pair of
+ * composables this replaced re-fetched per mount, so nothing they leaked
+ * outlived one screen.
+ */
+describe('the cached description and what the reader edits', () => {
+  /**
+   * The widget rendered for `tool`'s one parameter, found inside the step's
+   * own panel. `UUInputNumber` carries no `name`, so the widget is reached
+   * through the component `Step.vue` binds its `v-model` to — which is the
+   * binding under test.
+   */
+  /**
+   * Open the panel of the step running `tool`. `UAccordion` is single-open
+   * and Reka unmounts a collapsed panel, so only one step's contents exist
+   * at a time.
+   */
+  async function openStep(form: Awaited<ReturnType<typeof mountForm>>, tool: AToolStep) {
+    const trigger = await vi.waitFor(() => {
+      const found = form.findAll('button').find(candidate => candidate.text().includes(tool.name))
+      expect(found, `the step running ${tool.name} is listed`).toBeDefined()
+      return found!
+    })
+    if (trigger.attributes('aria-expanded') !== 'true') {
+      await trigger.trigger('click')
+    }
+  }
+
+  async function widgetFor(form: Awaited<ReturnType<typeof mountForm>>, tool: AToolStep) {
+    await openStep(form, tool)
+    return vi.waitFor(() => {
+      const found = form
+        .findAllComponents({ name: 'GalaxyIntegerToolParameter' })
+        .find(widget => widget.props('name') === tool.parameter)
+      expect(found, `the widget for ${tool.parameter} is rendered`).toBeDefined()
+      return found!
+    })
+  }
+
+  /** Type a value into it, the way the widget's own `v-model` writes back. */
+  async function edit(widget: Awaited<ReturnType<typeof widgetFor>>, value: string) {
+    widget.vm.$emit('update:modelValue', value)
+    await nextTick()
+  }
+
+  it('does not write the reader\'s edit back into the cache', async () => {
+    workflowSteps = { 2: aToolStep(2, TOOL_A) }
+    const first = await mountForm()
+    await edit(await widgetFor(first, TOOL_A), '30')
+
+    // Mounted again, as navigating away and back does. The cached answer is
+    // served — no second request — so if the edit reached it, it is now the
+    // revision's "saved" value for every reader of this revision.
+    const second = await mountForm()
+    const widget = await widgetFor(second, TOOL_A)
+
+    expect(descriptionsServed, 'the second mount was served from the cache').toBe(1)
+    expect(widget.props('modelValue')).toBe('10')
+  })
+
+  it('keeps the reader\'s edits when the description is refetched', async () => {
+    // The retry beside an unavailable step refetches, which rebuilds the
+    // parameter model. Re-seeding from it would silently discard everything
+    // typed so far — and a pinned revision is immutable, so there is nothing
+    // new to seed from anyway.
+    workflowSteps = { 2: aToolStep(2, TOOL_A), 3: aToolStep(3, TOOL_B) }
+    unavailableTools = [{ toolId: TOOL_B.id, toolVersion: TOOL_B.version, reason: 'unreachable' }]
+    const form = await mountForm()
+    await edit(await widgetFor(form, TOOL_A), '30')
+
+    unavailableTools = []
+    // The retry lives in the unavailable step's own panel, and opening that
+    // collapses the one just edited — which is the shape of the loss: the
+    // edit is no longer on screen when the refetch lands.
+    await openStep(form, TOOL_B)
+    await form.find('[data-testid="retry-workflow-description"]').trigger('click')
+
+    // Waited for through the *rendered* consequence of the new description
+    // rather than through the request count: the reseed this guards against
+    // happens after the response lands, so asserting any earlier passes
+    // whether or not the seeding was fixed.
+    await vi.waitFor(() => {
+      expect(descriptionsServed).toBe(2)
+      expect(form.find('[data-testid="step-unavailable-3"]').exists(), 'step 3 became editable').toBe(false)
+    })
+    await nextTick()
+
+    expect((await widgetFor(form, TOOL_A)).props('modelValue')).toBe('30')
+  })
+})
+
+/**
+ * #87. A description that never arrived leaves the form with no inputs and
+ * no steps — the same shape as a workflow that declares none. The pair of
+ * composables this replaced threw, which at least reached the error
+ * boundary; a Colada query reports the failure instead, and something has
+ * to read it.
+ */
+describe('a workflow the server could not describe', () => {
+  it('says so, refuses to submit, and offers the only retry there is', async () => {
+    describeWith = 503
+    const form = await mountForm()
+
+    const alert = await vi.waitFor(() => {
+      const found = form.find('[data-testid="workflow-description-error"]')
+      expect(found.exists(), 'the failure is on screen').toBe(true)
+      return found
+    })
+    expect(alert.text()).toContain('could not be read')
+    expect(form.find('button[type="submit"]').attributes('disabled')).toBeDefined()
+
+    // Through the form, so what is read is the refusal and not the button.
+    await submit(form)
+    await nextTick()
+    expect(requestsMade).toBe(0)
+
+    // The per-step retry cannot serve here: there are no steps to render it in.
+    describeWith = null
+    await form.find('[data-testid="retry-workflow-description"]').trigger('click')
+    await vi.waitFor(() => {
+      expect(form.find('[data-testid="workflow-description-error"]').exists()).toBe(false)
+    })
+    expect(form.find('button[type="submit"]').attributes('disabled')).toBeUndefined()
   })
 })

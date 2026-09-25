@@ -46,7 +46,9 @@ function analysisRow(id: number) {
     datamap: {},
     invocation: {},
     workflow_id: 1,
-    workflow_revision: id === 7 ? RAN_REVISION : null,
+    // Analysis 9 names a revision nothing is registered for, so its
+    // description 404s — the only way to drive the failure path here.
+    workflow_revision: id === 7 ? RAN_REVISION : (id === 9 ? 404 : null),
     workflows: { id: 1, name: 'A workflow', galaxy_id: GALAXY_WORKFLOW_ID, revision: PINNED_REVISION, name_key: 'aWorkflow', version_key: '1.0' },
     histories: { id: 1, state: 'ok', galaxy_id: 'galaxy-history-1' },
     jobs: [{ id: 1, step_id: 2, tool_id: TOOL.id, state: 'ok', stdout: '', stderr: '', analysis_id: id }],
@@ -189,6 +191,26 @@ describe('the workflow the analysis history panel describes', () => {
     await vi.waitFor(() => {
       expect(describedRevisions).toEqual([PINNED_REVISION])
     })
+  })
+})
+
+/**
+ * #87. Only the tool names and parameter labels on this page come from
+ * Galaxy. The inputs, the jobs and their states, stdout, stderr and the
+ * outputs all come from this server's own database, and a reader who opened
+ * an analysis should not lose them because a proxy was briefly unwell.
+ */
+describe('the panel when Galaxy could not describe the workflow at all', () => {
+  it('still shows the analysis, with the failure beside it rather than instead of it', async () => {
+    // The revision nothing is registered for, so the description 404s.
+    const panel = await mountPanel(9)
+
+    await vi.waitFor(() => {
+      expect(panel.find('[data-testid="workflow-description-error"]').exists(), 'the failure is reported').toBe(true)
+    })
+    expect(panel.text(), 'the inputs section survives').toContain('Inputs')
+    expect(panel.text(), 'the jobs section survives').toContain('Jobs')
+    expect(panel.text(), 'the outputs section survives').toContain('Outputs')
   })
 })
 

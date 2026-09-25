@@ -9,7 +9,13 @@ export const GALAXY_WORKFLOWS_QUERY_KEYS = {
   byId: (id: number) => [...GALAXY_WORKFLOWS_QUERY_KEYS.root, 'byId', id] as const,
   revisions: (workflowId: string) => [...GALAXY_WORKFLOWS_QUERY_KEYS.root, 'revisions', workflowId] as const,
   revisionTools: (workflowId: string, revision: number) => [...GALAXY_WORKFLOWS_QUERY_KEYS.root, 'revisions', workflowId, 'tools', revision] as const,
-  revisionDescription: (workflowId: string, revision: number) => [...GALAXY_WORKFLOWS_QUERY_KEYS.root, 'revisions', workflowId, 'description', revision] as const,
+  /**
+   * Deliberately not under `revisions`. Colada matches a key by prefix, so
+   * nesting it there would let an `invalidateQueries` of the revisions
+   * list* — which the publish dialog refreshes — refetch the full
+   * description for every open screen, undoing the caching this exists for.
+   */
+  revisionDescription: (workflowId: string, revision: number) => [...GALAXY_WORKFLOWS_QUERY_KEYS.root, 'descriptions', workflowId, revision] as const,
 }
 
 export const galaxyWorkflowsListQuery = defineQueryOptions(() => ({

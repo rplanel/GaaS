@@ -65,7 +65,16 @@ const { data: revisions } = useQuery(() => ({
   enabled: selectedWorkflowId.value !== undefined,
 }))
 
-const latestRevision = computed(() => revisions.value?.at(-1)?.version)
+// Read off the entries' `version`, the 0-based index Galaxy indexes a
+// revision by, **never off their position** — the rule `PublishVersionModal`
+// states and the reason it has a `newestOf`. Galaxy does not promise the
+// list is in index order.
+const latestRevision = computed(() => {
+  const listed = revisions.value ?? []
+  return listed.length === 0
+    ? undefined
+    : listed.reduce((newest, candidate) => (candidate.version > newest.version ? candidate : newest)).version
+})
 
 const {
   workflowSteps,

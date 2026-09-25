@@ -8,8 +8,9 @@ import type {
   WorkflowToolStep,
 } from 'blendtype'
 import type { UnavailableTool } from '../../../types/nuxt-galaxy'
-import { computed, toValue } from '#imports'
+import { computed, toRaw, toValue, watch } from '#imports'
 import { useQuery } from '@pinia/colada'
+import { log } from 'evlog/client'
 import { galaxyWorkflowDescriptionQuery } from '../../queries/galaxy/workflows'
 
 /**
@@ -83,6 +84,21 @@ export function useGalaxyWorkflowDescription(
     }
   })
 
+  // This one query is now the single point of failure for both the invoke
+  // form and the analysis panel, where there used to be two; a Galaxy
+  // outage that empties both screens should leave a trace (LOGGING-SPEC §3).
+  watch(error, (failure) => {
+    if (failure) {
+      log.warn({
+        action: 'workflow:description_failed',
+        tag: 'useGalaxyWorkflowDescription',
+        workflowId: toValue(workflowId),
+        revision: toValue(revision),
+        error: String(failure),
+      })
+    }
+  })
+
   const workflowSteps = computed<Record<string, WorkflowStep>>(() => toValue(description)?.steps ?? {})
   const workflowInputs = computed(() => toValue(description)?.inputs ?? {})
 
@@ -103,10 +119,22 @@ export function useGalaxyWorkflowDescription(
       }, {})
   })
 
-  /** The values the revision was saved with, per step. */
+  /**
+   * The values the revision was saved with, per step — **copied**, never the
+   * cached description's own objects.
+   *
+   * The invoke form v-models straight into these: `Step.vue` writes
+   * `workflowParametersModel[name]` in place. Handed the cached objects, one
+   * reader editing a parameter would rewrite what the revision is recorded
+   * as having been saved with, for every screen reading that revision and
+   * for every later mount — the entry has no expiry, so nothing would ever
+   * heal it. The pair of composables this replaced re-fetched per mount, so
+   * the same aliasing leaked nothing beyond one screen; sharing the answer
+   * is what makes the copy necessary.
+   */
   const workflowParametersModel = computed(() => {
     return Object.entries(toValue(workflowToolSteps)).reduce<Record<string, WorkflowToolParameters>>((acc, [stepId, step]) => {
-      acc[stepId] = step.tool_inputs
+      acc[stepId] = structuredClone(toRaw(step.tool_inputs))
       return acc
     }, {})
   })
@@ -124,10 +152,15 @@ export function useGalaxyWorkflowDescription(
    *
    * The endpoint keys them `<toolId>@<version>`, because one workflow can
    * pin the same tool at two versions; the screens look a tool up by the id
-   * its step names, so that is the key here. A workflow that really does pin
-   * two versions of one tool keeps the last of them, exactly as the
-   * composable this replaces did — telling the two apart is a change to what
-   * the screens render, and belongs with #88 rather than here.
+   * its step names, so that is the key here.
+   *
+   * A workflow that really does pin two versions of one tool keeps the last
+   * of them, and the step pinned to the other is then offered the wrong
+   * version's parameters. That is **#100**, and it is preserved rather than
+   * introduced: `useGalaxyTool` keyed by the answer's `id` and collided the
+   * same way, and #86's suite pins the behaviour by looking a tool up by
+   * bare id. What changed is that the fix became cheap — before #87 the
+   * client had no version to key by, and now the endpoint hands it one.
    */
   const toolsObj = computed<Record<string, GalaxyTool>>(() => {
     const tools = toValue(description)?.tools ?? {}
