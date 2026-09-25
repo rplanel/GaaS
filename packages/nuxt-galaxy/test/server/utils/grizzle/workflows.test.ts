@@ -1,3 +1,4 @@
+import type { GalaxyWorkflowExport } from 'blendtype'
 import type { Mock } from 'vitest'
 import type { PublishVersionBody } from '../../../../src/runtime/server/utils/publishBody'
 import { Effect, Exit } from 'effect'
@@ -30,7 +31,7 @@ import {
   mockGalaxyWorkflowExport,
   mockSupabaseUser,
 } from '../../fixtures'
-import { toolStep, workflowDefinition } from '../../workflowDefinition'
+import { connection, dataInputStep, toolStep, workflowDefinition } from '../../workflowDefinition'
 
 // Mock getCurrentUserEffect. The module's error classes are kept real so
 // `toBeInstanceOf` below compares against the class production throws.
@@ -148,6 +149,26 @@ describe('publishVersion', () => {
   function insertedRow(mockClient: ReturnType<typeof createMockServerSupabaseClientLayer>['mockClient']) {
     const chain = mockClient.schema.mock.results[0]!.value as Record<string, Mock>
     return chain.insert!.mock.calls[0]![0]
+  }
+
+  /**
+   * A Galaxy that exports `definition` and answers every tool lookup with the
+   * tool at the version asked for, except where `except` answers otherwise.
+   */
+  function galaxyHolding(
+    definition: unknown,
+    except: (toolId: string) => unknown = () => undefined,
+  ) {
+    return createRecordingGalaxyLayer(({ url }) => {
+      if (url.startsWith('api/workflows/'))
+        return definition
+      const match = /^api\/tools\/(.+)\?io_details=true&tool_version=(.+)$/.exec(url)
+      if (!match)
+        throw new Error(`unexpected Galaxy call: ${url}`)
+      // read the way Galaxy reads a query value: decoded, a raw `+` being a space
+      const toolVersion = decodeURIComponent(match[2]!.replaceAll('+', ' '))
+      return except(match[1]!) ?? { model_class: 'Tool', id: match[1], version: toolVersion }
+    })
   }
 
   /**
@@ -464,22 +485,8 @@ describe('publishVersion', () => {
       return Object.assign(new Error(`[GET] "api/tools/…": ${statusCode}`), { statusCode })
     }
 
-    /**
-     * A Galaxy that exports `withTools` and holds each tool at the version
-     * asked for, except where `except` answers something else for a tool id.
-     */
-    function galaxy(except: (toolId: string) => unknown = () => undefined) {
-      return createRecordingGalaxyLayer(({ url }) => {
-        if (url.startsWith('api/workflows/'))
-          return withTools
-        const match = /^api\/tools\/(.+)\?io_details=true&tool_version=(.+)$/.exec(url)
-        if (!match)
-          throw new Error(`unexpected Galaxy call: ${url}`)
-        // read the way Galaxy reads a query value: decoded, a raw `+` being a space
-        const toolVersion = decodeURIComponent(match[2]!.replaceAll('+', ' '))
-        return except(match[1]!) ?? { model_class: 'Tool', id: match[1], version: toolVersion }
-      })
-    }
+    /** The shared Galaxy, pinned to this describe's export. */
+    const galaxy = (except?: (toolId: string) => unknown) => galaxyHolding(withTools, except)
 
     function toolLookups(calls: { url: string }[]) {
       return calls.filter(call => call.url.startsWith('api/tools/'))
@@ -542,6 +549,83 @@ describe('publishVersion', () => {
 
       expectFailureOf(await exit, VersionLabelTakenError, () => {})
       expect(toolLookups(recording.calls)).toEqual([])
+    })
+  })
+
+  /**
+   * #82. A stored definition exists to be drawn from, and the row kept no
+   * connections at all: `galaxyWorkflowExportSchema` is parsed loosely, but
+   * that reaches the outer object only, and the nested step schema stripped. What reached the column described a set of steps
+   * with nothing joining them. Nothing read the fields yet, so it was latent
+   * rather than visible, which is why it needs a test at the publishing
+   * boundary and not only in the schema.
+   */
+  describe('the connections of the stored definition', () => {
+    const CAT = 'toolshed.g2.bx.psu.edu/repos/bgruening/text_processing/cat1/1.0.0'
+
+    /**
+     * Two inputs whose outputs both feed one input of the tool step. Galaxy
+     * keys connections by input name and writes the value as an array when
+     * several feed one, collapsing a singleton back to a bare object.
+     */
+    const fanIn = workflowDefinition({
+      0: dataInputStep(0, 'Input FASTQ'),
+      1: dataInputStep(1, 'Input reference'),
+      2: toolStep(2, CAT, '1.0.0', {
+        input_connections: {
+          'input1': connection(0),
+          'queries_0|input2': [connection(1), connection(0)],
+        },
+      }),
+    })
+
+    function storedDefinition(mockClient: ReturnType<typeof createMockServerSupabaseClientLayer>['mockClient']) {
+      return insertedRow(mockClient).definition as GalaxyWorkflowExport
+    }
+
+    it('keeps both connections when two upstream outputs feed one input', async () => {
+      const { exit, mockClient } = publish({ galaxyLayer: galaxyHolding(fanIn).layer })
+
+      expect(Exit.isSuccess(await exit)).toBe(true)
+      expect(storedDefinition(mockClient).steps['2']!.input_connections).toEqual({
+        'input1': { id: 0, output_name: 'output' },
+        'queries_0|input2': [
+          { id: 1, output_name: 'output' },
+          { id: 0, output_name: 'output' },
+        ],
+      })
+    })
+
+    it('keeps the layout, the condition and the subworkflow of a step', async () => {
+      const conditional = workflowDefinition({
+        0: dataInputStep(0, 'Input FASTQ'),
+        1: toolStep(1, CAT, '1.0.0', {
+          when: '$(inputs.run_it)',
+          subworkflow: { a_galaxy_workflow: 'true', steps: { 0: { id: 0, type: 'data_input' } } },
+        }),
+      })
+
+      const { exit, mockClient } = publish({ galaxyLayer: galaxyHolding(conditional).layer })
+
+      expect(Exit.isSuccess(await exit)).toBe(true)
+      const step = storedDefinition(mockClient).steps['1']!
+      expect(step.position).toEqual({ left: 240, top: 120 })
+      expect(step.when).toBe('$(inputs.run_it)')
+      expect(step.subworkflow).toEqual({ a_galaxy_workflow: 'true', steps: { 0: { id: 0, type: 'data_input' } } })
+    })
+
+    it('stores the export whole, not the subset the client models', async () => {
+      // the guard against the nested schema stripping again: a key nothing
+      // here models is still part of the definition the graph is drawn from
+      const withUnmodelled = {
+        ...fanIn,
+        steps: { ...fanIn.steps, 0: { ...fanIn.steps[0]!, an_unmodelled_galaxy_key: 'kept' } },
+      }
+
+      const { exit, mockClient } = publish({ galaxyLayer: galaxyHolding(withUnmodelled).layer })
+
+      expect(Exit.isSuccess(await exit)).toBe(true)
+      expect(storedDefinition(mockClient)).toEqual(withUnmodelled)
     })
   })
 

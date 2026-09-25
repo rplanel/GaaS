@@ -494,6 +494,120 @@ describe('exportWorkflowEffect', () => {
     ))
 })
 
+/**
+ * #82. A stored definition exists to be drawn from, so the export's steps
+ * have to reach the caller whole. The nested step schema used to strip: the
+ * `.loose()` above applies to the outer object only, and the step schema
+ * modelled `input_connections` as one optional key literally named
+ * `input`. Galaxy keys connections by *input name* and makes the value an
+ * array when several outputs feed one input, so every connection of every real
+ * workflow was discarded on the way in.
+ */
+describe('what the step of an export keeps', () => {
+  /** A fan-in: two upstream outputs feeding one input of step 2. */
+  const fanIn = {
+    id: 2,
+    annotation: '',
+    name: 'Concatenate datasets',
+    content_id: 'cat1',
+    label: null,
+    tool_id: 'cat1',
+    type: 'tool',
+    uuid: 'step-2-uuid',
+    tool_state: '{}',
+    tool_version: '1.0.0',
+    input_connections: {
+      'input1': { id: 0, output_name: 'output' },
+      'queries_0|input2': [
+        { id: 1, output_name: 'out_file1' },
+        { id: 0, output_name: 'output' },
+      ],
+    },
+    inputs: [],
+    outputs: [{ name: 'out_file1', type: 'input' }],
+    workflow_outputs: [],
+    position: { left: 480.5, top: 212 },
+    when: '$(inputs.run_it)',
+    subworkflow: { a_galaxy_workflow: 'true', steps: { 0: { id: 0, type: 'data_input' } } },
+    an_unmodelled_galaxy_key: 'kept',
+  }
+
+  const withFanIn = { ...mockRawExport, steps: { 2: fanIn } }
+
+  function exported() {
+    return pipe(
+      exportWorkflowEffect('wf-export-id'),
+      Effect.provide(createSuccessLayer(withFanIn)),
+      Effect.runPromise,
+    )
+  }
+
+  it('keeps a connection under whatever input name Galaxy keyed it by', async () => {
+    const step = (await exported()).steps['2']!
+    expect(step.input_connections.input1).toEqual({ id: 0, output_name: 'output' })
+    expect(step.input_connections['queries_0|input2']).toEqual([
+      { id: 1, output_name: 'out_file1' },
+      { id: 0, output_name: 'output' },
+    ])
+  })
+
+  // `_workflow_to_dict_export` collapses a singleton list to a bare dict, a
+  // back-compat hack Galaxy's own comment says must never be removed, so both
+  // shapes arrive and both have to survive.
+  it('keeps both connections when two upstream outputs feed one input', async () => {
+    const step = (await exported()).steps['2']!
+    const connections = step.input_connections['queries_0|input2']
+    expect(Array.isArray(connections)).toBe(true)
+    expect(connections).toHaveLength(2)
+  })
+
+  it('keeps the position, the condition and the subworkflow', async () => {
+    const step = (await exported()).steps['2']!
+    expect(step.position).toEqual({ left: 480.5, top: 212 })
+    expect(step.when).toBe('$(inputs.run_it)')
+    expect(step.subworkflow).toEqual({ a_galaxy_workflow: 'true', steps: { 0: { id: 0, type: 'data_input' } } })
+  })
+
+  // The guard for the defect itself: the nested schema must not strip. A key
+  // this client does not model is still part of the definition, and a step
+  // schema that starts dropping unknown keys again fails here.
+  it('keeps a key it does not model rather than stripping it', async () => {
+    const step = (await exported()).steps['2']!
+    expect(step).toMatchObject({ an_unmodelled_galaxy_key: 'kept' })
+  })
+
+  // A workflow built through the API was never laid out, and Galaxy writes
+  // that as a null position or leaves it out. Neither is a broken export.
+  it('accepts a step that was never laid out, however Galaxy says so', async () => {
+    const { position: _dropped, when: _w, subworkflow: _s, ...bare } = fanIn
+    const laidOut = await pipe(
+      exportWorkflowEffect('wf-export-id'),
+      Effect.provide(createSuccessLayer({
+        ...mockRawExport,
+        steps: { 0: { ...bare, position: null }, 1: bare },
+      })),
+      Effect.runPromise,
+    )
+
+    expect(laidOut.steps['0']!.position).toBeNull()
+    expect(laidOut.steps['1']!.position).toBeUndefined()
+  })
+
+  it('still refuses a step that is not a step at all', async () => {
+    const exit = await pipe(
+      exportWorkflowEffect('wf-export-id'),
+      Effect.provide(createSuccessLayer({ ...mockRawExport, steps: { 0: { ...fanIn, id: 'two' } } })),
+      Effect.exit,
+      Effect.runPromise,
+    )
+
+    expectFailure(exit, (error) => {
+      expect(error).toBeInstanceOf(WorkflowError)
+      expect(error.message).toContain('Invalid workflow export format')
+    })
+  })
+})
+
 describe('exportWorkflow (Promise wrapper)', () => {
   it('should resolve with exported workflow data', async () => {
     const result = await exportWorkflow('wf-export-id', createSuccessLayer(mockRawExport))

@@ -160,6 +160,41 @@ export interface WorkflowStepToolExport extends WorkflowStepRun {
 
 }
 
+/**
+ * One connection of a stored definition, as an export writes it: `id` is the
+ * upstream step's `order_index`, which is the integer that keys `steps` and
+ * the one a job row carries as `step_id`, and `output_name` the output of
+ * that step feeding this input. A subworkflow connection carries an
+ * `input_subworkflow_step_id` beside them, which is kept rather than modelled.
+ */
+export interface WorkflowStepConnection {
+  id: number
+  output_name: string
+}
+
+/**
+ * The incoming connections of a step, keyed by the name of the input they feed.
+ *
+ * Galaxy keys this by *input name* — `input1`, `queries_0|input2` — not by a
+ * fixed set of keys, and the value is an **array** when several outputs feed
+ * one input. A singleton list is collapsed to a bare object on the way out,
+ * a back-compat hack `_workflow_to_dict_export` comments must never be
+ * removed, so both shapes arrive and a reader handles both (#82).
+ */
+export type WorkflowStepConnections = Record<
+  string,
+  WorkflowStepConnection | WorkflowStepConnection[]
+>
+
+/**
+ * One step of a stored definition, as `download?style=export` writes it.
+ *
+ * The fields below are the ones this client reads or means to draw from;
+ * anything else Galaxy emits is **kept, not stripped**. A definition exists
+ * to be drawn from later, so a step schema that dropped what it did not
+ * model would leave the row describing a set of steps with nothing joining
+ * them (#82).
+ */
 export interface WorkflowStepExport {
   annotation: string
   id: number
@@ -171,12 +206,7 @@ export interface WorkflowStepExport {
   uuid: string
   tool_state: string
   tool_version: string | null
-  input_connections: {
-    input?: {
-      id: number
-      output_name: string
-    }
-  }
+  input_connections: WorkflowStepConnections
   inputs: Array<{
     description: string
     name: string
@@ -196,8 +226,34 @@ export interface WorkflowStepExport {
     output_name: string
     uuid: string
   } | undefined>
-
+  /**
+   * Where the editor last laid the step out. A workflow built through the
+   * API has none, and Galaxy writes that as `null` or leaves it out, so
+   * neither is a reason to refuse an export.
+   */
+  position?: {
+    left: number
+    top: number
+  } | null
+  /**
+   * The expression that decides whether the step runs, on a conditional step
+   * (Galaxy 23.0 and later). `null` on an unconditional one, absent before
+   * 23.0: a step that did not run because of this is not the same as one that
+   * has not run yet.
+   */
+  when?: string | null
+  /**
+   * The nested export a `subworkflow` step embeds, kept verbatim. Nothing
+   * reads into it: a subworkflow is drawn as one step that links out to its
+   * own invocation, never expanded inline.
+   */
+  subworkflow?: Record<string, unknown> | null
 }
+export const workflowStepConnectionSchema = z.looseObject({
+  id: z.number(),
+  output_name: z.string(),
+})
+
 export const workflowStepExportSchema = z.object({
   annotation: z.string(),
   id: z.number(),
@@ -209,12 +265,13 @@ export const workflowStepExportSchema = z.object({
   uuid: z.string(),
   tool_state: z.string(),
   tool_version: z.string().nullable(),
-  input_connections: z.object({
-    input: z.optional(z.object({
-      id: z.number(),
-      output_name: z.string(),
-    })),
-  }),
+  // Keyed by input name, one connection or several: see
+  // `WorkflowStepConnections`. Modelling it as a single key named `input`
+  // discarded every connection of every real workflow (#82).
+  input_connections: z.record(
+    z.string(),
+    z.union([workflowStepConnectionSchema, z.array(workflowStepConnectionSchema)]),
+  ),
   inputs: z.array(
     z.object({
       description: z.string(),
@@ -239,8 +296,21 @@ export const workflowStepExportSchema = z.object({
       output_name: z.string(),
       uuid: z.string(),
     }).optional().array().catch([]),
+  // Absent or null on a workflow that was never laid out in the editor, so
+  // all three of object, null and absent are an export this client accepts.
+  position: z.looseObject({
+    left: z.number(),
+    top: z.number(),
+  }).nullish(),
+  when: z.string().nullish(),
+  // Kept whole, never read into: a subworkflow is one step that links out.
+  subworkflow: z.looseObject({}).nullish(),
 
-})
+  // Loose on purpose. `galaxyWorkflowExportSchema` is parsed with `.loose()`,
+  // but that reaches the outer object only, so this schema stripping by
+  // default is what emptied a stored definition of everything the client had
+  // not thought to model (#82).
+}).loose()
 
 /**
  * A stored workflow as `GET /api/workflows/{id}/download` exports it, at one

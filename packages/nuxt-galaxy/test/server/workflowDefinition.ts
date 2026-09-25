@@ -1,4 +1,4 @@
-import type { GalaxyWorkflowExport, WorkflowStepExport } from 'blendtype'
+import type { GalaxyWorkflowExport, WorkflowStepConnection, WorkflowStepExport } from 'blendtype'
 
 /**
  * Builders for a stored `definition` — the `json` column publishing fills
@@ -14,6 +14,18 @@ import type { GalaxyWorkflowExport, WorkflowStepExport } from 'blendtype'
  * without the mock's exports getting in the way.
  */
 
+/**
+ * One incoming connection, as an export writes it: the upstream step's index
+ * and the output of that step feeding this input (#82). Several of them may
+ * feed one input, and then the value under that input name is an array.
+ *
+ * `output` is the name a data input's single output carries, which is what a
+ * step declares nothing in `outputs` for.
+ */
+export function connection(fromStep: number, outputName = 'output'): WorkflowStepConnection {
+  return { id: fromStep, output_name: outputName }
+}
+
 /** A step's index, which is both its key here and the key a datamap uses. */
 export function dataInputStep(
   id: number,
@@ -24,11 +36,13 @@ export function dataInputStep(
     annotation: '',
     content_id: null,
     id,
+    // An input step is where the workflow starts, so it genuinely has none.
     input_connections: {},
     inputs: [{ description: '', name: label ?? 'Input dataset' }],
     label,
     name: 'Input dataset',
     outputs: [],
+    position: { left: 0, top: id * 120 },
     tool_id: null,
     // A JSON *string* in the export format, which is where Galaxy's
     // `WorkflowStep.input_optional` reads its flag from.
@@ -47,6 +61,15 @@ export function dataInputStep(
  * version inside it, a built-in id does not) and `tool_version` the version
  * the revision was saved with. Galaxy refuses to run a revision whose tools
  * are not installed at exactly these versions (#75).
+ *
+ * Fed by the step before it unless `overrides` says otherwise: a tool step
+ * with no incoming connection is not something Galaxy exports, and a fixture
+ * that said it did certified #82's stripping as correct.
+ *
+ * The input is named `input1`, as a real tool names it, and deliberately not
+ * `input`: the broken schema modelled a single optional key literally called
+ * `input`, so a default keyed that way would still have survived it and left
+ * every suite built on this builder unable to tell fixed from broken.
  */
 export function toolStep(
   id: number,
@@ -54,15 +77,19 @@ export function toolStep(
   toolVersion: string,
   overrides: Partial<WorkflowStepExport> = {},
 ): WorkflowStepExport {
+  if (id < 1 && overrides.input_connections === undefined) {
+    throw new Error('a tool step at index 0 has no step before it: pass its own input_connections')
+  }
   return {
     annotation: '',
     content_id: toolId,
     id,
-    input_connections: {},
+    input_connections: { input1: connection(id - 1) },
     inputs: [],
     label: null,
     name: toolId.split('/').at(-2) ?? toolId,
     outputs: [],
+    position: { left: 240, top: id * 120 },
     tool_id: toolId,
     tool_state: '{}',
     tool_version: toolVersion,
