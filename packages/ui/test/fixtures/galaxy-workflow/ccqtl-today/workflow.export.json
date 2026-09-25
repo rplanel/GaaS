@@ -1,0 +1,580 @@
+{
+  "a_galaxy_workflow": "true",
+  "annotation": "",
+  "format-version": "0.1",
+  "name": "ccqtl-wf",
+  "steps": {
+    "0": {
+      "annotation": "",
+      "content_id": null,
+      "errors": null,
+      "id": 0,
+      "input_connections": {},
+      "inputs": [
+        {
+          "description": "",
+          "name": "Phenotype dataset"
+        }
+      ],
+      "label": "Phenotype dataset",
+      "name": "Input dataset",
+      "outputs": [],
+      "position": {
+        "left": 0,
+        "top": 48
+      },
+      "tool_id": null,
+      "tool_state": "{\"optional\": false, \"tag\": \"\"}",
+      "tool_version": null,
+      "type": "data_input",
+      "uuid": "84887fc4-4083-4ffb-ab02-3e69d8262d87",
+      "workflow_outputs": []
+    },
+    "1": {
+      "annotation": "",
+      "content_id": null,
+      "errors": null,
+      "id": 1,
+      "input_connections": {},
+      "inputs": [
+        {
+          "description": "",
+          "name": "Covariate dataset"
+        }
+      ],
+      "label": "Covariate dataset",
+      "name": "Input dataset",
+      "outputs": [],
+      "position": {
+        "left": 0,
+        "top": 168
+      },
+      "tool_id": null,
+      "tool_state": "{\"optional\": false, \"tag\": \"\"}",
+      "tool_version": null,
+      "type": "data_input",
+      "uuid": "39cc2035-dbc7-4226-8525-09932b26ea45",
+      "workflow_outputs": []
+    },
+    "2": {
+      "annotation": "",
+      "content_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_make_inputs/ccqtl_make_inputs/0.0.1_beta.2+galaxy0",
+      "errors": null,
+      "id": 2,
+      "input_connections": {
+        "path_covar": {
+          "id": 1,
+          "output_name": "output"
+        },
+        "path_pheno": {
+          "id": 0,
+          "output_name": "output"
+        }
+      },
+      "inputs": [],
+      "label": null,
+      "name": "CCQTL: Make input files",
+      "outputs": [
+        {
+          "name": "genofiles",
+          "type": "input"
+        },
+        {
+          "name": "phenotypes_out",
+          "type": "csv"
+        },
+        {
+          "name": "covariables_out",
+          "type": "csv"
+        },
+        {
+          "name": "crossinfo",
+          "type": "csv"
+        },
+        {
+          "name": "control_file",
+          "type": "yaml"
+        },
+        {
+          "name": "pr",
+          "type": "rds"
+        },
+        {
+          "name": "apr",
+          "type": "rds"
+        },
+        {
+          "name": "crossdata",
+          "type": "rds"
+        },
+        {
+          "name": "clean_pr",
+          "type": "rds"
+        },
+        {
+          "name": "kloco",
+          "type": "rds"
+        }
+      ],
+      "position": {
+        "left": 278,
+        "top": 0
+      },
+      "post_job_actions": {
+        "DeleteIntermediatesActiongenofiles": {
+          "action_arguments": {},
+          "action_type": "DeleteIntermediatesAction",
+          "output_name": "genofiles"
+        },
+        "HideDatasetActionapr": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "apr"
+        },
+        "HideDatasetActionclean_pr": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "clean_pr"
+        },
+        "HideDatasetActioncrossdata": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "crossdata"
+        },
+        "HideDatasetActionkloco": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "kloco"
+        },
+        "HideDatasetActionpr": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "pr"
+        }
+      },
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_make_inputs/ccqtl_make_inputs/0.0.1_beta.2+galaxy0",
+      "tool_shed_repository": {
+        "changeset_revision": "3e874646330f",
+        "name": "ccqtl_make_inputs",
+        "owner": "rplanel",
+        "tool_shed": "toolshed.g2.bx.psu.edu"
+      },
+      "tool_state": "{\"indiv_marker\": \"CC_MMnGM\", \"marker_set\": \"GM_m38\", \"path_covar\": {\"__class__\": \"ConnectedValue\"}, \"path_pheno\": {\"__class__\": \"ConnectedValue\"}, \"xp_desc\": \"\", \"__page__\": null, \"__rerun_remap_job_id__\": null}",
+      "tool_version": "0.0.1_beta.2+galaxy0",
+      "type": "tool",
+      "uuid": "971aba86-220f-472e-9889-d59234dcf778",
+      "workflow_outputs": [
+        {
+          "label": "CCQTL: Make input files on input dataset(s): genofiles",
+          "output_name": "genofiles",
+          "uuid": "1f1ec51d-bf5f-4d76-925d-97cc17ce3811"
+        },
+        {
+          "label": "CCQTL: Make input files on input dataset(s): pheno.csv",
+          "output_name": "phenotypes_out",
+          "uuid": "4c67cf73-9126-4b36-a865-e39a674a3b74"
+        },
+        {
+          "label": "CCQTL: Make input files on input dataset(s): covar.csv",
+          "output_name": "covariables_out",
+          "uuid": "10ec4aa5-1592-4e39-8809-521f5a1e5cbf"
+        },
+        {
+          "label": "CCQTL: Make input files on input dataset(s): crossinfo_rft.csv",
+          "output_name": "crossinfo",
+          "uuid": "afaa5e99-749a-45fe-8bfa-32e050afad37"
+        },
+        {
+          "label": "CCQTL: Make input files on input dataset(s): control_file.yaml",
+          "output_name": "control_file",
+          "uuid": "59830ac3-95e0-40fe-b68e-33f459ff5b45"
+        }
+      ]
+    },
+    "3": {
+      "annotation": "",
+      "content_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_genome_scan/ccqtl_genome_scan/0.0.1_beta.2+galaxy0",
+      "errors": null,
+      "id": 3,
+      "input_connections": {
+        "clean_pr": {
+          "id": 2,
+          "output_name": "clean_pr"
+        },
+        "crossdata": {
+          "id": 2,
+          "output_name": "crossdata"
+        },
+        "kloco": {
+          "id": 2,
+          "output_name": "kloco"
+        }
+      },
+      "inputs": [],
+      "label": null,
+      "name": "CCQTL: Run genome scan",
+      "outputs": [
+        {
+          "name": "lod",
+          "type": "csv"
+        },
+        {
+          "name": "out",
+          "type": "rds"
+        },
+        {
+          "name": "covar_modmat",
+          "type": "rds"
+        }
+      ],
+      "position": {
+        "left": 566,
+        "top": 250
+      },
+      "post_job_actions": {
+        "DeleteIntermediatesActionlod": {
+          "action_arguments": {},
+          "action_type": "DeleteIntermediatesAction",
+          "output_name": "lod"
+        },
+        "HideDatasetActioncovar_modmat": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "covar_modmat"
+        },
+        "HideDatasetActionout": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "out"
+        }
+      },
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_genome_scan/ccqtl_genome_scan/0.0.1_beta.2+galaxy0",
+      "tool_shed_repository": {
+        "changeset_revision": "a12f218dc737",
+        "name": "ccqtl_genome_scan",
+        "owner": "rplanel",
+        "tool_shed": "toolshed.g2.bx.psu.edu"
+      },
+      "tool_state": "{\"add_covar\": \"\", \"clean_pr\": {\"__class__\": \"ConnectedValue\"}, \"crossdata\": {\"__class__\": \"ConnectedValue\"}, \"kloco\": {\"__class__\": \"ConnectedValue\"}, \"__page__\": null, \"__rerun_remap_job_id__\": null}",
+      "tool_version": "0.0.1_beta.2+galaxy0",
+      "type": "tool",
+      "uuid": "ca625c9b-032f-4230-9f80-6eedc88883eb",
+      "workflow_outputs": [
+        {
+          "label": "CCQTL: Run genome scan on input dataset(s): lod.csv",
+          "output_name": "lod",
+          "uuid": "d373efb1-737f-4578-a2c9-1af15528e4d5"
+        }
+      ]
+    },
+    "4": {
+      "annotation": "",
+      "content_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_permutations/ccqtl_permutations/0.0.1_beta.2+galaxy1",
+      "errors": null,
+      "id": 4,
+      "input_connections": {
+        "clean_pr": {
+          "id": 2,
+          "output_name": "clean_pr"
+        },
+        "covar_modmat": {
+          "id": 3,
+          "output_name": "covar_modmat"
+        },
+        "crossdata": {
+          "id": 2,
+          "output_name": "crossdata"
+        },
+        "kloco": {
+          "id": 2,
+          "output_name": "kloco"
+        }
+      },
+      "inputs": [
+        {
+          "description": "runtime parameter for tool CCQTL: Run permutations",
+          "name": "clean_pr"
+        },
+        {
+          "description": "runtime parameter for tool CCQTL: Run permutations",
+          "name": "covar_modmat"
+        },
+        {
+          "description": "runtime parameter for tool CCQTL: Run permutations",
+          "name": "crossdata"
+        },
+        {
+          "description": "runtime parameter for tool CCQTL: Run permutations",
+          "name": "kloco"
+        }
+      ],
+      "label": null,
+      "name": "CCQTL: Run permutations",
+      "outputs": [
+        {
+          "name": "operm_lmm",
+          "type": "rds"
+        },
+        {
+          "name": "covar_permstrata",
+          "type": "rds"
+        },
+        {
+          "name": "stratcovar_modmat",
+          "type": "rds"
+        },
+        {
+          "name": "nrep_rds",
+          "type": "rds"
+        }
+      ],
+      "position": {
+        "left": 864,
+        "top": 261
+      },
+      "post_job_actions": {
+        "DeleteIntermediatesActionoperm_lmm": {
+          "action_arguments": {},
+          "action_type": "DeleteIntermediatesAction",
+          "output_name": "operm_lmm"
+        },
+        "HideDatasetActioncovar_permstrata": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "covar_permstrata"
+        },
+        "HideDatasetActionnrep_rds": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "nrep_rds"
+        },
+        "HideDatasetActionoperm_lmm": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "operm_lmm"
+        },
+        "HideDatasetActionstratcovar_modmat": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "stratcovar_modmat"
+        }
+      },
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_permutations/ccqtl_permutations/0.0.1_beta.2+galaxy1",
+      "tool_shed_repository": {
+        "changeset_revision": "2df37db680ad",
+        "name": "ccqtl_permutations",
+        "owner": "rplanel",
+        "tool_shed": "toolshed.g2.bx.psu.edu"
+      },
+      "tool_state": "{\"clean_pr\": {\"__class__\": \"RuntimeValue\"}, \"covar_modmat\": {\"__class__\": \"RuntimeValue\"}, \"crossdata\": {\"__class__\": \"RuntimeValue\"}, \"kloco\": {\"__class__\": \"RuntimeValue\"}, \"n_perm\": \"5\", \"strat_covar\": \"\", \"__page__\": null, \"__rerun_remap_job_id__\": null}",
+      "tool_version": "0.0.1_beta.2+galaxy1",
+      "type": "tool",
+      "uuid": "4bc68f9b-47d6-41f1-91c8-fb601a74b414",
+      "workflow_outputs": []
+    },
+    "5": {
+      "annotation": "",
+      "content_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_find_peaks/ccqtl_find_peaks/0.0.1_beta.2+galaxy0",
+      "errors": null,
+      "id": 5,
+      "input_connections": {
+        "apr": {
+          "id": 2,
+          "output_name": "apr"
+        },
+        "clean_pr": {
+          "id": 2,
+          "output_name": "clean_pr"
+        },
+        "crossdata": {
+          "id": 2,
+          "output_name": "crossdata"
+        },
+        "kloco": {
+          "id": 2,
+          "output_name": "kloco"
+        },
+        "nrep": {
+          "id": 4,
+          "output_name": "nrep_rds"
+        },
+        "operm_lmm": {
+          "id": 4,
+          "output_name": "operm_lmm"
+        },
+        "out": {
+          "id": 3,
+          "output_name": "out"
+        }
+      },
+      "inputs": [],
+      "label": null,
+      "name": "CCQTL: Retrieves QTL intervals",
+      "outputs": [
+        {
+          "name": "coefficients",
+          "type": "input"
+        },
+        {
+          "name": "haplotypes",
+          "type": "input"
+        },
+        {
+          "name": "peaks_csv",
+          "type": "csv"
+        },
+        {
+          "name": "peaks_rds",
+          "type": "rds"
+        },
+        {
+          "name": "significance_threshold",
+          "type": "csv"
+        }
+      ],
+      "position": {
+        "left": 1172,
+        "top": 115
+      },
+      "post_job_actions": {
+        "DeleteIntermediatesActioncoefficients": {
+          "action_arguments": {},
+          "action_type": "DeleteIntermediatesAction",
+          "output_name": "coefficients"
+        },
+        "HideDatasetActionpeaks_rds": {
+          "action_arguments": {},
+          "action_type": "HideDatasetAction",
+          "output_name": "peaks_rds"
+        }
+      },
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_find_peaks/ccqtl_find_peaks/0.0.1_beta.2+galaxy0",
+      "tool_shed_repository": {
+        "changeset_revision": "1c6f4f574a6d",
+        "name": "ccqtl_find_peaks",
+        "owner": "rplanel",
+        "tool_shed": "toolshed.g2.bx.psu.edu"
+      },
+      "tool_state": "{\"adjust\": \"false\", \"apr\": {\"__class__\": \"ConnectedValue\"}, \"clean_pr\": {\"__class__\": \"ConnectedValue\"}, \"crossdata\": {\"__class__\": \"ConnectedValue\"}, \"kloco\": {\"__class__\": \"ConnectedValue\"}, \"level\": \"95\", \"nrep\": {\"__class__\": \"ConnectedValue\"}, \"operm_lmm\": {\"__class__\": \"ConnectedValue\"}, \"out\": {\"__class__\": \"ConnectedValue\"}, \"user_drop\": \"1.5\", \"__page__\": null, \"__rerun_remap_job_id__\": null}",
+      "tool_version": "0.0.1_beta.2+galaxy0",
+      "type": "tool",
+      "uuid": "5cc06a78-8ed4-4e70-a4b7-06729eaac0a1",
+      "workflow_outputs": [
+        {
+          "label": "CCQTL: Retrieves QTL intervals on input dataset(s): coefficients",
+          "output_name": "coefficients",
+          "uuid": "45597143-9833-4bec-b3b7-ea8b8d5b1d80"
+        },
+        {
+          "label": "CCQTL: Retrieves QTL intervals on input dataset(s): peaks.csv",
+          "output_name": "peaks_csv",
+          "uuid": "4b93a10e-2ff4-4622-8852-93ab28f39e95"
+        },
+        {
+          "label": "CCQTL: Retrieves QTL intervals on input dataset(s): significance-threshold.csv",
+          "output_name": "significance_threshold",
+          "uuid": "d9342820-bd5a-461f-917b-1924128264ed"
+        },
+        {
+          "label": "CCQTL: Retrieves QTL intervals on input dataset(s): haplotypes",
+          "output_name": "haplotypes",
+          "uuid": "131de9d0-370e-498c-895b-eba5ae2aba43"
+        }
+      ]
+    },
+    "6": {
+      "annotation": "",
+      "content_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_refine_region/ccqtl_refine_region/0.0.1_beta.2+galaxy0",
+      "errors": null,
+      "id": 6,
+      "input_connections": {
+        "clean_pr": {
+          "id": 2,
+          "output_name": "clean_pr"
+        },
+        "crossdata": {
+          "id": 2,
+          "output_name": "crossdata"
+        },
+        "kloco": {
+          "id": 2,
+          "output_name": "kloco"
+        },
+        "peaks": {
+          "id": 5,
+          "output_name": "peaks_rds"
+        }
+      },
+      "inputs": [],
+      "label": null,
+      "name": "CCQTL: Refine QTL intervals",
+      "outputs": [
+        {
+          "name": "genes",
+          "type": "input"
+        },
+        {
+          "name": "snps_assoc",
+          "type": "input"
+        },
+        {
+          "name": "top_snps",
+          "type": "input"
+        },
+        {
+          "name": "refine_peaks",
+          "type": "csv"
+        }
+      ],
+      "position": {
+        "left": 1460,
+        "top": 648
+      },
+      "post_job_actions": {
+        "DeleteIntermediatesActiongenes": {
+          "action_arguments": {},
+          "action_type": "DeleteIntermediatesAction",
+          "output_name": "genes"
+        }
+      },
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_refine_region/ccqtl_refine_region/0.0.1_beta.2+galaxy0",
+      "tool_shed_repository": {
+        "changeset_revision": "826db226171b",
+        "name": "ccqtl_refine_region",
+        "owner": "rplanel",
+        "tool_shed": "toolshed.g2.bx.psu.edu"
+      },
+      "tool_state": "{\"annotations_path\": \"cc_annotations_m38\", \"clean_pr\": {\"__class__\": \"ConnectedValue\"}, \"crossdata\": {\"__class__\": \"ConnectedValue\"}, \"k_top_snps\": \"3\", \"kloco\": {\"__class__\": \"ConnectedValue\"}, \"peaks\": {\"__class__\": \"ConnectedValue\"}, \"width_p\": \"1\", \"__page__\": null, \"__rerun_remap_job_id__\": null}",
+      "tool_version": "0.0.1_beta.2+galaxy0",
+      "type": "tool",
+      "uuid": "608be71f-b5b1-46a0-a6a7-1c86df688006",
+      "workflow_outputs": [
+        {
+          "label": "CCQTL: Refine QTL intervals on input dataset(s): snp association",
+          "output_name": "snps_assoc",
+          "uuid": "37c5c931-a021-498c-ba6e-c61182257ac3"
+        },
+        {
+          "label": "CCQTL: Refine QTL intervals on input dataset(s): genes",
+          "output_name": "genes",
+          "uuid": "815b78f8-424c-4147-a4ac-ee50e0c69bd5"
+        },
+        {
+          "label": "CCQTL: Refine QTL intervals on input dataset(s): refine-peaks.csv",
+          "output_name": "refine_peaks",
+          "uuid": "c80fb9e0-6b6d-4efa-9972-f2d7817111e9"
+        },
+        {
+          "label": "CCQTL: Refine QTL intervals on input dataset(s): top snps",
+          "output_name": "top_snps",
+          "uuid": "b49c0611-d2c5-4d33-9885-fcbbde465972"
+        }
+      ]
+    }
+  },
+  "tags": [
+    "v0.0.1_beta.2"
+  ],
+  "uuid": "719b88a7-51b2-49ba-9b12-4c2ec24ae950",
+  "version": 1
+}

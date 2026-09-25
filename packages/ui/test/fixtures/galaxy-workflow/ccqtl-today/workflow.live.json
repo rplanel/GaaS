@@ -1,0 +1,277 @@
+{
+  "model_class": "StoredWorkflow",
+  "id": "0bd41bf44b0f6f7d",
+  "name": "ccqtl-wf",
+  "create_time": "2023-07-18T12:23:34.746796",
+  "update_time": "2023-09-29T20:47:07.928165",
+  "published": false,
+  "importable": false,
+  "deleted": false,
+  "hidden": false,
+  "tags": [
+    "v0.0.1_beta.2"
+  ],
+  "latest_workflow_uuid": "719b88a7-51b2-49ba-9b12-4c2ec24ae950",
+  "url": "/api/workflows/0bd41bf44b0f6f7d",
+  "owner": "rp-test",
+  "inputs": {
+    "0": {
+      "label": "Phenotype dataset",
+      "value": "",
+      "uuid": "84887fc4-4083-4ffb-ab02-3e69d8262d87"
+    },
+    "1": {
+      "label": "Covariate dataset",
+      "value": "",
+      "uuid": "39cc2035-dbc7-4226-8525-09932b26ea45"
+    }
+  },
+  "annotation": "",
+  "license": null,
+  "creator": null,
+  "source_metadata": null,
+  "steps": {
+    "0": {
+      "id": 0,
+      "type": "data_input",
+      "tool_id": null,
+      "tool_version": null,
+      "annotation": null,
+      "tool_inputs": {
+        "optional": false,
+        "tag": ""
+      },
+      "input_steps": {}
+    },
+    "1": {
+      "id": 1,
+      "type": "data_input",
+      "tool_id": null,
+      "tool_version": null,
+      "annotation": null,
+      "tool_inputs": {
+        "optional": false,
+        "tag": ""
+      },
+      "input_steps": {}
+    },
+    "2": {
+      "id": 2,
+      "type": "tool",
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_make_inputs/ccqtl_make_inputs/0.0.1_beta.2+galaxy0",
+      "tool_version": "0.0.1_beta.2+galaxy0",
+      "annotation": null,
+      "tool_inputs": {
+        "__page__": null,
+        "__rerun_remap_job_id__": null,
+        "indiv_marker": "CC_MMnGM",
+        "marker_set": "GM_m38",
+        "path_covar": {
+          "__class__": "ConnectedValue"
+        },
+        "path_pheno": {
+          "__class__": "ConnectedValue"
+        },
+        "xp_desc": ""
+      },
+      "input_steps": {
+        "path_pheno": {
+          "source_step": 0,
+          "step_output": "output"
+        },
+        "path_covar": {
+          "source_step": 1,
+          "step_output": "output"
+        }
+      }
+    },
+    "3": {
+      "id": 3,
+      "type": "tool",
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_genome_scan/ccqtl_genome_scan/0.0.1_beta.2+galaxy0",
+      "tool_version": "0.0.1_beta.2+galaxy0",
+      "annotation": null,
+      "tool_inputs": {
+        "__page__": null,
+        "__rerun_remap_job_id__": null,
+        "add_covar": "",
+        "clean_pr": {
+          "__class__": "ConnectedValue"
+        },
+        "crossdata": {
+          "__class__": "ConnectedValue"
+        },
+        "kloco": {
+          "__class__": "ConnectedValue"
+        }
+      },
+      "input_steps": {
+        "clean_pr": {
+          "source_step": 2,
+          "step_output": "clean_pr"
+        },
+        "kloco": {
+          "source_step": 2,
+          "step_output": "kloco"
+        },
+        "crossdata": {
+          "source_step": 2,
+          "step_output": "crossdata"
+        }
+      }
+    },
+    "4": {
+      "id": 4,
+      "type": "tool",
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_permutations/ccqtl_permutations/0.0.1_beta.2+galaxy1",
+      "tool_version": "0.0.1_beta.2+galaxy1",
+      "annotation": null,
+      "tool_inputs": {
+        "__page__": null,
+        "__rerun_remap_job_id__": null,
+        "clean_pr": {
+          "__class__": "RuntimeValue"
+        },
+        "covar_modmat": {
+          "__class__": "RuntimeValue"
+        },
+        "crossdata": {
+          "__class__": "RuntimeValue"
+        },
+        "kloco": {
+          "__class__": "RuntimeValue"
+        },
+        "n_perm": "5",
+        "strat_covar": ""
+      },
+      "input_steps": {
+        "crossdata": {
+          "source_step": 2,
+          "step_output": "crossdata"
+        },
+        "clean_pr": {
+          "source_step": 2,
+          "step_output": "clean_pr"
+        },
+        "kloco": {
+          "source_step": 2,
+          "step_output": "kloco"
+        },
+        "covar_modmat": {
+          "source_step": 3,
+          "step_output": "covar_modmat"
+        }
+      }
+    },
+    "5": {
+      "id": 5,
+      "type": "tool",
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_find_peaks/ccqtl_find_peaks/0.0.1_beta.2+galaxy0",
+      "tool_version": "0.0.1_beta.2+galaxy0",
+      "annotation": null,
+      "tool_inputs": {
+        "__page__": null,
+        "__rerun_remap_job_id__": null,
+        "adjust": "false",
+        "apr": {
+          "__class__": "ConnectedValue"
+        },
+        "clean_pr": {
+          "__class__": "ConnectedValue"
+        },
+        "crossdata": {
+          "__class__": "ConnectedValue"
+        },
+        "kloco": {
+          "__class__": "ConnectedValue"
+        },
+        "level": "95",
+        "nrep": {
+          "__class__": "ConnectedValue"
+        },
+        "operm_lmm": {
+          "__class__": "ConnectedValue"
+        },
+        "out": {
+          "__class__": "ConnectedValue"
+        },
+        "user_drop": "1.5"
+      },
+      "input_steps": {
+        "nrep": {
+          "source_step": 4,
+          "step_output": "nrep_rds"
+        },
+        "crossdata": {
+          "source_step": 2,
+          "step_output": "crossdata"
+        },
+        "clean_pr": {
+          "source_step": 2,
+          "step_output": "clean_pr"
+        },
+        "kloco": {
+          "source_step": 2,
+          "step_output": "kloco"
+        },
+        "apr": {
+          "source_step": 2,
+          "step_output": "apr"
+        },
+        "out": {
+          "source_step": 3,
+          "step_output": "out"
+        },
+        "operm_lmm": {
+          "source_step": 4,
+          "step_output": "operm_lmm"
+        }
+      }
+    },
+    "6": {
+      "id": 6,
+      "type": "tool",
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_refine_region/ccqtl_refine_region/0.0.1_beta.2+galaxy0",
+      "tool_version": "0.0.1_beta.2+galaxy0",
+      "annotation": null,
+      "tool_inputs": {
+        "__page__": null,
+        "__rerun_remap_job_id__": null,
+        "annotations_path": "cc_annotations_m38",
+        "clean_pr": {
+          "__class__": "ConnectedValue"
+        },
+        "crossdata": {
+          "__class__": "ConnectedValue"
+        },
+        "k_top_snps": "3",
+        "kloco": {
+          "__class__": "ConnectedValue"
+        },
+        "peaks": {
+          "__class__": "ConnectedValue"
+        },
+        "width_p": "1"
+      },
+      "input_steps": {
+        "crossdata": {
+          "source_step": 2,
+          "step_output": "crossdata"
+        },
+        "clean_pr": {
+          "source_step": 2,
+          "step_output": "clean_pr"
+        },
+        "kloco": {
+          "source_step": 2,
+          "step_output": "kloco"
+        },
+        "peaks": {
+          "source_step": 5,
+          "step_output": "peaks_rds"
+        }
+      }
+    }
+  },
+  "version": 1
+}

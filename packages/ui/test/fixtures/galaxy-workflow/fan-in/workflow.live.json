@@ -1,0 +1,778 @@
+{
+  "model_class": "StoredWorkflow",
+  "id": "5a30e01ff719f396",
+  "create_time": "2026-09-10T08:57:12.598877",
+  "update_time": "2026-09-15T18:57:22.689807",
+  "name": "wastewater-pathogen-profiling",
+  "url": "/api/workflows/5a30e01ff719f396",
+  "published": true,
+  "annotations": null,
+  "tags": [],
+  "deleted": false,
+  "hidden": false,
+  "owner": "cenbpat2016",
+  "latest_workflow_uuid": "9cde698f-28e7-4d2a-9bf5-4b507d233825",
+  "number_of_steps": null,
+  "show_in_tool_panel": null,
+  "annotation": "Taxonomic profiling of paired-end wastewater metagenomes using Kraken2, Bracken, Krona, and alpha diversity analysis (Shannon, Simpson, Fisher's) with attention to pathogen detection including Salmonella.",
+  "license": "MIT",
+  "version": 34,
+  "inputs": {
+    "0": {
+      "label": "Wastewater paired-end reads",
+      "value": "",
+      "uuid": "5a54a6ac-9624-4ae8-96c3-bcef94226f4c"
+    }
+  },
+  "creator": [
+    {
+      "class": "Person",
+      "name": "Nnaemeka Emmanuel Nnadi",
+      "address": null,
+      "alternateName": null,
+      "email": null,
+      "faxNumber": null,
+      "identifier": " https://orcid.org/0000-0002-8424-4859",
+      "image": null,
+      "telephone": null,
+      "url": null,
+      "familyName": null,
+      "givenName": null,
+      "honorificPrefix": null,
+      "honorificSuffix": null,
+      "jobTitle": null
+    }
+  ],
+  "creator_deleted": false,
+  "doi": null,
+  "steps": {
+    "0": {
+      "id": 0,
+      "annotation": "11 paired-end Illumina samples from wastewater metagenomic sequencing",
+      "input_steps": {},
+      "when": null,
+      "tool_id": null,
+      "tool_uuid": null,
+      "tool_version": null,
+      "tool_inputs": {
+        "collection_type": null,
+        "column_definitions": null,
+        "fields": null,
+        "optional": false,
+        "tag": null
+      },
+      "type": "data_collection_input"
+    },
+    "1": {
+      "id": 1,
+      "annotation": null,
+      "input_steps": {
+        "input_option|batchmode|pair_input": {
+          "source_step": 0,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/megahit/megahit/1.2.9+galaxy2",
+      "tool_uuid": null,
+      "tool_version": "1.2.9+galaxy2",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "advanced_section": {
+          "bubble_level": "2",
+          "cleaning_rounds": "5",
+          "disconnect_ratio": "0.1",
+          "kmin1pass": false,
+          "low_local_ratio": "0.2",
+          "merge_level": "20,0.95",
+          "nolocal": false,
+          "nomercy": false,
+          "prune_depth": "2",
+          "prune_level": "2"
+        },
+        "basic_section": {
+          "k_mer": {
+            "__current_case__": 0,
+            "k_list": "21,29,39,59,79,99,119,141",
+            "k_mer_method": "klist_method"
+          },
+          "min_count": "2"
+        },
+        "input_option": {
+          "__current_case__": 3,
+          "batchmode": {
+            "__current_case__": 0,
+            "pair_input": {
+              "__class__": "ConnectedValue"
+            },
+            "processmode": "individual"
+          },
+          "choice": "paired_collection"
+        },
+        "output_section": {
+          "log_file": false,
+          "min_contig_len": "500",
+          "show_intermediate_contigs": false
+        }
+      },
+      "type": "tool"
+    },
+    "2": {
+      "id": 2,
+      "annotation": null,
+      "input_steps": {
+        "single_paired|input_pair": {
+          "source_step": 0,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/kraken2/kraken2/2.17.1+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "2.17.1+galaxy0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "confidence": "0.1",
+        "kraken2_database": "k2_pluspf_20210517",
+        "min_base_quality": "10",
+        "minimum_hit_groups": "2",
+        "quick": false,
+        "report": {
+          "__current_case__": 0,
+          "create_report": "true",
+          "report_minimizer_data": false,
+          "report_zero_counts": false,
+          "use_mpa_style": false
+        },
+        "single_paired": {
+          "__current_case__": 0,
+          "input_pair": {
+            "__class__": "ConnectedValue"
+          },
+          "single_paired_selector": "collection"
+        },
+        "split_reads": false,
+        "use_names": true
+      },
+      "type": "tool"
+    },
+    "3": {
+      "id": 3,
+      "annotation": null,
+      "input_steps": {
+        "file_input": {
+          "source_step": 1,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/abricate/abricate/1.4.0+galaxy1",
+      "tool_uuid": null,
+      "tool_version": "1.4.0+galaxy1",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "adv": {
+          "db": "resfinder",
+          "min_cov": "80.0",
+          "min_dna_id": "80.0",
+          "no_header": false
+        },
+        "file_input": {
+          "__class__": "ConnectedValue"
+        }
+      },
+      "type": "tool"
+    },
+    "4": {
+      "id": 4,
+      "annotation": null,
+      "input_steps": {
+        "input_option|input_mode|nucleotide_input": {
+          "source_step": 1,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/amrfinderplus/amrfinderplus/4.2.7+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "4.2.7+galaxy0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "input_option": {
+          "amrfinder_db_select": "amrfinderplus_V4.2_2026-05-15.1",
+          "input_mode": {
+            "__current_case__": 0,
+            "input_select": "nucleotide",
+            "nucleotide_flank5_size": "0",
+            "nucleotide_input": {
+              "__class__": "ConnectedValue"
+            }
+          }
+        },
+        "options": {
+          "add_version_columns": false,
+          "coverage_min": "0.5",
+          "ident_min": "-1.0",
+          "name": null,
+          "plus": false,
+          "print_node": false,
+          "report_all_equal": false,
+          "translation_table": "11"
+        },
+        "organism_options": {
+          "organism_conditionnal": {
+            "__current_case__": 1,
+            "organism_select": ""
+          }
+        }
+      },
+      "type": "tool"
+    },
+    "5": {
+      "id": 5,
+      "annotation": null,
+      "input_steps": {
+        "seqfile": {
+          "source_step": 1,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/ufz/virsorter/virsorter/2.2.4+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "2.2.4+galaxy0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "db_dir": "0.4",
+        "exclude_lt2gene": false,
+        "hallmark_required": false,
+        "hallmark_required_on_short": false,
+        "high_confidence_only": false,
+        "include_groups": [
+          "dsDNAphage",
+          "ssDNA",
+          "RNA",
+          "NCLDV",
+          "lavidaviridae"
+        ],
+        "keep_original_seq": false,
+        "min_length": "0",
+        "min_score": "0.5",
+        "prep_for_dramv": false,
+        "provirus_cond": {
+          "__current_case__": 1,
+          "provirus_off": ""
+        },
+        "seqfile": {
+          "__class__": "ConnectedValue"
+        },
+        "seqname_suffix_off": false,
+        "viral_gene_enrich_off": false,
+        "viral_gene_required": false
+      },
+      "type": "tool"
+    },
+    "6": {
+      "id": 6,
+      "annotation": null,
+      "input_steps": {
+        "INPUT": {
+          "source_step": 1,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/ufz/genomad_end_to_end/genomad_end_to_end/1.12.0+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "1.12.0+galaxy0",
+      "tool_inputs": {
+        "DATABASE": "1.9",
+        "INPUT": {
+          "__class__": "ConnectedValue"
+        },
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "annotation": {
+          "full_ictv_lineage": true,
+          "lenient_taxonomy": true,
+          "sensitivity": "4.2"
+        },
+        "basic": {
+          "disable_find_proviruses": true,
+          "disable_nn_classification": true,
+          "enable_score_calibration": false
+        },
+        "filter_cond": {
+          "__current_case__": 0,
+          "filtering_preset": "--conservative"
+        },
+        "license": true,
+        "provirus": {
+          "skip_integrase_identification": false,
+          "skip_trna_identification": false
+        },
+        "score": {
+          "composition": "auto",
+          "force_auto": false
+        },
+        "splits": null
+      },
+      "type": "tool"
+    },
+    "7": {
+      "id": 7,
+      "annotation": null,
+      "input_steps": {
+        "input": {
+          "source_step": 2,
+          "step_output": "report_output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/bracken/est_abundance/3.1+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "3.1+galaxy0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "input": {
+          "__class__": "ConnectedValue"
+        },
+        "kmer_distr": "k2_pluspf_20210517",
+        "level": "S",
+        "logfile_output": false,
+        "out_report": true,
+        "threshold": "10"
+      },
+      "type": "tool"
+    },
+    "8": {
+      "id": 8,
+      "annotation": null,
+      "input_steps": {
+        "report": {
+          "source_step": 2,
+          "step_output": "report_output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/krakentools_kreport2krona/krakentools_kreport2krona/1.2.1+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "1.2.1+galaxy0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "intermediate_ranks": false,
+        "report": {
+          "__class__": "ConnectedValue"
+        }
+      },
+      "type": "tool"
+    },
+    "9": {
+      "id": 9,
+      "annotation": null,
+      "input_steps": {
+        "batchmode|input_fastas": {
+          "source_step": 6,
+          "step_output": "summary_virus_fna"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/galaxyp/fasta_merge_files_and_filter_unique_sequences/fasta_merge_files_and_filter_unique_sequences/1.2.0",
+      "tool_uuid": null,
+      "tool_version": "1.2.0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "accession_parser": "^>([^ ]+).*$",
+        "batchmode": {
+          "__current_case__": 1,
+          "input_fastas": {
+            "__class__": "ConnectedValue"
+          },
+          "processmode": "merge"
+        },
+        "uniqueness_criterion": "sequence"
+      },
+      "type": "tool"
+    },
+    "10": {
+      "id": 10,
+      "annotation": null,
+      "input_steps": {
+        "filename": {
+          "source_step": 7,
+          "step_output": "report"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/krakentools_alpha_diversity/krakentools_alpha_diversity/1.2.1+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "1.2.1+galaxy0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "alpha": "Si",
+        "filename": {
+          "__class__": "ConnectedValue"
+        }
+      },
+      "type": "tool"
+    },
+    "11": {
+      "id": 11,
+      "annotation": null,
+      "input_steps": {
+        "filename": {
+          "source_step": 7,
+          "step_output": "report"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/krakentools_alpha_diversity/krakentools_alpha_diversity/1.2.1+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "1.2.1+galaxy0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "alpha": "F",
+        "filename": {
+          "__class__": "ConnectedValue"
+        }
+      },
+      "type": "tool"
+    },
+    "12": {
+      "id": 12,
+      "annotation": null,
+      "input_steps": {
+        "filename": {
+          "source_step": 7,
+          "step_output": "report"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/krakentools_alpha_diversity/krakentools_alpha_diversity/1.2.1+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "1.2.1+galaxy0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "alpha": "Sh",
+        "filename": {
+          "__class__": "ConnectedValue"
+        }
+      },
+      "type": "tool"
+    },
+    "13": {
+      "id": 13,
+      "annotation": null,
+      "input_steps": {
+        "type_of_data|input": {
+          "source_step": 8,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/crs4/taxonomy_krona_chart/taxonomy_krona_chart/2.7.1+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "2.7.1+galaxy0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "combine_inputs": true,
+        "root_name": "Root",
+        "type_of_data": {
+          "__current_case__": 1,
+          "input": {
+            "__class__": "ConnectedValue"
+          },
+          "type_of_data_selector": "text"
+        }
+      },
+      "type": "tool"
+    },
+    "14": {
+      "id": 14,
+      "annotation": null,
+      "input_steps": {
+        "input": {
+          "source_step": 9,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/ufz/checkv_end_to_end/checkv_end_to_end/1.0.3+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "1.0.3+galaxy0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "input": {
+          "__class__": "ConnectedValue"
+        },
+        "optional_outputs": null,
+        "reference": "1.5"
+      },
+      "type": "tool"
+    },
+    "15": {
+      "id": 15,
+      "annotation": null,
+      "input_steps": {
+        "input_collection": {
+          "source_step": 10,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/collection_element_identifiers/collection_element_identifiers/0.0.3",
+      "tool_uuid": null,
+      "tool_version": "0.0.3",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "input_collection": {
+          "__class__": "ConnectedValue"
+        }
+      },
+      "type": "tool"
+    },
+    "16": {
+      "id": 16,
+      "annotation": null,
+      "input_steps": {
+        "input_list": {
+          "source_step": 10,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/nml/collapse_collections/collapse_dataset/5.1.0",
+      "tool_uuid": null,
+      "tool_version": "5.1.0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "filename": {
+          "__current_case__": 0,
+          "add_name": true,
+          "place_name": "same_multiple"
+        },
+        "input_list": {
+          "__class__": "ConnectedValue"
+        },
+        "one_header": false
+      },
+      "type": "tool"
+    },
+    "17": {
+      "id": 17,
+      "annotation": null,
+      "input_steps": {
+        "infile": {
+          "source_step": 11,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/bgruening/text_processing/tp_tail_tool/9.11+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "9.11+galaxy0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "complement": "",
+        "infile": {
+          "__class__": "ConnectedValue"
+        },
+        "num_lines": "1"
+      },
+      "type": "tool"
+    },
+    "18": {
+      "id": 18,
+      "annotation": null,
+      "input_steps": {
+        "input_list": {
+          "source_step": 12,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/nml/collapse_collections/collapse_dataset/5.1.0",
+      "tool_uuid": null,
+      "tool_version": "5.1.0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "filename": {
+          "__current_case__": 0,
+          "add_name": true,
+          "place_name": "same_multiple"
+        },
+        "input_list": {
+          "__class__": "ConnectedValue"
+        },
+        "one_header": false
+      },
+      "type": "tool"
+    },
+    "19": {
+      "id": 19,
+      "annotation": null,
+      "input_steps": {
+        "batchmode|input_fastas": {
+          "source_step": 14,
+          "step_output": "viruses"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/galaxyp/fasta_merge_files_and_filter_unique_sequences/fasta_merge_files_and_filter_unique_sequences/1.2.0",
+      "tool_uuid": null,
+      "tool_version": "1.2.0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "accession_parser": "^>([^ ]+).*$",
+        "batchmode": {
+          "__current_case__": 1,
+          "input_fastas": {
+            "__class__": "ConnectedValue"
+          },
+          "processmode": "merge"
+        },
+        "uniqueness_criterion": "sequence"
+      },
+      "type": "tool"
+    },
+    "20": {
+      "id": 20,
+      "annotation": null,
+      "input_steps": {
+        "input_list": {
+          "source_step": 17,
+          "step_output": "outfile"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/nml/collapse_collections/collapse_dataset/5.1.0",
+      "tool_uuid": null,
+      "tool_version": "5.1.0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "filename": {
+          "__current_case__": 0,
+          "add_name": true,
+          "place_name": "same_multiple"
+        },
+        "input_list": {
+          "__class__": "ConnectedValue"
+        },
+        "one_header": false
+      },
+      "type": "tool"
+    },
+    "21": {
+      "id": 21,
+      "annotation": null,
+      "input_steps": {
+        "mapped|mode|reference": {
+          "source_step": 19,
+          "step_output": "output"
+        },
+        "mapped|mode|read_type|paired_reads": {
+          "source_step": 0,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/coverm_contig/coverm_contig/0.8.0+galaxy1",
+      "tool_uuid": null,
+      "tool_version": "0.8.0+galaxy1",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "alignment": {
+          "exclude_supplementary": false,
+          "min_read_aligned_length": "0",
+          "min_read_aligned_percent": "0.0",
+          "min_read_percent_identity": "0.0",
+          "proper_pairs_only": {
+            "__current_case__": 1,
+            "proper_pairs_only": ""
+          }
+        },
+        "cov": {
+          "contig_end_exclusion": "75",
+          "methods": "mean",
+          "min_covered_fraction": "10",
+          "trim_max": "95",
+          "trim_min": "5"
+        },
+        "mapped": {
+          "__current_case__": 1,
+          "mapped": "not-mapped",
+          "mapper": "minimap2-sr",
+          "mode": {
+            "__current_case__": 1,
+            "extra_reads": [],
+            "mode": "co",
+            "read_type": {
+              "__current_case__": 2,
+              "paired_reads": {
+                "__class__": "ConnectedValue"
+              },
+              "type": "paired_collection"
+            },
+            "reference": {
+              "__class__": "ConnectedValue"
+            },
+            "sharded": false
+          }
+        },
+        "output_format": "dense"
+      },
+      "type": "tool"
+    },
+    "22": {
+      "id": 22,
+      "annotation": null,
+      "input_steps": {
+        "fa_file": {
+          "source_step": 19,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/ufz/iphop_predict/iphop_predict/1.4.2+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "1.4.2+galaxy0",
+      "tool_inputs": {
+        "__page__": 0,
+        "__rerun_remap_job_id__": null,
+        "db_dir": "iPHoP_db_Jun25_rw",
+        "fa_file": {
+          "__class__": "ConnectedValue"
+        },
+        "min_score": "90",
+        "no_qc": false
+      },
+      "type": "tool"
+    }
+  },
+  "importable": true,
+  "email_hash": "4d3dce9a2f7cf9fb9a1b4b3da616cdca",
+  "readme": "Here is the Readme without any asterisks.\n\n### Workflow Readme\n\nWastewater Pathogen Profiling Workflow\n\nPurpose\nThis workflow performs taxonomic profiling of paired-end Illumina wastewater metagenomes, with particular attention to detecting pathogens of public health concern, including Salmonella.\n\nInput Requirements\nData type: Paired-end Illumina FASTQ files (fastqsanger.gz)\nFormat: A Galaxy list:paired collection containing one forward/reverse pair per sample\nNaming: Files should follow standard Illumina naming, for example 1_S1_L001_R1_001.fastq.gz and 1_S1_L001_R2_001.fastq.gz\n\nWorkflow Steps\n1. Kraken2 - Taxonomic classification of reads against the PlusPF database. Confidence threshold 0.1, minimum base quality 10, minimum hit groups 2.\n2. Bracken - Species-level abundance re-estimation from the Kraken2 report. Read length 150 bp, threshold 10.\n3. Krona - Interactive visualization of community composition.\n4. KrakenTools Alpha Diversity - Shannon's diversity, Simpson's index, and Fisher's alpha calculated per sample.\n\nOutputs\nKrona HTML chart - Interactive community composition figure\nBracken abundance tables - Species-level relative abundances\nAlpha diversity tables - Shannon, Simpson, and Fisher's values for each sample\n\nImportant Limitations\nUnclassified reads are excluded from Bracken abundance estimates. In wastewater samples, a significant fraction of reads may be unclassified, which can inflate the apparent abundance of detected taxa. Users should adjust for unclassified reads before finalizing quantitative figures.\nNo host decontamination step is included. Human or other host DNA will be classified as such and excluded from bacterial abundance estimates.\nDatabase coverage: The PlusPF database includes bacteria, archaea, viruses, protozoa, and fungi. It does not include helminth genomes.\nCross-mapping caution: Salmonella is closely related to Escherichia and Shigella. The confidence threshold of 0.1 reduces false positives, but users should interpret very low-abundance Salmonella hits with caution.\n\nExpected Runtime\nKraken2 classification is the bottleneck. For 12 paired-end samples on usegalaxy.eu, approximately 1 to 3 hours.\n\nCitation\nIf you use this workflow, please cite:\nKraken2: Wood et al. (2019), Genome Biology\nBracken: Lu et al. (2017), PeerJ Computer Science\nKrona: Ondov et al. (2011), BMC Bioinformatics\nKrakenTools: Lu et al. (2022), Bioinformatics\n\nAuthor\nNnaemeka EmmanueL Nnadi, Plateau State University, Bokkos and Centre for Phage Biology and therapeutics, LTD/GTE, Jos\n\nCopy and paste this into the Readme field. After saving, your Best Practices score should show 5/5 Critical and 4/4 Attributes.",
+  "help": null,
+  "slug": "wastewater-pathogen-profiling",
+  "source_metadata": null
+}

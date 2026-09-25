@@ -1,0 +1,240 @@
+{
+  "model_class": "MergeCollectionTool",
+  "id": "__MERGE_COLLECTION__",
+  "name": "Merge collections",
+  "version": "1.0.0",
+  "description": "into a single collection",
+  "labels": [],
+  "icon": null,
+  "edam_operations": [
+    "operation_2409"
+  ],
+  "edam_topics": [],
+  "hidden": "",
+  "is_workflow_compatible": true,
+  "xrefs": [],
+  "versions": [
+    "1.0.0"
+  ],
+  "hidden_versions": [],
+  "inputs": [
+    {
+      "model_class": "Repeat",
+      "name": "inputs",
+      "type": "repeat",
+      "title": "Input Collections",
+      "help": null,
+      "default": 2,
+      "min": 2,
+      "max": null,
+      "inputs": [
+        {
+          "model_class": "DataCollectionToolParameter",
+          "name": "input",
+          "argument": null,
+          "type": "data_collection",
+          "label": "Input Collection",
+          "help": "",
+          "help_format": "html",
+          "refresh_on_change": true,
+          "optional": false,
+          "hidden": false,
+          "is_dynamic": false,
+          "value": null,
+          "collection_types": null,
+          "fields": null,
+          "column_definitions": null,
+          "extensions": [
+            "data"
+          ],
+          "multiple": false,
+          "tag": null,
+          "options": {
+            "hda": [],
+            "hdca": [],
+            "dce": []
+          },
+          "pinned": {
+            "hda": [],
+            "hdca": [],
+            "dce": []
+          },
+          "options_meta": {}
+        }
+      ]
+    },
+    {
+      "model_class": "Section",
+      "name": "advanced",
+      "type": "section",
+      "title": "Advanced Options",
+      "help": null,
+      "expanded": false,
+      "inputs": [
+        {
+          "model_class": "Conditional",
+          "name": "conflict",
+          "type": "conditional",
+          "cases": [
+            {
+              "model_class": "ConditionalWhen",
+              "value": "suffix_conflict",
+              "inputs": [
+                {
+                  "model_class": "TextToolParameter",
+                  "name": "suffix_pattern",
+                  "argument": null,
+                  "type": "text",
+                  "label": "Use the following suffix pattern:",
+                  "help": "Describe the suffix pattern to use when joining element name and data copy number. For instance, the default is '_#', which will produce _1 as the first suffix used.",
+                  "help_format": "html",
+                  "refresh_on_change": false,
+                  "optional": true,
+                  "hidden": false,
+                  "is_dynamic": false,
+                  "value": "_#",
+                  "area": false,
+                  "datalist": []
+                }
+              ]
+            },
+            {
+              "model_class": "ConditionalWhen",
+              "value": "suffix_conflict_rest",
+              "inputs": [
+                {
+                  "model_class": "TextToolParameter",
+                  "name": "suffix_pattern",
+                  "argument": null,
+                  "type": "text",
+                  "label": "Use the following suffix pattern:",
+                  "help": "Describe the suffix pattern to use when joining element name and data copy number. For instance, the default is '_#', which will produce _1 as the first suffix used.",
+                  "help_format": "html",
+                  "refresh_on_change": false,
+                  "optional": true,
+                  "hidden": false,
+                  "is_dynamic": false,
+                  "value": "_#",
+                  "area": false,
+                  "datalist": []
+                }
+              ]
+            },
+            {
+              "model_class": "ConditionalWhen",
+              "value": "suffix_every",
+              "inputs": [
+                {
+                  "model_class": "TextToolParameter",
+                  "name": "suffix_pattern",
+                  "argument": null,
+                  "type": "text",
+                  "label": "Use the following suffix pattern:",
+                  "help": "Describe the suffix pattern to use when joining element name and data copy number. For instance, the default is '_#', which will produce _1 as the first suffix used.",
+                  "help_format": "html",
+                  "refresh_on_change": false,
+                  "optional": true,
+                  "hidden": false,
+                  "is_dynamic": false,
+                  "value": "_#",
+                  "area": false,
+                  "datalist": []
+                }
+              ]
+            },
+            {
+              "model_class": "ConditionalWhen",
+              "value": "keep_first",
+              "inputs": []
+            },
+            {
+              "model_class": "ConditionalWhen",
+              "value": "keep_last",
+              "inputs": []
+            },
+            {
+              "model_class": "ConditionalWhen",
+              "value": "fail",
+              "inputs": []
+            }
+          ],
+          "test_param": {
+            "model_class": "SelectToolParameter",
+            "name": "duplicate_options",
+            "argument": null,
+            "type": "select",
+            "label": "How should conflicts (or potential conflicts) be handled?",
+            "help": "Collection elements must have unique element identifiers, when appending how should unique identifiers be assured. See Help section below for examples.",
+            "help_format": "html",
+            "refresh_on_change": true,
+            "optional": false,
+            "hidden": false,
+            "is_dynamic": false,
+            "value": "keep_first",
+            "options": [
+              [
+                "Append suffix to conflicted element identifiers",
+                "suffix_conflict",
+                false
+              ],
+              [
+                "Append suffix to conflicted element identifiers after first one encountered",
+                "suffix_conflict_rest",
+                false
+              ],
+              [
+                "Append suffix to every element identifier",
+                "suffix_every",
+                false
+              ],
+              [
+                "Keep first instance",
+                "keep_first",
+                true
+              ],
+              [
+                "Keep last instance",
+                "keep_last",
+                false
+              ],
+              [
+                "Fail collection creation",
+                "fail",
+                false
+              ]
+            ],
+            "display": null,
+            "multiple": false,
+            "textable": false
+          }
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "model_class": "ToolOutputCollection",
+      "name": "output",
+      "format": null,
+      "label": "${on_string} (merged)",
+      "hidden": false,
+      "output_type": "collection",
+      "default_format": "data",
+      "format_source": "input",
+      "metadata_source": null,
+      "inherit_format": false,
+      "inherit_metadata": false,
+      "structure": {
+        "collection_type": null,
+        "collection_type_source": "inputs_0|input",
+        "collection_type_from_rules": null,
+        "structured_like": null,
+        "discover_datasets": []
+      }
+    }
+  ],
+  "has_parameters": true,
+  "panel_section_id": "collection_operations",
+  "panel_section_name": "Collection Operations",
+  "form_style": "regular"
+}

@@ -350,6 +350,35 @@ workflow; the uuid route needs nothing of the workflow at all.
 Out of scope for this test: that GaaS *sends* the pin. `invokeWorkflowEffect`
 does (`workflows.ts:208`); this checks only that Galaxy honours it.
 
+### What the recordings settled (#86)
+
+Three real workflows are recorded under
+`packages/ui/test/fixtures/galaxy-workflow/`: `ccqtl-today` from Pasteur at
+22.05, and two from usegalaxy.eu at 26.1 for the shapes Pasteur's account does
+not have. A survey of 160 published workflows found only four carrying all five
+shapes at once, the smallest 57 steps, which is why it is a set rather than one.
+
+Four things the recordings showed that this document had wrong or missing:
+
+- **`ConnectedValue` is the most common shape there is, and appears nowhere
+  above.** Galaxy writes `{"__class__": "ConnectedValue"}` for a parameter fed
+  by an upstream step. It is in every recording. The invoke form must *not*
+  offer a field for one — the graph supplies it — which is a rule nothing had
+  written down.
+- **The live payload and the stored definition derive the same parameter
+  model**, on both recordings. Q12's switch of source is invisible to a reader
+  for these shapes, so the question below is answered for the cases we hold:
+  nowhere. The caveat stands for a tool upgraded since the revision was saved,
+  which no one-off recording can reach.
+- **22.05 writes a boolean as `"false"`; 26.1 writes `false`.** A widget that
+  parsed the string would read a different type after the upgrade. Pinned on
+  both sides.
+- **A `RuntimeValue` that is `data`-typed is never offered.** On `ccqtl-today`
+  step 4, Galaxy saved four data inputs as `RuntimeValue` — it expects them at
+  run time — but `useGalaxyTool` filters every `data` parameter out before the
+  panel is built, so GaaS never asks and the reader cannot supply them. Pinned
+  as it is; whether it is a defect is a separate question.
+
 ### Where does Q12 change widget defaults?
 
 Now that Q12 is required, this criterion has a different job. It was a go/no-go
@@ -417,7 +446,7 @@ drop-and-republish, not a migration.
    a data input, a tool with a conditional, one with a runtime parameter, and
    **one with a fan-in input**. Must come after step 1, or they pin the stripped
    payload as correct. Pays for itself twice; it is also Q12's acceptance
-   fixture.
+   fixture. **Done in #86** — see "What the recordings settled" below.
 3. **Sync fix: record mapped jobs**, via `step_details=true` and the per-step
    `jobs` array — not `legacy_job_state`, not `step_jobs_summary`. Independent of
    the graph, fixes a real defect, and is the prerequisite for Q18. Can go in

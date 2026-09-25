@@ -1,0 +1,486 @@
+{
+  "model_class": "Tool",
+  "id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_make_inputs/ccqtl_make_inputs/0.0.1_beta.2+galaxy0",
+  "name": "CCQTL: Make input files",
+  "version": "0.0.1_beta.2+galaxy0",
+  "description": "for subsequent QTL mapping and later steps",
+  "labels": [],
+  "edam_operations": [
+    "operation_3232"
+  ],
+  "edam_topics": [
+    "topic_0625",
+    "topic_0160",
+    "topic_3338"
+  ],
+  "hidden": "",
+  "is_workflow_compatible": true,
+  "xrefs": [],
+  "tool_shed_repository": {
+    "name": "ccqtl_make_inputs",
+    "owner": "rplanel",
+    "changeset_revision": "3e874646330f",
+    "tool_shed": "toolshed.g2.bx.psu.edu"
+  },
+  "inputs": [
+    {
+      "model_class": "DataToolParameter",
+      "name": "path_pheno",
+      "argument": "--path_pheno",
+      "type": "data",
+      "label": "File containing phenotype data",
+      "help": "File containing phenotype data. One single file irrespective of the number of phenotypes.",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "csv"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_3475"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "path_covar",
+      "argument": "--path_covar",
+      "type": "data",
+      "label": "File containing covariate data",
+      "help": "File containing covariate data. One single file irrespective of the number of             covariates and one of them must be sex, formatted as F vs M.",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "csv"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_3475"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "SelectToolParameter",
+      "name": "indiv_marker",
+      "argument": "--indiv_geno",
+      "type": "select",
+      "label": "Select individual genotypes of each CC mouse at each marker",
+      "help": "Directory that contains the individual genotypes of each CC mouse at each marker and the funnel codes if applicable.",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": true,
+      "value": "CC_MMnGM",
+      "options": [
+        [
+          "CC_MMnGM",
+          "CC_MMnGM",
+          false
+        ]
+      ],
+      "display": null,
+      "multiple": false,
+      "textable": false
+    },
+    {
+      "model_class": "SelectToolParameter",
+      "name": "marker_set",
+      "argument": "--marker_set",
+      "type": "select",
+      "label": "Select the genetic and physical maps as well as the founder genotypes information",
+      "help": "Directory that contains the genetic and physical maps as well as the founder genotypes information, for the different combinations of marker set and genome build.",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": true,
+      "value": "MMnGM_m38",
+      "options": [
+        [
+          "MMnGM_m38",
+          "MMnGM_m38",
+          false
+        ],
+        [
+          "MM_m38",
+          "MM_m38",
+          false
+        ],
+        [
+          "GM_m38",
+          "GM_m38",
+          false
+        ]
+      ],
+      "display": null,
+      "multiple": false,
+      "textable": false
+    },
+    {
+      "model_class": "TextToolParameter",
+      "name": "xp_desc",
+      "argument": "--xp_desc",
+      "type": "text",
+      "label": "Experience description (optional)",
+      "help": "",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": "",
+      "area": false,
+      "datalist": []
+    }
+  ],
+  "outputs": [
+    {
+      "model_class": "ToolOutputCollection",
+      "name": "genofiles",
+      "format": null,
+      "label": "${tool.name} on ${on_string}: genofiles",
+      "hidden": false,
+      "output_type": "collection",
+      "default_format": "csv",
+      "default_format_source": null,
+      "default_metadata_source": null,
+      "inherit_format": false,
+      "inherit_metadata": false,
+      "structure": {
+        "collection_type": "list",
+        "collection_type_source": null,
+        "collection_type_from_rules": null,
+        "structured_like": null,
+        "discover_datasets": [
+          {
+            "discover_via": "pattern",
+            "dbkey": "__input__",
+            "format": "csv",
+            "visible": false,
+            "assign_primary_output": false,
+            "directory": "outfiles",
+            "recurse": false,
+            "match_relative_path": false,
+            "sort_key": "filename",
+            "sort_comp": "lexical",
+            "pattern": "(?P<designation>.+\\.csv_mod)",
+            "sort_by": "filename"
+          }
+        ]
+      }
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "phenotypes_out",
+      "format": "csv",
+      "label": "${tool.name} on ${on_string}: pheno.csv",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/pheno.csv",
+      "edam_format": "format_3475",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "covariables_out",
+      "format": "csv",
+      "label": "${tool.name} on ${on_string}: covar.csv",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/covar.csv",
+      "edam_format": "format_3475",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "crossinfo",
+      "format": "csv",
+      "label": "${tool.name} on ${on_string}: crossinfo_rft.csv",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/crossinfo_rft.csv",
+      "edam_format": "format_3475",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "control_file",
+      "format": "yaml",
+      "label": "${tool.name} on ${on_string}: control_file.yaml",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "control_file.yaml",
+      "edam_format": "format_2330",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "pr",
+      "format": "rds",
+      "label": "${tool.name} on ${on_string}: pr.rds",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/Rdata/pr.rds",
+      "edam_format": "format_2333",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "apr",
+      "format": "rds",
+      "label": "${tool.name} on ${on_string}: apr.rds",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/Rdata/apr.rds",
+      "edam_format": "format_2333",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "crossdata",
+      "format": "rds",
+      "label": "${tool.name} on ${on_string}: crossdata.rds",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/Rdata/crossdata.rds",
+      "edam_format": "format_2333",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "clean_pr",
+      "format": "rds",
+      "label": "${tool.name} on ${on_string}: clean_pr.rds",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/Rdata/clean_pr.rds",
+      "edam_format": "format_2333",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "kloco",
+      "format": "rds",
+      "label": "${tool.name} on ${on_string}: kloco.rds",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/Rdata/kloco.rds",
+      "edam_format": "format_2333",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    }
+  ],
+  "panel_section_id": "phenotype_association",
+  "panel_section_name": "Phenotype Association",
+  "form_style": "regular"
+}

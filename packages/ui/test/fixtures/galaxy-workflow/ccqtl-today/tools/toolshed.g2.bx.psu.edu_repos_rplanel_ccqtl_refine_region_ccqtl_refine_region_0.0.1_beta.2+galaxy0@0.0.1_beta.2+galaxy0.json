@@ -1,0 +1,346 @@
+{
+  "model_class": "Tool",
+  "id": "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_refine_region/ccqtl_refine_region/0.0.1_beta.2+galaxy0",
+  "name": "CCQTL: Refine QTL intervals",
+  "version": "0.0.1_beta.2+galaxy0",
+  "description": "by providing gene annotations and and DNA seq variants",
+  "labels": [],
+  "edam_operations": [
+    "operation_3232"
+  ],
+  "edam_topics": [
+    "topic_0625",
+    "topic_0160",
+    "topic_3338"
+  ],
+  "hidden": "",
+  "is_workflow_compatible": true,
+  "xrefs": [],
+  "tool_shed_repository": {
+    "name": "ccqtl_refine_region",
+    "owner": "rplanel",
+    "changeset_revision": "826db226171b",
+    "tool_shed": "toolshed.g2.bx.psu.edu"
+  },
+  "inputs": [
+    {
+      "model_class": "DataToolParameter",
+      "name": "crossdata",
+      "argument": "--crossdata",
+      "type": "data",
+      "label": "crossdata rds file",
+      "help": "The cross rds file output from make_inputs",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "clean_pr",
+      "argument": "--clean_pr",
+      "type": "data",
+      "label": "clean_pr ds file",
+      "help": "The cleaned genotype probabilities rds file output from make_inputs",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "kloco",
+      "argument": "--kloco",
+      "type": "data",
+      "label": "kloco rds file",
+      "help": "the LOCO kinship rds file output from make_inputs",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "IntegerToolParameter",
+      "name": "width_p",
+      "argument": "--width_p",
+      "type": "integer",
+      "label": "Width of the genomic window around the peak (Mb)",
+      "help": "",
+      "refresh_on_change": false,
+      "min": 1,
+      "max": 5,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": "1",
+      "area": false,
+      "datalist": []
+    },
+    {
+      "model_class": "IntegerToolParameter",
+      "name": "k_top_snps",
+      "argument": "--k_top_snps",
+      "type": "integer",
+      "label": "Number of top SNPs to be kept at a given peak",
+      "help": "",
+      "refresh_on_change": false,
+      "min": 1,
+      "max": 10,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": "5",
+      "area": false,
+      "datalist": []
+    },
+    {
+      "model_class": "DataToolParameter",
+      "name": "peaks",
+      "argument": "--peaks",
+      "type": "data",
+      "label": "peaks",
+      "help": "",
+      "refresh_on_change": true,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": false,
+      "value": null,
+      "extensions": [
+        "rds"
+      ],
+      "edam": {
+        "edam_formats": [
+          "format_2333"
+        ],
+        "edam_data": [
+          "data_0006"
+        ]
+      },
+      "multiple": false,
+      "options": {
+        "hda": [],
+        "hdca": []
+      },
+      "tag": null
+    },
+    {
+      "model_class": "SelectToolParameter",
+      "name": "annotations_path",
+      "argument": "--annotations_path",
+      "type": "select",
+      "label": "Select DNA seq variants and gene annotation",
+      "help": "If your dataset of interest is not listed, contact the Galaxy team",
+      "refresh_on_change": false,
+      "optional": false,
+      "hidden": false,
+      "is_dynamic": true,
+      "value": "cc_annotations_m38",
+      "options": [
+        [
+          "Annotations m38",
+          "cc_annotations_m38",
+          false
+        ]
+      ],
+      "display": null,
+      "multiple": false,
+      "textable": false
+    }
+  ],
+  "outputs": [
+    {
+      "model_class": "ToolOutputCollection",
+      "name": "genes",
+      "format": null,
+      "label": "${tool.name} on ${on_string}: genes",
+      "hidden": false,
+      "output_type": "collection",
+      "default_format": "csv",
+      "default_format_source": null,
+      "default_metadata_source": null,
+      "inherit_format": false,
+      "inherit_metadata": false,
+      "structure": {
+        "collection_type": "list",
+        "collection_type_source": null,
+        "collection_type_from_rules": null,
+        "structured_like": null,
+        "discover_datasets": [
+          {
+            "discover_via": "pattern",
+            "dbkey": "__input__",
+            "format": "csv",
+            "visible": false,
+            "assign_primary_output": false,
+            "directory": "outfiles/genes/",
+            "recurse": false,
+            "match_relative_path": false,
+            "sort_key": "filename",
+            "sort_comp": "lexical",
+            "pattern": "(?P<designation>.*)",
+            "sort_by": "filename"
+          }
+        ]
+      }
+    },
+    {
+      "model_class": "ToolOutputCollection",
+      "name": "snps_assoc",
+      "format": null,
+      "label": "${tool.name} on ${on_string}: snp association",
+      "hidden": false,
+      "output_type": "collection",
+      "default_format": "csv",
+      "default_format_source": null,
+      "default_metadata_source": null,
+      "inherit_format": false,
+      "inherit_metadata": false,
+      "structure": {
+        "collection_type": "list",
+        "collection_type_source": null,
+        "collection_type_from_rules": null,
+        "structured_like": null,
+        "discover_datasets": [
+          {
+            "discover_via": "pattern",
+            "dbkey": "__input__",
+            "format": "csv",
+            "visible": false,
+            "assign_primary_output": false,
+            "directory": "outfiles/snps/assoc/",
+            "recurse": false,
+            "match_relative_path": false,
+            "sort_key": "filename",
+            "sort_comp": "lexical",
+            "pattern": "(?P<designation>.*)",
+            "sort_by": "filename"
+          }
+        ]
+      }
+    },
+    {
+      "model_class": "ToolOutputCollection",
+      "name": "top_snps",
+      "format": null,
+      "label": "${tool.name} on ${on_string}: top snps",
+      "hidden": false,
+      "output_type": "collection",
+      "default_format": "csv",
+      "default_format_source": null,
+      "default_metadata_source": null,
+      "inherit_format": false,
+      "inherit_metadata": false,
+      "structure": {
+        "collection_type": "list",
+        "collection_type_source": null,
+        "collection_type_from_rules": null,
+        "structured_like": null,
+        "discover_datasets": [
+          {
+            "discover_via": "pattern",
+            "dbkey": "__input__",
+            "format": "csv",
+            "visible": false,
+            "assign_primary_output": false,
+            "directory": "outfiles/snps/top/",
+            "recurse": false,
+            "match_relative_path": false,
+            "sort_key": "filename",
+            "sort_comp": "lexical",
+            "pattern": "(?P<designation>.*)",
+            "sort_by": "filename"
+          }
+        ]
+      }
+    },
+    {
+      "model_class": "ToolOutput",
+      "name": "refine_peaks",
+      "format": "csv",
+      "label": "${tool.name} on ${on_string}: refine-peaks.csv",
+      "hidden": false,
+      "output_type": "data",
+      "format_source": null,
+      "default_identifier_source": "None",
+      "metadata_source": "",
+      "parent": null,
+      "count": 1,
+      "from_work_dir": "outfiles/peaks/refine-peaks.csv",
+      "edam_format": "format_3475",
+      "edam_data": "data_0006",
+      "discover_datasets": [
+        {
+          "discover_via": "pattern",
+          "dbkey": "__input__",
+          "format": null,
+          "visible": false,
+          "assign_primary_output": false,
+          "directory": null,
+          "recurse": false,
+          "match_relative_path": false,
+          "sort_key": "filename",
+          "sort_comp": "lexical",
+          "pattern": "primary_DATASET_ID_(?P<designation>[^_]+)_(?P<visible>[^_]+)_(?P<ext>[^_]+)(_(?P<dbkey>[^_]+))?",
+          "sort_by": "filename"
+        }
+      ]
+    }
+  ],
+  "panel_section_id": "phenotype_association",
+  "panel_section_name": "Phenotype Association",
+  "form_style": "regular"
+}

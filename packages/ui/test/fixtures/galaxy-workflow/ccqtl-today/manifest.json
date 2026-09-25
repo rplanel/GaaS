@@ -1,0 +1,91 @@
+{
+  "recordedAt": "2026-09-25",
+  "instance": "galaxy.pasteur.fr",
+  "toolsRecorded": true,
+  "galaxyVersion": "22.05.1",
+  "workflowId": "0bd41bf44b0f6f7d",
+  "workflowName": "ccqtl-wf",
+  "revision": 1,
+  "command": "node scripts/record-workflow-fixtures.mts 0bd41bf44b0f6f7d --name ccqtl-today",
+  "datasetOptionsRedacted": true,
+  "shapes": {
+    "live": {
+      "0": [
+        "data_input"
+      ],
+      "1": [
+        "data_input"
+      ],
+      "2": [
+        "ConnectedValue"
+      ],
+      "3": [
+        "ConnectedValue"
+      ],
+      "4": [
+        "RuntimeValue"
+      ],
+      "5": [
+        "ConnectedValue"
+      ],
+      "6": [
+        "ConnectedValue"
+      ]
+    },
+    "export": {
+      "0": [
+        "data_input"
+      ],
+      "1": [
+        "data_input"
+      ],
+      "2": [
+        "ConnectedValue"
+      ],
+      "3": [
+        "ConnectedValue"
+      ],
+      "4": [
+        "RuntimeValue"
+      ],
+      "5": [
+        "ConnectedValue"
+      ],
+      "6": [
+        "ConnectedValue"
+      ]
+    }
+  },
+  "missingShapes": [
+    "conditional",
+    "repeat",
+    "fan-in"
+  ],
+  "tools": {
+    "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_make_inputs/ccqtl_make_inputs/0.0.1_beta.2+galaxy0@0.0.1_beta.2+galaxy0": {
+      "file": "tools/toolshed.g2.bx.psu.edu_repos_rplanel_ccqtl_make_inputs_ccqtl_make_inputs_0.0.1_beta.2+galaxy0@0.0.1_beta.2+galaxy0.json",
+      "askedVersion": "0.0.1_beta.2+galaxy0",
+      "servedVersion": "0.0.1_beta.2+galaxy0"
+    },
+    "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_genome_scan/ccqtl_genome_scan/0.0.1_beta.2+galaxy0@0.0.1_beta.2+galaxy0": {
+      "file": "tools/toolshed.g2.bx.psu.edu_repos_rplanel_ccqtl_genome_scan_ccqtl_genome_scan_0.0.1_beta.2+galaxy0@0.0.1_beta.2+galaxy0.json",
+      "askedVersion": "0.0.1_beta.2+galaxy0",
+      "servedVersion": "0.0.1_beta.2+galaxy0"
+    },
+    "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_permutations/ccqtl_permutations/0.0.1_beta.2+galaxy1@0.0.1_beta.2+galaxy1": {
+      "file": "tools/toolshed.g2.bx.psu.edu_repos_rplanel_ccqtl_permutations_ccqtl_permutations_0.0.1_beta.2+galaxy1@0.0.1_beta.2+galaxy1.json",
+      "askedVersion": "0.0.1_beta.2+galaxy1",
+      "servedVersion": "0.0.1_beta.2+galaxy1"
+    },
+    "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_find_peaks/ccqtl_find_peaks/0.0.1_beta.2+galaxy0@0.0.1_beta.2+galaxy0": {
+      "file": "tools/toolshed.g2.bx.psu.edu_repos_rplanel_ccqtl_find_peaks_ccqtl_find_peaks_0.0.1_beta.2+galaxy0@0.0.1_beta.2+galaxy0.json",
+      "askedVersion": "0.0.1_beta.2+galaxy0",
+      "servedVersion": "0.0.1_beta.2+galaxy0"
+    },
+    "toolshed.g2.bx.psu.edu/repos/rplanel/ccqtl_refine_region/ccqtl_refine_region/0.0.1_beta.2+galaxy0@0.0.1_beta.2+galaxy0": {
+      "file": "tools/toolshed.g2.bx.psu.edu_repos_rplanel_ccqtl_refine_region_ccqtl_refine_region_0.0.1_beta.2+galaxy0@0.0.1_beta.2+galaxy0.json",
+      "askedVersion": "0.0.1_beta.2+galaxy0",
+      "servedVersion": "0.0.1_beta.2+galaxy0"
+    }
+  }
+}

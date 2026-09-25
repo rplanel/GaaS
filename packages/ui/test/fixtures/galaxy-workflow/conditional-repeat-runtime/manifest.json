@@ -1,0 +1,81 @@
+{
+  "recordedAt": "2026-09-25",
+  "instance": "usegalaxy.eu",
+  "toolsRecorded": true,
+  "galaxyVersion": "26.1.2.dev0",
+  "workflowId": "95dfc6403c0edd08",
+  "workflowName": "Integron finder",
+  "revision": 1,
+  "command": "node scripts/record-workflow-fixtures.mts 95dfc6403c0edd08 --name conditional-repeat-runtime",
+  "datasetOptionsRedacted": true,
+  "shapes": {
+    "live": {
+      "0": [
+        "data_input"
+      ],
+      "1": [
+        "ConnectedValue",
+        "RuntimeValue"
+      ],
+      "2": [
+        "ConnectedValue",
+        "conditional",
+        "repeat"
+      ],
+      "3": [
+        "RuntimeValue",
+        "conditional",
+        "repeat"
+      ],
+      "4": [
+        "RuntimeValue",
+        "conditional",
+        "repeat"
+      ]
+    },
+    "export": {
+      "0": [
+        "data_input"
+      ],
+      "1": [
+        "ConnectedValue",
+        "RuntimeValue"
+      ],
+      "2": [
+        "ConnectedValue",
+        "conditional",
+        "repeat"
+      ],
+      "3": [
+        "RuntimeValue",
+        "conditional",
+        "repeat"
+      ],
+      "4": [
+        "RuntimeValue",
+        "conditional",
+        "repeat"
+      ]
+    }
+  },
+  "missingShapes": [
+    "fan-in"
+  ],
+  "tools": {
+    "toolshed.g2.bx.psu.edu/repos/iuc/integron_finder/integron_finder/2.0.5+galaxy1@2.0.5+galaxy1": {
+      "file": "tools/toolshed.g2.bx.psu.edu_repos_iuc_integron_finder_integron_finder_2.0.5+galaxy1@2.0.5+galaxy1.json",
+      "askedVersion": "2.0.5+galaxy1",
+      "servedVersion": "2.0.5+galaxy1"
+    },
+    "__BUILD_LIST__@1.2.0": {
+      "file": "tools/__BUILD_LIST__@1.2.0.json",
+      "askedVersion": "1.2.0",
+      "servedVersion": "1.2.0"
+    },
+    "__MERGE_COLLECTION__@1.0.0": {
+      "file": "tools/__MERGE_COLLECTION__@1.0.0.json",
+      "askedVersion": "1.0.0",
+      "servedVersion": "1.0.0"
+    }
+  }
+}
