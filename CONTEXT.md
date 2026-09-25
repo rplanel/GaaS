@@ -5,7 +5,7 @@ Vocabulary shared by every package in this repository: the Galaxy API client, th
 ## Analyses
 
 **Analysis**:
-One run of a workflow, requested by a user through the web application and executed on the Galaxy instance. It owns the inputs, outputs and jobs of that run.
+One run of a workflow, requested by a user through the web application and executed on the Galaxy instance. It owns the datasets that fed that run, the datasets it produced and its jobs.
 _Avoid_: Run, job, invocation (the latter two are Galaxy-side parts of an analysis)
 
 **Workflow**:
@@ -53,12 +53,24 @@ The user who requested an analysis. Every analysis and every monitoring record h
 _Avoid_: Author, creator
 
 **Step**:
-One numbered operation of a workflow: an input the user supplies, or a tool the workflow runs. A step is named by its index, which is the same number in the workflow, in the analysis and in the graph, so the three always mean the same step.
+One numbered operation of a workflow: an input it declares, a parameter it takes, or a tool it runs. A step is named by its index, which is the same number in the workflow, in the analysis and in the graph, so the three always mean the same step.
 _Avoid_: Node, task, stage
 
 **Step state**:
 What one step of one analysis has come to, read per step and never aggregated: Not started, Running, Succeeded, Failed, Cancelled or Skipped. A step state is not an Outcome — an analysis has exactly one Outcome, and it is not the sum of its step states. Not started covers a step nothing has run yet, including one the analysis has scheduled but not begun.
 _Avoid_: Job state, node status, step outcome, progress
+
+**Input**:
+One place a workflow takes a dataset from the user, declared as a `data_input` or `data_collection_input` step and named by the label its author gave it, or by its step index where there is none. An input is the place, not the dataset that fills it: an analysis supplies one dataset per input the workflow declares, except the optional ones. Galaxy counts a parameter step as an input too, so where the two must be told apart the phrase is *dataset input*.
+_Avoid_: Parameter (a value the workflow takes, not a dataset), input step, data input
+
+**Dataset**:
+One of a user's files, in either of the two places the application keeps it: on their Datasets page, uploaded and offered to the inputs of any workflow they start, or in an analysis's Galaxy history, as the copy an input was given or as something the analysis produced. Starting an analysis copies rather than moves, so a dataset on the Datasets page outlives every analysis it feeds.
+_Avoid_: File, upload, HDA, history dataset (in anything a user reads)
+
+**Datamap**:
+The part of a request to start an analysis that says which dataset goes to which input, keyed by the input's step index. It is stored on the analysis as sent, so that copying an analysis can offer the same choices again.
+_Avoid_: Inputs object, input mapping, dataset map
 
 ## Usage statistics
 
