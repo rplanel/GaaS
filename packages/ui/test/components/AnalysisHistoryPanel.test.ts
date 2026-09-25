@@ -228,7 +228,7 @@ describe('a step whose tool the panel could not read', () => {
    * version when the definition arrived, and the panel's long-standing
    * "no tool name - no tool version" when it did not. That fallback is not
    * this ticket's to change — it predates the one composable and is what
-   * a failed `useGalaxyTool` fetch produced too — but it is why the header
+   * a failed tool fetch produced before it too — but it is why the header
    * cannot be looked up by the tool's name in both cases.
    */
   async function parametersPanel(panel: Awaited<ReturnType<typeof mountPanel>>, jobLabel: string) {

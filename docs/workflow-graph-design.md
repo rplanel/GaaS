@@ -483,7 +483,7 @@ Four things the recordings showed that this document had wrong or missing:
   both sides.
 - **A `RuntimeValue` that is `data`-typed is never offered.** On `ccqtl-today`
   step 4, Galaxy saved four data inputs as `RuntimeValue` — it expects them at
-  run time — but `useGalaxyTool` filters every `data` parameter out before the
+  run time — but the composable filters every `data` parameter out before the
   panel is built, so GaaS never asks and the reader cannot supply them. Pinned
   as it is; whether it is a defect is a separate question.
 

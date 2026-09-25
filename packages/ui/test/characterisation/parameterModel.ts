@@ -145,7 +145,7 @@ interface ExportStep {
 
 /**
  * The steps the invoke form treats as tool steps, by the test that
- * `useGalaxyWorkflow.workflowToolSteps` applies: type `tool`, with both a
+ * `useGalaxyWorkflowDescription.workflowToolSteps` applies: type `tool`, with both a
  * tool id and a tool version. A step failing any of the three is not offered
  * parameters at all, so the filter is part of the model.
  */
@@ -159,7 +159,7 @@ export function toolStepIds(steps: Record<string, LiveStep | ExportStep>): strin
 /**
  * The parameter values per tool step as the *live* payload carries them.
  *
- * This mirrors `useGalaxyWorkflow.workflowParametersModel`, which is one
+ * This mirrors `useGalaxyWorkflowDescription.workflowParametersModel`, which is one
  * property read per step: `tool_inputs` is the raw database column, handed
  * back untouched.
  */
@@ -266,7 +266,7 @@ export function edgesOf(
  *     v-if="workflowParametersModel && toolInput.name in workflowParametersModel"
  *
  * So the rendered set is the **intersection** of what the tool declares and
- * what the workflow saved, and `useGalaxyTool` has already dropped every
+ * what the workflow saved, and the composable has already dropped every
  * `data` parameter from the first of those. That intersection is the model
  * this suite exists to pin: it is what changes if either side changes, and
  * neither payload alone can show it.

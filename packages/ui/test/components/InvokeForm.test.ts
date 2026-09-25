@@ -92,7 +92,7 @@ const TOOL_B: AToolStep = {
 
 /**
  * The one parameter a tool offers. Deliberately not a `data` parameter:
- * `useGalaxyTool` filters those out of `toolInputParameters`, so a panel
+ * the composable filters those out of `toolInputParameters`, so a panel
  * built from one would render nothing whether or not #83 is fixed.
  */
 function anIntegerParameter(tool: AToolStep): GalaxyIntegerToolParameter {
