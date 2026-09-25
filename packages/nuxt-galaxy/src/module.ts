@@ -12,6 +12,7 @@ import {
 } from '@nuxt/kit'
 import { defu } from 'defu'
 import * as logOptions from './log-options'
+import { GALAXY_CACHE_MOUNT } from './runtime/server/utils/galaxyCacheMount'
 
 const log = logger.withTag('nuxt-galaxy')
 export type { UsageStatisticsRange, UsageStatisticsRequest } from './runtime/app/queries/db/usageStatistics'
@@ -84,6 +85,34 @@ export interface ModuleOptions {
    * Uses evlog under the hood.
    */
   logs?: logOptions.LogOptions
+
+  /**
+   * The cache behind `GET /api/galaxy/workflows/:workflowId/revisions/:revision/description`
+   * (ADR 0004, #87): tool definitions keyed by Galaxy URL, tool id and the
+   * version Galaxy served, and pinned workflow revisions keyed by Galaxy URL,
+   * workflow id and revision. Both are immutable, so neither expires.
+   *
+   * The substrate is a Nitro storage mount rather than an in-process map,
+   * because this package is distributed and a consumer running more than one
+   * replica needs one cache behind all of them. `storage` is passed straight
+   * to `nitro.storage` as the mount's options, so pointing it at Redis is
+   * `{ driver: 'redis', url: '…' }`.
+   */
+  cache?: {
+    /**
+     * Whether anything is cached at all. Turning it off is the escape hatch:
+     * there is no expiry and no runtime invalidation.
+     * @default true
+     * @type boolean
+     */
+    enabled?: boolean
+
+    /**
+     * Nitro storage mount options for the cache.
+     * @default { driver: 'memory' }
+     */
+    storage?: Record<string, unknown>
+  }
 
   /**
    * Sync lock TTL in seconds.
@@ -166,6 +195,7 @@ export default defineNuxtModule<ModuleOptions>({
     runMigrations: false,
     useBlobUpload: undefined,
     logs: {},
+    cache: { enabled: true, storage: { driver: 'memory' } },
     syncLockTtlSeconds: 900,
     syncBatchSize: 20,
     syncMaxRetries: 3,
@@ -208,6 +238,13 @@ export default defineNuxtModule<ModuleOptions>({
 
     const _resolvedLogs = logOptions.resolveLogOptions(nuxt.options.dev, moduleOptions.logs)
 
+    // The description endpoint's cache (#87). Mounted whatever the setting,
+    // so that turning the cache off and on again is a runtime-config change
+    // rather than a different Nitro build; `enabled` is what the endpoint
+    // reads, and a disabled cache never touches the mount.
+    const cacheEnabled = moduleOptions.cache?.enabled ?? true
+    const cacheStorage = moduleOptions.cache?.storage ?? { driver: 'memory' }
+
     await installModule('evlog/nuxt', {
       enabled: _resolvedLogs.enabled,
       env: { service: _resolvedLogs.service },
@@ -245,6 +282,7 @@ export default defineNuxtModule<ModuleOptions>({
           databaseUrl: moduleOptions.databaseUrl,
         },
         logs: _resolvedLogs,
+        cache: { enabled: cacheEnabled },
         sync: {
           lockTtlSeconds: syncLockTtlSeconds,
           batchSize: syncBatchSize,
@@ -313,6 +351,7 @@ export default defineNuxtModule<ModuleOptions>({
     addServerImportsDir(resolver.resolve('./runtime/server/db'))
     // Nitro tasks
     nuxt.options.nitro = defu(nuxt.options.nitro || {}, {
+      storage: { [GALAXY_CACHE_MOUNT]: cacheStorage },
       experimental: { tasks: true },
       scheduledTasks: { '*/30 * * * * *': ['galaxy:sync-analyses'] },
       tasks: {
@@ -366,6 +405,14 @@ export default defineNuxtModule<ModuleOptions>({
     addServerHandler({
       route: '/api/galaxy/workflows/:workflowId/revisions/:revision/tools',
       handler: resolver.resolve('./runtime/server/api/galaxy/workflows/[workflowId]/revisions/[revision]/tools.get'),
+      method: 'get',
+    })
+    // one revision described in one call — steps, inputs, tool definitions
+    // and the tools that are unusable — for the invoke form and the analysis
+    // panel (#87)
+    addServerHandler({
+      route: '/api/galaxy/workflows/:workflowId/revisions/:revision/description',
+      handler: resolver.resolve('./runtime/server/api/galaxy/workflows/[workflowId]/revisions/[revision]/description.get'),
       method: 'get',
     })
 
@@ -460,6 +507,9 @@ declare module '@nuxt/schema' {
         databaseUrl: string
       }
       logs: logOptions.ResolvedLogOptions
+      cache: {
+        enabled: boolean
+      }
       sync: {
         lockTtlSeconds: number
         batchSize: number

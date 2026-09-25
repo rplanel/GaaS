@@ -1,6 +1,9 @@
+import type { GalaxyTool } from 'blendtype'
+import type { GalaxyCache } from '../../../../src/runtime/server/utils/galaxyCache'
 import { Effect, Exit } from 'effect'
 import { describe, expect, it } from 'vitest'
-import { missingToolsEffect, pinnedTools } from '../../../../src/runtime/server/utils/grizzle/workflowTools'
+import { noGalaxyCache, toolCacheKey } from '../../../../src/runtime/server/utils/galaxyCache'
+import { missingToolsEffect, pinnedTools, pinnedToolsOfSteps, resolvePinnedToolsEffect } from '../../../../src/runtime/server/utils/grizzle/workflowTools'
 import { createRecordingGalaxyLayer, expectFailure } from '../../fixtures'
 import { dataInputStep, toolStep, workflowDefinition } from '../../workflowDefinition'
 
@@ -145,5 +148,219 @@ describe('missingToolsEffect', () => {
     expectFailure(exit, (error) => {
       expect(error).toMatchObject({ _tag: 'ToolError', statusCode: 500 })
     })
+  })
+})
+
+/**
+ * #87, Q22. The description endpoint needs every pinned tool's definition
+ * anyway, so the verdict `missingToolsEffect` answers for the publish dialog
+ * is folded into that same fetch rather than run beside it: one pass, not 2N
+ * round trips. These are the fold's own rules — what each of Galaxy's
+ * answers means, what is cached and under which key, and what never fails.
+ */
+
+/** A tool definition with one data parameter, as `io_details=true` fills it. */
+function installedWithDatasetOptions(toolId: string, version: string) {
+  return {
+    ...installed(toolId, version),
+    inputs: [
+      {
+        name: 'input',
+        type: 'data',
+        options: {
+          hda: [{ id: 'hda-1', hid: 3, name: 'somebody else\'s dataset', src: 'hda', keep: false }],
+          hdca: [{ id: 'hdca-1', hid: 4, name: 'somebody else\'s collection', src: 'hdca', keep: false }],
+        },
+      },
+      {
+        name: 'advanced',
+        type: 'conditional',
+        cases: [
+          {
+            value: 'yes',
+            inputs: [
+              { name: 'nested', type: 'data', options: { hda: [{ id: 'hda-2' }], hdca: [] } },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+/** A cache backed by a plain map, so a test can read what was written and under which key. */
+function recordingCache(): GalaxyCache & { entries: Map<string, unknown> } {
+  const entries = new Map<string, unknown>()
+  return {
+    entries,
+    tool: (galaxyUrl, toolId, version) =>
+      Effect.succeed(entries.get(toolCacheKey(galaxyUrl, toolId, version)) as GalaxyTool | undefined),
+    writeTool: (galaxyUrl, toolId, servedVersion, tool) =>
+      Effect.sync(() => {
+        entries.set(toolCacheKey(galaxyUrl, toolId, servedVersion), tool)
+      }),
+    workflow: () => Effect.succeed(undefined),
+    writeWorkflow: () => Effect.void,
+  }
+}
+
+const GALAXY = 'https://galaxy.example.com'
+
+describe('resolvePinnedToolsEffect', () => {
+  it('serves every tool Galaxy holds at its pinned version, keyed by id and version', async () => {
+    const galaxy = galaxyHolding()
+
+    const resolved = await resolvePinnedToolsEffect(pinnedTools(twoTools), noGalaxyCache, GALAXY).pipe(
+      Effect.provide(galaxy.layer),
+      Effect.runPromise,
+    )
+
+    expect(Object.keys(resolved.tools).sort()).toEqual([`${BAR}@2.0`, `${FOO}@1.2.3+galaxy0`])
+    expect(resolved.unavailable).toEqual([])
+  })
+
+  it('reports a tool Galaxy does not hold at all as not_installed, and serves no definition for it', async () => {
+    const galaxy = galaxyHolding(toolId => (toolId === BAR ? galaxyAnswers(404) : undefined))
+
+    const resolved = await resolvePinnedToolsEffect(pinnedTools(twoTools), noGalaxyCache, GALAXY).pipe(
+      Effect.provide(galaxy.layer),
+      Effect.runPromise,
+    )
+
+    expect(resolved.unavailable).toEqual([{ toolId: BAR, toolVersion: '2.0', reason: 'not_installed' }])
+    expect(Object.keys(resolved.tools)).toEqual([`${FOO}@1.2.3+galaxy0`])
+  })
+
+  it('reports a tool Galaxy serves at another version as version_mismatch, naming that version', async () => {
+    // `get_tool` resolves without `exact`, so a 200 can carry another
+    // version of the same lineage. A mismatched definition is never served:
+    // that is what `require_exact_tool_versions` means.
+    const galaxy = galaxyHolding(toolId => (toolId === FOO ? installed(FOO, '1.3.0') : undefined))
+
+    const resolved = await resolvePinnedToolsEffect(pinnedTools(twoTools), noGalaxyCache, GALAXY).pipe(
+      Effect.provide(galaxy.layer),
+      Effect.runPromise,
+    )
+
+    expect(resolved.unavailable).toEqual([
+      { toolId: FOO, toolVersion: '1.2.3+galaxy0', reason: 'version_mismatch', servedVersion: '1.3.0' },
+    ])
+    expect(Object.keys(resolved.tools)).toEqual([`${BAR}@2.0`])
+  })
+
+  it('reports a tool Galaxy could not answer for as unreachable, and describes the rest anyway', async () => {
+    // One tool failing does not fail the request: a reader who can edit one
+    // step of two is better served than one who gets a 503.
+    const galaxy = galaxyHolding(toolId => (toolId === BAR ? galaxyAnswers(500) : undefined))
+
+    const resolved = await resolvePinnedToolsEffect(pinnedTools(twoTools), noGalaxyCache, GALAXY).pipe(
+      Effect.provide(galaxy.layer),
+      Effect.runPromise,
+    )
+
+    expect(resolved.unavailable).toEqual([{ toolId: BAR, toolVersion: '2.0', reason: 'unreachable' }])
+    expect(Object.keys(resolved.tools)).toEqual([`${FOO}@1.2.3+galaxy0`])
+  })
+
+  it('fetches each pinned tool once, serving both its definition and its verdict', async () => {
+    const galaxy = galaxyHolding(toolId => (toolId === BAR ? galaxyAnswers(404) : undefined))
+
+    await resolvePinnedToolsEffect(pinnedTools(twoTools), noGalaxyCache, GALAXY).pipe(
+      Effect.provide(galaxy.layer),
+      Effect.runPromise,
+    )
+
+    expect(galaxy.calls).toHaveLength(2)
+  })
+
+  it('strips the history-dependent dataset options from every data parameter, at any depth', async () => {
+    // `io_details=true` fills `options.hda`/`options.hdca` from whichever
+    // history the API account touched last. They are a per-user snapshot of
+    // somebody else's datasets, nothing on the client reads them, and
+    // caching them would pin one account's history into every later answer.
+    const galaxy = galaxyHolding(toolId => installedWithDatasetOptions(toolId, '1.2.3+galaxy0'))
+
+    const resolved = await resolvePinnedToolsEffect(
+      [{ toolId: FOO, toolVersion: '1.2.3+galaxy0' }],
+      noGalaxyCache,
+      GALAXY,
+    ).pipe(Effect.provide(galaxy.layer), Effect.runPromise)
+
+    const served = resolved.tools[`${FOO}@1.2.3+galaxy0`]!
+    expect(served.inputs[0]).toEqual({ name: 'input', type: 'data', options: {} })
+    const nested = (served.inputs[1] as unknown as { cases: { inputs: unknown[] }[] }).cases[0]!.inputs[0]
+    expect(nested).toEqual({ name: 'nested', type: 'data', options: {} })
+  })
+
+  it('caches a definition under the version Galaxy served, never the version asked for', async () => {
+    // The sharpest interaction between Q16 and Q22, and it exists only
+    // because this cache has no expiry: written under the asked-for key, a
+    // fallback answer would serve the wrong tool's parameters for ever.
+    const cache = recordingCache()
+    const galaxy = galaxyHolding(() => installed(FOO, '1.3.0'))
+
+    await resolvePinnedToolsEffect([{ toolId: FOO, toolVersion: '1.2.3+galaxy0' }], cache, GALAXY).pipe(
+      Effect.provide(galaxy.layer),
+      Effect.runPromise,
+    )
+
+    expect([...cache.entries.keys()]).toEqual([toolCacheKey(GALAXY, FOO, '1.3.0')])
+    expect(cache.entries.has(toolCacheKey(GALAXY, FOO, '1.2.3+galaxy0'))).toBe(false)
+  })
+
+  it('serves a cached definition without asking Galaxy again', async () => {
+    const cache = recordingCache()
+    const first = galaxyHolding()
+    await resolvePinnedToolsEffect(pinnedTools(twoTools), cache, GALAXY).pipe(
+      Effect.provide(first.layer),
+      Effect.runPromise,
+    )
+
+    const second = createRecordingGalaxyLayer(() => new Error('Galaxy should not have been asked again'))
+    const resolved = await resolvePinnedToolsEffect(pinnedTools(twoTools), cache, GALAXY).pipe(
+      Effect.provide(second.layer),
+      Effect.runPromise,
+    )
+
+    expect(second.calls).toEqual([])
+    expect(Object.keys(resolved.tools).sort()).toEqual([`${BAR}@2.0`, `${FOO}@1.2.3+galaxy0`])
+  })
+
+  it('caches nothing for a tool that failed, so a retry refetches only what failed', async () => {
+    const cache = recordingCache()
+    const galaxy = galaxyHolding(toolId => (toolId === BAR ? galaxyAnswers(500) : undefined))
+
+    await resolvePinnedToolsEffect(pinnedTools(twoTools), cache, GALAXY).pipe(
+      Effect.provide(galaxy.layer),
+      Effect.runPromise,
+    )
+
+    expect([...cache.entries.keys()]).toEqual([toolCacheKey(GALAXY, FOO, '1.2.3+galaxy0')])
+  })
+
+  it('asks Galaxy nothing, and answers empty, for a revision that pins no tool', async () => {
+    const galaxy = createRecordingGalaxyLayer(() => new Error('Galaxy should not have been asked'))
+
+    const resolved = await resolvePinnedToolsEffect([], noGalaxyCache, GALAXY).pipe(
+      Effect.provide(galaxy.layer),
+      Effect.runPromise,
+    )
+
+    expect(resolved).toEqual({ tools: {}, unavailable: [] })
+    expect(galaxy.calls).toEqual([])
+  })
+})
+
+describe('pinnedToolsOfSteps', () => {
+  it('reads the live payload\'s steps, which name a tool the same way the export does', () => {
+    const live = {
+      0: { id: 0, type: 'data_input', tool_id: null, tool_version: null },
+      1: { id: 1, type: 'tool', tool_id: FOO, tool_version: '1.2.3+galaxy0' },
+      2: { id: 2, type: 'tool', tool_id: FOO, tool_version: '1.2.3+galaxy0' },
+    }
+
+    expect(pinnedToolsOfSteps(Object.values(live))).toEqual([
+      { toolId: FOO, toolVersion: '1.2.3+galaxy0' },
+    ])
   })
 })
