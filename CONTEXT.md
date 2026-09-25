@@ -52,6 +52,14 @@ _Avoid_: Fallback component, default view
 The user who requested an analysis. Every analysis and every monitoring record has exactly one owner.
 _Avoid_: Author, creator
 
+**Step**:
+One numbered operation of a workflow: an input the user supplies, or a tool the workflow runs. A step is named by its index, which is the same number in the workflow, in the analysis and in the graph, so the three always mean the same step.
+_Avoid_: Node, task, stage
+
+**Step state**:
+What one step of one analysis has come to, read per step and never aggregated: Not started, Running, Succeeded, Failed, Cancelled or Skipped. A step state is not an Outcome — an analysis has exactly one Outcome, and it is not the sum of its step states. Not started covers a step nothing has run yet, including one the analysis has scheduled but not begun.
+_Avoid_: Job state, node status, step outcome, progress
+
 ## Usage statistics
 
 **Monitoring record**:
@@ -90,7 +98,7 @@ _Avoid_: Period, bin, slot
 
 **Granularity**:
 The bucket width of a trend: day, week or month.
-_Avoid_: Interval, resolution, step
+_Avoid_: Interval, resolution, step — *step* here means a time step; the Galaxy sense, one numbered operation of a workflow, is the term **Step** above.
 
 **Automatic granularity**:
 The bucket width a trend takes when nobody has chosen one, worked out from how
