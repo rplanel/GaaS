@@ -322,6 +322,13 @@ export function createRoutedGalaxyLayer(
 export interface RecordedGalaxyCall {
   method: string
   url: string
+  /**
+   * The `query` ofetch was handed, when there was one. blendtype puts some
+   * parameters in the path and others here — the revision an invocation or a
+   * workflow read is pinned to travels as `query.version` — so a test that
+   * has to say which revision was asked for cannot read the URL alone.
+   */
+  query?: Record<string, unknown>
 }
 
 /**
@@ -339,8 +346,8 @@ export function createRecordingGalaxyLayer(
     calls,
     layer: Layer.succeed(
       GalaxyFetch,
-      (async (url: string, options?: { method?: string }) => {
-        const call = { method: options?.method ?? 'GET', url }
+      (async (url: string, options?: { method?: string, query?: Record<string, unknown> }) => {
+        const call = { method: options?.method ?? 'GET', url, query: options?.query }
         calls.push(call)
         const response = answer(call)
         if (response instanceof Error) {

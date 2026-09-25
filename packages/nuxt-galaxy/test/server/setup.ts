@@ -36,6 +36,40 @@ vi.mock('evlog', () => ({
   useLogger: vi.fn(() => createMockRequestLogger()),
 }))
 
+/**
+ * The Nitro storage mounts the mocked `useStorage` hands out, one per mount
+ * name and shared for the life of the test file, since a cache that forgot
+ * between two reads would pass every test about caching.
+ *
+ * `resetMockStorages()` empties them; a test file that cares calls it in a
+ * `beforeEach`.
+ */
+const mockStorages = new Map<string, Map<string, unknown>>()
+
+export function resetMockStorages(): void {
+  mockStorages.clear()
+}
+
+/** A stand-in for one mount, with the two methods the Galaxy cache uses. */
+function mockStorage(mount: string) {
+  let items = mockStorages.get(mount)
+  if (!items) {
+    items = new Map<string, unknown>()
+    mockStorages.set(mount, items)
+  }
+  const store = items
+  return {
+    getItem: vi.fn(async (key: string) => store.get(key) ?? null),
+    setItem: vi.fn(async (key: string, value: unknown) => {
+      store.set(key, value)
+    }),
+    removeItem: vi.fn(async (key: string) => {
+      store.delete(key)
+    }),
+    getKeys: vi.fn(async () => [...store.keys()]),
+  }
+}
+
 // Mock #imports (Nuxt auto-imports used by server code)
 vi.mock('#imports', () => ({
   useRuntimeConfig: vi.fn(() => ({
@@ -49,6 +83,9 @@ vi.mock('#imports', () => ({
       drizzle: {
         databaseUrl: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
       },
+      cache: {
+        enabled: true,
+      },
       sync: {
         lockTtlSeconds: 900,
         batchSize: 20,
@@ -58,6 +95,7 @@ vi.mock('#imports', () => ({
       },
     },
   })),
+  useStorage: vi.fn((mount: string) => mockStorage(mount)),
   createError: vi.fn((opts: string | { statusCode?: number, statusMessage?: string }) => {
     if (typeof opts === 'string')
       return new Error(opts)

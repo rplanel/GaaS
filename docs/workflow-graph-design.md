@@ -62,14 +62,14 @@ missing-tools check, `GET /api/workflows/{id}?version=N`,
 | Q12 | Source of truth becomes the **stored definition** (export shape), *not* the live API, sequenced after Q13(a). Originally "drop it if it costs more than it solves"; **now required** — the live shape drops edges. See below. |
 | Q13 | **(a) + (b)**: one server endpoint returning `{steps, inputs, tools}` with server-side tool caching, plus one client composable over Pinia Colada. |
 | Q14 | **Refactor first.** Exception: follow-mode may ship before the refactor, because it needs no tool definitions. |
-| Q15 | Cache key is **`galaxy_id` + `revision`**, prefixed by the **Galaxy URL**, and only a *pinned* revision is cached. Revised — see below. |
-| Q16 | Tool definitions are cached **forever** per `toolId@version`, bounded by **the toolbox** rather than by size, and keyed by the version Galaxy **served**. No TTL. Revised — see below. |
+| Q15 | Cache key is **`galaxy_id` + `revision`**, prefixed by the **Galaxy URL**, and only a *pinned* revision is cached. Revised, then built in #87 — see below. |
+| Q16 | Tool definitions are cached **forever** per `toolId@version`, bounded by **the toolbox** rather than by size, and keyed by the version Galaxy **served**. No TTL. Revised, then built in #87 — see below. |
 | Q17 | **Characterisation tests first** — pin today's payload, then change what feeds it. |
 | Q18 | A **mapped step** (one step, many jobs) shows a **count badge** ("12/30 ok, 3 running"). Mechanism revised — see below. |
 | Q19 | A **subworkflow step** is one node that **links out** to that subworkflow's own invocation graph. No inline expansion. |
 | Q20 | **Skipped** and **Not started** are drawn differently. A conditional (`when`) step that did not run is not the same as one that has not run yet. |
 | Q21 | A **paused step** is drawn as paused; the graph does **not** resume it. Resuming is a separate feature with an unanswered permission question (GaaS invokes under a service account). |
-| Q22 | A pinned revision whose **tool versions are gone** is marked **before submit**, using the existing `missingToolsEffect`, **folded into** the Q13(a) endpoint's own tool fetch rather than run beside it. Revised — see below. |
+| Q22 | A pinned revision whose **tool versions are gone** is marked **before submit**, using the existing `missingToolsEffect`, **folded into** the Q13(a) endpoint's own tool fetch rather than run beside it. Revised, then built in #87 — see below. |
 
 ### Decisions whose premise verification changed
 
@@ -137,6 +137,59 @@ graph throws away. And the existing
 `GET /api/galaxy/workflows/:id/revisions/:revision/tools` endpoint is **kept**,
 not replaced: `PublishVersionModal` reads it, and it answers "can this revision
 be published" rather than "describe this workflow so it can be invoked".
+
+### Q13(a), Q15, Q16 and Q22 as built (#87)
+
+`GET /api/galaxy/workflows/:workflowId/revisions/:revision/description`. The
+revision is a mandatory path segment, which is what makes Q15's rule
+structural rather than conditional: the unpinned read must not be cached, so
+it is given no route and an unpinned caller has no way to ask for it. A
+revision that is not a non-negative integer of at most nine digits is refused
+with 400 before Galaxy is asked; a 400 or a 404 from Galaxy is a 404 here,
+since Galaxy answers 400 for a revision index past the end of the history, as
+`versionState` already knew; and every other way the workflow read can fail is
+a logged 500, as for the sibling proxies. Galaxy answering 503 is 503.
+
+The answer is `{ steps, inputs, tools, unavailable }` with no envelope —
+`steps` and `inputs` are the live payload's own, verbatim, since #88
+normalises them and Q12 changes their source behind this same contract.
+`tools` is keyed `<toolId>@<version>` and carries **resolved definitions
+only**; `unavailable` is a list, because one tool can appear at two versions
+in one workflow, and every pinned tool is in exactly one of the two — a tool
+that failed is never merely absent (#96). Its `reason` is one of
+`not_installed` (a 404), `version_mismatch` (a 200 carrying another version,
+which also names the `servedVersion`) or `unreachable` (anything else Galaxy
+did). The first two would refuse the submission; the third would not.
+
+The `options` of every data and data collection parameter are emptied at any
+depth, before the definition is cached: `io_details=true` fills them from
+whichever history the API account touched last, so they are a per-user
+snapshot that nothing on the client reads and that no cache should hold. The
+whole object goes rather than the two keys the ticket named — a real payload
+carries `hda`, `hdca`, `dce` and `ldda` under one parameter, all from the same
+snapshot, and a list of key names is one the next Galaxy release can add to
+unnoticed. `io_details` itself cannot be dropped: it is also what makes Galaxy
+send `inputs` at all.
+
+The cache is the Nitro storage mount `galaxy-cache`, mounted by the module on
+the memory driver and configurable through the `galaxy.cache` module option —
+`storage` for the mount's own options (`{ driver: 'redis', … }` for a
+deployment with several replicas) and `enabled` to turn the whole thing off,
+which is the only escape hatch there is. Keys carry their family (`tool|`,
+`workflow|`) so that a tool and a workflow revision cannot name one entry, and
+are percent-encoded part by part, because unstorage normalises a key before it
+reaches the driver — it truncates at the first `?` and turns `/` into `:` —
+and a Galaxy URL and a toolshed guid carry both separators. Nothing is written
+for a tool that failed, so a retry refetches only what failed. A hit is
+checked against the version its key promises before it is served, since a
+store shared with another build is not this module's to trust.
+
+Q22's fold is `resolvePinnedToolsEffect`, the sibling of `missingToolsEffect`
+in the same module: it takes the pinned tools rather than an export, so the
+description endpoint can derive them from the live payload, and it answers
+each tool's definition and its verdict from the one fetch. `missingToolsEffect`
+keeps its export-taking signature and its three callers on the publish path,
+which asks a different question at a different moment.
 
 ### Verdict on the refactor
 

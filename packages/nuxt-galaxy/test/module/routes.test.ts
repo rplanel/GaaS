@@ -48,4 +48,16 @@ describe('module server routes', () => {
     expect(routes).toContainEqual({ route: '/api/galaxy/workflows/:workflowId/versions', method: 'get' })
     expect(routes).toContainEqual({ route: '/api/galaxy/workflows/:workflowId/revisions/:revision/tools', method: 'get' })
   })
+
+  it('registers one revision\'s description, which the invoke form and the analysis panel read (#87)', async () => {
+    const routes = await registeredRoutes()
+
+    expect(routes).toContainEqual({ route: '/api/galaxy/workflows/:workflowId/revisions/:revision/description', method: 'get' })
+  })
+
+  it('gives the unpinned description no route, so nothing can ask for what must not be cached (#87, Q15)', async () => {
+    const routes = await registeredRoutes()
+
+    expect(routes.map(handler => handler.route)).not.toContain('/api/galaxy/workflows/:workflowId/description')
+  })
 })
