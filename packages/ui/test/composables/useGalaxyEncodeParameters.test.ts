@@ -49,7 +49,7 @@ describe('a falsy value inside a conditional', () => {
   })
 
   it('submits a null, which is a value Galaxy stored and not an absence', () => {
-    // Dropped today for a second reason: `typeof null === 'object'`, so it
+    // This one broke for a second reason: `typeof null === 'object'`, so it
     // took the flattening branch and `for (const key in null)` emitted
     // nothing at all — the key vanished from the top level too.
     expect(encode({ 1: { adv: { opt: null }, topLevelNull: null } })['1'])
@@ -103,8 +103,8 @@ describe('__current_case__, the key the model round-trips on', () => {
     // Inert in Galaxy — it recomputes the key in `visit_input_values` before
     // anything reads it — but not inert here: `Conditional.vue` indexes
     // `props.cases` with it, and the decoder hands it back when an analysis
-    // is copied or shown in the history panel. Dropped at case 0, the branch
-    // renders no inputs at all.
+    // is copied or shown in the history panel. Dropped at case 0, as the old
+    // guard dropped it, the branch rendered no inputs at all.
     expect(encode({ 1: { adv: { __current_case__: 0, foo: 'bar' } } })['1'])
       .toEqual({ 'adv|__current_case__': 0, 'adv|foo': 'bar' })
   })
@@ -117,7 +117,7 @@ describe('__current_case__, the key the model round-trips on', () => {
 
 describe('the model measured in #95', () => {
   it('submits every value it holds, not just the truthy ones', () => {
-    // The ticket's own reproduction, kept whole: before the fix this lost
+    // The ticket's own reproduction, kept whole. Before the fix it lost
     // `adv|threshold`, `adv|cutoff`, `adv|mode` and `2`'s `adv|__current_case__`
     // while keeping the identical `topLevelZero` and `topLevelEmpty`.
     expect(encode({

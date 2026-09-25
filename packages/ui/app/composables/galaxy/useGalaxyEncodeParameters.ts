@@ -1,7 +1,7 @@
 import type { ComputedRef, MaybeRef } from 'vue'
 import type { EncodedGalaxyWorkflowParameter, WorkflowParametersModel } from './types'
 import { computed, toValue } from 'vue'
-import { isConditional, isPresent } from './parameterValue'
+import { flattenKey, isConditional, isPresent } from './parameterValue'
 
 export function useGalaxyEncodeParameters(parameterModel: MaybeRef<WorkflowParametersModel>): { encodedParameters: ComputedRef<EncodedGalaxyWorkflowParameter> } {
   const encodedParameters = computed<EncodedGalaxyWorkflowParameter>(() => {
@@ -22,7 +22,7 @@ export function useGalaxyEncodeParameters(parameterModel: MaybeRef<WorkflowParam
               // cannot carry a guard on `param[paramKey]` past the `if`.
               const nested = param[paramKey]
               if (isPresent(nested)) {
-                parameters[stepId][`${key}|${paramKey}`] = nested
+                parameters[stepId][flattenKey(key, paramKey)] = nested
               }
             }
           }
