@@ -17,6 +17,16 @@ const cards = [
     to: '/test/meili-with-mosaic',
   },
   {
+    title: 'Workflow graph',
+    description: 'a Galaxy workflow drawn with Vue Flow, with its parameters edited from the canvas',
+    to: '/test/workflow-graph',
+  },
+  {
+    title: 'Workflow graph — forms in nodes',
+    description: 'the same graph, with each step\'s form inside its own node',
+    to: '/test/workflow-graph-in-node',
+  },
+  {
     title: 'Sequence browser',
     description: 'a sequence browser powered by D3',
     to: '/test/sequence-browser',
