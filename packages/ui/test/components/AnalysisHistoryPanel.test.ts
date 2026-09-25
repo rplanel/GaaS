@@ -42,7 +42,7 @@ function analysisRow(id: number) {
     // panel's parameter *values* come from — the tool definition supplies
     // only their labels and widgets, which is why a tool it cannot read
     // costs the labels and not the values.
-    parameters: { 2: { quality_cutoff: '10' } },
+    parameters: { 2: { 'quality_cutoff': '10', 'advanced|mode': 'fast' } },
     datamap: {},
     invocation: {},
     workflow_id: 1,
@@ -245,6 +245,9 @@ describe('a step whose tool the panel could not read', () => {
     await vi.waitFor(() => {
       expect(body.textContent).toContain('could not be read from Galaxy')
       expect(body.textContent, 'the raw parameter name stands in for the label').toContain('quality_cutoff')
+      // A conditional decodes to a nested object, which Vue interpolates as
+      // `[object Object]` unless it is stringified.
+      expect(body.textContent, 'a nested value is readable').toContain('{"mode":"fast"}')
     })
   })
 

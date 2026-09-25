@@ -319,7 +319,12 @@ const sortedOutputs = computed(() => {
                             {{ name }}
                           </dt>
                           <dd class="break-all opacity-80">
-                            {{ value }}
+                            <!--
+                              Stringified rather than interpolated: a
+                              conditional's value is an object, and Vue
+                              renders one as `[object Object]`.
+                            -->
+                            {{ typeof value === 'object' && value !== null ? JSON.stringify(value) : value }}
                           </dd>
                         </template>
                       </dl>
