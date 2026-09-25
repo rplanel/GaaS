@@ -62,14 +62,14 @@ missing-tools check, `GET /api/workflows/{id}?version=N`,
 | Q12 | Source of truth becomes the **stored definition** (export shape), *not* the live API, sequenced after Q13(a). Originally "drop it if it costs more than it solves"; **now required** — the live shape drops edges. See below. |
 | Q13 | **(a) + (b)**: one server endpoint returning `{steps, inputs, tools}` with server-side tool caching, plus one client composable over Pinia Colada. |
 | Q14 | **Refactor first.** Exception: follow-mode may ship before the refactor, because it needs no tool definitions. |
-| Q15 | Cache key is **`galaxy_id` + `revision`**. |
-| Q16 | Tool definitions are cached **forever** per `toolId@version`, bounded by size. No TTL. |
+| Q15 | Cache key is **`galaxy_id` + `revision`**, prefixed by the **Galaxy URL**, and only a *pinned* revision is cached. Revised — see below. |
+| Q16 | Tool definitions are cached **forever** per `toolId@version`, bounded by **the toolbox** rather than by size, and keyed by the version Galaxy **served**. No TTL. Revised — see below. |
 | Q17 | **Characterisation tests first** — pin today's payload, then change what feeds it. |
 | Q18 | A **mapped step** (one step, many jobs) shows a **count badge** ("12/30 ok, 3 running"). Mechanism revised — see below. |
 | Q19 | A **subworkflow step** is one node that **links out** to that subworkflow's own invocation graph. No inline expansion. |
 | Q20 | **Skipped** and **Not started** are drawn differently. A conditional (`when`) step that did not run is not the same as one that has not run yet. |
 | Q21 | A **paused step** is drawn as paused; the graph does **not** resume it. Resuming is a separate feature with an unanswered permission question (GaaS invokes under a service account). |
-| Q22 | A pinned revision whose **tool versions are gone** is marked **before submit**, using the existing `missingToolsEffect`. This check belongs on the Q13(a) endpoint. |
+| Q22 | A pinned revision whose **tool versions are gone** is marked **before submit**, using the existing `missingToolsEffect`, **folded into** the Q13(a) endpoint's own tool fetch rather than run beside it. Revised — see below. |
 
 ### Decisions whose premise verification changed
 
@@ -89,6 +89,54 @@ missing-tools check, `GET /api/workflows/{id}?version=N`,
   not per-step and cannot be joined to a step. Use `step_details=true` instead.
 - **Q20** — has real backing on 26.x (`when_expression` exists); had none on
   22.05. Gated on the upgrade.
+
+### What the #87 scope interview settled (2026-09-25)
+
+Q13's endpoint was specified before anyone asked how a *distributed* package
+caches, or which payload Q22's check reads. Four decisions changed.
+
+- **Q16 — bounded by the toolbox, not by size.** A hard size bound means an
+  in-process LRU, which is per-replica and lost on restart: right for a single
+  Kubernetes replica, wrong for a package other people deploy. The substrate
+  is a **Nitro storage mount** with a memory driver by default, exposed as a
+  module option so a consumer with several replicas can point it at Redis. The
+  bound comes for free instead: a tool definition is a few KB and the key space
+  is "distinct tools this Galaxy holds", so it stops growing on its own.
+
+- **Q16 — keyed by the version Galaxy *served*, never the one asked for.**
+  `get_tool` resolves without `exact`, so Galaxy answers 200 with another
+  installed version when it lacks the one requested (#75). Cached under the
+  asked-for key, that would serve the wrong tool's parameters forever, with no
+  TTL to heal it. This is the sharpest interaction between Q16 and Q22, and it
+  only exists because the cache has no expiry.
+
+- **Q15 — the Galaxy URL joins the key, and only pinned revisions are cached.**
+  Two deployments sharing one Redis would otherwise cross-serve, and a built-in
+  tool id (`Cut1`) carries no toolshed path to disambiguate it. And an
+  *unpinned* read returns whatever Galaxy's latest revision is, which moves the
+  moment someone saves in the editor — so the endpoint's route makes the
+  revision mandatory, and the unpinned read has no route at all.
+
+- **Q22 — folded into the tool fetch, not added beside it.** The endpoint
+  fetches each pinned tool to answer `tools`; `missingToolsEffect` fetches the
+  same tools to answer `missing`. Separately that is 2N round trips for N
+  tools. One pass answers both: a tool served at the wrong version is at once
+  "not a usable definition" and "missing".
+
+  Q10 applied honestly also splits the verdicts. A 404 and a version mismatch
+  **would** refuse the submission and so block it; an unreachable Galaxy would
+  not, since it may be well again by the time the user submits. Parameter
+  *values* come from the workflow's saved `tool_inputs`, not from the tool
+  definition — the definition supplies only the widgets — so an unreachable
+  tool means a step that cannot be **edited**, not one that would submit wrong.
+
+Two corrections to what the refactor verdict below claims. The **four copies of
+one derivation** are two in production plus two prototypes; the prototypes are
+exempt from #87 and disposed of by #91, since converting them is work the real
+graph throws away. And the existing
+`GET /api/galaxy/workflows/:id/revisions/:revision/tools` endpoint is **kept**,
+not replaced: `PublishVersionModal` reads it, and it answers "can this revision
+be published" rather than "describe this workflow so it can be invoked".
 
 ### Verdict on the refactor
 
