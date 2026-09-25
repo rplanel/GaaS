@@ -72,6 +72,18 @@ _Avoid_: File, upload, HDA, history dataset (in anything a user reads)
 The part of a request to start an analysis that says which dataset goes to which input, keyed by the input's step index. It is stored on the analysis as sent, so that copying an analysis can offer the same choices again.
 _Avoid_: Inputs object, input mapping, dataset map
 
+**Parameter**:
+A value a step takes, as against an input, which is a dataset it takes. A workflow's author fixes a parameter when they save the workflow, and an analysis may submit its own value for any of them; for a parameter nobody supplies, Galaxy uses the tool's own default.
+_Avoid_: Setting, option, argument, field
+
+**Conditional**:
+One of a step's parameters whose value is a group of further parameters, with a test parameter choosing which group applies. Galaxy names a parameter inside one by joining the two with a `|`, and records the chosen branch as `__current_case__`, which it recomputes on every run rather than trusting what it was sent. A conditional's alternatives are its *cases*.
+_Avoid_: Nested parameter, sub-parameter, group
+
+**Absent value**:
+A parameter the model holds nothing for, which is the only thing left out of what an analysis submits. A `0`, an empty string, a `null` or a `false` is a value somebody chose — the workflow's author or the reader — and is submitted like any other. Leaving one out is not a smaller version of submitting it: Galaxy substitutes the tool's own default, with no error and nothing on screen to say so. Absence is `undefined` and nothing else, at every depth of a step's parameters.
+_Avoid_: Empty, blank, missing, unset, falsy
+
 ## Usage statistics
 
 **Monitoring record**:
