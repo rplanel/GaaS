@@ -1,10 +1,12 @@
-import type { GalaxyWorkflow, WorkflowInput } from 'blendtype'
+import type { GalaxyIntegerToolParameter, GalaxyTool, GalaxyWorkflow, WorkflowInput, WorkflowStep } from 'blendtype'
 import type { IncomingMessage } from 'node:http'
 import type { UploadedDatasetDb } from '../../app/components/galaxy/workflow/InvokeForm.vue'
 import { UApp } from '#components'
 import { mockNuxtImport, mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
 
+import { encodeParam } from 'ufo'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import InvokeForm from '../../app/components/galaxy/workflow/InvokeForm.vue'
 
 /** The status the analyses endpoint refuses the next submission with. */
@@ -32,6 +34,8 @@ let requestedRevision: string | null = null
 
 /** The inputs the workflow declares, as Galaxy describes them. */
 let workflowInputs: Record<string, WorkflowInput> = {}
+/** The steps it declares, keyed by step id, as Galaxy describes them. */
+let workflowSteps: Record<string, WorkflowStep> = {}
 /** The datamap of the analysis being copied, when the form is copying one. */
 let storedDatamap: Record<string, UploadedDatasetDb> | null = null
 /** Whether the query for the pickable datasets fails instead of answering. */
@@ -45,6 +49,102 @@ const DATASETS = [
 
 function anInput(label: string, uuid: string): WorkflowInput {
   return { label, value: '', uuid }
+}
+
+/**
+ * A tool one step is pinned to. `id` is the toolshed guid Galaxy knows it by,
+ * whose last two segments are the name and version the accordion header
+ * reads off it; `parameter` is the single input that step offers, named
+ * distinctly per tool so one panel can be told apart from its neighbour's by
+ * what it renders.
+ */
+interface AToolStep {
+  id: string
+  version: string
+  name: string
+  description: string
+  parameter: string
+  parameterLabel: string
+}
+
+const TOOL_A: AToolStep = {
+  id: 'toolshed.g2.bx.psu.edu/repos/iuc/seqtk/seqtk_seq/1.3',
+  version: '1.3',
+  name: 'seqtk_seq',
+  description: 'Convert FASTQ to FASTA',
+  parameter: 'quality_cutoff',
+  parameterLabel: 'Quality cutoff',
+}
+
+const TOOL_B: AToolStep = {
+  id: 'toolshed.g2.bx.psu.edu/repos/iuc/fasttree/fasttree/2.1.10',
+  version: '2.1.10',
+  name: 'fasttree',
+  description: 'Build an approximately-maximum-likelihood tree',
+  parameter: 'bootstrap_replicates',
+  parameterLabel: 'Bootstrap replicates',
+}
+
+/**
+ * The one parameter a tool offers. Deliberately not a `data` parameter:
+ * `useGalaxyTool` filters those out of `toolInputParameters`, so a panel
+ * built from one would render nothing whether or not #83 is fixed.
+ */
+function anIntegerParameter(tool: AToolStep): GalaxyIntegerToolParameter {
+  return {
+    model_class: 'IntegerToolParameter',
+    type: 'integer',
+    name: tool.parameter,
+    label: tool.parameterLabel,
+    argument: null,
+    help: '',
+    refresh_on_change: false,
+    optional: false,
+    hidden: false,
+    is_dynamic: false,
+    min: 1,
+    max: 100,
+    value: '10',
+    area: false,
+  }
+}
+
+/** A tool as the proxy describes it, under the id its step names it by. */
+function aTool(tool: AToolStep): GalaxyTool {
+  return {
+    model_class: 'Tool',
+    id: tool.id,
+    name: tool.name,
+    version: tool.version,
+    description: tool.description,
+    edam_operations: [],
+    edam_topics: [],
+    tool_shed_repository: {
+      name: tool.name,
+      owner: 'iuc',
+      changeset_revision: 'abc123',
+      tool_shed: 'toolshed.g2.bx.psu.edu',
+    },
+    inputs: [anIntegerParameter(tool)],
+    outputs: [],
+  }
+}
+
+/**
+ * One tool step of the workflow. `tool_inputs` has to carry the parameter by
+ * name as well as the tool definition declaring it: `Step.vue` renders a
+ * parameter only where the step's own model holds a value under that name.
+ */
+function aToolStep(id: number, tool: AToolStep): WorkflowStep {
+  return {
+    id,
+    type: 'tool',
+    tool_id: tool.id,
+    tool_version: tool.version,
+    annotation: null,
+    tool_inputs: { [tool.parameter]: '10' },
+    input_steps: {},
+  }
 }
 
 /**
@@ -102,9 +202,21 @@ mockNuxtImport('useSupabaseClient', () => () => supabase)
 registerEndpoint(`/api/galaxy/workflows/${GALAXY_WORKFLOW_ID}`, (event) => {
   requestedRevision = new URL(event.node.req.url ?? '/', 'http://test').searchParams.get('version')
   return {
-    data: { inputs: workflowInputs, steps: {} } as unknown as GalaxyWorkflow,
+    data: { inputs: workflowInputs, steps: workflowSteps } as unknown as GalaxyWorkflow,
   }
 })
+
+/**
+ * One registration per tool, because `registerEndpoint` matches a path
+ * literally: the module's real route is `/api/galaxy/tools/:toolId/:toolVersion`,
+ * but a pattern written here would never match. `useGalaxyTool` asks for the
+ * id through `encodeParam`, so a toolshed guid arrives as a single
+ * `%2F`-escaped segment and the path registered has to be escaped the same
+ * way.
+ */
+for (const tool of [TOOL_A, TOOL_B]) {
+  registerEndpoint(`/api/galaxy/tools/${encodeParam(tool.id)}/${tool.version}`, () => aTool(tool))
+}
 
 /**
  * The submitted JSON. `readBody` would mean importing `h3`, which is not a
@@ -243,6 +355,63 @@ async function submit(wrapper: Awaited<ReturnType<typeof mountForm>>) {
   await wrapper.find('form').trigger('submit')
 }
 
+/**
+ * Wait until every one of `tools` is listed as a step *and* its definition
+ * has arrived. The description is the proof of the second: the header reads
+ * it off the fetched tool, so it is empty until that fetch lands, and a panel
+ * opened before then would be empty for a reason that has nothing to do
+ * with #83.
+ */
+async function toolStepsReady(
+  form: Awaited<ReturnType<typeof mountForm>>,
+  tools: AToolStep[],
+) {
+  await vi.waitFor(() => {
+    for (const tool of tools) {
+      expect(form.text(), `the step running ${tool.name} is listed`).toContain(tool.description)
+    }
+  })
+}
+
+/**
+ * Open the panel of the step running `tool` and answer with what it renders.
+ *
+ * Read through the trigger's `aria-controls` rather than off the whole form,
+ * so an assertion names one step's panel and cannot be satisfied by its
+ * neighbour's. Each panel is opened and read in turn because `UAccordion` is
+ * single-open — showing the second collapses the first, and Reka unmounts a
+ * collapsed panel rather than hiding it.
+ *
+ * Looked up inside the wrapper, not on `document`: a panel renders inline,
+ * unlike the dataset picker's menu, and the mounted wrapper is not attached
+ * to the document, so `getElementById` would answer `null` for every panel
+ * whether or not it opened.
+ */
+async function parametersShownFor(
+  form: Awaited<ReturnType<typeof mountForm>>,
+  tool: AToolStep,
+): Promise<string> {
+  const trigger = form
+    .findAll('button')
+    .find(candidate => candidate.text().includes(tool.name))
+  if (!trigger) {
+    throw new Error(`no accordion trigger is rendered for the step running ${tool.name}`)
+  }
+  await trigger.trigger('click')
+
+  const panelId = trigger.attributes('aria-controls')
+  if (!panelId) {
+    throw new Error(`the trigger for the step running ${tool.name} names no panel`)
+  }
+  const panel = await vi.waitFor(() => {
+    const element = form.element.querySelector(`[id="${panelId}"]`)
+    expect(element, `the step running ${tool.name} opened its panel`).not.toBeNull()
+    return element!
+  })
+  await nextTick()
+  return panel.textContent ?? ''
+}
+
 beforeEach(() => {
   refuseWith = null
   refuseMessage = null
@@ -251,6 +420,7 @@ beforeEach(() => {
   requestsMade = 0
   lastBody = null
   workflowInputs = {}
+  workflowSteps = {}
   storedDatamap = null
   datasetsUnavailable = false
 })
@@ -609,5 +779,31 @@ describe('an analysis copied from an earlier one', () => {
       expect(inputField(form, '1').text()).toContain('Required')
     })
     expect(requestsMade).toBe(0)
+  })
+})
+
+describe('the parameters a workflow\'s tool steps offer', () => {
+  // #83. `galaxyWorkflowStepProps` reset its map to empty inside the loop it
+  // filled, so each pass discarded the one before and only the last tool step
+  // kept an entry. Every earlier step's panel then rendered nothing, with no
+  // error and nothing on screen to say a parameter had gone missing — which
+  // is why this asserts on the first step's panel, not on a count.
+  it('are offered for every tool step, not only the last', async () => {
+    workflowSteps = { 0: aToolStep(0, TOOL_A), 1: aToolStep(1, TOOL_B) }
+    const form = await mountForm()
+    await toolStepsReady(form, [TOOL_A, TOOL_B])
+
+    expect(await parametersShownFor(form, TOOL_A)).toContain(TOOL_A.parameterLabel)
+    expect(await parametersShownFor(form, TOOL_B)).toContain(TOOL_B.parameterLabel)
+  })
+
+  // The case that passed throughout, kept so the fix cannot be traded for one
+  // that keeps only the first entry instead of only the last.
+  it('are offered for the only tool step of a one-step workflow', async () => {
+    workflowSteps = { 0: aToolStep(0, TOOL_A) }
+    const form = await mountForm()
+    await toolStepsReady(form, [TOOL_A])
+
+    expect(await parametersShownFor(form, TOOL_A)).toContain(TOOL_A.parameterLabel)
   })
 })

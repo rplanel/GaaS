@@ -5,12 +5,24 @@ import type {
 } from 'blendtype'
 import { computed } from '#imports'
 
+/**
+ * The two variants are discriminated by `multiple`, which is also the only
+ * one of them the body reads.
+ *
+ * They used to carry an `isConditionalSelect` prop as well, declared required
+ * while nothing passed it and nothing read it (#83). Dropping it is not just
+ * tidying: Galaxy has no conditional-select component to mirror — a
+ * conditional's `test_param` renders through the same generic form element as
+ * any other input, and the conditional-ness lives in the parent, which
+ * re-matches the case when the value changes. The prop was inverted on top of
+ * that, `true` on the *multiple* variant, where a `test_param` can only ever
+ * be single-valued.
+ */
 export interface GalaxyMultipleSelectToolParameterProps
   extends GalaxyMultipleSelectToolParameter {
   modelValue: string[]
   disabled?: boolean
   variant?: 'form' | 'display'
-  isConditionalSelect: true
 }
 
 export interface GalaxySingleSelectToolParameterProps
@@ -18,7 +30,6 @@ export interface GalaxySingleSelectToolParameterProps
   modelValue: string
   disabled?: boolean
   variant?: 'form' | 'display'
-  isConditionalSelect: false
 }
 export type GalaxySelectToolParameterProps
   = | GalaxySingleSelectToolParameterProps

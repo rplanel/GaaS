@@ -202,7 +202,20 @@ const galaxyWorkflowStepProps = computed(
     const workflowParametersModelVal = toValue(invokeWorkflowParameterModel)
     let props: Record<string, Omit<WorkflowStepProps, 'variant'>> | undefined
 
+    // One map for the whole workflow, built once outside the loop. Written
+    // inside it, as #83 had it, every pass threw away the step before and
+    // only the last one kept an entry: a workflow of two or more tool steps
+    // offered parameters for exactly one of them, and the panels for the rest
+    // rendered empty with nothing on screen to say why.
+    //
+    // `undefined` still means "there is no workflow to describe yet", which
+    // is what the guard below decides; `{}` means the workflow is known and
+    // declares no tool step. Nothing can tell the two apart today — the
+    // template's only read is `galaxyWorkflowStepProps?.[stepId]` — but
+    // keeping the distinction costs nothing and leaves the loading state
+    // legible to the consolidation this derivation is headed for.
     if (workflowStepsItemsVal && toolInputParameterComponentVal) {
+      props = {}
       for (const item of workflowStepsItemsVal) {
         const { value: stepId } = item
         if (stepId) {
@@ -210,7 +223,6 @@ const galaxyWorkflowStepProps = computed(
           if (workflowStep) {
             const toolId = workflowStep.tool_id
             if (toolId !== null) {
-              props = {}
               props[stepId] = {
                 workflowStep,
                 toolParameters: toolInputParametersVal[toolId],
