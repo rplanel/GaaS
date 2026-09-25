@@ -306,6 +306,13 @@ If the invoke path needs work, that is a separate ask.
   `input_connections: {}`**, the stripped shape, so Q17's characterisation tests
   built on that fixture would pin the defect as correct. Fix the fixture first.
 
+  **Fixed in #82.** `workflowStepExportSchema` is `.loose()`,
+  `input_connections` is a record keyed by input name whose value is one
+  connection or an array of them, and `position`, `when` and `subworkflow` are
+  modelled. The fixture's `toolStep` now keys its connection by `input1` — not
+  `input`, the one key the broken schema kept — so a suite built on it can
+  tell fixed from broken.
+
 ## Still to verify
 
 ### Does the revision pin actually bind?

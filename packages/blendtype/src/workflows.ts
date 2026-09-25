@@ -76,7 +76,7 @@ export function exportWorkflowEffect(workflowId: string, style: 'export' | 'run'
     })
     const workflow = yield* workflowEffect
     return yield* Effect.try({
-      try: () => galaxyWorkflowExportSchema.passthrough().parse(workflow),
+      try: () => galaxyWorkflowExportSchema.loose().parse(workflow),
       catch: cause => new WorkflowError({
         message: `Invalid workflow export format for workflow ${workflowId}`,
         workflowId,
