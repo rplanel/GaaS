@@ -277,9 +277,16 @@ If the invoke path needs work, that is a separate ask.
 ## Pre-existing defects found along the way
 
 - `InvokeForm.vue:194` — `props = {}` reset **inside** the loop, so only the
-  last tool step survives.
+  last tool step survives. **Fixed in #83**, with the map built once outside
+  the loop. `InvokeForm.test.ts` now serves two tool steps at distinct
+  `tool_id`s and opens each accordion panel in turn; before the fix the first
+  step's panel rendered empty.
 - `GalaxySelectToolParameter` requires an `isConditionalSelect` prop that
-  nothing passes and nothing reads.
+  nothing passes and nothing reads. **Dropped in #83.** Galaxy has no
+  conditional-select component to mirror — a conditional's `test_param`
+  renders through the same generic form element as any other input — and the
+  prop was inverted besides, `true` on the *multiple* variant where a
+  `test_param` can only ever be single-valued.
 - The revision pin is a no-op in production until the upgrade (above).
 - **`galaxyWorkflowExportSchema` strips every connection, position and `when`
   out of the stored definition.** `exportWorkflowEffect` parses with
