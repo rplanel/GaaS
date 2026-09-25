@@ -92,4 +92,8 @@ repos
 **/.claude/skills/review-logging-patterns
 **/skills-lock.json
 **/CLAUDE.md
+# Local seed configuration: instance URLs and account emails, per developer.
+# `nuxt-galaxy`'s has a committed `seed.example.json` beside it to copy from;
+# the playground's has none, and nothing in the playground reads it.
 packages/nuxt-galaxy/src/runtime/server/db/seed.json
+playground/seed.json
