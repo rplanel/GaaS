@@ -28,7 +28,6 @@
  */
 
 import { mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
-import { encodeParam } from 'ufo'
 import { describe, expect, it } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
 import { FIXTURES, loadFixture } from './fixtures'
@@ -46,57 +45,38 @@ const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
 const fanIn = loadFixture(FIXTURES.fanIn)
 
 /**
- * The path a tool has to be *registered* at for `useGalaxyTool`'s fetch of it
- * to arrive.
+ * Every recorded payload served as the one endpoint the application now
+ * reads (#87): a revision's steps, its inputs and the definitions of the
+ * tools it pins, in one answer.
  *
- * `registerEndpoint` matches literally, so there is one registration per
- * tool: the module's real route is `/api/galaxy/tools/:toolId/:toolVersion`,
- * and a pattern written here would match nothing. `useGalaxyTool` asks
- * through `encodeParam`, which collapses a toolshed guid's slashes into one
- * `%2F`-escaped segment — and that part matches fine.
- *
- * What does not is `%2B`. A toolshed guid carries the version inside the id
- * (`…/ccqtl_make_inputs/0.0.1_beta.2+galaxy0`), so `encodeParam` escapes that
- * `+` to `%2B`, and a registration containing `%2B` is never reached: the
- * harness's router decodes the incoming path before matching but not the
- * registered one, so the two keys disagree. Registering the `+` literally is
- * what closes the gap. Measured, not guessed — `%2F` in the same segment and
- * a raw `+` in the version segment both match without this.
- *
- * This is the third place the `+` in a Galaxy version has bitten: #75 had
- * Galaxy itself read `1.2.3 galaxy0` because a raw `+` in a query decodes to
- * a space.
+ * One registration per fixture, where there used to be one per fixture plus
+ * one per tool. `registerEndpoint` matches literally, so each tool needed
+ * its own path — and a toolshed guid carries its version inside the id
+ * (`…/ccqtl_make_inputs/0.0.1_beta.2+galaxy0`), whose `+` `encodeParam`
+ * escapes to `%2B`, and a registered path containing `%2B` was never
+ * reached: the harness decodes the incoming path before matching but not the
+ * registered one. No tool id travels in a path any more, so none of that
+ * applies; the `+` is inside the JSON body, where nothing decodes it.
  */
-function toolEndpointPath(toolId: string, version: string) {
-  return `/api/galaxy/tools/${encodeParam(toolId).replace(/%2B/gi, '+')}/${version}`
-}
-
-/** Every recorded payload served at the path the application fetches it from. */
 for (const fixture of [ccqtl, nested, fanIn]) {
-  registerEndpoint(`/api/galaxy/workflows/${fixture.manifest.workflowId}`, () => ({
-    data: fixture.live,
-  }))
-  for (const [key, tool] of Object.entries(fixture.tools)) {
-    const at = key.lastIndexOf('@')
-    registerEndpoint(toolEndpointPath(key.slice(0, at), key.slice(at + 1)), () => tool)
-  }
+  registerEndpoint(
+    `/api/galaxy/workflows/${fixture.manifest.workflowId}/revisions/${fixture.manifest.revision}/description`,
+    () => ({
+      steps: fixture.live.steps,
+      inputs: fixture.live.inputs,
+      tools: fixture.tools,
+      unavailable: [],
+    }),
+  )
 }
-
-/**
- * What `useGalaxyTool` takes. `nuxt-galaxy` does not re-export its
- * `ToolQuery` from the package root, and reaching into the runtime path for
- * one interface is not worth the coupling.
- */
-interface ToolQuery { toolId: string, toolVersion: string }
 
 /**
  * Run a composable where Vue expects one to run.
  *
- * `useGalaxyWorkflow` and `useGalaxyTool` both open a `watch` with
- * `immediate: true`, so they need an owning scope or the watcher is never
- * disposed and Vue says so. Mounting a component that does nothing but call
- * them is the cheapest scope there is, and it keeps the suite pinning the
- * real composables rather than a copy of their bodies.
+ * `useGalaxyWorkflowDescription` opens a Pinia Colada query, which needs an
+ * owning scope. Mounting a component that does nothing but call it is the
+ * cheapest scope there is, and it keeps the suite pinning the real
+ * composable rather than a copy of its body.
  */
 async function inSetup<T>(use: () => T): Promise<T> {
   let captured: T | undefined
@@ -109,18 +89,20 @@ async function inSetup<T>(use: () => T): Promise<T> {
   return captured as T
 }
 
-/** The live model, taken through the composables the invoke form uses. */
+/**
+ * The live model, taken through the composable the invoke form uses.
+ *
+ * #86 drove the two composables #87 deleted, on purpose: so that changing
+ * them would break this suite. The seam has moved to the one that replaced
+ * them; every assertion below is the one it was.
+ */
 async function liveModelThroughComposables(fixture: typeof ccqtl) {
-  const { workflowSteps, workflowToolIds, workflowParametersModel } = await inSetup(() =>
-    useGalaxyWorkflow(ref(fixture.manifest.workflowId)),
+  const { workflowSteps, workflowParametersModel, toolsObj, toolInputParameters } = await inSetup(() =>
+    useGalaxyWorkflowDescription(ref(fixture.manifest.workflowId), ref(fixture.manifest.revision)),
   )
   await expect.poll(() => Object.keys(workflowSteps.value).length).toBeGreaterThan(0)
 
-  const toolIds = workflowToolIds.value as ToolQuery[]
-  const { toolsObj, toolInputParameters } = await inSetup(() => useGalaxyTool(toolIds))
-  // `useAsyncQueue` fills its result array as the fetches land, so the wait is
-  // for every distinct tool rather than for the first.
-  const distinct = new Set(toolIds.map(({ toolId }) => toolId)).size
+  const distinct = new Set(Object.keys(fixture.tools).map(key => key.slice(0, key.lastIndexOf('@')))).size
   await expect.poll(() => Object.keys(toolsObj.value).length).toBe(distinct)
 
   return { workflowParametersModel, toolInputParameters, toolsObj }
@@ -289,10 +271,10 @@ describe('the live payload and the stored definition, read side by side', () => 
 
 describe('what a step actually puts on screen', () => {
   it('renders the intersection of the tool\'s parameters and the step\'s saved values', async () => {
-    // The model no single payload holds. `useGalaxyTool` drops every `data`
+    // The model no single payload holds. The composable drops every `data`
     // parameter, `Step.vue` renders only where the step's own model has a
     // value under that name, and what a reader sees is the overlap. Driven
-    // through the real composables so that changing either breaks this.
+    // through the real composable so that changing it breaks this.
     const { workflowParametersModel, toolInputParameters } = await liveModelThroughComposables(ccqtl)
 
     const step4 = ccqtl.live.steps['4']!
@@ -300,7 +282,7 @@ describe('what a step actually puts on screen', () => {
     const saved = describeParameters(workflowParametersModel.value['4']!)
 
     // Two of six. `ccqtl_permutations` declares four `data` parameters and
-    // two others, and `useGalaxyTool` drops every `data` one, so the panel
+    // two others, and the composable drops every `data` one, so the panel
     // offers only the integer and the text field.
     expect(renderedParameterNames(declared, saved)).toEqual(['n_perm', 'strat_covar'])
   })
@@ -309,7 +291,7 @@ describe('what a step actually puts on screen', () => {
     // Surfaced by the recording, and worth its own name: on step 4 Galaxy
     // saved `crossdata`, `clean_pr`, `kloco` and `covar_modmat` as
     // `RuntimeValue` — it expects them to be supplied when the workflow runs
-    // — but all four are `data` parameters, and `useGalaxyTool` filters those
+    // — but all four are `data` parameters, and the composable filters those
     // out before the panel is built. So GaaS never asks for them and the
     // reader has no way to provide them.
     //

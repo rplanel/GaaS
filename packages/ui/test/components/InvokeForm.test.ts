@@ -1,12 +1,13 @@
-import type { GalaxyIntegerToolParameter, GalaxyTool, GalaxyWorkflow, WorkflowInput, WorkflowStep } from 'blendtype'
+import type { GalaxyIntegerToolParameter, GalaxyTool, WorkflowInput, WorkflowStep } from 'blendtype'
 import type { IncomingMessage } from 'node:http'
+import type { UnavailableTool } from 'nuxt-galaxy'
 import type { UploadedDatasetDb } from '../../app/components/galaxy/workflow/InvokeForm.vue'
 import { UApp } from '#components'
 import { mockNuxtImport, mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
 
-import { encodeParam } from 'ufo'
+import { useQueryCache } from '@pinia/colada'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick } from 'vue'
+import { defineComponent, h, nextTick } from 'vue'
 import InvokeForm from '../../app/components/galaxy/workflow/InvokeForm.vue'
 
 /** The status the analyses endpoint refuses the next submission with. */
@@ -29,8 +30,12 @@ let lastBody: Record<string, unknown> | null = null
 const GALAXY_WORKFLOW_ID = 'galaxy-wf-1'
 /** The Galaxy revision that row is pinned to, its `revision` column. */
 const WORKFLOW_REVISION = 3
-/** The `version` the form asked Galaxy for on its last workflow fetch, `null` when it asked for none. */
-let requestedRevision: string | null = null
+/** The revision the form last asked for a description of, `null` when it asked for none. */
+let describedRevision: number | null = null
+/** How many times the form asked the server to describe the revision. */
+let descriptionsServed = 0
+/** The tools the description reports as unusable, and why. */
+let unavailableTools: UnavailableTool[] = []
 
 /** The inputs the workflow declares, as Galaxy describes them. */
 let workflowInputs: Record<string, WorkflowInput> = {}
@@ -195,28 +200,31 @@ const supabase = fakeSupabaseClient()
 mockNuxtImport('useSupabaseClient', () => () => supabase)
 
 /**
- * Only the two fields the form reads off a Galaxy workflow are filled in. The
- * query string is read off the raw request rather than with `getQuery`, for
- * the reason `submittedBody` gives below: `h3` is not a dependency here.
+ * The one call the form makes for the revision and every tool it pins (#87).
+ * `registerEndpoint` matches a path literally, so this registration is the
+ * proof that the form asked for the revision the row is pinned to: any other
+ * revision, or the unpinned read the form used to make, reaches nothing.
+ *
+ * Only the definitions of the tools the steps actually name are served, so a
+ * test that marks one unavailable gets a description with a hole in it,
+ * which is what the endpoint answers.
  */
-registerEndpoint(`/api/galaxy/workflows/${GALAXY_WORKFLOW_ID}`, (event) => {
-  requestedRevision = new URL(event.node.req.url ?? '/', 'http://test').searchParams.get('version')
-  return {
-    data: { inputs: workflowInputs, steps: workflowSteps } as unknown as GalaxyWorkflow,
-  }
-})
-
-/**
- * One registration per tool, because `registerEndpoint` matches a path
- * literally: the module's real route is `/api/galaxy/tools/:toolId/:toolVersion`,
- * but a pattern written here would never match. `useGalaxyTool` asks for the
- * id through `encodeParam`, so a toolshed guid arrives as a single
- * `%2F`-escaped segment and the path registered has to be escaped the same
- * way.
- */
-for (const tool of [TOOL_A, TOOL_B]) {
-  registerEndpoint(`/api/galaxy/tools/${encodeParam(tool.id)}/${tool.version}`, () => aTool(tool))
-}
+registerEndpoint(
+  `/api/galaxy/workflows/${GALAXY_WORKFLOW_ID}/revisions/${WORKFLOW_REVISION}/description`,
+  () => {
+    describedRevision = WORKFLOW_REVISION
+    descriptionsServed += 1
+    const unusable = new Set(unavailableTools.map(tool => `${tool.toolId}@${tool.toolVersion}`))
+    const tools: Record<string, GalaxyTool> = {}
+    for (const tool of [TOOL_A, TOOL_B]) {
+      const key = `${tool.id}@${tool.version}`
+      if (!unusable.has(key)) {
+        tools[key] = aTool(tool)
+      }
+    }
+    return { steps: workflowSteps, inputs: workflowInputs, tools, unavailable: unavailableTools }
+  },
+)
 
 /**
  * The submitted JSON. `readBody` would mean importing `h3`, which is not a
@@ -412,10 +420,41 @@ async function parametersShownFor(
   return panel.textContent ?? ''
 }
 
-beforeEach(() => {
+/**
+ * The Colada cache the mounted app shares, reached from inside a component
+ * because the store needs the app's pinia and a test body is outside it.
+ */
+let queryCache: ReturnType<typeof useQueryCache> | undefined
+
+/**
+ * Forget every answer between tests.
+ *
+ * The Colada cache outlives one mount, so the first test's workflow would
+ * otherwise be served to every test after it. The entries are **removed**
+ * rather than invalidated: the description is cached with no expiry on
+ * purpose — a pinned revision is immutable — and invalidating only marks an
+ * entry stale, which a `staleTime` of forever then reads as fresh anyway.
+ */
+async function forgetCachedAnswers() {
+  if (!queryCache) {
+    await mountSuspended(defineComponent({
+      setup() {
+        queryCache = useQueryCache()
+        return () => h('div')
+      },
+    }))
+  }
+  for (const entry of queryCache!.getEntries()) {
+    queryCache!.remove(entry)
+  }
+}
+
+beforeEach(async () => {
   refuseWith = null
   refuseMessage = null
-  requestedRevision = null
+  describedRevision = null
+  descriptionsServed = 0
+  unavailableTools = []
   serveEmptyBody = false
   requestsMade = 0
   lastBody = null
@@ -423,6 +462,7 @@ beforeEach(() => {
   workflowSteps = {}
   storedDatamap = null
   datasetsUnavailable = false
+  await forgetCachedAnswers()
 })
 
 // First in the file on purpose: the query for the dataset list is shared by
@@ -457,7 +497,7 @@ describe('invokeForm component', () => {
     await mountForm()
 
     await vi.waitFor(() => {
-      expect(requestedRevision).toBe(String(WORKFLOW_REVISION))
+      expect(describedRevision).toBe(WORKFLOW_REVISION)
     })
   })
 
@@ -805,5 +845,115 @@ describe('the parameters a workflow\'s tool steps offer', () => {
     await toolStepsReady(form, [TOOL_A])
 
     expect(await parametersShownFor(form, TOOL_A)).toContain(TOOL_A.parameterLabel)
+  })
+})
+
+/**
+ * #87. Galaxy refuses to run a revision whose tools are not installed at the
+ * versions it pins, so the form says so before the reader fills anything in.
+ * Q10 applied honestly splits the verdicts: only what would refuse the
+ * submission refuses it here.
+ */
+describe('a revision whose tools Galaxy cannot serve', () => {
+  /** Open the accordion panel of the step running `tool` and answer with its root element. */
+  async function panelOf(form: Awaited<ReturnType<typeof mountForm>>, tool: AToolStep) {
+    const trigger = await vi.waitFor(() => {
+      const found = form.findAll('button').find(candidate => candidate.text().includes(tool.name))
+      expect(found, `the step running ${tool.name} is listed`).toBeDefined()
+      return found!
+    })
+    await trigger.trigger('click')
+    const panelId = trigger.attributes('aria-controls')
+    return vi.waitFor(() => {
+      const element = form.element.querySelector(`[id="${panelId}"]`)
+      expect(element, `the step running ${tool.name} opened its panel`).not.toBeNull()
+      return element!
+    })
+  }
+
+  it('names the tools that would refuse the submission, and refuses it', async () => {
+    workflowSteps = { 2: aToolStep(2, TOOL_A), 3: aToolStep(3, TOOL_B) }
+    unavailableTools = [
+      { toolId: TOOL_A.id, toolVersion: TOOL_A.version, reason: 'not_installed' },
+      { toolId: TOOL_B.id, toolVersion: TOOL_B.version, reason: 'version_mismatch', servedVersion: '3.0' },
+    ]
+    const form = await mountForm()
+
+    const alert = await vi.waitFor(() => {
+      const found = form.find('[data-testid="blocking-tools"]')
+      expect(found.exists(), 'the form marked the revision as unrunnable').toBe(true)
+      return found
+    })
+    expect(alert.text()).toContain(TOOL_A.id)
+    expect(alert.text()).toContain('is not installed')
+    expect(alert.text()).toContain('is installed only at 3.0')
+    expect(form.find('button[type="submit"]').attributes('disabled')).toBeDefined()
+
+    // Submitted through the form rather than the button, so the refusal
+    // being real is what this reads, not the button being disabled.
+    await submit(form)
+    await nextTick()
+
+    expect(requestsMade).toBe(0)
+  })
+
+  it('does not refuse the submission for a tool that is merely unreachable', async () => {
+    // Galaxy may be well again by the time the reader submits, and the
+    // values that go up come from the workflow's saved parameters rather
+    // than from the tool definition, so nothing here would submit wrong.
+    workflowSteps = { 2: aToolStep(2, TOOL_A) }
+    unavailableTools = [{ toolId: TOOL_A.id, toolVersion: TOOL_A.version, reason: 'unreachable' }]
+    const form = await mountForm()
+    await vi.waitFor(() => {
+      expect(form.text()).toContain(TOOL_A.name)
+    })
+
+    expect(form.find('[data-testid="blocking-tools"]').exists()).toBe(false)
+    await submit(form)
+
+    await vi.waitFor(() => {
+      expect(requestsMade).toBe(1)
+    })
+  })
+
+  it('renders an unreachable tool\'s step un-editable, with the reason and a retry that picks it up', async () => {
+    workflowSteps = { 2: aToolStep(2, TOOL_A) }
+    unavailableTools = [{ toolId: TOOL_A.id, toolVersion: TOOL_A.version, reason: 'unreachable' }]
+    const form = await mountForm()
+
+    const panel = await panelOf(form, TOOL_A)
+    await vi.waitFor(() => {
+      expect(panel.textContent, 'the step says why it cannot be edited').toContain('could not be read from Galaxy')
+    })
+    // An empty panel is what #96 is about: a tool that failed must never
+    // look like a tool that loaded with no parameters.
+    expect(panel.textContent).not.toContain(TOOL_A.parameterLabel)
+
+    unavailableTools = []
+    await form.find('[data-testid="retry-workflow-description"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(descriptionsServed, 'the retry asked Galaxy again').toBe(2)
+      expect(panel.textContent, 'the step is editable again').toContain(TOOL_A.parameterLabel)
+    })
+  })
+})
+
+/**
+ * #87. One request per revision, shared through Pinia Colada. The old pair
+ * of composables used raw `$fetch`, so every mount refetched the workflow
+ * and every one of its tools.
+ */
+describe('a revision described a second time', () => {
+  it('is served from the cache rather than fetched again', async () => {
+    workflowSteps = { 2: aToolStep(2, TOOL_A) }
+    const first = await mountForm()
+    await toolStepsReady(first, [TOOL_A])
+    expect(descriptionsServed).toBe(1)
+
+    const second = await mountForm()
+    await toolStepsReady(second, [TOOL_A])
+
+    expect(descriptionsServed).toBe(1)
   })
 })

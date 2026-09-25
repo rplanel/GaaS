@@ -79,14 +79,18 @@ useSupabaseRealtime(`galaxy:jobs:${props.analysisId}`, 'jobs', refresh)
 // Display-only refresh: this subscription re-fetches displayed rows and must not trigger Galaxy sync.
 useSupabaseRealtime(`galaxy:analysis_outputs:${props.analysisId}`, 'analysis_outputs', refresh)
 
+// One request for the revision and every tool it pins (#87), shared through
+// Pinia Colada: the invoke form for the same revision reuses this answer
+// rather than fetching 1+N times of its own.
 const {
   workflowSteps,
-  workflowToolIds,
   stepToTool,
+  toolsObj,
+  toolInputParameters,
+  unavailableByStep,
   error: workflowError,
-} = useGalaxyWorkflow(workflowGalaxyId, workflowRevision)
+} = useGalaxyWorkflowDescription(workflowGalaxyId, workflowRevision)
 
-const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
 const { getToolParameters, getParametersInputComponent } = useAnalysisTools(toolsObj)
 const { jobs, jobsAccordionItems, jobsMap, jobDetailsAccordionItems } = useAnalysisJob(detailedAnalysis, toolsObj)
 
@@ -296,7 +300,32 @@ const sortedOutputs = computed(() => {
                         && item.value
                     " class="p-2"
                   >
+                    <!--
+                      This panel blocks nothing — it has no submit, and the
+                      job it describes has already run. Where the tool
+                      definition could not be read there are no labels and no
+                      widgets, so what was sent is shown by its raw parameter
+                      names rather than not at all (#96): a tool that failed
+                      is never indistinguishable from a tool with no
+                      parameters.
+                    -->
+                    <div v-if="unavailableByStep[item.value]" data-testid="step-parameters-unlabelled">
+                      <p class="text-sm opacity-60 px-4 py-2">
+                        {{ describeUnavailableTool(unavailableByStep[item.value]!) }}, so these are its raw parameter names.
+                      </p>
+                      <dl class="grid grid-cols-[auto_1fr] gap-x-4 px-4 py-2 text-sm">
+                        <template v-for="(value, name) in workflowParametersModel[item.value]" :key="name">
+                          <dt class="font-medium break-all">
+                            {{ name }}
+                          </dt>
+                          <dd class="break-all opacity-80">
+                            {{ value }}
+                          </dd>
+                        </template>
+                      </dl>
+                    </div>
                     <GalaxyWorkflowStep
+                      v-else
                       variant="display" :workflow-step="workflowSteps[item.value]"
                       :tool-parameters="getToolParameters(item.value)"
                       :parameters-inputs-component="getParametersInputComponent(item.value)"

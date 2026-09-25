@@ -52,14 +52,28 @@ watch(workflowItems, (items) => {
   }
 }, { immediate: true })
 
+/**
+ * The revision to describe. `useGalaxyWorkflowDescription` takes one because
+ * the endpoint behind it does (#87, Q15): a pinned revision is immutable and
+ * so cacheable, while Galaxy's latest moves with every save in its editor.
+ * These prototypes never pinned one, so they ask for the last revision
+ * Galaxy lists, which is the one they described before. #91 replaces both
+ * pages with the real graph and this goes with them.
+ */
+const { data: revisions } = useQuery(() => ({
+  ...galaxyWorkflowRevisionsQuery({ workflowId: selectedWorkflowId.value ?? '' }),
+  enabled: selectedWorkflowId.value !== undefined,
+}))
+
+const latestRevision = computed(() => revisions.value?.at(-1)?.version)
+
 const {
   workflowSteps,
   workflowInputs,
-  workflowToolIds,
   workflowParametersModel,
-} = useGalaxyWorkflow(selectedWorkflowId)
-
-const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
+  toolsObj,
+  toolInputParameters,
+} = useGalaxyWorkflowDescription(selectedWorkflowId, latestRevision)
 
 /** One component per tool input, per tool — the real widget set. */
 const toolInputComponents = computed(() => {

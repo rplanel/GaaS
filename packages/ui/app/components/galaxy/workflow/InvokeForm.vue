@@ -263,6 +263,14 @@ function rememberThisPage() {
  * asks for exactly what it showed.
  */
 async function runAnalysis(event: FormSubmitEvent<Schema>) {
+  // Galaxy refuses to run a revision whose tools are not installed at the
+  // versions it pins, so the submission is refused here rather than by
+  // Galaxy after the datasets have been uploaded. The alert above the button
+  // has already named them; Run is disabled too, and this is the refusal
+  // that does not depend on the button.
+  if (toValue(blockingTools).length > 0) {
+    return
+  }
   const analysesNameVal = event.data.analysisName
   const workflowIdVal = toValue(props.workflowId)
   const workflowParametersModelVal = toValue(invokeWorkflowParameterModel)
@@ -343,16 +351,23 @@ const workflowGalaxyId = computed(() => {
 // moves with every save in its editor.
 const workflowRevision = computed(() => toValue(dbWorkflow)?.revision)
 
+// One request for the revision and every tool it pins (#87), shared through
+// Pinia Colada with anything else reading the same revision. It replaced
+// `useGalaxyWorkflow` + `useGalaxyTool`, which fetched 1+N times per mount
+// over raw `$fetch` and so deduplicated nothing.
 const {
   workflowSteps,
   stepToTool,
   workflowInputs,
   workflowToolSteps,
-  workflowToolIds,
   workflowParametersModel,
-} = useGalaxyWorkflow(workflowGalaxyId, workflowRevision)
-
-const { toolsObj, toolInputParameters } = useGalaxyTool(workflowToolIds)
+  toolsObj,
+  toolInputParameters,
+  blockingTools,
+  unavailableByStep,
+  isLoading: describingWorkflow,
+  retry: retryDescription,
+} = useGalaxyWorkflowDescription(workflowGalaxyId, workflowRevision)
 
 watchEffect(() => {
   // Named rather than `Record<string, any>`: `datamap` is a nullable `Json`
@@ -462,8 +477,39 @@ watchEffect(() => {
           <template #body="{ item: { value: stepId } }">
             <div class="p-2">
               <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)]">
+                <!--
+                  A step whose tool could not be read is un-editable and says
+                  so, rather than rendering an empty panel that looks like a
+                  tool with no parameters (#96). The retry is the only way
+                  back: the description is cached without expiry, so a tool
+                  installed since, or a Galaxy that has come back, is picked
+                  up when the reader asks for it.
+                -->
+                <UAlert
+                  v-if="stepId !== undefined && unavailableByStep[stepId]"
+                  :data-testid="`step-unavailable-${stepId}`"
+                  role="status"
+                  variant="subtle"
+                  color="warning"
+                  icon="i-lucide:unplug"
+                  title="This step cannot be edited"
+                  :description="describeUnavailableTool(unavailableByStep[stepId]!)"
+                >
+                  <template #actions>
+                    <UButton
+                      data-testid="retry-workflow-description"
+                      size="xs"
+                      color="warning"
+                      variant="outline"
+                      :loading="describingWorkflow"
+                      @click="retryDescription()"
+                    >
+                      Retry
+                    </UButton>
+                  </template>
+                </UAlert>
                 <GalaxyWorkflowStep
-                  v-if="stepId !== undefined && galaxyWorkflowStepProps?.[stepId]"
+                  v-else-if="stepId !== undefined && galaxyWorkflowStepProps?.[stepId]"
                   v-bind="galaxyWorkflowStepProps[stepId]" variant="form"
                 />
               </div>
@@ -496,7 +542,33 @@ watchEffect(() => {
           </UButton>
         </template>
       </UAlert>
-      <UButton type="submit" :loading="startingAnalysis">
+      <!--
+        Marked before submit, and only what would refuse it (Q10): Galaxy
+        will not run a revision whose tools are not installed at the versions
+        it pins, so this analysis cannot start until they are. A tool merely
+        unreachable is not here — Galaxy may be well again by the time the
+        reader submits, and the values that will be sent come from the
+        workflow's saved parameters rather than from the tool definition.
+      -->
+      <UAlert
+        v-if="blockingTools.length > 0"
+        data-testid="blocking-tools"
+        role="alert"
+        variant="subtle"
+        color="error"
+        icon="i-lucide:alert-octagon"
+        title="This version cannot be run"
+        class="mb-3"
+      >
+        <template #description>
+          <ul class="list-disc ps-5">
+            <li v-for="tool in blockingTools" :key="`${tool.toolId}@${tool.toolVersion}`">
+              {{ describeUnavailableTool(tool) }}
+            </li>
+          </ul>
+        </template>
+      </UAlert>
+      <UButton type="submit" :loading="startingAnalysis" :disabled="blockingTools.length > 0">
         Run
       </UButton>
     </UForm>

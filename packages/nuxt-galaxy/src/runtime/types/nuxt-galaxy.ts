@@ -129,6 +129,7 @@ export interface UpdatedAnalysisLog extends Sync {
   isSync: boolean
 }
 
+export type { ToolInputParameter } from '../app/composables/galaxy/useGalaxyWorkflowDescription'
 /**
  * What `POST /api/db/analyses` accepts. Inferred from the schema that checks
  * it (#47) rather than declared here beside it, so that the type a client
