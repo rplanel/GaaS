@@ -1,33 +1,29 @@
 import type { NuxtHooks } from '@nuxt/schema'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { loadNuxt } from '@nuxt/kit'
 import { beforeAll, describe, expect, it } from 'vitest'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const fixtureDir = join(__dirname, '../fixtures/basic')
+import { withFixtureNuxt } from './loadFixture'
 
 type ImportsContext = Parameters<NuxtHooks['imports:context']>[0]
 
 /**
  * The names the module makes available without an import, read back from
  * Nuxt's own import registry once every module has registered its share.
+ *
+ * `imports:context` fires during `ready()`, so the hook is registered from
+ * `before` rather than after the load — see `loadFixture`.
  */
 async function loadAutoImportNames(): Promise<string[]> {
-  const nuxt = await loadNuxt({
-    cwd: fixtureDir,
-    dev: false,
-    ready: false,
-    overrides: { ssr: false, test: true },
-  })
   let context: ImportsContext | undefined
-  nuxt.hook('imports:context', (ctx) => {
-    context = ctx
-  })
-  await nuxt.ready()
-  const imports = await context!.getImports()
-  await nuxt.close()
-  return imports.map(entry => entry.as ?? entry.name)
+  return withFixtureNuxt(
+    async () => {
+      const imports = await context!.getImports()
+      return imports.map(entry => entry.as ?? entry.name)
+    },
+    {
+      before: nuxt => nuxt.hook('imports:context', (ctx) => {
+        context = ctx
+      }),
+    },
+  )
 }
 
 describe('module auto-imports', () => {
