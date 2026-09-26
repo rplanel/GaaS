@@ -1,26 +1,25 @@
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { loadNuxt } from '@nuxt/kit'
 import { describe, expect, it } from 'vitest'
+import { withFixtureNuxt } from './loadFixture'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const fixtureDir = join(__dirname, '../fixtures/basic')
+/**
+ * One load per distinct configuration, each with its own content database —
+ * see `loadFixture`, which explains why both matter.
+ */
+const loaded = new Map<string, ReturnType<typeof loadNitroConfig>>()
 
-async function loadModuleConfig(galaxyOverrides: Record<string, unknown> = {}) {
-  const nuxt = await loadNuxt({
-    cwd: fixtureDir,
-    dev: false,
-    ready: false,
-    overrides: {
-      ssr: false,
-      test: true,
-      galaxy: galaxyOverrides,
-    },
-  })
-  await nuxt.ready()
-  const nitro = nuxt.options.nitro
-  await nuxt.close()
-  return nitro
+function loadNitroConfig(galaxyOverrides: Record<string, unknown>) {
+  return withFixtureNuxt(options => options.nitro, { galaxy: galaxyOverrides })
+}
+
+function loadModuleConfig(galaxyOverrides: Record<string, unknown> = {}) {
+  const key = JSON.stringify(galaxyOverrides)
+  const already = loaded.get(key)
+  if (already) {
+    return already
+  }
+  const loading = loadNitroConfig(galaxyOverrides)
+  loaded.set(key, loading)
+  return loading
 }
 
 describe('module task registration', () => {
