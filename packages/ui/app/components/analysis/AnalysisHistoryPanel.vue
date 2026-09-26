@@ -107,9 +107,15 @@ function useAnalysisJob(analysis: Ref<AnalysisDetail | undefined>, tools: Ref<Re
   const jobsAccordionItems = computed<AccordionItem[] | undefined>(() => {
     const jobsVal = toValue(jobs)
     const toolsVal = toValue(tools)
+    const stepToToolVal = toValue(stepToTool)
     if (jobsVal && toolsVal) {
       return jobsVal.map((job): AccordionItem => {
-        const item = toolsVal[job.tool_id]
+        // A job row carries a bare `tool_id` and no version, so it cannot
+        // name a definition on its own — two steps may run the same tool at
+        // two versions (#100). Its `step_id` is the step's order index,
+        // which is what the revision pins a version by, so the step is the
+        // way round.
+        const item = toolsVal[stepToToolVal[String(job.step_id)] ?? '']
         return {
           label: `${item?.name ?? 'no tool name'} - ${
             item?.version ?? 'no tool version'

@@ -6,9 +6,13 @@ import { Controls } from '@vue-flow/controls'
 import { Handle, Position, VueFlow } from '@vue-flow/core'
 
 /**
- * The part of a Galaxy step this canvas reads, as
- * `GET /api/galaxy/workflows/{id}` describes it. A subset of blendtype's
- * `WorkflowStep`, declared here so the prototype stays a playground-only file.
+ * The part of a step this canvas reads, as the description endpoint answers
+ * it. A subset of `DescribedStep`, declared here so the prototype stays a
+ * playground-only file.
+ *
+ * `input_connections` is the stored definition's spelling, keyed by the name
+ * of the input it feeds, one connection or an array of them — the live API's
+ * `input_steps` cannot express an input fed by two upstream outputs (#88).
  */
 export interface FormGraphStep {
   id: number
@@ -16,8 +20,11 @@ export interface FormGraphStep {
   tool_id: string | null
   tool_version: string | null
   annotation: string | null
-  input_steps: Record<string, { source_step: number, step_output: string }>
+  input_connections: Record<string, Connection | Connection[]>
 }
+
+/** One incoming edge: the upstream step's index, and the output feeding this input. */
+interface Connection { id: number, output_name: string }
 
 const props = withDefaults(
   defineProps<{
@@ -96,13 +103,15 @@ const graph = computed(() => {
   }))
 
   const edges = entries.flatMap(([stepId, step]) =>
-    Object.entries(step.input_steps ?? {}).map(([inputName, connection]) => ({
-      id: `${connection.source_step}->${stepId}:${inputName}`,
-      source: String(connection.source_step),
-      target: stepId,
-      label: inputName,
-      style: { strokeWidth: 1.5 },
-    })),
+    Object.entries(step.input_connections ?? {}).flatMap(([inputName, value]) =>
+      (Array.isArray(value) ? value : [value]).map(connection => ({
+        id: `${connection.id}:${connection.output_name}->${stepId}:${inputName}`,
+        source: String(connection.id),
+        target: stepId,
+        label: inputName,
+        style: { strokeWidth: 1.5 },
+      })),
+    ),
   )
 
   const g = new Graph()

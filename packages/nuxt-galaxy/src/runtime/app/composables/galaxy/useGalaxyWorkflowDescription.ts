@@ -3,14 +3,13 @@ import type {
   GalaxyDataToolParameter,
   GalaxyTool,
   GalaxyToolParameters,
-  WorkflowStep,
   WorkflowToolParameters,
-  WorkflowToolStep,
 } from 'blendtype'
-import type { UnavailableTool } from '../../../types/nuxt-galaxy'
+import type { DescribedStep, DescribedToolStep, UnavailableTool } from '../../../types/nuxt-galaxy'
 import { computed, toRaw, toValue, watch } from '#imports'
 import { useQuery } from '@pinia/colada'
 import { log } from 'evlog/client'
+import { toolKey } from '../../../shared/toolKey'
 import { galaxyWorkflowDescriptionQuery } from '../../queries/galaxy/workflows'
 
 /**
@@ -66,7 +65,9 @@ export function describeUnavailableTool(tool: UnavailableTool): string {
  * `revision` is mandatory, as the endpoint's route is: the revision a
  * workflow row is pinned to is the one an analysis of that row starts (#48),
  * and Galaxy's *latest* revision — what the old composable described when
- * asked for none — moves with every save in its editor.
+ * asked for none — moves with every save in its editor. Since #88 the
+ * answer comes from the export captured at publish rather than from Galaxy,
+ * so what is described is what was published, whatever the editor holds now.
  */
 export function useGalaxyWorkflowDescription(
   workflowId: MaybeRefOrGetter<string | undefined>,
@@ -85,8 +86,8 @@ export function useGalaxyWorkflowDescription(
   })
 
   // This one query is now the single point of failure for both the invoke
-  // form and the analysis panel, where there used to be two; a Galaxy
-  // outage that empties both screens should leave a trace (LOGGING-SPEC §3).
+  // form and the analysis panel, where there used to be two; an outage that
+  // empties both screens should leave a trace (LOGGING-SPEC §3).
   watch(error, (failure) => {
     if (failure) {
       log.warn({
@@ -99,21 +100,21 @@ export function useGalaxyWorkflowDescription(
     }
   })
 
-  const workflowSteps = computed<Record<string, WorkflowStep>>(() => toValue(description)?.steps ?? {})
+  const workflowSteps = computed<Record<string, DescribedStep>>(() => toValue(description)?.steps ?? {})
   const workflowInputs = computed(() => toValue(description)?.inputs ?? {})
 
   /**
    * The steps that run a tool: type `tool`, with both a `tool_id` and a
    * `tool_version`. A data or parameter input carries neither.
    */
-  const workflowToolSteps = computed<Record<string, WorkflowToolStep>>(() => {
+  const workflowToolSteps = computed<Record<string, DescribedToolStep>>(() => {
     const steps = toValue(workflowSteps)
     return Object.entries(steps)
-      .filter((entry): entry is [string, WorkflowToolStep] => {
+      .filter((entry): entry is [string, DescribedToolStep] => {
         const [, step] = entry
         return step.type === 'tool' && step.tool_id !== null && step.tool_version !== null
       })
-      .reduce<Record<string, WorkflowToolStep>>((acc, [stepId, step]) => {
+      .reduce<Record<string, DescribedToolStep>>((acc, [stepId, step]) => {
         acc[stepId] = step
         return acc
       }, {})
@@ -139,41 +140,43 @@ export function useGalaxyWorkflowDescription(
     }, {})
   })
 
-  /** Which tool each tool step runs, by step id. */
+  /**
+   * Which tool each tool step runs, by step id — named `<toolId>@<version>`,
+   * the tool the step itself **pins**.
+   *
+   * By bare tool id a step resolved to whatever else shared its id (#100). A
+   * toolshed guid ends in its own version, so the ids that really do repeat
+   * across two versions are the **built-in** ones — `Cut1`,
+   * `__BUILD_LIST__`, `Grep1` — and a workflow may pin one of those at two
+   * versions in two steps. Both definitions then landed under one key and
+   * the last one read won, so both steps were offered that version's form:
+   * `Step.vue` renders a parameter only where the step's own saved values
+   * have one under that name, so a parameter the step does have went
+   * unoffered, and one both versions declare was rendered with the other
+   * version's label, bounds and widget.
+   */
   const stepToTool = computed(() => {
     return Object.entries(toValue(workflowToolSteps)).reduce<Record<string, string>>((acc, [stepId, step]) => {
-      acc[stepId] = step.tool_id
+      acc[stepId] = toolKey(step.tool_id, step.tool_version)
       return acc
     }, {})
   })
 
   /**
-   * The resolved definitions, by tool id.
+   * The resolved definitions, keyed as the endpoint keys them:
+   * `<toolId>@<version>`.
    *
-   * The endpoint keys them `<toolId>@<version>`, because one workflow can
-   * pin the same tool at two versions; the screens look a tool up by the id
-   * its step names, so that is the key here.
-   *
-   * A workflow that really does pin two versions of one tool keeps the last
-   * of them, and the step pinned to the other is then offered the wrong
-   * version's parameters. That is **#100**, and it is preserved rather than
-   * introduced: `useGalaxyTool` keyed by the answer's `id` and collided the
-   * same way, and #86's suite pins the behaviour by looking a tool up by
-   * bare id. What changed is that the fix became cheap — before #87 the
-   * client had no version to key by, and now the endpoint hands it one.
+   * Served through rather than re-keyed. The endpoint has always keyed them
+   * by the pin, because one workflow can pin the same tool at two versions;
+   * this composable used to throw the version away on the way past, which is
+   * where the two definitions collided (#100).
    */
-  const toolsObj = computed<Record<string, GalaxyTool>>(() => {
-    const tools = toValue(description)?.tools ?? {}
-    return Object.entries(tools).reduce<Record<string, GalaxyTool>>((acc, [key, tool]) => {
-      acc[key.slice(0, key.lastIndexOf('@'))] = tool
-      return acc
-    }, {})
-  })
+  const toolsObj = computed<Record<string, GalaxyTool>>(() => toValue(description)?.tools ?? {})
 
-  /** The parameters each tool offers a widget for, by tool id. */
+  /** The parameters each tool offers a widget for, by the same pin. */
   const toolInputParameters = computed(() => {
-    return Object.entries(toValue(toolsObj)).reduce<Record<string, ToolInputParameter[]>>((acc, [toolId, tool]) => {
-      acc[toolId] = tool.inputs.filter((input): input is ToolInputParameter => input.type !== 'data')
+    return Object.entries(toValue(toolsObj)).reduce<Record<string, ToolInputParameter[]>>((acc, [key, tool]) => {
+      acc[key] = tool.inputs.filter((input): input is ToolInputParameter => input.type !== 'data')
       return acc
     }, {})
   })
@@ -194,9 +197,9 @@ export function useGalaxyWorkflowDescription(
    * from a tool that loaded with no parameters.
    */
   const unavailableByStep = computed<Record<string, UnavailableTool>>(() => {
-    const byPin = new Map(toValue(unavailableTools).map(tool => [`${tool.toolId}@${tool.toolVersion}`, tool]))
+    const byPin = new Map(toValue(unavailableTools).map(tool => [toolKey(tool.toolId, tool.toolVersion), tool]))
     return Object.entries(toValue(workflowToolSteps)).reduce<Record<string, UnavailableTool>>((acc, [stepId, step]) => {
-      const tool = byPin.get(`${step.tool_id}@${step.tool_version}`)
+      const tool = byPin.get(toolKey(step.tool_id, step.tool_version))
       if (tool) {
         acc[stepId] = tool
       }
@@ -219,9 +222,11 @@ export function useGalaxyWorkflowDescription(
     isLoading,
     error,
     /**
-     * Ask Galaxy again, whatever the cache holds. The answer is cached for
-     * ever by design, so this is the only way an unavailable tool that has
-     * since been installed, or a Galaxy that has come back, is picked up.
+     * Ask the server again, whatever the cache holds. The answer is cached
+     * for ever by design, so this is the only way an unavailable tool that
+     * has since been installed, or a Galaxy that has come back, is picked
+     * up — the revision itself no longer moves at all, since it is read from
+     * the export stored at publish (#88).
      */
     retry: refetch,
   }

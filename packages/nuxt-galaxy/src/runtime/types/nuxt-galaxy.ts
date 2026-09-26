@@ -137,6 +137,13 @@ export interface UpdatedAnalysisLog extends Sync {
  */
 export type { AnalysisBody } from '../server/utils/analysisBody'
 /**
+ * One step and one declared input of a revision, in the single shape this
+ * application describes a workflow in since #88 — normalised from the stored
+ * definition, rather than either the live Galaxy payload's spelling or the
+ * export's.
+ */
+export type { DescribedStep, DescribedToolStep, DescribedWorkflowInput } from '../server/utils/grizzle/storedDefinition'
+/**
  * The state of a version (#76): whether it can still run, as
  * `GET /api/db/workflows/:id/state` reads it live from Galaxy and the admin
  * workflows page shows it beside each version.

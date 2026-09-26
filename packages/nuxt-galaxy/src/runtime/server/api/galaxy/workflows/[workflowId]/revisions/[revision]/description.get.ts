@@ -2,6 +2,7 @@ import { useRuntimeConfig } from '#imports'
 import { toGalaxyServiceUnavailable } from 'blendtype'
 import { Effect, Exit } from 'effect'
 import { createError, defineEventHandler, getRouterParam } from 'h3'
+import { Drizzle } from '../../../../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../../../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../../../../../utils/galaxy'
 import { useGalaxyCache } from '../../../../../../utils/galaxyCache'
@@ -19,17 +20,22 @@ import { requestedRevisionParam } from '../../../../../../utils/revisionParam'
  * cacheable data in the system and were the most refetched; they are cached
  * here, per Galaxy URL and per the version Galaxy **served**, with no expiry.
  *
- * Nothing is read from the database and nothing is written anywhere but the
- * cache.
+ * The workflow half is read from the **stored definition** (#88, Q12) — the
+ * export captured when the version was published, in this application's own
+ * database — rather than from the live Galaxy API, which keys a step's
+ * connections in an overwrite loop and so cannot describe an input fed by
+ * two upstream outputs. So the only thing asked of Galaxy here is the tools.
+ *
+ * Nothing is written anywhere but the cache.
  */
 export default defineEventHandler(async (event) => {
-  const { public: { galaxy: { url } }, galaxy: { cache } } = useRuntimeConfig()
+  const { public: { galaxy: { url } }, galaxy: { cache, email } } = useRuntimeConfig()
 
-  // Read before anything is asked of Galaxy, so a revision nobody can use
-  // costs a round trip and nothing more. Mandatory by construction, and that
-  // is the point (Q15): the unpinned read answers whatever Galaxy's latest
-  // revision is, which moves with every save in its editor and so must not
-  // be cached. Giving it no route means a caller cannot ask for it.
+  // Read before anything else is done, so a revision nobody can use costs a
+  // parse and nothing more. Mandatory by construction, and that is the point
+  // (Q15): the unpinned read answers whatever Galaxy's latest revision is,
+  // which moves with every save in its editor and so must not be cached.
+  // Giving it no route means a caller cannot ask for it.
   const revision = requestedRevisionParam(event)
   // a middle segment, so an empty one matches the route and arrives here
   const workflowId = getRouterParam(event, 'workflowId') ?? ''
@@ -39,8 +45,9 @@ export default defineEventHandler(async (event) => {
 
   const result = await runGalaxyEffect(
     event,
-    workflowDescriptionEffect(workflowId, revision, useGalaxyCache(cache.enabled), url).pipe(
+    workflowDescriptionEffect(workflowId, revision, useGalaxyCache(cache.enabled), url, email).pipe(
       toGalaxyServiceUnavailable,
+      Effect.provide(Drizzle.Live),
       Effect.provide(useGalaxyLayer()),
       Effect.exit,
     ),
@@ -49,10 +56,17 @@ export default defineEventHandler(async (event) => {
   return Exit.match(result, {
     onFailure: cause => toHttpError(event, cause, 'workflow description', {
       statuses: {
-        // the one cause here the caller can act on besides the shared ones.
-        // Galaxy failing for a reason of its own is a fault to log, not a
-        // revision to report as absent.
+        // The causes the caller can act on besides the shared ones. A
+        // database read that failed for a reason of its own is a fault to
+        // log, not a revision to report as absent.
         WorkflowRevisionNotFound: 404,
+        // Both say the same thing about the row rather than about the
+        // request: what is stored is not the revision that was asked for, or
+        // is not readable as one. Neither is a fault of this request's, and
+        // both are mended the same way — republish the version — so the
+        // sentence, not the status, is what tells them apart.
+        StoredDefinitionStale: 409,
+        StoredDefinitionUnreadable: 409,
       },
     }),
     onSuccess: value => value,

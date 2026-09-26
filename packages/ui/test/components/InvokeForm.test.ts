@@ -1,6 +1,6 @@
-import type { GalaxyIntegerToolParameter, GalaxyTool, WorkflowInput, WorkflowStep } from 'blendtype'
+import type { GalaxyIntegerToolParameter, GalaxyTool } from 'blendtype'
 import type { IncomingMessage } from 'node:http'
-import type { UnavailableTool } from 'nuxt-galaxy'
+import type { DescribedStep, DescribedWorkflowInput, UnavailableTool } from 'nuxt-galaxy'
 import type { UploadedDatasetDb } from '../../app/components/galaxy/workflow/InvokeForm.vue'
 import { UApp } from '#components'
 import { mockNuxtImport, mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
@@ -39,10 +39,12 @@ let unavailableTools: UnavailableTool[] = []
 /** The status the description endpoint refuses with, or `null` to answer it. */
 let describeWith: number | null = null
 
-/** The inputs the workflow declares, as Galaxy describes them. */
-let workflowInputs: Record<string, WorkflowInput> = {}
-/** The steps it declares, keyed by step id, as Galaxy describes them. */
-let workflowSteps: Record<string, WorkflowStep> = {}
+/** The inputs the workflow declares, as the description endpoint serves them. */
+let workflowInputs: Record<string, DescribedWorkflowInput> = {}
+/** The steps it declares, keyed by step id, as the description endpoint serves them. */
+let workflowSteps: Record<string, DescribedStep> = {}
+/** Which tools the description carries definitions for; the two below unless a test says otherwise. */
+let servedTools: AToolStep[] = []
 /** The datamap of the analysis being copied, when the form is copying one. */
 let storedDatamap: Record<string, UploadedDatasetDb> | null = null
 /** Whether the query for the pickable datasets fails instead of answering. */
@@ -54,7 +56,7 @@ const DATASETS = [
   { id: 2, dataset_name: 'genome.fasta', metadata: null, owner_id: 'owner-1', storage_object_id: 'so-genome' },
 ] satisfies UploadedDatasetDb[]
 
-function anInput(label: string, uuid: string): WorkflowInput {
+function anInput(label: string, uuid: string): DescribedWorkflowInput {
   return { label, value: '', uuid }
 }
 
@@ -72,6 +74,13 @@ interface AToolStep {
   description: string
   parameter: string
   parameterLabel: string
+  /**
+   * A parameter this tool shares with another version of itself, under one
+   * name and a label of its own. Two versions of one tool usually differ by
+   * what a shared parameter *is* rather than by which parameters exist, and
+   * that difference is invisible unless the name is the same (#100).
+   */
+  sharedParameter?: { name: string, label: string }
 }
 
 const TOOL_A: AToolStep = {
@@ -97,12 +106,12 @@ const TOOL_B: AToolStep = {
  * the composable filters those out of `toolInputParameters`, so a panel
  * built from one would render nothing whether or not #83 is fixed.
  */
-function anIntegerParameter(tool: AToolStep): GalaxyIntegerToolParameter {
+function anIntegerParameter(name: string, label: string): GalaxyIntegerToolParameter {
   return {
     model_class: 'IntegerToolParameter',
     type: 'integer',
-    name: tool.parameter,
-    label: tool.parameterLabel,
+    name,
+    label,
     argument: null,
     help: '',
     refresh_on_change: false,
@@ -132,9 +141,18 @@ function aTool(tool: AToolStep): GalaxyTool {
       changeset_revision: 'abc123',
       tool_shed: 'toolshed.g2.bx.psu.edu',
     },
-    inputs: [anIntegerParameter(tool)],
+    inputs: parametersOf(tool),
     outputs: [],
   }
+}
+
+/** Every parameter a tool declares: its own, and any it shares with another version of itself. */
+function parametersOf(tool: AToolStep): GalaxyIntegerToolParameter[] {
+  const parameters = [anIntegerParameter(tool.parameter, tool.parameterLabel)]
+  if (tool.sharedParameter) {
+    parameters.push(anIntegerParameter(tool.sharedParameter.name, tool.sharedParameter.label))
+  }
+  return parameters
 }
 
 /**
@@ -142,15 +160,21 @@ function aTool(tool: AToolStep): GalaxyTool {
  * name as well as the tool definition declaring it: `Step.vue` renders a
  * parameter only where the step's own model holds a value under that name.
  */
-function aToolStep(id: number, tool: AToolStep): WorkflowStep {
+function aToolStep(id: number, tool: AToolStep): DescribedStep {
   return {
     id,
     type: 'tool',
+    label: null,
+    uuid: `step-uuid-${id}`,
     tool_id: tool.id,
     tool_version: tool.version,
     annotation: null,
-    tool_inputs: { [tool.parameter]: '10' },
-    input_steps: {},
+    tool_inputs: {
+      [tool.parameter]: '10',
+      ...(tool.sharedParameter ? { [tool.sharedParameter.name]: '10' } : {}),
+    },
+    input_connections: {},
+    outputs: [],
   }
 }
 
@@ -222,7 +246,7 @@ registerEndpoint(
     }
     const unusable = new Set(unavailableTools.map(tool => `${tool.toolId}@${tool.toolVersion}`))
     const tools: Record<string, GalaxyTool> = {}
-    for (const tool of [TOOL_A, TOOL_B]) {
+    for (const tool of servedTools) {
       const key = `${tool.id}@${tool.version}`
       if (!unusable.has(key)) {
         tools[key] = aTool(tool)
@@ -383,6 +407,7 @@ async function toolStepsReady(
   await vi.waitFor(() => {
     for (const tool of tools) {
       expect(form.text(), `the step running ${tool.name} is listed`).toContain(tool.description)
+      expect(form.text(), `the step running ${tool.name} names its version`).toContain(`v${tool.version}`)
     }
   })
 }
@@ -405,11 +430,14 @@ async function parametersShownFor(
   form: Awaited<ReturnType<typeof mountForm>>,
   tool: AToolStep,
 ): Promise<string> {
+  // Matched on the version as well as the name, because a workflow may run
+  // the same tool at two versions and the name alone would then always
+  // answer with the first step's panel (#100). The header renders both.
   const trigger = form
     .findAll('button')
-    .find(candidate => candidate.text().includes(tool.name))
+    .find(candidate => candidate.text().includes(tool.name) && candidate.text().includes(`v${tool.version}`))
   if (!trigger) {
-    throw new Error(`no accordion trigger is rendered for the step running ${tool.name}`)
+    throw new Error(`no accordion trigger is rendered for the step running ${tool.name} ${tool.version}`)
   }
   await trigger.trigger('click')
 
@@ -467,6 +495,7 @@ beforeEach(async () => {
   lastBody = null
   workflowInputs = {}
   workflowSteps = {}
+  servedTools = [TOOL_A, TOOL_B]
   storedDatamap = null
   datasetsUnavailable = false
   await forgetCachedAnswers()
@@ -856,6 +885,79 @@ describe('the parameters a workflow\'s tool steps offer', () => {
     await toolStepsReady(form, [TOOL_A])
 
     expect(await parametersShownFor(form, TOOL_A)).toContain(TOOL_A.parameterLabel)
+  })
+})
+
+/**
+ * #100. A workflow may pin the **same tool at two versions**, and each step
+ * must be offered the parameters of the version *that step* pins.
+ *
+ * The two tools below share one `tool_id` on purpose. A toolshed guid
+ * carries its version inside the id — `…/seqtk_seq/1.3` and `…/seqtk_seq/1.4`
+ * are two different strings — so the one kind of tool whose id really is the
+ * same at two versions is a **built-in**: `Cut1`, `__BUILD_LIST__`,
+ * `Grep1`. That is what this pins.
+ *
+ * Before the fix the composable dropped the version from the endpoint's own
+ * key on the way past, so both definitions landed under `Cut1` and the last
+ * one read won. The step on 1.0.2 was then offered 1.1.0's parameter list
+ * bound to 1.0.2's saved values: a parameter 1.0.2 does not have rendered
+ * and submitted, and one it does have dropped.
+ */
+describe('a workflow pinning one tool at two versions', () => {
+  const CUT_OLD: AToolStep = {
+    id: 'Cut1',
+    version: '1.0.2',
+    name: 'Cut1',
+    description: 'Cut columns from a table',
+    parameter: 'columnList',
+    parameterLabel: 'Cut columns',
+    sharedParameter: { name: 'delimiter', label: 'Delimited by a tab' },
+  }
+
+  const CUT_NEW: AToolStep = {
+    ...CUT_OLD,
+    version: '1.1.0',
+    // A parameter 1.0.2 does not have, and a different reading of the one
+    // both versions do have: the two ways a step can be handed the wrong
+    // version's form.
+    parameter: 'header_lines',
+    parameterLabel: 'Header lines to keep',
+    sharedParameter: { name: 'delimiter', label: 'Delimited by anything' },
+  }
+
+  beforeEach(() => {
+    servedTools = [CUT_OLD, CUT_NEW]
+    workflowSteps = { 1: aToolStep(1, CUT_OLD), 2: aToolStep(2, CUT_NEW) }
+  })
+
+  it('offers each step the parameters of the version that step pins', async () => {
+    const form = await mountForm()
+    await toolStepsReady(form, [CUT_OLD, CUT_NEW])
+
+    // Asserted separately, panel by panel: the failure this replaces was one
+    // step being handed its neighbour's parameter list, which only shows up
+    // when each panel is read on its own.
+    const older = await parametersShownFor(form, CUT_OLD)
+    expect(older, 'the step pinned to 1.0.2 offers 1.0.2\'s parameter').toContain(CUT_OLD.parameterLabel)
+    expect(older, 'and not 1.1.0\'s').not.toContain(CUT_NEW.parameterLabel)
+
+    const newer = await parametersShownFor(form, CUT_NEW)
+    expect(newer, 'the step pinned to 1.1.0 offers 1.1.0\'s parameter').toContain(CUT_NEW.parameterLabel)
+    expect(newer, 'and not 1.0.2\'s').not.toContain(CUT_OLD.parameterLabel)
+  })
+
+  it('reads a parameter both versions declare as its own version declares it', async () => {
+    // The commoner shape, and the one a disjoint parameter set cannot show:
+    // two versions usually differ in what a shared parameter *is* — its
+    // label, its bounds, which widget renders it — rather than in which
+    // parameters exist. Keyed by bare id both steps were handed the last
+    // definition read, so both rendered the same version's reading of it.
+    const form = await mountForm()
+    await toolStepsReady(form, [CUT_OLD, CUT_NEW])
+
+    expect(await parametersShownFor(form, CUT_OLD)).toContain(CUT_OLD.sharedParameter!.label)
+    expect(await parametersShownFor(form, CUT_NEW)).toContain(CUT_NEW.sharedParameter!.label)
   })
 })
 

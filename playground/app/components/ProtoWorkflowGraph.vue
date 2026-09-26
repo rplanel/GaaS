@@ -6,12 +6,16 @@ import { Controls } from '@vue-flow/controls'
 import { Handle, Position, VueFlow } from '@vue-flow/core'
 
 /**
- * The part of a Galaxy step this canvas reads, as
- * `GET /api/galaxy/workflows/{id}` describes it. Declared here rather than
- * imported from `blendtype` so the prototype stays a playground-only file:
- * the fields are a subset of `WorkflowStep`, and `input_steps` is the whole
- * reason a workflow can be drawn at all — one entry per incoming connection,
- * naming the step it comes from and the output it takes.
+ * The part of a step this canvas reads, as the description endpoint answers
+ * it. Declared here rather than imported so the prototype stays a
+ * playground-only file: the fields are a subset of `DescribedStep`, and
+ * `input_connections` is the whole reason a workflow can be drawn at all.
+ *
+ * Keyed by the name of the input a connection feeds, with a value that is
+ * one connection **or an array of them** — which is why this reads the
+ * stored definition's spelling and not the live API's `input_steps` (#88):
+ * Galaxy builds that one by assigning into a dict in a loop, so an input fed
+ * by two upstream outputs silently keeps only the last of them.
  */
 export interface GraphStep {
   id: number
@@ -19,8 +23,11 @@ export interface GraphStep {
   tool_id: string | null
   tool_version: string | null
   annotation: string | null
-  input_steps: Record<string, { source_step: number, step_output: string }>
+  input_connections: Record<string, Connection | Connection[]>
 }
+
+/** One incoming edge: the upstream step's index, and the output feeding this input. */
+interface Connection { id: number, output_name: string }
 
 const props = withDefaults(
   defineProps<{
@@ -87,15 +94,19 @@ const graph = computed(() => {
   }))
 
   const edges = entries.flatMap(([stepId, step]) =>
-    Object.entries(step.input_steps ?? {}).map(([inputName, connection]) => ({
-      // One input can only be fed once, so the input's name makes the id
-      // unique even where two edges join the same pair of steps.
-      id: `${connection.source_step}->${stepId}:${inputName}`,
-      source: String(connection.source_step),
-      target: stepId,
-      label: inputName,
-      style: { strokeWidth: 1.5 },
-    })),
+    Object.entries(step.input_connections ?? {}).flatMap(([inputName, value]) =>
+      // One input may be fed by several outputs, so the id carries the
+      // output's name too: `{id, output_name}` and `[{…}, {…}]` are both
+      // shapes the export writes, and two edges can join the same pair of
+      // steps through one input.
+      (Array.isArray(value) ? value : [value]).map(connection => ({
+        id: `${connection.id}:${connection.output_name}->${stepId}:${inputName}`,
+        source: String(connection.id),
+        target: stepId,
+        label: inputName,
+        style: { strokeWidth: 1.5 },
+      })),
+    ),
   )
 
   const g = new Graph()

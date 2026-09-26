@@ -2,6 +2,7 @@ import type { GalaxyFetch, GalaxyTool, GalaxyWorkflowExport, ToolError } from 'b
 import type { GalaxyCache } from '../galaxyCache'
 import * as bt from 'blendtype'
 import { Effect } from 'effect'
+import { toolKey } from '../../../shared/toolKey'
 
 /**
  * One tool a revision pins: the id Galaxy knows it by and the version the
@@ -36,11 +37,12 @@ export function pinnedTools(definition: GalaxyWorkflowExport): PinnedTool[] {
 /**
  * The same reading, off any collection of steps.
  *
- * The export and the live payload describe a step differently in every other
- * respect, but both name a tool with `tool_id` and `tool_version`, so the two
- * callers that need this list — the publish check, which holds an export, and
- * the description endpoint, which holds the live payload — share one
- * derivation rather than two that can drift.
+ * A raw export step and a normalised one differ in every other respect, but
+ * both name a tool with `tool_id` and `tool_version`, so the two callers
+ * that need this list — the publish check, which holds the export as Galaxy
+ * wrote it, and the description endpoint, which holds the steps it
+ * normalised from the stored one — share one derivation rather than two that
+ * can drift.
  */
 export function pinnedToolsOfSteps(
   steps: Iterable<{ readonly tool_id?: string | null, readonly tool_version?: string | null }>,
@@ -141,11 +143,6 @@ export interface UnavailableTool {
 export interface ResolvedTools {
   readonly tools: Record<string, GalaxyTool>
   readonly unavailable: UnavailableTool[]
-}
-
-/** The key one resolved definition is served under. */
-export function toolKey(toolId: string, version: string): string {
-  return `${toolId}@${version}`
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

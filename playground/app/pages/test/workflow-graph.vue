@@ -79,6 +79,7 @@ const {
   workflowSteps,
   workflowInputs,
   workflowParametersModel,
+  stepToTool,
   toolsObj,
   toolInputParameters,
 } = useGalaxyWorkflowDescription(selectedWorkflowId, latestRevision)
@@ -90,10 +91,13 @@ const {
 const toolInputComponents = computed(() => {
   const tools = toValue(toolsObj)
   return Object.entries(tools).reduce<Record<string, Record<string, unknown>>>(
-    (acc, [toolId, tool]) => {
+    // Keyed `<toolId>@<version>`, as `toolsObj` is: a workflow may pin the
+    // same tool at two versions, and by bare id one step would be handed the
+    // other version's widgets (#100).
+    (acc, [pinnedTool, tool]) => {
       const { inputComponentsObject } = useGalaxyToolInputComponent(tool.inputs)
       if (inputComponentsObject.value) {
-        acc[toolId] = inputComponentsObject.value
+        acc[pinnedTool] = inputComponentsObject.value
       }
       return acc
     },
@@ -145,10 +149,13 @@ const selectedStepProps = computed(() => {
     return undefined
   }
   const stepId = selectedStepId.value as string
+  // The tool this step pins, not its bare id: both maps are keyed
+  // `<toolId>@<version>` (#100).
+  const pinnedTool = toValue(stepToTool)[stepId] ?? ''
   return {
     workflowStep: step,
-    toolParameters: toValue(toolInputParameters)[step.tool_id],
-    parametersInputsComponent: toValue(toolInputComponents)[step.tool_id],
+    toolParameters: toValue(toolInputParameters)[pinnedTool],
+    parametersInputsComponent: toValue(toolInputComponents)[pinnedTool],
     workflowParametersModel: parametersModel.value[stepId],
   }
 })

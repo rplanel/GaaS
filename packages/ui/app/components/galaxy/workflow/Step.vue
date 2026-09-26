@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { GalaxyToolParameters, WorkflowStep } from 'blendtype'
+import type { GalaxyToolParameters } from 'blendtype'
+import type { DescribedStep } from 'nuxt-galaxy'
 import type { GalaxyToolInputComponent } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 
 export interface Props {
   variant?: 'form' | 'display'
-  workflowStep: MaybeRef<WorkflowStep | undefined>
+  workflowStep: MaybeRef<DescribedStep | undefined>
   toolParameters: GalaxyToolParameters[] | undefined
   parametersInputsComponent:
     | Record<string, GalaxyToolInputComponent>

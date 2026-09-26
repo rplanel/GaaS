@@ -87,6 +87,11 @@ src/
 │   │   ├── lib/migrate.js  # Migration utilities
 │   │   ├── plugins/        # Nitro plugins
 │   │   └── utils/          # Server utilities
+│   ├── shared/             # The few pure helpers BOTH halves must agree on
+│   │                       # byte-for-byte (e.g. the `<toolId>@<version>` key
+│   │                       # the endpoint serves under and the composable
+│   │                       # looks up with). No imports, no side effects;
+│   │                       # anything with a direction belongs in app/ or server/
 │   └── types/
 │       ├── database.ts     # Generated Supabase types
 │       └── nuxt-galaxy.ts  # Module types

@@ -58,8 +58,8 @@ missing-tools check, `GET /api/workflows/{id}?version=N`,
 | Q8 | Vue Flow / dagre dependencies go in the **pnpm catalog**, not as loose ranges. |
 | Q9 | On small screens the panel becomes a **slideover**. |
 | Q10 | Mark **only what would refuse the submission** — no decorative warnings. |
-| Q11 | The graph **refuses to draw** on a `revision_uuid` mismatch rather than drawing a stale shape. |
-| Q12 | Source of truth becomes the **stored definition** (export shape), *not* the live API, sequenced after Q13(a). Originally "drop it if it costs more than it solves"; **now required** — the live shape drops edges. See below. |
+| Q11 | The graph **refuses to draw** on a `revision_uuid` mismatch rather than drawing a stale shape. Built in #88 — see below. |
+| Q12 | Source of truth becomes the **stored definition** (export shape), *not* the live API, sequenced after Q13(a). Originally "drop it if it costs more than it solves"; **now required** — the live shape drops edges. Built in #88 — see below. |
 | Q13 | **(a) + (b)**: one server endpoint returning `{steps, inputs, tools}` with server-side tool caching, plus one client composable over Pinia Colada. |
 | Q14 | **Refactor first.** Exception: follow-mode may ship before the refactor, because it needs no tool definitions. |
 | Q15 | Cache key is **`galaxy_id` + `revision`**, prefixed by the **Galaxy URL**, and only a *pinned* revision is cached. Revised, then built in #87 — see below. |
@@ -190,6 +190,55 @@ description endpoint can derive them from the live payload, and it answers
 each tool's definition and its verdict from the one fetch. `missingToolsEffect`
 keeps its export-taking signature and its three callers on the publish path,
 which asks a different question at a different moment.
+
+### Q12 and Q11 as built (#88)
+
+The description endpoint reads the **version row**, not Galaxy: a published
+version *is* a stored workflow at one revision (ADR 0004), and its export was
+captured at publish and never refreshed. So the workflow half is one local
+query, scoped to the Galaxy service account as every other read of that table
+is, and the only thing asked of Galaxy is the tools. The answer's shape is
+unchanged — `{ steps, inputs, tools, unavailable }` — and the cache lost its
+workflow half, because there is no longer a round trip to save.
+
+`steps` and `inputs` are no longer "the live payload's own, verbatim". They
+are **normalised**, which is what the design doc meant by "two shapes for one
+thing, and nothing normalises". A step is named as the live payload named it
+wherever both can say the same thing — `tool_inputs`, decoded from the
+export's `tool_state` string; `annotation` empty-as-`null` — and carries
+`input_connections` in the export's own spelling, keyed by input name with a
+value that is one connection **or an array of them**. The live payload's
+`input_steps` is gone rather than kept beside it: it is built by assigning
+into a dict in a loop, so it cannot express a fan-in at all, and keeping a
+lossy field next to a faithful one only invites the wrong one being read.
+`outputs` comes over too — the second thing the live payload has no list of.
+`position`, `when`, `subworkflow` and `workflow_outputs` stay in the row and
+out of the contract until something reads them.
+
+`inputs` is re-derived rather than read, because the export is the workflow
+rather than a reading of it: the input steps, keyed by `order_index`,
+labelled by the author's label, else the `name` in the saved state, else one
+fixed string per input type. Those three strings and the order of the
+fallbacks are Galaxy's own, checked against `managers/workflows.py` on both
+22.05 (`:1499`) and 26.1 (`:1896`).
+
+Two refusals, both 409 and both mended by republishing the version:
+
+- **Q11's** — the stored definition's `uuid` is not the version's
+  `revision_uuid`. This is the comparison `versionStateEffect` already makes,
+  and reading the stored definition is what puts the pinned revision's own
+  uuid in hand to make it; on the live payload there was nothing to compare.
+  It should be unreachable, since publishing writes both out of one export.
+- **A row stored before the export schema was widened (#82)**, which parses
+  perfectly — the stripped shape is a subset of the widened one — and would
+  be drawn as a workflow whose steps are joined by nothing, with nothing
+  about the picture to say so. Told apart by its fingerprint: **no** step
+  carrying a key outside the fourteen the old schema kept. Galaxy writes
+  `errors` and `position` on every step of every export, on 22.05 and 26.1
+  alike, so a definition it really produced always carries something outside
+  that set; the recordings pin that fact, so the day a Galaxy release stops
+  writing both, the characterisation suite says so before this check starts
+  refusing every row.
 
 ### Verdict on the refactor
 
@@ -567,7 +616,8 @@ drop-and-republish, not a migration.
    contract. Once step 1 has landed this is close to trivial: the row is already
    fetched and stored at publish, so it is a read of something you hold rather
    than a new round trip. **Required, not droppable** — the live shape drops
-   fan-in edges and carries no per-revision uuid for Q11.
+   fan-in edges and carries no per-revision uuid for Q11. **Done in #88**, with
+   Q11's refusal, and with #100 folded in — see "Q12 and Q11 as built" above.
 6. **Follow-mode graph** — may ship before 4 and 5, since it needs no tool
    definitions.
 7. **Invoke-mode graph.**
