@@ -89,8 +89,10 @@ export interface ModuleOptions {
   /**
    * The cache behind `GET /api/galaxy/workflows/:workflowId/revisions/:revision/description`
    * (ADR 0004, #87): tool definitions keyed by Galaxy URL, tool id and the
-   * version Galaxy served, and pinned workflow revisions keyed by Galaxy URL,
-   * workflow id and revision. Both are immutable, so neither expires.
+   * version Galaxy served. Galaxy treats a tool's version string as the
+   * tool's identity, so the entry is immutable and never expires. The
+   * revision itself is not cached — since #88 it is read from the stored
+   * definition, which is a local query rather than a Galaxy round trip.
    *
    * The substrate is a Nitro storage mount rather than an in-process map,
    * because this package is distributed and a consumer running more than one

@@ -102,8 +102,12 @@ async function liveModelThroughComposables(fixture: typeof ccqtl) {
   )
   await expect.poll(() => Object.keys(workflowSteps.value).length).toBeGreaterThan(0)
 
-  const distinct = new Set(Object.keys(fixture.tools).map(key => key.slice(0, key.lastIndexOf('@')))).size
-  await expect.poll(() => Object.keys(toolsObj.value).length).toBe(distinct)
+  // One entry per `<toolId>@<version>` the endpoint served. It used to be
+  // one per distinct tool *id*, because the composable dropped the version
+  // on the way past and two versions of one tool collapsed into one entry
+  // (#100). Only how a test reaches a tool moved; nothing it asserts about
+  // what is rendered did.
+  await expect.poll(() => Object.keys(toolsObj.value).length).toBe(Object.keys(fixture.tools).length)
 
   return { workflowParametersModel, toolInputParameters, toolsObj }
 }
@@ -278,7 +282,7 @@ describe('what a step actually puts on screen', () => {
     const { workflowParametersModel, toolInputParameters } = await liveModelThroughComposables(ccqtl)
 
     const step4 = ccqtl.live.steps['4']!
-    const declared = toolInputParameters.value[step4.tool_id!]!.map(input => input.name)
+    const declared = toolInputParameters.value[`${step4.tool_id}@${step4.tool_version}`]!.map(input => input.name)
     const saved = describeParameters(workflowParametersModel.value['4']!)
 
     // Two of six. `ccqtl_permutations` declares four `data` parameters and
@@ -336,6 +340,24 @@ describe('the recordings themselves', () => {
     for (const fixture of [ccqtl, nested]) {
       for (const [key, tool] of Object.entries(fixture.manifest.tools)) {
         expect(tool.servedVersion, `${fixture.slug} ${key}`).toBe(tool.askedVersion)
+      }
+    }
+  })
+
+  it('carry the step keys a stored definition is told apart by', () => {
+    // #88 tells a row stored before the export schema was widened (#82) from
+    // one Galaxy really produced by whether any step carries a key outside
+    // the fourteen the old schema kept. `errors` and `position` are the two
+    // Galaxy writes on every step unconditionally — measured here, on both
+    // 22.05 and 26.1, rather than taken from reading its source. If a future
+    // Galaxy stops writing both, that check starts refusing every row, and
+    // this is where it says so first.
+    for (const fixture of [ccqtl, nested, fanIn]) {
+      const steps = Object.values(fixture.exported.steps as Record<string, Record<string, unknown>>)
+      expect(steps.length, fixture.slug).toBeGreaterThan(0)
+      for (const step of steps) {
+        expect(Object.keys(step), `${fixture.slug} step ${String(step.id)}`).toContain('errors')
+        expect(Object.keys(step), `${fixture.slug} step ${String(step.id)}`).toContain('position')
       }
     }
   })

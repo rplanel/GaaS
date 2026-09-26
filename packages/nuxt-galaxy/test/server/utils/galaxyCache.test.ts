@@ -1,4 +1,4 @@
-import type { GalaxyTool, GalaxyWorkflow } from 'blendtype'
+import type { GalaxyTool } from 'blendtype'
 import type { GalaxyCacheStore } from '../../../src/runtime/server/utils/galaxyCache'
 import { Effect } from 'effect'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -7,7 +7,6 @@ import {
   noGalaxyCache,
   toolCacheKey,
   useGalaxyCache,
-  workflowCacheKey,
 } from '../../../src/runtime/server/utils/galaxyCache'
 import { GALAXY_CACHE_MOUNT } from '../../../src/runtime/server/utils/galaxyCacheMount'
 import { resetMockStorages } from '../setup'
@@ -26,7 +25,6 @@ const GALAXY = 'https://galaxy.example.com'
 const FOO = 'toolshed.g2.bx.psu.edu/repos/iuc/foo/foo/1.2.3+galaxy0'
 
 const aTool = { model_class: 'Tool', id: FOO, name: 'foo', version: '1.2.3+galaxy0' } as unknown as GalaxyTool
-const aWorkflow = { id: 'galaxy-workflow-1', steps: {}, inputs: {} } as unknown as GalaxyWorkflow
 
 /** A store that answers, so a round trip can be watched end to end. */
 function mapStore(): GalaxyCacheStore & { items: Map<string, unknown> } {
@@ -50,17 +48,12 @@ describe('cache keys', () => {
     expect(toolCacheKey(GALAXY, FOO, '1.2.3+galaxy0')).not.toBe(toolCacheKey(GALAXY, FOO, '1.3.0'))
   })
 
-  it('tells two revisions of one workflow apart, and two workflows', () => {
-    expect(workflowCacheKey(GALAXY, 'wf-1', 3)).not.toBe(workflowCacheKey(GALAXY, 'wf-1', 4))
-    expect(workflowCacheKey(GALAXY, 'wf-1', 3)).not.toBe(workflowCacheKey(GALAXY, 'wf-2', 3))
-  })
-
-  it('cannot name a tool and a workflow revision with one key', () => {
-    // A tool called `wf-7` at version `3`, and revision 3 of workflow
-    // `wf-7`: without a family prefix these are the same string, and a
-    // workflow read answered with a tool describes a revision with no steps
-    // — cached for ever, since nothing here expires.
-    expect(toolCacheKey(GALAXY, 'wf-7', '3')).not.toBe(workflowCacheKey(GALAXY, 'wf-7', 3))
+  it('names the tool family, so an older build\'s workflow entry cannot answer a tool read', () => {
+    // #88 made the workflow half a local database read, so nothing writes a
+    // `workflow|` key any more — but a store shared with an older build of
+    // this package still holds them, and nothing here ever expires. The
+    // prefix is what keeps an unprefixed key from naming one of them.
+    expect(toolCacheKey(GALAXY, 'wf-7', '3').startsWith('tool|')).toBe(true)
   })
 
   it('survives unstorage normalising the key', () => {
@@ -68,30 +61,26 @@ describe('cache keys', () => {
     // collapses runs of `:`. A Galaxy URL and a toolshed guid carry both
     // separators, so an unencoded key could lose its tail or collide with
     // another; encoding each part first puts that out of reach.
-    for (const key of [toolCacheKey(GALAXY, FOO, '1.2.3+galaxy0'), workflowCacheKey(GALAXY, 'wf-1', 3)]) {
-      expect(key).not.toContain('/')
-      expect(key).not.toContain('?')
-      expect(key).not.toContain(':')
-    }
+    const key = toolCacheKey(GALAXY, FOO, '1.2.3+galaxy0')
+    expect(key).not.toContain('/')
+    expect(key).not.toContain('?')
+    expect(key).not.toContain(':')
   })
 })
 
 describe('makeGalaxyCache', () => {
-  it('reads back what it wrote, for a tool and for a workflow revision', async () => {
+  it('reads back what it wrote', async () => {
     const cache = makeGalaxyCache(mapStore())
 
     await Effect.runPromise(cache.writeTool(GALAXY, FOO, '1.2.3+galaxy0', aTool))
-    await Effect.runPromise(cache.writeWorkflow(GALAXY, 'wf-1', 3, aWorkflow))
 
     expect(await Effect.runPromise(cache.tool(GALAXY, FOO, '1.2.3+galaxy0'))).toEqual(aTool)
-    expect(await Effect.runPromise(cache.workflow(GALAXY, 'wf-1', 3))).toEqual(aWorkflow)
   })
 
   it('answers a miss with undefined rather than null', async () => {
     const cache = makeGalaxyCache(mapStore())
 
     expect(await Effect.runPromise(cache.tool(GALAXY, FOO, '1.2.3+galaxy0'))).toBeUndefined()
-    expect(await Effect.runPromise(cache.workflow(GALAXY, 'wf-1', 3))).toBeUndefined()
   })
 
   it('treats a store that threw as a miss, not as a failed request', async () => {

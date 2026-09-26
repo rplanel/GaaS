@@ -2,12 +2,12 @@ import { Effect, Layer } from 'effect'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
- * #87, Q13(a). One revision described in one call, for the invoke form and
- * the analysis panel: steps, inputs, tool definitions, and the tools that
- * came back as something other than themselves.
+ * #87 Q13(a), and #88 Q12. One revision described in one call, for the
+ * invoke form and the analysis panel: steps, inputs, tool definitions, and
+ * the tools that came back as something other than themselves.
  *
  * The description itself has its own tests; here it is the request — which
- * revision is refused before Galaxy is asked, and which status each failure
+ * revision is refused before anything is read, and which status each failure
  * answers with.
  */
 
@@ -35,6 +35,20 @@ class MockWorkflowRevisionNotFound extends Error {
   }
 }
 
+class MockStoredDefinitionStale extends Error {
+  readonly _tag = 'StoredDefinitionStale'
+  constructor(opts: { message: string }) {
+    super(opts.message)
+  }
+}
+
+class MockStoredDefinitionUnreadable extends Error {
+  readonly _tag = 'StoredDefinitionUnreadable'
+  constructor(opts: { message: string }) {
+    super(opts.message)
+  }
+}
+
 const mocks = vi.hoisted(() => ({
   workflowDescriptionEffect: vi.fn(),
   useGalaxyCache: vi.fn(),
@@ -51,6 +65,12 @@ vi.mock('blendtype', () => ({
 vi.mock('../../../../src/runtime/server/utils/grizzle/workflowDescription', () => ({
   workflowDescriptionEffect: mocks.workflowDescriptionEffect,
   WorkflowRevisionNotFound: MockWorkflowRevisionNotFound,
+  StoredDefinitionStale: MockStoredDefinitionStale,
+  StoredDefinitionUnreadable: MockStoredDefinitionUnreadable,
+}))
+
+vi.mock('../../../../src/runtime/server/utils/drizzle', () => ({
+  Drizzle: { Live: Layer.empty },
 }))
 
 vi.mock('../../../../src/runtime/server/utils/galaxyCache', () => ({
@@ -91,6 +111,7 @@ describe('get /api/galaxy/workflows/:workflowId/revisions/:revision/description'
       3,
       expect.anything(),
       'https://galaxy.example.com',
+      expect.any(String),
     )
     expect(result).toEqual(mockDescription)
   })
@@ -143,14 +164,35 @@ describe('get /api/galaxy/workflows/:workflowId/revisions/:revision/description'
     expect(mocks.workflowDescriptionEffect).not.toHaveBeenCalled()
   })
 
-  it('answers 404 when Galaxy holds no such workflow or revision', async () => {
+  it('answers 404 when no published version pins that revision', async () => {
     mocks.workflowDescriptionEffect.mockReturnValue(
-      Effect.fail(new MockWorkflowRevisionNotFound({ message: 'Galaxy holds no revision 3 of workflow galaxy-workflow-1' })),
+      Effect.fail(new MockWorkflowRevisionNotFound({ message: 'No published version pins revision 3 of workflow galaxy-workflow-1' })),
     )
 
     const handler = await loadHandler()
 
     await expect(handler({} as any)).rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  // #88. Neither is a fault of this request's, and both are mended the same
+  // way — republish the version — so the sentence is what tells them apart.
+  // The alternative, answering a stale or unreadable row with the shape it
+  // does hold, is the one thing this endpoint must not do: a graph of the
+  // wrong revision looks exactly like a graph of the right one.
+  it.each([
+    ['a definition that is not the revision the version pinned', MockStoredDefinitionStale],
+    ['a definition stored before the schema kept its connections', MockStoredDefinitionUnreadable],
+  ])('answers 409 for %s, with the sentence that says which', async (_label, Failure) => {
+    mocks.workflowDescriptionEffect.mockReturnValue(
+      Effect.fail(new Failure({ message: 'Republish the version.' })),
+    )
+
+    const handler = await loadHandler()
+
+    await expect(handler({} as any)).rejects.toMatchObject({
+      statusCode: 409,
+      statusMessage: 'Republish the version.',
+    })
   })
 
   it('answers 503 when Galaxy is unavailable, as the other Galaxy proxies do', async () => {

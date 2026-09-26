@@ -130,17 +130,25 @@ function inputFieldName(stepId: string) {
 // `ts/no-use-before-define` disable at the top).
 const toolInputParameterComponent = useGalaxyToolsInputComponents(() => toolsObj.value)
 
+/**
+ * What to call the tool a step runs.
+ *
+ * A toolshed guid ends in `…/<name>/<version>`, so the name is its
+ * second-to-last segment; a built-in id (`Cut1`, `__BUILD_LIST__`) has no
+ * segments at all and is its own name. Reading the *version* out of the id
+ * the same way only ever worked for the first kind, and got a built-in step
+ * left out of the header entirely — the step carries `tool_version`, which
+ * is right for both and is the version the revision actually pins (#100).
+ */
+function toolNameOf(step: { tool_id: string }): string {
+  const segments = step.tool_id.split('/')
+  return (segments.length >= 2 ? segments.at(-2) : step.tool_id) || step.tool_id
+}
+
 const workflowStepsItems = computed<AccordionItem[] | undefined>(() => {
   const workflowStepsVal = toValue(workflowToolSteps)
   return Object.entries(workflowStepsVal)
-    .map(([stepId, step]) => {
-      const toolId = step.tool_id
-      const splittedToolId = toolId?.split('/').slice(-2)
-      if (splittedToolId?.length === 2) {
-        return { value: stepId, label: splittedToolId[0] }
-      }
-      return { value: stepId }
-    })
+    .map(([stepId, step]) => ({ value: stepId, label: toolNameOf(step) }))
 })
 
 const workflowStepsToolInfo = computed(() => {
@@ -153,19 +161,14 @@ const workflowStepsToolInfo = computed(() => {
       description: string
     }
   } = {}
-  for (const stepId in stepToToolVal) {
-    const toolId = stepToToolVal[stepId]
-    if (toolId) {
-      const splittedToolId = toolId?.split('/').slice(-2)
-      if (splittedToolId?.length === 2) {
-        const [toolName, toolVersion] = splittedToolId
-        const toolDescription = toolsVal[toolId]?.description ?? ''
-        wfStepsToolInfo[stepId] = {
-          name: toolName || '',
-          version: toolVersion || '',
-          description: toolDescription,
-        }
-      }
+  for (const [stepId, step] of Object.entries(toValue(workflowToolSteps))) {
+    wfStepsToolInfo[stepId] = {
+      name: toolNameOf(step),
+      version: step.tool_version,
+      // `stepToTool` names the *pin*, which is what the definitions are
+      // keyed by: by bare id a step running one of two pinned versions of a
+      // tool read the other one's description (#100).
+      description: toolsVal[stepToToolVal[stepId] ?? '']?.description ?? '',
     }
   }
   return wfStepsToolInfo
@@ -195,21 +198,24 @@ const galaxyWorkflowStepProps = computed(
     // keeping the distinction costs nothing and leaves the loading state
     // legible to the consolidation this derivation is headed for.
     if (workflowStepsItemsVal && toolInputParameterComponentVal) {
+      const stepToToolVal = toValue(stepToTool)
       props = {}
       for (const item of workflowStepsItemsVal) {
         const { value: stepId } = item
         if (stepId) {
           const workflowStep = workflowStepsVal[stepId]
-          if (workflowStep) {
-            const toolId = workflowStep.tool_id
-            if (toolId !== null) {
-              props[stepId] = {
-                workflowStep,
-                toolParameters: toolInputParametersVal[toolId],
-                parametersInputsComponent:
-                toolInputParameterComponentVal[toolId],
-                workflowParametersModel: workflowParametersModelVal[stepId],
-              }
+          // The tool **this step** pins, `<toolId>@<version>`, never its bare
+          // id: a workflow may run the same tool at two versions, and by id
+          // alone one of the two steps was offered the other's parameter list
+          // bound to its own saved values (#100).
+          const pinnedTool = stepToToolVal[stepId]
+          if (workflowStep && pinnedTool !== undefined) {
+            props[stepId] = {
+              workflowStep,
+              toolParameters: toolInputParametersVal[pinnedTool],
+              parametersInputsComponent:
+                toolInputParameterComponentVal[pinnedTool],
+              workflowParametersModel: workflowParametersModelVal[stepId],
             }
           }
         }

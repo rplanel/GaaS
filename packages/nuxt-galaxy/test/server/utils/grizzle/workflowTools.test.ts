@@ -220,8 +220,6 @@ function recordingCache(): GalaxyCache & { entries: Map<string, unknown> } {
       Effect.sync(() => {
         entries.set(toolCacheKey(galaxyUrl, toolId, servedVersion), tool)
       }),
-    workflow: () => Effect.succeed(undefined),
-    writeWorkflow: () => Effect.void,
   }
 }
 
