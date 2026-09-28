@@ -74,10 +74,13 @@ function createMockSupabase(config: MockSupabaseConfig = {}): SupabaseClient<Dat
     if (currentAction === 'select' && currentTable === 'jobs') {
       // Two queries read `jobs`: the stderr of the analysis's first failed
       // job, and every recorded row of the analysis. Only the columns tell
-      // them apart.
-      return currentColumns === 'stderr'
-        ? config.jobsStderrResult ?? { data: null, error: null }
-        : config.recordedJobsResult ?? { data: [], error: null }
+      // them apart, so a third one is named here or it silently reads as an
+      // analysis with no recorded job.
+      if (currentColumns === 'stderr')
+        return config.jobsStderrResult ?? { data: null, error: null }
+      if (currentColumns === 'id, galaxy_id, state, update_time')
+        return config.recordedJobsResult ?? { data: [], error: null }
+      throw new Error(`the Supabase double has no answer for \`jobs.select('${currentColumns}')\``)
     }
     if (currentAction === 'update')
       return config.updateResult ?? { data: null, error: null }
