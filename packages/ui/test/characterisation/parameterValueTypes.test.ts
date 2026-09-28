@@ -55,8 +55,8 @@ import type {
   WorkflowConditionalParametersValue,
   WorkflowParameterValue,
   WorkflowRepeatInstanceValue,
-  WorkflowRuntimeValue,
 } from 'blendtype'
+import { isWorkflowRepeatInstanceValue, isWorkflowRuntimeValue } from 'blendtype'
 import { describe, expect, it } from 'vitest'
 import { FIXTURES, loadFixture } from './fixtures'
 
@@ -76,16 +76,17 @@ function isRecordArray(value: unknown[]): value is Record<string, unknown>[] {
   return value.every(entry => isRecord(entry))
 }
 
-/** Both spellings, because `is_runtime_value` answers true for both. */
-function isRuntimeValue(value: unknown): value is WorkflowRuntimeValue {
-  return isRecord(value) && (value.__class__ === 'RuntimeValue' || value.__class__ === 'ConnectedValue')
-}
-
 /** A `{values: […]}` dataset literal, which is what a tool form's value looks like. */
 function isDatasetValue(value: unknown): value is GalaxyDataToolValue {
   return isRecord(value)
     && Array.isArray(value.values)
     && value.values.every(entry => isRecord(entry) && typeof entry.id === 'string' && typeof entry.src === 'string')
+}
+
+/** One recorded value and where in the payload it was found, as `step 2 · datasets`. */
+interface Found {
+  where: string
+  value: unknown
 }
 
 /** Enough of a value to name it in a failure, without pasting a whole repeat into the output. */
@@ -94,8 +95,15 @@ function preview(value: unknown): string {
   return json.length > 120 ? `${json.slice(0, 117)}…` : json
 }
 
-/** How many values the walk placed, so a walk that quietly finds nothing cannot pass. */
-let placed = 0
+/**
+ * How many values the walk placed, counted so a walk that quietly finds
+ * nothing cannot pass. Threaded through the recursion rather than kept in a
+ * module-level `let`: the counter is per-assertion, and shared mutable state
+ * would be right only for as long as this file stays sequential.
+ */
+interface Tally {
+  placed: number
+}
 
 /**
  * One recorded value, retyped as `WorkflowParameterValue`.
@@ -104,25 +112,44 @@ let placed = 0
  * order of the branches is the order the union declares its members, and the
  * plain-nesting branch is last because it is the widest.
  */
-function admit(where: string, value: unknown): WorkflowParameterValue {
-  placed += 1
+function admit(where: string, value: unknown, tally: Tally): WorkflowParameterValue {
+  tally.placed += 1
   if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value
   }
-  if (isRuntimeValue(value)) {
+  if (isWorkflowRuntimeValue(value)) {
     return value
   }
   if (Array.isArray(value)) {
-    return admitList(where, value)
+    return admitList(where, value, tally)
   }
   if (isRecord(value)) {
-    const nested: WorkflowConditionalParametersValue = {}
-    for (const [name, inner] of Object.entries(value)) {
-      nested[name] = admit(`${where}.${name}`, inner)
-    }
-    return nested
+    return admitFields(where, value, tally)
   }
   throw new TypeError(`${where}: no member of WorkflowParameterValue admits ${preview(value)}`)
+}
+
+/**
+ * Every field of one object, each retyped in turn.
+ *
+ * The one loop the plain-nesting branch, a repeat's instance and a tool's own
+ * rule object all want; `skip` is the bookkeeping key the caller has already
+ * placed itself, which only the repeat has.
+ */
+function admitFields(
+  where: string,
+  value: Record<string, unknown>,
+  tally: Tally,
+  skip?: string,
+): WorkflowConditionalParametersValue {
+  const nested: WorkflowConditionalParametersValue = {}
+  for (const [name, inner] of Object.entries(value)) {
+    if (name === skip) {
+      continue
+    }
+    nested[name] = admit(`${where}.${name}`, inner, tally)
+  }
+  return nested
 }
 
 /**
@@ -137,7 +164,7 @@ function admit(where: string, value: unknown): WorkflowParameterValue {
  * Empty first, because an empty list is every one of them at once and nothing
  * distinguishes it. `fan-in` step 21 has one.
  */
-function admitList(where: string, values: unknown[]): WorkflowParameterValue[] {
+function admitList(where: string, values: unknown[], tally: Tally): WorkflowParameterValue[] {
   if (values.length === 0) {
     return []
   }
@@ -147,11 +174,11 @@ function admitList(where: string, values: unknown[]): WorkflowParameterValue[] {
   if (isNumberArray(values)) {
     return values
   }
-  if (values.every(entry => isRecord(entry) && typeof entry.__index__ === 'number')) {
-    return admitRepeatInstances(where, values)
+  if (values.every(entry => isWorkflowRepeatInstanceValue(entry))) {
+    return admitRepeatInstances(where, values, tally)
   }
   if (isRecordArray(values)) {
-    return admitNestedList(where, values)
+    return admitNestedList(where, values, tally)
   }
   throw new TypeError(`${where}: the recordings hold no list shaped like ${preview(values)}`)
 }
@@ -164,18 +191,15 @@ function admitList(where: string, values: unknown[]): WorkflowParameterValue[] {
  * keyed by the index that survived (#97). That it is a `number` and not a
  * string is the part the type states and this checks.
  */
-function admitRepeatInstances(where: string, values: unknown[]): WorkflowRepeatInstanceValue[] {
+function admitRepeatInstances(where: string, values: unknown[], tally: Tally): WorkflowRepeatInstanceValue[] {
   return values.map((entry, position) => {
     const at = `${where}[${position}]`
-    if (!isRecord(entry) || typeof entry.__index__ !== 'number') {
+    if (!isWorkflowRepeatInstanceValue(entry)) {
       throw new TypeError(`${at}: no member of WorkflowParameterValue admits ${preview(entry)}`)
     }
-    const instance: WorkflowRepeatInstanceValue = { __index__: entry.__index__ }
-    for (const [name, inner] of Object.entries(entry)) {
-      if (name === '__index__') {
-        continue
-      }
-      instance[name] = admit(`${at}.${name}`, inner)
+    const instance: WorkflowRepeatInstanceValue = {
+      ...admitFields(at, entry, tally, '__index__'),
+      __index__: entry.__index__,
     }
     return instance
   })
@@ -192,20 +216,17 @@ function admitRepeatInstances(where: string, values: unknown[]): WorkflowRepeatI
  * `subworkflow-nested`'s subworkflows, where the live payload says
  * `tool_inputs: null`.
  */
-function admitNestedList(where: string, values: Record<string, unknown>[]): WorkflowConditionalParametersValue[] {
-  return values.map((entry, position) => {
-    const at = `${where}[${position}]`
-    const nested: WorkflowConditionalParametersValue = {}
-    for (const [name, inner] of Object.entries(entry)) {
-      nested[name] = admit(`${at}.${name}`, inner)
-    }
-    return nested
-  })
+function admitNestedList(
+  where: string,
+  values: Record<string, unknown>[],
+  tally: Tally,
+): WorkflowConditionalParametersValue[] {
+  return values.map((entry, position) => admitFields(`${where}[${position}]`, entry, tally))
 }
 
 /** One recorded data parameter's `value`, retyped as the declared type. */
-function admitDataParameterValue(where: string, value: unknown): GalaxyDataToolParameter['value'] {
-  placed += 1
+function admitDataParameterValue(where: string, value: unknown, tally: Tally): GalaxyDataToolParameter['value'] {
+  tally.placed += 1
   if (value === null) {
     return value
   }
@@ -217,10 +238,15 @@ function admitDataParameterValue(where: string, value: unknown): GalaxyDataToolP
 
 // -------------------------------------------------------------- the payloads
 
-/** The message of every value the walk could not place, one per saved state. */
-function refusals(states: { where: string, state: unknown }[]): string[] {
+/**
+ * Every saved state walked, with the message of each value the walk could not
+ * place. One `try` per state, so a failure names the step it is in and the
+ * other states are still walked.
+ */
+function walkStates(states: Found[]): { refused: string[], placed: number } {
   const refused: string[] = []
-  for (const { where, state } of states) {
+  const tally: Tally = { placed: 0 }
+  for (const { where, value: state } of states) {
     if (state === null || state === undefined) {
       // `null` on a subworkflow step, which ran no tool and saved no state.
       continue
@@ -229,23 +255,21 @@ function refusals(states: { where: string, state: unknown }[]): string[] {
       if (!isRecord(state)) {
         throw new TypeError(`${where}: a saved tool state is not an object: ${preview(state)}`)
       }
-      for (const [name, value] of Object.entries(state)) {
-        admit(`${where} · ${name}`, value)
-      }
+      admitFields(where, state, tally)
     }
     catch (error) {
       refused.push(error instanceof Error ? error.message : String(error))
     }
   }
-  return refused
+  return { refused, placed: tally.placed }
 }
 
 /** Every step's saved state as the live payload carries it: the decoded column, per step. */
-function liveStates(live: unknown): { where: string, state: unknown }[] {
+function liveStates(live: unknown): Found[] {
   const steps = isRecord(live) && isRecord(live.steps) ? live.steps : {}
   return Object.entries(steps).map(([stepId, step]) => ({
     where: `step ${stepId}`,
-    state: isRecord(step) ? step.tool_inputs : undefined,
+    value: isRecord(step) ? step.tool_inputs : undefined,
   }))
 }
 
@@ -259,9 +283,9 @@ function liveStates(live: unknown): { where: string, state: unknown }[] {
  * carry their own states. `subworkflow-nested` is the recording that has
  * them, and it is the one whose live payload says `tool_inputs: null`.
  */
-function exportStates(exported: unknown, prefix = 'step'): { where: string, state: unknown }[] {
+function exportStates(exported: unknown, prefix = 'step'): Found[] {
   const steps = isRecord(exported) && isRecord(exported.steps) ? exported.steps : {}
-  const states: { where: string, state: unknown }[] = []
+  const states: Found[] = []
   for (const [stepId, step] of Object.entries(steps)) {
     if (!isRecord(step)) {
       continue
@@ -272,10 +296,10 @@ function exportStates(exported: unknown, prefix = 'step'): { where: string, stat
       // it no longer holds, so an unparseable string is a recording of that
       // rather than a shape to refuse.
       try {
-        states.push({ where, state: JSON.parse(step.tool_state) })
+        states.push({ where, value: JSON.parse(step.tool_state) })
       }
       catch {
-        states.push({ where, state: undefined })
+        states.push({ where, value: undefined })
       }
     }
     if (step.subworkflow !== null && step.subworkflow !== undefined) {
@@ -294,9 +318,9 @@ function exportStates(exported: unknown, prefix = 'step'): { where: string, stat
  * case, a repeat block or a section, and only the first of those three is in
  * `GalaxyToolParameters` at all.
  */
-function dataParameterValues(tool: unknown, prefix = ''): { where: string, value: unknown }[] {
+function dataParameterValues(tool: unknown, prefix = ''): Found[] {
   const nodes = isRecord(tool) && Array.isArray(tool.inputs) ? tool.inputs : []
-  const found: { where: string, value: unknown }[] = []
+  const found: Found[] = []
   for (const node of nodes) {
     if (!isRecord(node) || typeof node.name !== 'string') {
       continue
@@ -329,14 +353,14 @@ describe('the saved tool state of every recorded step is a WorkflowToolParameter
     const fixture = loadFixture(slug)
 
     it(`${slug} — the live payload`, () => {
-      placed = 0
-      expect(refusals(liveStates(fixture.live))).toEqual([])
+      const { refused, placed } = walkStates(liveStates(fixture.live))
+      expect(refused).toEqual([])
       expect(placed).toBeGreaterThan(0)
     })
 
     it(`${slug} — the stored definition`, () => {
-      placed = 0
-      expect(refusals(exportStates(fixture.exported))).toEqual([])
+      const { refused, placed } = walkStates(exportStates(fixture.exported))
+      expect(refused).toEqual([])
       expect(placed).toBeGreaterThan(0)
     })
   }
@@ -353,12 +377,12 @@ describe('the value of every recorded data parameter is one its declared type ad
     }
 
     it(`${slug} — every data parameter of every tool it pins`, () => {
-      placed = 0
+      const tally: Tally = { placed: 0 }
       const refused: string[] = []
       for (const [toolKey, tool] of Object.entries(fixture.tools)) {
         for (const { where, value } of dataParameterValues(tool)) {
           try {
-            admitDataParameterValue(`${toolKey} · ${where}`, value)
+            admitDataParameterValue(`${toolKey} · ${where}`, value, tally)
           }
           catch (error) {
             refused.push(error instanceof Error ? error.message : String(error))
@@ -366,7 +390,7 @@ describe('the value of every recorded data parameter is one its declared type ad
         }
       }
       expect(refused).toEqual([])
-      expect(placed).toBeGreaterThan(0)
+      expect(tally.placed).toBeGreaterThan(0)
     })
   }
 })

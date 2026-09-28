@@ -1,4 +1,5 @@
 import type { GalaxyTool, WorkflowStepConnections, WorkflowToolParameters } from 'blendtype'
+import { isWorkflowRepeatInstanceValue, isWorkflowRuntimeValue } from 'blendtype'
 
 /**
  * One data parameter of a tool step that nothing will supply at invoke.
@@ -37,19 +38,21 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Whether a saved value is one of the two runtime markers.
+ * That every data parameter of a stored tool step is a runtime marker comes
+ * from `add_dummy_datasets`, which writes one for each, and is borne out by
+ * every recording. Galaxy says so in as many words too — "All data parameters
+ * are represented as runtime values" — though in the narrower setting of
+ * `SubworkflowModule.get_runtime_inputs`, explaining why that function skips
+ * them, rather than as a declaration about tool state.
  *
- * Both spellings, and deliberately no distinction between them: Galaxy's
- * `is_runtime_value` answers true for `RuntimeValue` and `ConnectedValue`
- * alike. Which spelling gets written is decided at *save* time by
- * `add_dummy_datasets`, so it says nothing about what will happen at run time.
- *
- * That every data parameter of a stored tool step is one or the other comes
- * from `add_dummy_datasets` itself, which writes a marker for each, and is
- * borne out by all three recordings. Galaxy says so in as many words too —
- * "All data parameters are represented as runtime values" — though in the
- * narrower setting of `SubworkflowModule.get_runtime_inputs`, explaining why
- * that function skips them, rather than as a declaration about tool state.
+ * Which spelling gets written is decided at *save* time by
+ * `add_dummy_datasets`, so it says nothing about what will happen at run
+ * time, and `isWorkflowRuntimeValue` draws no distinction between the two for
+ * the same reason Galaxy's `is_runtime_value` draws none. That is the
+ * correction #97 rests on: the ticket read `RuntimeValue` as "the reader must
+ * supply this" and `ConnectedValue` as "an edge supplies this", where the
+ * recordings show both markers on both kinds of parameter and a marker is not
+ * what Galaxy consults.
  *
  * Checked on both releases this project meets, because the recordings span
  * them and the function moved house between them. The test for the two
@@ -59,14 +62,11 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * - 22.05: `tools/parameters/basic.py:80`, comment at `workflow/modules.py:602`
  * - 26.1: `tools/parameters/workflow_utils.py:50`, comment at `workflow/modules.py:1029`
  *
- * That is the correction #97 rests on. The ticket read `RuntimeValue` as
- * "the reader must supply this" and `ConnectedValue` as "an edge supplies
- * this"; the recordings show both markers on both kinds of parameter, and a
- * marker is not what Galaxy consults.
+ * The predicate itself lives in `blendtype` beside the type it narrows to
+ * (#102). It was written out here while `WorkflowParameterValue` could not
+ * express a marker at all, which made a local `boolean` test the only thing
+ * there was to write.
  */
-function isRuntimeValue(value: unknown): boolean {
-  return isPlainObject(value) && (value.__class__ === 'RuntimeValue' || value.__class__ === 'ConnectedValue')
-}
 
 /**
  * Whether an edge feeds this input.
@@ -142,7 +142,7 @@ function walk(
       // A value that is not a runtime marker is one this function did not
       // model, and saying nothing is the safe reading of that: the warning
       // exists to name a gap, so inventing one costs more than missing one.
-      if (isRuntimeValue(value) && !isFed(connections, prefixedName)) {
+      if (isWorkflowRuntimeValue(value) && !isFed(connections, prefixedName)) {
         found.push({ name: prefixedName, label: labelOf(node, name), optional: Boolean(node.optional) })
       }
       continue
@@ -171,17 +171,14 @@ function walk(
         continue
       }
       for (const instance of value) {
-        if (!isPlainObject(instance)) {
-          continue
-        }
         // The index the instance carries, never its position in the array:
         // Galaxy keys the connection by `__index__`, and a repeat whose
-        // middle entry was deleted keeps the gap in its indices.
-        const index = instance.__index__
-        if (typeof index !== 'number') {
+        // middle entry was deleted keeps the gap in its indices. That is the
+        // whole of what `isWorkflowRepeatInstanceValue` tests.
+        if (!isWorkflowRepeatInstanceValue(instance)) {
           continue
         }
-        walk(inputsOf(node), instance, `${prefix}${name}_${index}|`, connections, found)
+        walk(inputsOf(node), instance, `${prefix}${name}_${instance.__index__}|`, connections, found)
       }
     }
   }

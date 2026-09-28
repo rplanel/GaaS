@@ -122,15 +122,28 @@ export interface WorkflowRepeatInstanceValue {
  * subworkflow of `subworkflow-nested`. A member narrow enough to refuse any
  * of those would be a member that lies, which is what #102 was.
  *
- * So what the union is *for* is naming the three shapes that carry meaning,
- * as the types a reader narrows to: `WorkflowRuntimeValue` for a value the
- * run will fill, `WorkflowRepeatInstanceValue` for one instance of a repeat,
- * and `WorkflowConditionalParametersValue` for the plain nesting a
- * `conditional` or a `section` saves. Which shapes the recordings *actually*
- * hold is pinned in `packages/ui/test/characterisation/parameterValueTypes.test.ts`,
- * whose walk names each of them and refuses anything else — narrower than
- * this union on purpose, so that a re-recording carrying something new fails
- * a test rather than passing silently.
+ * So what the union is *for* is naming the three shapes that carry meaning:
+ * `WorkflowRuntimeValue` for a value the run will fill,
+ * `WorkflowRepeatInstanceValue` for one instance of a repeat, and
+ * `WorkflowConditionalParametersValue` for the plain nesting a `conditional`
+ * or a `section` saves.
+ *
+ * Only two of the three are members. A repeat's instances arrive through the
+ * list member, because `WorkflowRepeatInstanceValue[]` is subsumed by
+ * `WorkflowParameterValue[]` — an open index signature of this union accepts
+ * `__index__: number` like any other key — and a union member that another
+ * member already covers buys a reader nothing: narrowing
+ * `WorkflowRepeatInstanceValue[] | WorkflowParameterValue[]` still cannot
+ * reach `__index__`. `isWorkflowRuntimeValue` and
+ * `isWorkflowRepeatInstanceValue` below are how a reader gets to either type,
+ * and are the reason both are named rather than written inline at each site
+ * that asks.
+ *
+ * Which shapes the recordings *actually* hold is pinned in
+ * `packages/ui/test/characterisation/parameterValueTypes.test.ts`, whose walk
+ * names each of them and refuses anything else — narrower than this union on
+ * purpose, so that a re-recording carrying something new fails a test rather
+ * than passing silently.
  */
 export type WorkflowParameterValue
   = | string
@@ -140,6 +153,39 @@ export type WorkflowParameterValue
     | WorkflowRuntimeValue
     | WorkflowParameterValue[]
     | WorkflowConditionalParametersValue
+
+/**
+ * Whether a saved value is one of the two runtime markers.
+ *
+ * The predicate the type exists for. Both spellings and no distinction
+ * between them, because `is_runtime_value` draws none: a caller asking "will
+ * the run fill this" wants both, and one asking "which spelling was written"
+ * wants neither and should compare `__class__` itself — which is what
+ * `parameterModel.ts` does, keeping the two apart as separate shapes on
+ * purpose.
+ */
+export function isWorkflowRuntimeValue(value: unknown): value is WorkflowRuntimeValue {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false
+  }
+  const marker = (value as { __class__?: unknown }).__class__
+  return marker === 'RuntimeValue' || marker === 'ConnectedValue'
+}
+
+/**
+ * Whether a saved value is one instance of a repeat.
+ *
+ * `__index__` being a `number` is the whole test, and the reason to go
+ * through a predicate rather than a cast: the index is what a connection is
+ * keyed by, so reading it off something that has none — or that has it as a
+ * string — is the mistake that names the wrong input (#97).
+ */
+export function isWorkflowRepeatInstanceValue(value: unknown): value is WorkflowRepeatInstanceValue {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false
+  }
+  return typeof (value as { __index__?: unknown }).__index__ === 'number'
+}
 
 export interface WorkflowStep {
   id: number
