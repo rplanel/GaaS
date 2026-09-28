@@ -1,6 +1,6 @@
 import type { GalaxyBooleanToolParameter } from '../src/types/tool'
 import { describe, expect, it } from 'vitest'
-import { booleanToolParameterValue } from '../src/types/tool'
+import { booleanToolParameterValue } from '../src/tools'
 
 /**
  * That a boolean parameter reads the same on both releases GaaS meets (#110).

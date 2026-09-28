@@ -38,15 +38,20 @@
  * compiler see it at all — which is the case for criterion 1 rather than an
  * aside on it, and why this walk returns the named type and not a literal.
  *
- * **Out of scope, and still contradicted.** `GalaxyBooleanToolParameter.value`
- * is `string` where `integron_finder` declares `false`,
- * `GalaxyBaseSelectToolParameter.value` cannot be the `null`
- * `type_replicon` carries, and `text`, `repeat`, `section` and
- * `data_collection` are absent from `GalaxyToolParameterType` altogether.
- * Only the data parameter's `value` is #102's; the parameter *kinds* belong
- * to the section/repeat ticket, which is why the walk below reaches a data
- * parameter through a section or a repeat without typing the section or the
- * repeat itself.
+ * **What each ticket settled here.** #102 fixed the three saved-*state* types
+ * and checked only `data` parameters on the tool side, leaving the other two
+ * `value` types listed in this header as out of its scope. #110 then fixed
+ * those — a boolean's `value` is a string at 22.05 and a real boolean at 26.1,
+ * and no select's `value` could be the `null` `type_replicon` carries — and
+ * widened the tool-side walk from `data` parameters to _every_ parameter,
+ * which is what would have caught them and why #102's narrower walk did not.
+ *
+ * **Still out of scope.** `text`, `repeat`, `section` and `data_collection`
+ * are absent from `GalaxyToolParameterType` altogether. Those are parameter
+ * _kinds_ rather than values, three of them #101's, and it is why the walk
+ * below goes *through* a section or a repeat to reach what is nested inside
+ * without typing the section or the repeat itself. `UNMODELLED_KINDS` is where
+ * that set is pinned, so a recording bringing a fifth announces itself.
  */
 
 import type {
@@ -61,6 +66,7 @@ import type {
   WorkflowParameterValue,
   WorkflowRepeatInstanceValue,
 } from 'blendtype'
+import type { WorkflowFixture } from './fixtures'
 import { booleanToolParameterValue, isWorkflowRepeatInstanceValue, isWorkflowRuntimeValue } from 'blendtype'
 import { describe, expect, it } from 'vitest'
 import { FIXTURES, loadFixture } from './fixtures'
@@ -407,13 +413,15 @@ function declaredParameters(tool: unknown, prefix = ''): DeclaredParameter[] {
       continue
     }
     const name = `${prefix}${node.name}`
-    if (node.type === 'section' || node.type === 'repeat') {
-      found.push({ where: name, node })
+    found.push({ where: name, node })
+    // Read from `model_class` and not from `type`, so this and
+    // `admitDeclaredValue` below name the taxonomy once between them rather
+    // than in Galaxy's two spellings of it.
+    if (node.model_class === 'Section' || node.model_class === 'Repeat') {
       found.push(...declaredParameters(node, `${name}|`))
       continue
     }
-    if (node.type === 'conditional') {
-      found.push({ where: name, node })
+    if (node.model_class === 'Conditional') {
       if (isRecord(node.test_param)) {
         found.push({ where: `${name}|${String(node.test_param.name)}`, node: node.test_param })
       }
@@ -422,9 +430,7 @@ function declaredParameters(tool: unknown, prefix = ''): DeclaredParameter[] {
       for (const one of Array.isArray(node.cases) ? node.cases : []) {
         found.push(...declaredParameters(one, `${name}|`))
       }
-      continue
     }
-    found.push({ where: name, node })
   }
   return found
 }
@@ -441,21 +447,32 @@ function declaredParameters(tool: unknown, prefix = ''): DeclaredParameter[] {
  */
 const UNMODELLED_KINDS = ['DataCollectionToolParameter', 'Repeat', 'Section', 'TextToolParameter']
 
+/** A `model_class` whose `value` nothing here could check, or `undefined` when it was checked. */
+type UncheckedKind = string | undefined
+
 /**
  * One declared parameter's `value`, admitted against the type its
- * `model_class` names. Returns the kind when there is no type to check it
- * against, so the caller can pin that set rather than lose it.
+ * `model_class` names.
+ *
+ * Answers the `model_class` when there is no declared type to check the value
+ * against, so the caller can pin that set rather than lose it — see
+ * `UNMODELLED_KINDS`. A kind with a type, and a kind that carries no `value`
+ * of its own, both answer `undefined`.
  */
-function admitDeclaredValue(where: string, node: Record<string, unknown>, tally: Tally): string | undefined {
+function admitDeclaredValue(where: string, node: Record<string, unknown>, tally: Tally): UncheckedKind {
   const kind = String(node.model_class)
   const value = node.value
+  if (kind === 'Conditional' || UNMODELLED_KINDS.includes(kind)) {
+    // A conditional carries no `value` of its own — `test_param` does, and the
+    // walk hands that over separately — so it is checked, not unchecked.
+    return kind === 'Conditional' ? undefined : kind
+  }
+  tally.placed += 1
   switch (kind) {
     case 'DataToolParameter':
-      tally.placed += 1
       admitDataParameterValue(where, value)
       return undefined
     case 'BooleanToolParameter': {
-      tally.placed += 1
       const admitted = admitBooleanParameterValue(where, value)
       // And through the published reader, against every recorded boolean:
       // whichever release wrote it, a caller must end up with a boolean or
@@ -470,21 +487,46 @@ function admitDeclaredValue(where: string, node: Record<string, unknown>, tally:
       return undefined
     }
     case 'SelectToolParameter':
-      tally.placed += 1
       admitSelectParameterValue(where, value, node.multiple)
       return undefined
     case 'IntegerToolParameter':
     case 'FloatToolParameter':
-      tally.placed += 1
       admitNumericParameterValue(where, value)
       return undefined
-    case 'Conditional':
-      // No `value` of its own — `test_param` carries it, and the walk above
-      // hands that over separately.
-      return undefined
     default:
+      // A kind absent from `UNMODELLED_KINDS` and from the arms above is one
+      // nobody has decided about. Counted a moment ago, so undo that: it was
+      // not checked against anything.
+      tally.placed -= 1
       return kind
   }
+}
+
+/** Every parameter of every tool a set of recordings pins, walked once. */
+function walkDeclaredValues(fixtures: WorkflowFixture[]): {
+  refused: string[]
+  placed: number
+  unchecked: string[]
+} {
+  const tally: Tally = { placed: 0 }
+  const refused: string[] = []
+  const unchecked = new Set<string>()
+  for (const fixture of fixtures) {
+    for (const [toolKey, tool] of Object.entries(fixture.tools)) {
+      for (const { where, node } of declaredParameters(tool)) {
+        try {
+          const kind = admitDeclaredValue(`${toolKey} · ${where}`, node, tally)
+          if (kind !== undefined) {
+            unchecked.add(kind)
+          }
+        }
+        catch (error) {
+          refused.push(error instanceof Error ? error.message : String(error))
+        }
+      }
+    }
+  }
+  return { refused, placed: tally.placed, unchecked: [...unchecked].sort() }
 }
 
 // ----------------------------------------------------------------- the suite
@@ -518,55 +560,25 @@ describe('the value of every recorded parameter is one its declared type admits'
     }
 
     it(`${slug} — every parameter of every tool it pins`, () => {
-      const tally: Tally = { placed: 0 }
-      const refused: string[] = []
-      const unmodelled = new Set<string>()
-      for (const [toolKey, tool] of Object.entries(fixture.tools)) {
-        for (const { where, node } of declaredParameters(tool)) {
-          try {
-            const kind = admitDeclaredValue(`${toolKey} · ${where}`, node, tally)
-            if (kind !== undefined) {
-              unmodelled.add(kind)
-            }
-          }
-          catch (error) {
-            refused.push(error instanceof Error ? error.message : String(error))
-          }
-        }
-      }
+      const { refused, placed, unchecked } = walkDeclaredValues([fixture])
       expect(refused).toEqual([])
-      expect(tally.placed).toBeGreaterThan(0)
-      // Every kind walked past is one this project declares no type for, and
-      // the set is exact so a new one announces itself.
-      expect([...unmodelled].sort().every(kind => UNMODELLED_KINDS.includes(kind)), [...unmodelled].sort().join(', ')).toBe(true)
+      expect(placed).toBeGreaterThan(0)
+      // Every kind walked past is one this project declares no type for.
+      expect(unchecked.filter(kind => !UNMODELLED_KINDS.includes(kind))).toEqual([])
     })
   }
 })
 
 describe('the kinds the recordings carry that nothing here types', () => {
   it('are the four #101 and the text parameter owe, and no others', () => {
-    // Read off the recordings rather than listed by hand, so that a
-    // re-recording bringing a fifth kind fails here. `Section`, `Repeat` and
-    // `DataCollectionToolParameter` are #101's; `TextToolParameter` has no
-    // ticket yet and is the one worth noticing.
-    const kinds = new Set<string>()
-    const tally: Tally = { placed: 0 }
-    for (const slug of Object.values(FIXTURES)) {
-      const fixture = loadFixture(slug)
-      for (const tool of Object.values(fixture.tools)) {
-        for (const { where, node } of declaredParameters(tool)) {
-          try {
-            const kind = admitDeclaredValue(where, node, tally)
-            if (kind !== undefined) {
-              kinds.add(kind)
-            }
-          }
-          catch {
-            // A refusal is the other suite's business; this one counts kinds.
-          }
-        }
-      }
-    }
-    expect([...kinds].sort()).toEqual(UNMODELLED_KINDS)
+    // Across every recording at once, where the suite above asks per fixture:
+    // no single one carries all four, so only the union is the whole set. Read
+    // off the recordings rather than listed by hand, so a re-recording
+    // bringing a fifth kind fails here rather than being walked past.
+    // `Section`, `Repeat` and `DataCollectionToolParameter` are #101's;
+    // `TextToolParameter` has no ticket yet and is the one worth noticing.
+    const { unchecked } = walkDeclaredValues(Object.values(FIXTURES).map(loadFixture))
+
+    expect(unchecked).toEqual(UNMODELLED_KINDS)
   })
 })

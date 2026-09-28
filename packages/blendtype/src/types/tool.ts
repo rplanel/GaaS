@@ -96,6 +96,13 @@ export interface GalaxyBooleanToolParameter extends BaseToolParameter {
    * `adjust` is `"false"` at 22.05, while `integron_finder` carries nine real
    * `false`s at 26.1.
    *
+   * Spelled out rather than derived from `GalaxyToolParameterValue`, which is
+   * the only `value` in this file that is not. Adding `boolean` to that union
+   * would reach the select types through their
+   * `Exclude<…, GalaxyDataToolValue>`, which would then admit a boolean for a
+   * select — a shape no release sends. One member spelled out beats four
+   * derived ones going wrong.
+   *
    * **`null` is read off the source, not measured.** `checked` defaults to
    * `None if optional else False` (`tool_util/parser/util.py:68` at 26.1,
    * inline in the constructor at 22.05) and `get_initial_value` returns it
@@ -107,50 +114,6 @@ export interface GalaxyBooleanToolParameter extends BaseToolParameter {
   value: boolean | string | null
   truevalue: string
   falsevalue: string
-}
-
-/**
- * A boolean parameter's value, read the way Galaxy reads it.
- *
- * Published because the wire type *changes between the two releases this
- * project spans*, and Galaxy@Pasteur is about to cross that line: a caller
- * narrowing `boolean | string | null` itself would work on 22.05 and quietly
- * invert on 26.1, or the other way about, and the flip would land as a
- * behaviour change nobody edited. One reader means the upgrade is invisible to
- * every call site.
- *
- * Faithful to `BooleanToolParameter.to_python`, which dispatches on `optional`
- * and is identical on both releases:
- *
- * - not optional → `string_as_bool`, true for `true`, `yes`, `on` **and `1`**;
- * - optional → `string_as_bool_or_none`, `null` for `none` and `null`, true
- *   for `true`, `yes`, `on` — and **not** for `1`, which that function omits.
- *
- * The `1` is not a transcription slip: the two helpers really disagree about
- * it (`util/__init__.py`, both releases), so an optional and a required
- * boolean read `"1"` differently and this follows suit. Comparison is
- * case-insensitive in both, as Galaxy's `str(string).lower()` makes it.
- *
- * That `'null'` is a string at 22.05 costs nothing here, and nothing upstream
- * either: `string_as_bool_or_none` accepts `"null"` as well as `"none"`, so
- * Galaxy's own round trip survives it even though its docstring names only
- * `'None'`.
- */
-export function booleanToolParameterValue(
-  parameter: Pick<GalaxyBooleanToolParameter, 'value' | 'optional'>,
-): boolean | null {
-  const { value, optional } = parameter
-  if (typeof value === 'boolean') {
-    return value
-  }
-  const spelling = String(value).toLowerCase()
-  if (optional) {
-    if (spelling === 'none' || spelling === 'null') {
-      return null
-    }
-    return spelling === 'true' || spelling === 'yes' || spelling === 'on'
-  }
-  return spelling === 'true' || spelling === 'yes' || spelling === 'on' || spelling === '1'
 }
 
 export interface GalaxyDataToolParameter extends BaseToolParameter {
