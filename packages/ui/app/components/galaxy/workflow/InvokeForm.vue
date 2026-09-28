@@ -364,7 +364,7 @@ const {
   toolInputParameters,
   blockingTools,
   unavailableByStep,
-  unsuppliedByStep,
+  unconnectedInputsByStep,
   isLoading: describingWorkflow,
   retry: retryDescription,
   error: describeError,
@@ -383,14 +383,22 @@ const {
  * invocation and runs the step with the input empty, so refusing here would
  * refuse something Galaxy is willing to do.
  */
-const unsuppliedSteps = computed(() => {
+const stepsWithUnconnectedInputs = computed(() => {
   const toolInfo = toValue(workflowStepsToolInfo)
-  return Object.entries(toValue(unsuppliedByStep)).map(([stepId, parameters]) => ({
+  return Object.entries(toValue(unconnectedInputsByStep)).map(([stepId, inputs]) => ({
     stepId,
     toolName: toolInfo[stepId]?.name ?? stepId,
-    description: describeUnsuppliedDataParameters(parameters),
+    description: describeUnconnectedDatasetInputs(inputs),
   }))
 })
+
+/**
+ * The same sentence, by step, so the panel and the summary cannot word one
+ * step's mark two ways.
+ */
+const unconnectedInputsSentence = computed(() => Object.fromEntries(
+  toValue(stepsWithUnconnectedInputs).map(step => [step.stepId, step.description]),
+))
 
 /**
  * What the editable parameter model is *of*: the analysis being copied, and
@@ -559,14 +567,14 @@ watch(parameterModelSource, () => {
                     this panel — which is why it is a mark and not a picker.
                   -->
                   <UAlert
-                    v-if="unsuppliedByStep[stepId]"
-                    :data-testid="`step-unsupplied-${stepId}`"
+                    v-if="unconnectedInputsSentence[stepId]"
+                    :data-testid="`step-unconnected-${stepId}`"
                     role="status"
                     variant="subtle"
                     color="warning"
                     icon="i-lucide:unlink"
                     title="An input of this step is not connected"
-                    :description="describeUnsuppliedDataParameters(unsuppliedByStep[stepId]!)"
+                    :description="unconnectedInputsSentence[stepId]"
                   />
                   <GalaxyWorkflowStep
                     v-bind="galaxyWorkflowStepProps[stepId]" variant="form"
@@ -668,8 +676,8 @@ watch(parameterModelSource, () => {
         visible behind a click is not a warning given before submit.
       -->
       <UAlert
-        v-if="unsuppliedSteps.length > 0"
-        data-testid="unsupplied-steps"
+        v-if="stepsWithUnconnectedInputs.length > 0"
+        data-testid="unconnected-inputs"
         role="status"
         variant="subtle"
         color="warning"
@@ -679,8 +687,8 @@ watch(parameterModelSource, () => {
       >
         <template #description>
           <ul class="list-disc ps-5">
-            <li v-for="unsupplied in unsuppliedSteps" :key="unsupplied.stepId">
-              <span class="font-medium">{{ unsupplied.toolName }}</span>: {{ unsupplied.description }}
+            <li v-for="step in stepsWithUnconnectedInputs" :key="step.stepId">
+              <span class="font-medium">{{ step.toolName }}</span>: {{ step.description }}
             </li>
           </ul>
         </template>

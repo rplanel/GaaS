@@ -7,7 +7,7 @@ import type { GalaxyTool, WorkflowStepConnections, WorkflowToolParameters } from
  * `datasets_3|input` — because that is the spelling a connection is keyed by,
  * and so the only one the two sides can be compared in.
  */
-export interface UnsuppliedDataParameter {
+export interface UnconnectedDatasetInput {
   readonly name: string
   /** What the tool calls it on screen, falling back to its name when it is unlabelled. */
   readonly label: string
@@ -15,8 +15,22 @@ export interface UnsuppliedDataParameter {
   readonly optional: boolean
 }
 
-/** The parameter types that carry a dataset, and so are fed by an edge rather than typed into a form. */
-const DATA_TYPES: ReadonlySet<string> = new Set(['data', 'data_collection'])
+/**
+ * The parameter types of a tool step that carry a **dataset**, and so are fed
+ * by an edge rather than typed into a form.
+ *
+ * Exported because the invoke form's widget filter has to agree with it. The
+ * two are the same judgement read in opposite directions — "this is fed by the
+ * graph, so offer no widget" and "this is fed by the graph, and nothing is
+ * feeding it" — and stated twice they drifted: the filter tested
+ * `type !== 'data'` alone, so a `data_collection` parameter was at once given a
+ * widget slot *and* reported as unconnected. `data_collection` is not in
+ * `GalaxyToolParameterType` at all, which is why nothing caught it.
+ *
+ * Galaxy's own list is `["data", "data_collection"]`, in the `is_data` test
+ * both `add_dummy_datasets` and `ToolModule.execute`'s callback make.
+ */
+export const DATASET_INPUT_TYPES: ReadonlySet<string> = new Set(['data', 'data_collection'])
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -26,12 +40,19 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * Whether a saved value is one of the two runtime markers.
  *
  * Both spellings, and deliberately no distinction between them: Galaxy's
- * `is_runtime_value` (`tools/parameters/basic.py:80`, unchanged from 22.05 to
- * 26.1) answers true for `RuntimeValue` and `ConnectedValue` alike, and every
- * data parameter of a stored tool step is one or the other — "All data
- * parameters are represented as runtime values", as `workflow/modules.py:601`
+ * `is_runtime_value` answers true for `RuntimeValue` and `ConnectedValue`
+ * alike, and every data parameter of a stored tool step is one or the other —
+ * "All data parameters are represented as runtime values", as its own comment
  * puts it. Which spelling gets written is decided at *save* time by
  * `add_dummy_datasets`, so it says nothing about what will happen at run time.
+ *
+ * Checked on both releases this project meets, because the recordings span
+ * them and the function moved house between them. The test for the two
+ * markers is character for character the same (`dict` widened to
+ * `MutableMapping`, which changes nothing here):
+ *
+ * - 22.05: `tools/parameters/basic.py:80`, comment at `workflow/modules.py:602`
+ * - 26.1: `tools/parameters/workflow_utils.py:50`, comment at `workflow/modules.py:1029`
  *
  * That is the correction #97 rests on. The ticket read `RuntimeValue` as
  * "the reader must supply this" and `ConnectedValue` as "an edge supplies
@@ -46,11 +67,12 @@ function isRuntimeValue(value: unknown): boolean {
  * Whether an edge feeds this input.
  *
  * This is the whole test, because it is the whole of what Galaxy does:
- * `replacement_for_input` (`workflow/run.py:290`) looks the prefixed name up
- * in `step.input_connections_by_name` and fills the parameter from the
- * upstream output if it is there, leaving the saved value untouched if it is
- * not. A `data_input` step of the workflow is not a separate case — it
- * reaches a tool step through a connection like anything else.
+ * `replacement_for_input` looks the prefixed name up in
+ * `step.input_connections_by_name` and fills the parameter from the upstream
+ * output if it is there, leaving the saved value untouched if it is not
+ * (`workflow/run.py:290` at 22.05, `:460` at 26.1 — the lookup is the same
+ * line on both). A `data_input` step of the workflow is not a separate
+ * case — it reaches a tool step through a connection like anything else.
  *
  * An empty array counts as nothing joined. The export models a fan-in as an
  * array under the input's name, so the key existing is not the same as the
@@ -94,7 +116,7 @@ function walk(
   state: unknown,
   prefix: string,
   connections: WorkflowStepConnections,
-  found: UnsuppliedDataParameter[],
+  found: UnconnectedDatasetInput[],
 ): void {
   if (!isPlainObject(state)) {
     return
@@ -110,7 +132,7 @@ function walk(
     }
     const value = state[name]
 
-    if (DATA_TYPES.has(type)) {
+    if (DATASET_INPUT_TYPES.has(type)) {
       const prefixedName = `${prefix}${name}`
       // A value that is not a runtime marker is one this function did not
       // model, and saying nothing is the safe reading of that: the warning
@@ -167,10 +189,10 @@ function walk(
  * tool, or from one of the workflow's own `data_input` steps — and never by
  * anything the invoke form could offer. So a data parameter with no edge is
  * one the analysis will run without, and Galaxy says nothing about it:
- * `DataToolParameter.from_json` returns `None` for a runtime value
- * (`tools/parameters/basic.py:2039`) **before** it checks whether the
- * parameter is required, so the invocation is accepted and the tool runs with
- * the input empty.
+ * `DataToolParameter.from_json` returns `None` for a runtime value **before**
+ * it checks whether the parameter is required (`tools/parameters/basic.py:2039`
+ * at 22.05, `:2359` at 26.1), so the invocation is accepted and the tool runs
+ * with the input empty.
  *
  * That silence is what this is for. It is not a submission blocker: the
  * invocation is valid and Galaxy will run it, which is why the form marks the
@@ -183,11 +205,11 @@ function walk(
  * carries `topology_file` with no edge, and `__BUILD_LIST__` step 2 keeps
  * five repeat entries against three connections.
  */
-export function unsuppliedDataParameters(
+export function unconnectedDatasetInputs(
   tool: GalaxyTool,
   step: { readonly tool_inputs: WorkflowToolParameters, readonly input_connections: WorkflowStepConnections },
-): UnsuppliedDataParameter[] {
-  const found: UnsuppliedDataParameter[] = []
+): UnconnectedDatasetInput[] {
+  const found: UnconnectedDatasetInput[] = []
   walk(tool.inputs ?? [], step.tool_inputs, '', step.input_connections ?? {}, found)
   return found
 }

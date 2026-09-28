@@ -49,6 +49,6 @@ describe('module auto-imports', () => {
     // registration is what the pair of them hang off.
     expect(names).toContain('useGalaxyWorkflowDescription')
     expect(names).toContain('describeUnavailableTool')
-    expect(names).toContain('describeUnsuppliedDataParameters')
+    expect(names).toContain('describeUnconnectedDatasetInputs')
   })
 })

@@ -90,6 +90,8 @@ interface AToolStep {
    * one is how a test reaches the mark, not how it reaches a field.
    */
   dataParameter?: { name: string, label: string, optional?: boolean }
+  /** A second one, for the mixed required/optional sentence. */
+  secondDataParameter?: { name: string, label: string, optional?: boolean }
 }
 
 const TOOL_A: AToolStep = {
@@ -186,12 +188,14 @@ function parametersOf(tool: AToolStep): GalaxyToolParameters[] {
   if (tool.sharedParameter) {
     parameters.push(anIntegerParameter(tool.sharedParameter.name, tool.sharedParameter.label))
   }
-  if (tool.dataParameter) {
-    parameters.push(aDataParameter(
-      tool.dataParameter.name,
-      tool.dataParameter.label,
-      tool.dataParameter.optional ?? true,
-    ))
+  for (const dataParameter of [tool.dataParameter, tool.secondDataParameter]) {
+    if (dataParameter) {
+      parameters.push(aDataParameter(
+        dataParameter.name,
+        dataParameter.label,
+        dataParameter.optional ?? true,
+      ))
+    }
   }
   return parameters
 }
@@ -219,6 +223,7 @@ function aToolStep(id: number, tool: AToolStep, options: { feedData?: boolean } 
       // #97 established — so the marker is here in both cases and only
       // `input_connections` differs.
       ...(dataParameter ? { [dataParameter.name]: { __class__: 'RuntimeValue' } } : {}),
+      ...(tool.secondDataParameter ? { [tool.secondDataParameter.name]: { __class__: 'RuntimeValue' } } : {}),
     } as DescribedStep['tool_inputs'],
     input_connections: dataParameter && options.feedData
       ? { [dataParameter.name]: { id: id - 1, output_name: 'output' } }
@@ -1255,14 +1260,15 @@ describe('a workflow the server could not describe', () => {
  * `RuntimeValue`", and the filter it blamed turned out to be right: a data
  * parameter is fed by a connection — from an upstream tool, or from one of
  * the workflow's own input steps — and there is nothing a widget on the step
- * panel could do about it. `replacement_for_input` (`workflow/run.py:290`)
- * reads `step.input_connections_by_name` and never looks at the marker.
+ * panel could do about it. `replacement_for_input` (`workflow/run.py:290` at
+ * 22.05, `:460` at 26.1) reads `step.input_connections_by_name` and never
+ * looks at the marker.
  *
  * What is left is the case with no connection at all. Galaxy accepts that
  * invocation and runs the step with the input empty —
  * `DataToolParameter.from_json` returns `None` for a runtime value
- * (`tools/parameters/basic.py:2039`) before it checks whether the parameter
- * is required — so the reader is never told and never asked. These pin that
+ * (`tools/parameters/basic.py:2039` at 22.05, `:2359` at 26.1) before it
+ * checks whether the parameter is required — so the reader is never told and never asked. These pin that
  * they are told.
  */
 describe('a data parameter nothing feeds', () => {
@@ -1277,7 +1283,7 @@ describe('a data parameter nothing feeds', () => {
     const form = await mountForm()
 
     const alert = await vi.waitFor(() => {
-      const found = form.find('[data-testid="unsupplied-steps"]')
+      const found = form.find('[data-testid="unconnected-inputs"]')
       expect(found.exists(), 'the form marked the step before submit').toBe(true)
       return found
     })
@@ -1306,14 +1312,41 @@ describe('a data parameter nothing feeds', () => {
     const form = await mountForm()
 
     const alert = await vi.waitFor(() => {
-      const found = form.find('[data-testid="unsupplied-steps"]')
+      const found = form.find('[data-testid="unconnected-inputs"]')
       expect(found.exists()).toBe(true)
       return found
     })
     // A reader told "will run without it" about an input the tool cannot run
-    // without has been told the wrong thing.
-    expect(alert.text()).toContain('will fail without it')
-    expect(alert.text()).not.toContain('will run without it')
+    // without has been told the wrong thing. The required input is named
+    // rather than called "it", so the sentence keeps its shape when a mixed
+    // list names some of its entries and not others.
+    expect(alert.text()).toContain('will fail without Replicon file')
+    expect(alert.text()).not.toContain('will run without')
+  })
+
+  it('names only the required ones in a mixed list', async () => {
+    // "this step will fail without them" over a list whose other entries are
+    // optional is wrong about those entries, and a tool with several dataset
+    // inputs rarely has them all optional — so the mixed list is the case
+    // that arises, not the edge case.
+    const MIXED: AToolStep = {
+      ...TOOL_A,
+      dataParameter: { name: 'sequence', label: 'Replicon file', optional: false },
+      secondDataParameter: { name: 'topology_file', label: 'Topology file', optional: true },
+    }
+    workflowSteps = { 2: aToolStep(2, MIXED) }
+    servedTools = [MIXED, TOOL_B]
+    const form = await mountForm()
+
+    const alert = await vi.waitFor(() => {
+      const found = form.find('[data-testid="unconnected-inputs"]')
+      expect(found.exists()).toBe(true)
+      return found
+    })
+    // Both are named as unconnected; only the required one is named as fatal.
+    expect(alert.text()).toContain('Replicon file, Topology file are set to be supplied')
+    expect(alert.text()).toContain('will fail without Replicon file')
+    expect(alert.text()).not.toContain('will fail without Replicon file, Topology file')
   })
 
   it('marks nothing when an edge feeds it', async () => {
@@ -1324,8 +1357,8 @@ describe('a data parameter nothing feeds', () => {
     const form = await mountForm()
     await toolStepsReady(form, [NEEDS_DATA])
 
-    expect(form.find('[data-testid="unsupplied-steps"]').exists()).toBe(false)
-    expect(form.find('[data-testid="step-unsupplied-2"]').exists()).toBe(false)
+    expect(form.find('[data-testid="unconnected-inputs"]').exists()).toBe(false)
+    expect(form.find('[data-testid="step-unconnected-2"]').exists()).toBe(false)
   })
 
   it('marks nothing for a workflow whose tools declare no data parameter', async () => {
@@ -1335,7 +1368,7 @@ describe('a data parameter nothing feeds', () => {
     const form = await mountForm()
     await toolStepsReady(form, [TOOL_A, TOOL_B])
 
-    expect(form.find('[data-testid="unsupplied-steps"]').exists()).toBe(false)
+    expect(form.find('[data-testid="unconnected-inputs"]').exists()).toBe(false)
   })
 
   it('marks the step in its own panel too, beside the parameters it does offer', async () => {
@@ -1366,6 +1399,6 @@ describe('a data parameter nothing feeds', () => {
     await vi.waitFor(() => {
       expect(form.find('[data-testid="blocking-tools"]').exists()).toBe(true)
     })
-    expect(form.find('[data-testid="unsupplied-steps"]').exists()).toBe(false)
+    expect(form.find('[data-testid="unconnected-inputs"]').exists()).toBe(false)
   })
 })

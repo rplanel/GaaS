@@ -5,14 +5,14 @@ import type {
   GalaxyToolParameters,
   WorkflowToolParameters,
 } from 'blendtype'
-import type { UnsuppliedDataParameter } from '../../../shared/unsuppliedDataParameters'
 import type { DescribedStep, DescribedToolStep, UnavailableTool } from '../../../types/nuxt-galaxy'
+import type { UnconnectedDatasetInput } from '../../utils/unconnectedDatasetInputs'
 import { computed, toRaw, toValue, watch } from '#imports'
 import { useQuery } from '@pinia/colada'
 import { log } from 'evlog/client'
 import { toolKey } from '../../../shared/toolKey'
-import { unsuppliedDataParameters } from '../../../shared/unsuppliedDataParameters'
 import { galaxyWorkflowDescriptionQuery } from '../../queries/galaxy/workflows'
+import { DATASET_INPUT_TYPES, unconnectedDatasetInputs } from '../../utils/unconnectedDatasetInputs'
 
 /**
  * A tool parameter the invoke form offers a widget for: everything a tool
@@ -29,7 +29,7 @@ import { galaxyWorkflowDescriptionQuery } from '../../queries/galaxy/workflows'
  * pinned as unoffered are all four **connected**; the marker is what Galaxy's
  * editor happened to save, not a request for a value. The real gap is a data
  * parameter with no edge at all, which no filter can fix and which
- * `unsuppliedByStep` names instead.
+ * `unconnectedInputsByStep` names instead.
  */
 export type ToolInputParameter = Exclude<GalaxyToolParameters, GalaxyDataToolParameter>
 
@@ -47,22 +47,29 @@ export type ToolInputParameter = Exclude<GalaxyToolParameters, GalaxyDataToolPar
 const BLOCKS_SUBMIT: ReadonlySet<UnavailableTool['reason']> = new Set(['not_installed', 'version_mismatch'])
 
 /**
- * Why a step is marked for a data parameter nothing supplies (#97).
+ * Why a step is marked for a dataset input nothing feeds (#97).
  *
- * Both branches say the analysis will start, because it will: Galaxy does not
- * refuse this invocation. What differs is what the step then does with an
- * empty input, and a required parameter is the case worth spelling out
- * separately — a reader who is told "will run without it" about an input the
- * tool cannot run without has been told the wrong thing.
+ * Every sentence says the analysis will start, because it will: Galaxy does
+ * not refuse this invocation. What differs is what the step then does with an
+ * empty input.
+ *
+ * The required ones are named rather than folded into the count. "This step
+ * will fail without them" over a list of three, only one of which is
+ * required, is wrong about the other two — and the mixed list is the case that
+ * actually arises, since a tool with several dataset inputs rarely has them
+ * all optional.
  */
-export function describeUnsuppliedDataParameters(unsupplied: UnsuppliedDataParameter[]): string {
-  const names = unsupplied.map(parameter => parameter.label).join(', ')
-  const plural = unsupplied.length > 1
-  const them = plural ? 'them' : 'it'
-  const subject = `${names} ${plural ? 'are' : 'is'} set to be supplied when the workflow runs, but nothing is connected to ${them}.`
-  return unsupplied.some(parameter => !parameter.optional)
-    ? `${subject} The analysis will start, and this step will fail without ${them}.`
-    : `${subject} The analysis will start, and this step will run without ${them}.`
+export function describeUnconnectedDatasetInputs(inputs: UnconnectedDatasetInput[]): string {
+  const labelsOf = (subset: UnconnectedDatasetInput[]) => subset.map(input => input.label).join(', ')
+  const plural = inputs.length > 1
+  const subject = `${labelsOf(inputs)} ${plural ? 'are' : 'is'} set to be supplied when the workflow runs, but nothing is connected to ${plural ? 'them' : 'it'}.`
+  const required = inputs.filter(input => !input.optional)
+  if (required.length === 0) {
+    return `${subject} The analysis will start, and this step will run without ${plural ? 'them' : 'it'}.`
+  }
+  // Named even when it is the whole list, so the sentence does not change
+  // shape between "one required input" and "one of three required".
+  return `${subject} The analysis will start, and this step will fail without ${labelsOf(required)}.`
 }
 
 /** How a tool is named in a sentence a reader has to act on. */
@@ -204,7 +211,14 @@ export function useGalaxyWorkflowDescription(
   /** The parameters each tool offers a widget for, by the same pin. */
   const toolInputParameters = computed(() => {
     return Object.entries(toValue(toolsObj)).reduce<Record<string, ToolInputParameter[]>>((acc, [key, tool]) => {
-      acc[key] = tool.inputs.filter((input): input is ToolInputParameter => input.type !== 'data')
+      // Read from the same set `unconnectedDatasetInputs` judges by, so the
+      // two cannot disagree. Tested as `!== 'data'`, a `data_collection`
+      // parameter was offered a widget — which `Step.vue` renders as a blank,
+      // since no component is mapped for it — *and* reported as unconnected
+      // by the mark, telling the reader both that they may set it and that
+      // nothing is feeding it. `data_collection` is absent from
+      // `GalaxyToolParameterType`, so the type system had nothing to say.
+      acc[key] = tool.inputs.filter((input): input is ToolInputParameter => !DATASET_INPUT_TYPES.has(input.type))
       return acc
     }, {})
   })
@@ -225,14 +239,14 @@ export function useGalaxyWorkflowDescription(
    * `unavailableByStep` already marks those steps with the reason, so a step
    * is never silently both.
    */
-  const unsuppliedByStep = computed<Record<string, UnsuppliedDataParameter[]>>(() => {
+  const unconnectedInputsByStep = computed<Record<string, UnconnectedDatasetInput[]>>(() => {
     const tools = toValue(toolsObj)
-    return Object.entries(toValue(workflowToolSteps)).reduce<Record<string, UnsuppliedDataParameter[]>>((acc, [stepId, step]) => {
+    return Object.entries(toValue(workflowToolSteps)).reduce<Record<string, UnconnectedDatasetInput[]>>((acc, [stepId, step]) => {
       const tool = tools[toolKey(step.tool_id, step.tool_version)]
       if (tool === undefined) {
         return acc
       }
-      const unsupplied = unsuppliedDataParameters(tool, step)
+      const unsupplied = unconnectedDatasetInputs(tool, step)
       if (unsupplied.length > 0) {
         acc[stepId] = unsupplied
       }
@@ -278,7 +292,7 @@ export function useGalaxyWorkflowDescription(
     unavailableTools,
     blockingTools,
     unavailableByStep,
-    unsuppliedByStep,
+    unconnectedInputsByStep,
     isLoading,
     error,
     /**

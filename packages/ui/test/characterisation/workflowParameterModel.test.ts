@@ -123,7 +123,7 @@ async function inSetup<T>(use: () => T): Promise<T> {
  * them; every assertion below is the one it was.
  */
 async function liveModelThroughComposables(fixture: typeof ccqtl) {
-  const { workflowSteps, workflowParametersModel, toolsObj, toolInputParameters, unsuppliedByStep } = await inSetup(() =>
+  const { workflowSteps, workflowParametersModel, toolsObj, toolInputParameters, unconnectedInputsByStep } = await inSetup(() =>
     useGalaxyWorkflowDescription(ref(fixture.manifest.workflowId), ref(fixture.manifest.revision)),
   )
   await expect.poll(() => Object.keys(workflowSteps.value).length).toBeGreaterThan(0)
@@ -135,7 +135,7 @@ async function liveModelThroughComposables(fixture: typeof ccqtl) {
   // what is rendered did.
   await expect.poll(() => Object.keys(toolsObj.value).length).toBe(Object.keys(fixture.tools).length)
 
-  return { workflowParametersModel, toolInputParameters, toolsObj, unsuppliedByStep }
+  return { workflowParametersModel, toolInputParameters, toolsObj, unconnectedInputsByStep }
 }
 
 describe('the model the invoke form derives, per recorded workflow', () => {
@@ -158,7 +158,7 @@ describe('the model the invoke form derives, per recorded workflow', () => {
       // happen — all four are connected, and the marker is not what Galaxy
       // consults at invoke. The suite still records which marker each carries,
       // because that is what the recording says; what changed is what it
-      // means, which the `unsuppliedByStep` tests below pin.
+      // means, which the `unconnectedInputsByStep` tests below pin.
       expect(model['4']).toMatchObject({
         clean_pr: { kind: 'RuntimeValue' },
         covar_modmat: { kind: 'RuntimeValue' },
@@ -332,7 +332,7 @@ describe('what a step actually puts on screen', () => {
     // asks for them and the reader has no way to provide them" — on the
     // premise that a `RuntimeValue` is a request for a value. It is not.
     // Every one of the four is **connected**, to step 2 or step 3, and
-    // `replacement_for_input` (`workflow/run.py:290`) fills a data input from
+    // `replacement_for_input` (`workflow/run.py:290` at 22.05) fills a data input from
     // `step.input_connections_by_name` without ever reading the marker. The
     // graph supplies them, the invocation succeeds, and offering a field for
     // them would have been wrong.
@@ -357,9 +357,9 @@ describe('what a step actually puts on screen', () => {
     // nested recording below: a workflow whose data parameters are all
     // connected or declared as inputs is unchanged by this ticket. Driven
     // through the real composable, so a rule that over-reports breaks here.
-    const { unsuppliedByStep } = await liveModelThroughComposables(ccqtl)
+    const { unconnectedInputsByStep } = await liveModelThroughComposables(ccqtl)
 
-    expect(unsuppliedByStep.value).toEqual({})
+    expect(unconnectedInputsByStep.value).toEqual({})
   })
 
   it('offers no parameter for a data input step, which declares no tool', async () => {
@@ -372,15 +372,15 @@ describe('what a step actually puts on screen', () => {
     // is in this recording rather than in `ccqtl-today`. Three shapes at once,
     // and every one of them decided by the absence of an edge rather than by
     // which marker Galaxy wrote.
-    const { unsuppliedByStep } = await liveModelThroughComposables(nested)
+    const { unconnectedInputsByStep } = await liveModelThroughComposables(nested)
 
-    expect(Object.keys(unsuppliedByStep.value).sort()).toEqual(['1', '2'])
+    expect(Object.keys(unconnectedInputsByStep.value).sort()).toEqual(['1', '2'])
 
     // Step 1, `integron_finder`. `sequence` is connected and absent from this
     // list; `topology_file` is `RuntimeValue` with no edge, and
     // `covar_matrix` is the same two levels down inside sections — which the
     // form renders nowhere at all, so it is both invisible and unsettable.
-    expect(unsuppliedByStep.value['1']).toEqual([
+    expect(unconnectedInputsByStep.value['1']).toEqual([
       {
         name: 'topology_file',
         label: 'Select a topology file from your history',
@@ -397,7 +397,7 @@ describe('what a step actually puts on screen', () => {
     // connections, so the last two are bare. They say `ConnectedValue` — the
     // marker #86 read as "the graph supplies this" — with no connection to
     // supply them, which is why the rule reads the edge and not the marker.
-    expect(unsuppliedByStep.value['2']!.map(parameter => parameter.name))
+    expect(unconnectedInputsByStep.value['2']!.map(parameter => parameter.name))
       .toEqual(['datasets_3|input', 'datasets_4|input'])
   })
 
@@ -412,9 +412,9 @@ describe('what a step actually puts on screen', () => {
     // It cannot pin more than that. With no definition there are no types to
     // over-report from, so this says the missing case is *handled*, not that
     // the rule is right; the nested recording above is what says that.
-    const { unsuppliedByStep } = await liveModelThroughComposables(fanIn)
+    const { unconnectedInputsByStep } = await liveModelThroughComposables(fanIn)
 
-    expect(unsuppliedByStep.value).toEqual({})
+    expect(unconnectedInputsByStep.value).toEqual({})
   })
 })
 
