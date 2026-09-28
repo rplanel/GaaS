@@ -47,29 +47,51 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
  * function serves the saved state and the tool's declared default because
  * Galaxy reads both through `to_python`: `ToolParameter.value_from_basic`
  * delegates to it for anything that is not a runtime marker (`basic.py:243`
- * at 22.05, `:305` at 26.1).
+ * at 22.05, `:306` at 26.1).
  *
- * Which is the one shape handled here rather than there. A boolean the
- * workflow editor marked "set at runtime" saves `{__class__: "RuntimeValue"}`,
- * and Galaxy short-circuits it before `to_python` ever sees it
- * (`basic.py:230` at 22.05, `:295` at 26.1). A switch has no position for
- * "the run will decide", so it reads as off — as it did before this change,
- * and as `null` does: an optional boolean is tri-state in Galaxy and binary
- * here.
+ * What `switchPosition` below adds to that reading is the two ends it does
+ * not cover: the shapes `to_python` is never handed, and the `null` a switch
+ * has no position for.
  */
+function switchPosition(saved: WorkflowParameterValue, optional: boolean): boolean {
+  /**
+   * Nothing `to_python` is ever asked to read. A boolean the workflow editor
+   * marked "set at runtime" saves `{__class__: "RuntimeValue"}` and Galaxy
+   * short-circuits it before `to_python` sees it (`basic.py:230` at 22.05,
+   * `:295` at 26.1); a list or a nested object belongs to a group rather
+   * than to a boolean at all. A switch has no position for any of them, so
+   * they read as off — as they did before this change.
+   */
+  if (typeof saved === 'object' && saved !== null) {
+    return false
+  }
+  /**
+   * A number is not a shape Galaxy's own `to_json` writes for a boolean, but
+   * `string_as_bool` would still read one: it compares `str(string).lower()`,
+   * so a saved `1` is on. Stringified rather than refused, because refusing
+   * it would be this widget disagreeing with `to_python` about a value the
+   * saved-value type admits.
+   */
+  const read = booleanToolParameterValue({
+    value: typeof saved === 'number' ? String(saved) : saved,
+    optional,
+  })
+  /**
+   * And `null`: an optional boolean is tri-state in Galaxy and a switch is
+   * binary, so "unset" shows as off, indistinguishable from `false`.
+   */
+  return read ?? false
+}
+
 const proxyValue = computed({
   get(): boolean {
-    const saved = props.modelValue
-    if (typeof saved !== 'boolean' && typeof saved !== 'string' && saved !== null) {
-      return false
-    }
-    return booleanToolParameterValue({ value: saved, optional: props.optional }) ?? false
+    return switchPosition(props.modelValue, props.optional)
   },
   /**
    * Unchanged: what the form submits is still `'true'` or `'false'`, which
    * is the 22.05 state spelling and is what Galaxy reads on the way back in.
    * `BooleanToolParameter.from_json` is `to_python` is `string_as_bool`
-   * (`basic.py:567` at 22.05, `:662` at 26.1), which accepts it on both
+   * (`basic.py:565` at 22.05, `:662` at 26.1), which accepts it on both
    * releases — whereas emitting `truevalue` would be read as `false` for
    * every tool whose `truevalue` is not one of `true`/`yes`/`on`/`1`, `gbk`
    * among them.

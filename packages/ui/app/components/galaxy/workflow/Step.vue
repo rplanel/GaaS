@@ -57,12 +57,27 @@ const parametersInputsComponent = toRef(() => props.parametersInputsComponent)
  * component renders both of them.
  *
  * **Decision: this class of bug stays test-caught.** What holds instead is
- * that each widget declares the type it really receives, so the declaration
- * is honest even where nothing reads it, and that the widgets are driven
- * from recorded payloads in test rather than from hand-written values — a
- * hand-written value is checked against the declaration and so can only
- * carry shapes the declaration already admits, which is exactly how #111
- * went unseen.
+ * that a widget is driven from recorded payloads in test rather than from
+ * hand-written values — a hand-written value is checked against the
+ * declaration and so can only carry shapes the declaration already admits,
+ * which is exactly how #111 went unseen — and that its `modelValue` declares
+ * the type it really receives, so the declaration is honest even where
+ * nothing reads it.
+ *
+ * Only `BooleanToolParameter` has been through that second half. The other
+ * five are untouched and none of their declarations has been measured
+ * against a recording: `modelValue` is `string` on `FloatToolParameter`,
+ * `number` on `IntegerToolParameter`, `any` on `DataToolParameter`,
+ * `{ __current_case__: number } & Record<string, string>` on
+ * `GalaxyConditional`, and `string` / `string[]` on `SelectToolParameter`
+ * — the last of which #111 did check, and a select's saved value really is
+ * a string or a list of them on both releases.
+ *
+ * At least one of the rest is already contradicted by the payloads: the
+ * recordings save every integer parameter as a **string**, `calin_threshold`
+ * as `"2"` and `dist_thresh` as `"4000"` on step 1 of
+ * `conditional-repeat-runtime`, against `IntegerToolParameter`'s `number`.
+ * Unaudited here because #111 scoped itself to the boolean.
  */
 function getComponent(toolInput: GalaxyToolParameters) {
   return toValue(parametersInputsComponent)?.[toolInput.name]?.component
