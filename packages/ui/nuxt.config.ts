@@ -58,6 +58,13 @@ export default defineNuxtConfig({
 
   vite: {
     optimizeDeps: {
+      // `blendtype` is a workspace package: its `dist` is rebuilt while a dev
+      // server runs, and Vite's pre-bundled copy is keyed on dependency
+      // metadata rather than on that file's contents, so it goes stale and
+      // serves a module missing whatever the rebuild added. Excluded here so
+      // dev always reads the real `dist`. Its own dependencies stay in
+      // `include` below, which is the pairing Vite documents.
+      exclude: ['blendtype'],
       include: [
         '@uwdata/mosaic-core',
         '@uwdata/mosaic-sql',
