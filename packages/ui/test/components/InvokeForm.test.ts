@@ -174,7 +174,13 @@ function aDataParameter(name: string, label: string, optional: boolean): GalaxyD
     optional,
     hidden: false,
     is_dynamic: false,
-    value: { values: [] },
+    // `null`, as the real payload has it: `to_dict` fills this from
+    // `get_initial_value`, which for a data parameter is a scan of the
+    // requesting account's history rather than a declared default — so
+    // `blendtype` typing it as a `GalaxyDataToolValue` is wrong about
+    // reality. Every recorded data parameter carries `null` here. Cast
+    // because the declared type does not admit it, and nothing reads it.
+    value: null as unknown as GalaxyDataToolParameter['value'],
     extensions: ['fasta'],
     edam: { edam_formats: [], edam_data: [] },
     multiple: false,
@@ -1320,8 +1326,16 @@ describe('a data parameter nothing feeds', () => {
     // without has been told the wrong thing. The required input is named
     // rather than called "it", so the sentence keeps its shape when a mixed
     // list names some of its entries and not others.
-    expect(alert.text()).toContain('will fail without Replicon file')
+    //
+    // And it says "cannot run", not "will fail", because the two releases
+    // this project meets disagree about what happens: 22.05 accepts the
+    // invocation and the step fails, 26.1 refuses the invocation outright
+    // (`ParameterValueError` from `from_json`, once
+    // `replace_optional_connections` has turned the marker into `None`). A
+    // sentence promising that the analysis starts would be false on 26.1.
+    expect(alert.text()).toContain('This step cannot run without Replicon file')
     expect(alert.text()).not.toContain('will run without')
+    expect(alert.text(), 'no release-dependent promise about starting').not.toContain('The analysis will start')
   })
 
   it('names only the required ones in a mixed list', async () => {
@@ -1345,8 +1359,8 @@ describe('a data parameter nothing feeds', () => {
     })
     // Both are named as unconnected; only the required one is named as fatal.
     expect(alert.text()).toContain('Replicon file, Topology file are set to be supplied')
-    expect(alert.text()).toContain('will fail without Replicon file')
-    expect(alert.text()).not.toContain('will fail without Replicon file, Topology file')
+    expect(alert.text()).toContain('cannot run without Replicon file')
+    expect(alert.text()).not.toContain('cannot run without Replicon file, Topology file')
   })
 
   it('marks nothing when an edge feeds it', async () => {

@@ -49,15 +49,42 @@ const BLOCKS_SUBMIT: ReadonlySet<UnavailableTool['reason']> = new Set(['not_inst
 /**
  * Why a step is marked for a dataset input nothing feeds (#97).
  *
- * Every sentence says the analysis will start, because it will: Galaxy does
- * not refuse this invocation. What differs is what the step then does with an
- * empty input.
+ * The two branches differ because Galaxy's own behaviour does, and **only the
+ * optional one is the same on both releases this project meets**:
+ *
+ * - **Optional.** The step runs with the input empty, on 22.05 and 26.1
+ *   alike. So the sentence may promise that the analysis starts, and does.
+ * - **Required.** The two releases diverge, and the sentence must not promise
+ *   either. `ToolModule.execute` calls `visit_input_values` with
+ *   `replace_optional_connections=True`. At 22.05 that branch is guarded by
+ *   `hasattr(input, "value")` (`tools/parameters/__init__.py:160`), and a
+ *   `DataToolParameter` has no `value` attribute — nothing on the chain from
+ *   `ToolParameter` down sets one — so the runtime marker survives,
+ *   `from_json` returns `None` for it *before* the required check
+ *   (`basic.py:2039`), and the invocation is accepted. By 26.1 that guard is
+ *   gone: the marker is replaced with `None`
+ *   (`tools/parameters/__init__.py:202-212`), `is_runtime_value(None)` is
+ *   false, so `if not value and not self.optional and not self.default_object`
+ *   raises `ParameterValueError` (`basic.py:2361`) and **Galaxy refuses the
+ *   invocation**.
+ *
+ * So "the analysis will start, and this step will fail" — what this said
+ * first — is true at 22.05 and false at 26.1. "This step cannot run without
+ * it" is true on both, and is what a reader can act on either way.
  *
  * The required ones are named rather than folded into the count. "This step
- * will fail without them" over a list of three, only one of which is
+ * cannot run without them" over a list of three, only one of which is
  * required, is wrong about the other two — and the mixed list is the case that
  * actually arises, since a tool with several dataset inputs rarely has them
  * all optional.
+ *
+ * Neither branch blocks submit, which is still Q10: at 22.05 Galaxy accepts
+ * the invocation, so refusing it here would refuse something it would run.
+ * When Pasteur moves to 26.x, a *required* unconnected input becomes
+ * something Galaxy itself refuses, and blocking it before the datasets are
+ * uploaded is then the same argument `blockingTools` already makes. No
+ * recorded workflow has one, so that is a decision for the upgrade rather
+ * than a guess now.
  */
 export function describeUnconnectedDatasetInputs(inputs: UnconnectedDatasetInput[]): string {
   const labelsOf = (subset: UnconnectedDatasetInput[]) => subset.map(input => input.label).join(', ')
@@ -69,7 +96,7 @@ export function describeUnconnectedDatasetInputs(inputs: UnconnectedDatasetInput
   }
   // Named even when it is the whole list, so the sentence does not change
   // shape between "one required input" and "one of three required".
-  return `${subject} The analysis will start, and this step will fail without ${labelsOf(required)}.`
+  return `${subject} This step cannot run without ${labelsOf(required)}.`
 }
 
 /** How a tool is named in a sentence a reader has to act on. */

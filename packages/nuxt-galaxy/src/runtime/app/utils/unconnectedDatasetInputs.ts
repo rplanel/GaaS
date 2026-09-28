@@ -41,10 +41,15 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  *
  * Both spellings, and deliberately no distinction between them: Galaxy's
  * `is_runtime_value` answers true for `RuntimeValue` and `ConnectedValue`
- * alike, and every data parameter of a stored tool step is one or the other —
- * "All data parameters are represented as runtime values", as its own comment
- * puts it. Which spelling gets written is decided at *save* time by
+ * alike. Which spelling gets written is decided at *save* time by
  * `add_dummy_datasets`, so it says nothing about what will happen at run time.
+ *
+ * That every data parameter of a stored tool step is one or the other comes
+ * from `add_dummy_datasets` itself, which writes a marker for each, and is
+ * borne out by all three recordings. Galaxy says so in as many words too —
+ * "All data parameters are represented as runtime values" — though in the
+ * narrower setting of `SubworkflowModule.get_runtime_inputs`, explaining why
+ * that function skips them, rather than as a declaration about tool state.
  *
  * Checked on both releases this project meets, because the recordings span
  * them and the function moved house between them. The test for the two
@@ -188,11 +193,25 @@ function walk(
  * A data parameter of a tool step is filled by an edge — from an upstream
  * tool, or from one of the workflow's own `data_input` steps — and never by
  * anything the invoke form could offer. So a data parameter with no edge is
- * one the analysis will run without, and Galaxy says nothing about it:
- * `DataToolParameter.from_json` returns `None` for a runtime value **before**
- * it checks whether the parameter is required (`tools/parameters/basic.py:2039`
- * at 22.05, `:2359` at 26.1), so the invocation is accepted and the tool runs
- * with the input empty.
+ * one nothing will supply, and Galaxy says nothing about it before the fact.
+ *
+ * What happens then is release-dependent, and
+ * `describeUnconnectedDatasetInputs` carries the detail: at 22.05 the marker
+ * survives into `from_json`, which returns `None` for it before the required
+ * check, so the invocation is accepted whether or not the parameter is
+ * required; by 26.1 the marker is replaced with `None` first, so a *required*
+ * one raises and the invocation is refused. An **optional** one runs with the
+ * input empty on both, which is every instance the recordings hold.
+ *
+ * **Known limitation.** 26.1 added `default_object` to
+ * `DataToolParameter` — a `<param type="data">` may declare a default, and an
+ * unconnected one is then filled from it rather than left empty
+ * (`basic.py:2364`). Such an input is reported here even though Galaxy would
+ * supply it. It cannot be told apart from this side: the tool API's `to_dict`
+ * exposes no `default` key, and the `value` it does return comes from
+ * `get_initial_value`, which is a scan of the requesting account's history
+ * rather than a declaration — which is exactly what the description endpoint
+ * strips as `withoutDatasetOptions`. 22.05 has no `default_object` at all.
  *
  * That silence is what this is for. It is not a submission blocker: the
  * invocation is valid and Galaxy will run it, which is why the form marks the
