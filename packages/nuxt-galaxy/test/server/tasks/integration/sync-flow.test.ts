@@ -144,6 +144,8 @@ describe('sync-flow integration', () => {
       { data: null, error: null },
       // syncAnalysisEffect: update monitoring outcome
       { data: null, error: null },
+      // syncAnalysisEffect: read the jobs already recorded for the analysis
+      { data: [], error: null },
       // syncJobEffect: check existing job
       { data: null, error: null },
       // syncJobEffect: insert job and return id
@@ -273,6 +275,8 @@ describe('sync-flow integration', () => {
       { data: null, error: null },
       // syncAnalysisEffect: update monitoring outcome
       { data: null, error: null },
+      // syncAnalysisEffect: read the jobs already recorded for the analysis
+      { data: [], error: null },
       // syncJobEffect: check existing job
       { data: null, error: null },
       // syncJobEffect: insert job and return id
@@ -403,6 +407,7 @@ describe('sync-flow integration', () => {
       { data: { id: 1, state: 'scheduled', galaxy_id: galaxyInvocationId, history_id: historyId, owner_id: ownerId }, error: null },
       { data: null, error: null }, // update analysis state
       { data: null, error: null }, // update monitoring outcome
+      { data: [], error: null }, // read the jobs already recorded for the analysis
       { data: null, error: null }, // syncJobEffect: check existing job
       { data: { id: 100 }, error: null }, // syncJobEffect: insert job
       { data: null, error: null }, // syncOutputDatasetEffect: check existing output
@@ -416,6 +421,7 @@ describe('sync-flow integration', () => {
       { data: { id: 2, state: 'scheduled', galaxy_id: galaxyInvocationId, history_id: historyId, owner_id: ownerId }, error: null },
       { data: null, error: null }, // update analysis state
       { data: null, error: null }, // update monitoring outcome
+      { data: [], error: null }, // read the jobs already recorded for the analysis
       { data: null, error: null }, // syncJobEffect: check existing job
       { data: { id: 101 }, error: null }, // syncJobEffect: insert job
       { data: null, error: null }, // syncOutputDatasetEffect: check existing output

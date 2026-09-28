@@ -22,7 +22,11 @@ vi.mock('../../../../../src/runtime/server/utils/grizzle/sync/lock', () => ({
   releaseSyncLock: vi.fn<typeof releaseSyncLock>(),
 }))
 
-vi.mock('../../../../../src/runtime/server/utils/grizzle/sync/job', () => ({
+// Only the Galaxy round trip is doubled. `selectRecordedJobsEffect` and
+// `isRecordedJobCurrent` stay real, because what they read off the Supabase
+// double is exactly what these tests are about.
+vi.mock('../../../../../src/runtime/server/utils/grizzle/sync/job', async importOriginal => ({
+  ...await importOriginal<typeof import('../../../../../src/runtime/server/utils/grizzle/sync/job')>(),
   syncJobEffect: vi.fn<typeof syncJobEffect>(),
 }))
 
@@ -33,6 +37,8 @@ vi.mock('../../../../../src/runtime/server/utils/grizzle/sync/output', () => ({
 interface MockSupabaseConfig {
   analysisSelectResult?: { data: unknown, error: unknown }
   jobsStderrResult?: { data: unknown, error: unknown }
+  /** The job rows a previous sync recorded, as `selectRecordedJobsEffect` reads them. */
+  recordedJobsResult?: { data: unknown, error: unknown }
   updateResult?: { data: unknown, error: unknown }
 }
 
@@ -54,6 +60,7 @@ function createMockSupabase(config: MockSupabaseConfig = {}): SupabaseClient<Dat
   const calls: RecordedCalls = {}
   let currentTable: string | null = null
   let currentAction: 'select' | 'update' | 'insert' | null = null
+  let currentColumns: string | null = null
   let chain: Record<string, unknown>
 
   const recordCall = (method: string, ...args: unknown[]) => {
@@ -64,8 +71,17 @@ function createMockSupabase(config: MockSupabaseConfig = {}): SupabaseClient<Dat
   const resolveResult = () => {
     if (currentAction === 'select' && currentTable === 'analyses')
       return config.analysisSelectResult ?? { data: null, error: null }
-    if (currentAction === 'select' && currentTable === 'jobs')
-      return config.jobsStderrResult ?? { data: null, error: null }
+    if (currentAction === 'select' && currentTable === 'jobs') {
+      // Two queries read `jobs`: the stderr of the analysis's first failed
+      // job, and every recorded row of the analysis. Only the columns tell
+      // them apart, so a third one is named here or it silently reads as an
+      // analysis with no recorded job.
+      if (currentColumns === 'stderr')
+        return config.jobsStderrResult ?? { data: null, error: null }
+      if (currentColumns === 'id, galaxy_id, state, update_time')
+        return config.recordedJobsResult ?? { data: [], error: null }
+      throw new Error(`the Supabase double has no answer for \`jobs.select('${currentColumns}')\``)
+    }
     if (currentAction === 'update')
       return config.updateResult ?? { data: null, error: null }
     return { data: null, error: null }
@@ -79,6 +95,7 @@ function createMockSupabase(config: MockSupabaseConfig = {}): SupabaseClient<Dat
     }),
     select: vi.fn((columns: string) => {
       currentAction = 'select'
+      currentColumns = columns
       return recordCall('select', columns)
     }),
     update: vi.fn((payload: unknown) => {
@@ -472,6 +489,196 @@ describe('syncAnalysisEffect', () => {
 
       expect(syncJobEffect).toHaveBeenCalledTimes(2)
       expect(syncOutputDatasetEffect).not.toHaveBeenCalled()
+    })
+
+    describe('re-syncing jobs the invocation reports unchanged', () => {
+      // The sync polls until the invocation is terminal, so a mapped step over
+      // thirty inputs asked Galaxy for the same thirty jobs every poll (#106).
+      // `step_details=true` already reports each job's state and update time,
+      // which is enough to tell an unchanged job from a changed one.
+      const galaxyUpdateTime = '2024-05-06T07:08:09.123456'
+      const recordedUpdateTime = '2024-05-06T07:08:09.123+00:00'
+
+      /** A job as the step's own `jobs` array carries it on 22.05: no `tool_id`. */
+      function reportedJob(
+        galaxyJobId: string,
+        overrides: Partial<bt.GalaxyInvocationStepJob> = {},
+      ): bt.GalaxyInvocationStepJob {
+        return {
+          model_class: 'Job',
+          id: galaxyJobId,
+          state: 'ok' as bt.JobState,
+          update_time: galaxyUpdateTime,
+          ...overrides,
+        }
+      }
+
+      /** The row a previous sync wrote for that job, as Postgres hands it back. */
+      function recordedRow(
+        id: number,
+        galaxyJobId: string,
+        overrides: Record<string, unknown> = {},
+      ) {
+        return {
+          id,
+          galaxy_id: galaxyJobId,
+          state: 'ok',
+          update_time: recordedUpdateTime,
+          ...overrides,
+        }
+      }
+
+      function mappedStepReporting(galaxyJobIds: string[]): bt.GalaxyInvocationStep {
+        return step({
+          id: 'step-mapped',
+          workflow_step_id: 'ws-mapped',
+          order_index: 3,
+          workflow_step_label: 'map over inputs',
+          jobs: galaxyJobIds.map(id => reportedJob(id)),
+        })
+      }
+
+      const threeUnchanged = [
+        recordedRow(201, 'job-a'),
+        recordedRow(202, 'job-b'),
+        recordedRow(203, 'job-c'),
+      ]
+
+      it('fetches no job of a mapped step whose every element is unchanged', async () => {
+        const supabase = createMockSupabase({
+          analysisSelectResult: { data: baseAnalysisRow, error: null },
+          recordedJobsResult: { data: threeUnchanged, error: null },
+        })
+        const layer = createMockGalaxyLayer(
+          invocationWith([mappedStepReporting(['job-a', 'job-b', 'job-c'])]),
+        )
+
+        await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+        expect(syncJobEffect).not.toHaveBeenCalled()
+      })
+
+      it('fetches the one job whose state moved on', async () => {
+        const supabase = createMockSupabase({
+          analysisSelectResult: { data: baseAnalysisRow, error: null },
+          recordedJobsResult: {
+            data: [
+              recordedRow(201, 'job-a'),
+              recordedRow(202, 'job-b', { state: 'running' }),
+              recordedRow(203, 'job-c'),
+            ],
+            error: null,
+          },
+        })
+        const layer = createMockGalaxyLayer(
+          invocationWith([mappedStepReporting(['job-a', 'job-b', 'job-c'])]),
+        )
+
+        await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+        expect(syncedJobs()).toEqual([['job-b', 3]])
+      })
+
+      it('fetches the one job Galaxy has touched since', async () => {
+        const supabase = createMockSupabase({
+          analysisSelectResult: { data: baseAnalysisRow, error: null },
+          recordedJobsResult: {
+            data: [
+              recordedRow(201, 'job-a'),
+              recordedRow(202, 'job-b'),
+              recordedRow(203, 'job-c', { update_time: '2024-05-06T07:00:00+00:00' }),
+            ],
+            error: null,
+          },
+        })
+        const layer = createMockGalaxyLayer(
+          invocationWith([mappedStepReporting(['job-a', 'job-b', 'job-c'])]),
+        )
+
+        await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+        expect(syncedJobs()).toEqual([['job-c', 3]])
+      })
+
+      it('fetches a job it has no row for, which 22.05 reports without a tool_id', async () => {
+        const supabase = createMockSupabase({
+          analysisSelectResult: { data: baseAnalysisRow, error: null },
+          recordedJobsResult: {
+            data: [recordedRow(201, 'job-a'), recordedRow(202, 'job-b')],
+            error: null,
+          },
+        })
+        const mapped = mappedStepReporting(['job-a', 'job-b', 'job-c'])
+        const layer = createMockGalaxyLayer(invocationWith([mapped]))
+
+        await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+        // `jobs.tool_id` is notNull() and the step's entry carries none on
+        // 22.05, so the row can only come from `GET /api/jobs/{id}`.
+        expect(mapped.jobs?.every(job => job.tool_id === undefined)).toBe(true)
+        expect(syncedJobs()).toEqual([['job-c', 3]])
+      })
+
+      it('fetches a job reported only by job_id, which says nothing to compare', async () => {
+        const supabase = createMockSupabase({
+          analysisSelectResult: { data: baseAnalysisRow, error: null },
+          recordedJobsResult: { data: [recordedRow(205, 'galaxy-job-1')], error: null },
+        })
+        const layer = createMockGalaxyLayer(invocationWith([
+          step({ job_id: 'galaxy-job-1', order_index: 2 }),
+        ]))
+
+        await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+        expect(syncedJobs()).toEqual([['galaxy-job-1', 2]])
+      })
+
+      it('reads the recorded rows in one query for the whole sync', async () => {
+        const supabase = createMockSupabase({
+          analysisSelectResult: { data: baseAnalysisRow, error: null },
+          recordedJobsResult: { data: threeUnchanged, error: null },
+        })
+        const layer = createMockGalaxyLayer(
+          invocationWith([mappedStepReporting(['job-a', 'job-b', 'job-c'])]),
+        )
+
+        await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+        const { __calls: calls } = supabase
+        const recordedJobsSelects = callsTo(calls, 'select').filter(
+          call => call[0] === 'id, galaxy_id, state, update_time',
+        )
+        expect(recordedJobsSelects).toHaveLength(1)
+        expect(calls.eq).toContainEqual(['analysis_id', analysisId])
+      })
+
+      it('attaches an output dataset to the recorded row of a job it did not fetch', async () => {
+        const supabase = createMockSupabase({
+          analysisSelectResult: { data: baseAnalysisRow, error: null },
+          recordedJobsResult: { data: [recordedRow(205, 'galaxy-job-1')], error: null },
+        })
+        const layer = createMockGalaxyLayer({
+          ...invocationWith([
+            step({ job_id: 'galaxy-job-1', jobs: [reportedJob('galaxy-job-1')] }),
+          ]),
+          outputs: {
+            out1: { id: 'dataset-1', src: 'hda', label: 'out1', workflow_step_id: 'ws-1' },
+          },
+        })
+
+        await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+        expect(syncJobEffect).not.toHaveBeenCalled()
+        expect(syncOutputDatasetEffect).toHaveBeenCalledWith(
+          'dataset-1',
+          analysisId,
+          historyId,
+          205,
+          ownerId,
+          supabase,
+          layer,
+        )
+      })
     })
   })
 

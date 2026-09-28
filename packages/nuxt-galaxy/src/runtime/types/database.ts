@@ -463,6 +463,7 @@ export type Database = {
           stdout: string | null
           step_id: number
           tool_id: string
+          update_time: string | null
         }
         Insert: {
           analysis_id: number
@@ -477,6 +478,7 @@ export type Database = {
           stdout?: string | null
           step_id: number
           tool_id: string
+          update_time?: string | null
         }
         Update: {
           analysis_id?: number
@@ -491,6 +493,7 @@ export type Database = {
           stdout?: string | null
           step_id?: number
           tool_id?: string
+          update_time?: string | null
         }
         Relationships: [
           {
