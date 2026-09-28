@@ -51,4 +51,13 @@ describe('module auto-imports', () => {
     expect(names).toContain('describeUnavailableTool')
     expect(names).toContain('describeUnconnectedDatasetInputs')
   })
+
+  it('registers the shared naming of an input step the graph labels nodes with', () => {
+    // `runtime/shared/` is imported by path inside this package and is not
+    // reachable that way from the `ui` layer, so the graph gets at it only
+    // through these two registrations. Unregistered, a node labels every
+    // unnamed input step `undefined` — a render, not a type error (#89).
+    expect(names).toContain('inputStepLabel')
+    expect(names).toContain('isInputStep')
+  })
 })

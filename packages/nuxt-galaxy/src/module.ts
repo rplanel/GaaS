@@ -325,6 +325,13 @@ export default defineNuxtModule<ModuleOptions>({
       { name: 'useGalaxyWorkflowDescription', path: './runtime/app/composables/galaxy/useGalaxyWorkflowDescription' },
       { name: 'describeUnavailableTool', path: './runtime/app/composables/galaxy/useGalaxyWorkflowDescription' },
       { name: 'describeUnconnectedDatasetInputs', path: './runtime/app/composables/galaxy/useGalaxyWorkflowDescription' },
+      // Galaxy's own naming of an input step, which the graph labels a node
+      // with and `describedInputsOf` labels the datamap with (#89). Shared so
+      // that the two cannot disagree about what a step is called; registered
+      // here because the graph reads it from a layer that cannot import
+      // `runtime/shared/` by path.
+      { name: 'inputStepLabel', path: './runtime/shared/stepLabel' },
+      { name: 'isInputStep', path: './runtime/shared/stepLabel' },
       { name: 'useUploadFileToStorage', path: './runtime/app/composables/useUploadFileToStorage' },
       { name: 'useDiskUsage', path: './runtime/app/composables/useDiskUsage' },
       { name: 'useSupabaseRealtime', path: './runtime/app/composables/useSupabaseRealtime' },

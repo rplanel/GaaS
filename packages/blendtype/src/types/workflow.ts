@@ -14,7 +14,22 @@ export type GalaxyWorkflowInput = Record<
   }
 >
 
-const workflowStepTypes = ['data_input', 'parameter_input', 'data_collection_input', 'tool'] as const
+/**
+ * The step types a stored definition can hold.
+ *
+ * `subworkflow` was missing until #89, and its absence meant more than an
+ * unnamed case: `workflowStepExportSchema` refused the whole export, so a
+ * workflow with a subworkflow step could not be published at all. Measured
+ * against three published workflows on usegalaxy.eu at 26.1.2 — every one of
+ * them failed to parse on `type`, `content_id`, `tool_state` and
+ * `tool_version` together.
+ *
+ * `pause` is Galaxy's fifth step type and is still absent here, deliberately:
+ * nothing in this project has measured one, and the set is widened from
+ * recordings rather than from Galaxy's source. A workflow carrying one is
+ * refused the same way a subworkflow step was.
+ */
+const workflowStepTypes = ['data_input', 'parameter_input', 'data_collection_input', 'tool', 'subworkflow'] as const
 
 export type WorkflowStepType = typeof workflowStepTypes[number]
 
@@ -199,13 +214,19 @@ export interface WorkflowStepExport {
   annotation: string
   id: number
   name: string
-  content_id: string | null
+  /**
+   * Absent on a subworkflow step, which Galaxy writes without it (#89). The
+   * three keys below go the same way, and for the same reason: they describe
+   * a tool, and a subworkflow step runs none.
+   */
+  content_id?: string | null
   label: string | null
+  /** Present but `null` on a subworkflow step, unlike the three optional keys. */
   tool_id: string | null
   type: WorkflowStepType
   uuid: string
-  tool_state: string
-  tool_version: string | null
+  tool_state?: string
+  tool_version?: string | null
   input_connections: WorkflowStepConnections
   inputs: Array<{
     description: string
@@ -243,28 +264,69 @@ export interface WorkflowStepExport {
    */
   when?: string | null
   /**
-   * The nested export a `subworkflow` step embeds, kept verbatim. Nothing
-   * reads into it: a subworkflow is drawn as one step that links out to its
-   * own invocation, never expanded inline.
+   * The workflow a `subworkflow` step runs, embedded whole.
+   *
+   * Modelled rather than kept opaque since #89, because there is now a
+   * reader: the graph draws the step as **one** node — never expanded inline
+   * (Q19) — and drilling into that node draws the nested definition's own
+   * steps and connections. The nested export is the only description of it
+   * there is; it carries a `uuid` and a `name` but no stored-workflow id, so
+   * nothing else could be looked up.
    */
-  subworkflow?: Record<string, unknown> | null
+  subworkflow?: WorkflowSubworkflowExport | null
+}
+
+/**
+ * The workflow embedded in a `subworkflow` step, as an export writes it.
+ *
+ * The same shape as a whole export **minus `version`**, which Galaxy adds to
+ * a downloaded dict and not to a nested one — measured on usegalaxy.eu at
+ * 26.1.2. So it cannot be modelled as `GalaxyWorkflowExport`, and it is not
+ * a revision anything can be pinned to: only the outer workflow has an index
+ * an invocation runs (#48).
+ *
+ * Its own steps may hold a further `subworkflow` step, which is why this and
+ * `WorkflowStepExport` refer to each other. `subworkflow-nested` is recorded
+ * with exactly that shape, two levels deep.
+ *
+ * Only `steps` is required, and only because the alternative is worse.
+ * Everything parsed here is parsed on the publish path, so a required key
+ * Galaxy ever omits is a workflow nobody can publish — which is why `uuid`,
+ * `annotation`, `tags`, `creator`, `license` and `report` are all left to the
+ * catchall although every recorded nested export carries some of them.
+ * `steps` earns the exception: a nested export whose steps cannot be read
+ * would be *drawn*, as a graph with no nodes and nothing on the picture to
+ * say why, and #82 settled that a graph which silently omits what it cannot
+ * read is worse than a refusal.
+ */
+export interface WorkflowSubworkflowExport {
+  steps: { [key: string]: WorkflowStepExport }
+  /**
+   * What the subworkflow is called. Optional because nothing must fail to
+   * publish for want of a name: it is the fallback label for the node when
+   * the author never labelled the step, and an unnamed node beats an
+   * unpublishable workflow.
+   */
+  name?: string
 }
 export const workflowStepConnectionSchema = z.looseObject({
   id: z.number(),
   output_name: z.string(),
 })
 
-export const workflowStepExportSchema = z.object({
+export const workflowStepExportSchema = z.looseObject({
   annotation: z.string(),
   id: z.number(),
   name: z.string(),
-  content_id: z.string().nullable(),
+  content_id: z.string().nullish(),
   label: z.string().nullable(),
   tool_id: z.string().nullable(),
   type: z.enum(workflowStepTypes),
   uuid: z.string(),
-  tool_state: z.string(),
-  tool_version: z.string().nullable(),
+  // Optional, not nullable: Galaxy leaves all three keys **out** of a
+  // subworkflow step rather than writing them as `null` (#89).
+  tool_state: z.string().optional(),
+  tool_version: z.string().nullish(),
   // Keyed by input name, one connection or several: see
   // `WorkflowStepConnections`. Modelling it as a single key named `input`
   // discarded every connection of every real workflow (#82).
@@ -303,14 +365,47 @@ export const workflowStepExportSchema = z.object({
     top: z.number(),
   }).nullish(),
   when: z.string().nullish(),
-  // Kept whole, never read into: a subworkflow is one step that links out.
-  subworkflow: z.looseObject({}).nullish(),
+  // Parsed rather than kept opaque since #89: the graph drills into it. The
+  // getter is what lets this and `workflowSubworkflowExportSchema` refer to
+  // each other, since a subworkflow's own steps may hold another one.
+  //
+  // The forward reference is the recursion, not an ordering mistake: swapping
+  // the two declarations moves the same reference into the other one's
+  // `steps` getter. It is safe because a getter is not run until something
+  // parses — see the `z.looseObject` note below for what happens when
+  // something runs it sooner.
+  get subworkflow() {
+    // eslint-disable-next-line ts/no-use-before-define
+    return workflowSubworkflowExportSchema.nullish()
+  },
 
-  // Loose on purpose. `galaxyWorkflowExportSchema` is parsed with `.loose()`,
-  // but that reaches the outer object only, so this schema stripping by
-  // default is what emptied a stored definition of everything the client had
-  // not thought to model (#82).
-}).loose()
+  // `z.looseObject` rather than `z.object().loose()`, which is the same
+  // schema by a route that does not break: `.loose()` clones the object and
+  // enumerates its shape there and then, which runs the `subworkflow` getter
+  // above before the schema it names has been initialised — a
+  // `ReferenceError` at import time, not at parse time. Loose either way,
+  // and for the reason #82 established: `galaxyWorkflowExportSchema` is
+  // parsed with `.loose()` but that reaches the outer object only, so this
+  // schema stripping by default is what emptied a stored definition of
+  // everything the client had not thought to model.
+})
+
+/**
+ * The workflow a `subworkflow` step embeds.
+ *
+ * Annotated with its interface rather than left to inference, because this
+ * and `workflowStepExportSchema` refer to each other and an inferred pair
+ * has no base case to stop at. Loose for the same reason every other schema
+ * here is: `comments`, `creator`, `license`, `report`, `tags` and
+ * `format-version` all arrive on a real nested export and none of them is
+ * modelled, so stripping would be #82 again one level down.
+ */
+export const workflowSubworkflowExportSchema: z.ZodType<WorkflowSubworkflowExport> = z.looseObject({
+  name: z.string().optional(),
+  get steps() {
+    return z.record(z.string(), workflowStepExportSchema)
+  },
+})
 
 /**
  * A stored workflow as `GET /api/workflows/{id}/download` exports it, at one
