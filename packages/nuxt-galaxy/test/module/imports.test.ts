@@ -41,4 +41,14 @@ describe('module auto-imports', () => {
   it('no longer registers the first-generation workflow composable', () => {
     expect(names).not.toContain('useDatabaseWorkflow')
   })
+
+  it('registers the sentences the invoke form marks a step with', () => {
+    // Both are called from `InvokeForm.vue`'s template, where an unregistered
+    // name is not a type error but an empty render: the step would be marked
+    // with a blank description and nothing would say why. The composable's own
+    // registration is what the pair of them hang off.
+    expect(names).toContain('useGalaxyWorkflowDescription')
+    expect(names).toContain('describeUnavailableTool')
+    expect(names).toContain('describeUnconnectedDatasetInputs')
+  })
 })

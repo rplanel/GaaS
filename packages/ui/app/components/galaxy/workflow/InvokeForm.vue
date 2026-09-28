@@ -364,10 +364,41 @@ const {
   toolInputParameters,
   blockingTools,
   unavailableByStep,
+  unconnectedInputsByStep,
   isLoading: describingWorkflow,
   retry: retryDescription,
   error: describeError,
 } = useGalaxyWorkflowDescription(workflowGalaxyId, workflowRevision)
+
+/**
+ * The steps to name above Run, each with the tool that runs it (#97).
+ *
+ * The per-step alert alone would not satisfy "mark it before submit": the
+ * accordion is collapsed until a reader opens it, so a step nobody expands is
+ * a step nobody is warned about. This is the summary that is on screen without
+ * being asked for — the same two places Q22 marks an unavailable tool, and for
+ * the same reason.
+ *
+ * Unlike `blockingTools` it does **not** disable Run. Galaxy accepts the
+ * invocation and runs the step with the input empty, so refusing here would
+ * refuse something Galaxy is willing to do.
+ */
+const stepsWithUnconnectedInputs = computed(() => {
+  const toolInfo = toValue(workflowStepsToolInfo)
+  return Object.entries(toValue(unconnectedInputsByStep)).map(([stepId, inputs]) => ({
+    stepId,
+    toolName: toolInfo[stepId]?.name ?? stepId,
+    description: describeUnconnectedDatasetInputs(inputs),
+  }))
+})
+
+/**
+ * The same sentence, by step, so the panel and the summary cannot word one
+ * step's mark two ways.
+ */
+const unconnectedInputsSentence = computed(() => Object.fromEntries(
+  toValue(stepsWithUnconnectedInputs).map(step => [step.stepId, step.description]),
+))
 
 /**
  * What the editable parameter model is *of*: the analysis being copied, and
@@ -525,10 +556,30 @@ watch(parameterModelSource, () => {
                     </UButton>
                   </template>
                 </UAlert>
-                <GalaxyWorkflowStep
-                  v-else-if="stepId !== undefined && galaxyWorkflowStepProps?.[stepId]"
-                  v-bind="galaxyWorkflowStepProps[stepId]" variant="form"
-                />
+                <template v-else-if="stepId !== undefined && galaxyWorkflowStepProps?.[stepId]">
+                  <!--
+                    A data parameter with no edge feeding it (#97). Not an
+                    error and not a blocker: Galaxy starts the analysis and
+                    runs the step with the input empty, so this says what will
+                    happen rather than refusing it. There is no field to offer
+                    either — a data parameter is fed by a connection or by one
+                    of the workflow's own input steps, never by a widget on
+                    this panel — which is why it is a mark and not a picker.
+                  -->
+                  <UAlert
+                    v-if="unconnectedInputsSentence[stepId]"
+                    :data-testid="`step-unconnected-${stepId}`"
+                    role="status"
+                    variant="subtle"
+                    color="warning"
+                    icon="i-lucide:unlink"
+                    title="An input of this step is not connected"
+                    :description="unconnectedInputsSentence[stepId]"
+                  />
+                  <GalaxyWorkflowStep
+                    v-bind="galaxyWorkflowStepProps[stepId]" variant="form"
+                  />
+                </template>
               </div>
             </div>
           </template>
@@ -612,6 +663,32 @@ watch(parameterModelSource, () => {
           <ul class="list-disc ps-5">
             <li v-for="tool in blockingTools" :key="`${tool.toolId}@${tool.toolVersion}`">
               {{ describeUnavailableTool(tool) }}
+            </li>
+          </ul>
+        </template>
+      </UAlert>
+      <!--
+        Marked before submit and deliberately not blocking (#97): Galaxy
+        accepts an invocation whose data parameter nothing feeds and runs the
+        step with it empty, so Run stays enabled and this says what the
+        analysis will do. Named here as well as in the step panel because the
+        accordion is collapsed until a reader opens it, and a warning only
+        visible behind a click is not a warning given before submit.
+      -->
+      <UAlert
+        v-if="stepsWithUnconnectedInputs.length > 0"
+        data-testid="unconnected-inputs"
+        role="status"
+        variant="subtle"
+        color="warning"
+        icon="i-lucide:unlink"
+        title="Some steps have an input that is not connected"
+        class="mb-3"
+      >
+        <template #description>
+          <ul class="list-disc ps-5">
+            <li v-for="step in stepsWithUnconnectedInputs" :key="step.stepId">
+              <span class="font-medium">{{ step.toolName }}</span>: {{ step.description }}
             </li>
           </ul>
         </template>

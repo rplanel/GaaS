@@ -324,6 +324,7 @@ export default defineNuxtModule<ModuleOptions>({
       // `$fetch` and so deduplicated nothing
       { name: 'useGalaxyWorkflowDescription', path: './runtime/app/composables/galaxy/useGalaxyWorkflowDescription' },
       { name: 'describeUnavailableTool', path: './runtime/app/composables/galaxy/useGalaxyWorkflowDescription' },
+      { name: 'describeUnconnectedDatasetInputs', path: './runtime/app/composables/galaxy/useGalaxyWorkflowDescription' },
       { name: 'useUploadFileToStorage', path: './runtime/app/composables/useUploadFileToStorage' },
       { name: 'useDiskUsage', path: './runtime/app/composables/useDiskUsage' },
       { name: 'useSupabaseRealtime', path: './runtime/app/composables/useSupabaseRealtime' },

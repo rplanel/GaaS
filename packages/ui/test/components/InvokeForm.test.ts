@@ -1,4 +1,4 @@
-import type { GalaxyIntegerToolParameter, GalaxyTool } from 'blendtype'
+import type { GalaxyDataToolParameter, GalaxyIntegerToolParameter, GalaxyTool, GalaxyToolParameters } from 'blendtype'
 import type { IncomingMessage } from 'node:http'
 import type { DescribedStep, DescribedWorkflowInput, UnavailableTool } from 'nuxt-galaxy'
 import type { UploadedDatasetDb } from '../../app/components/galaxy/workflow/InvokeForm.vue'
@@ -81,6 +81,17 @@ interface AToolStep {
    * that difference is invisible unless the name is the same (#100).
    */
   sharedParameter?: { name: string, label: string }
+  /**
+   * A `data` parameter this tool declares, which is fed by an edge rather
+   * than by a widget (#97).
+   *
+   * It never reaches `toolInputParameters` — the composable drops every
+   * `data` parameter, and #97 confirmed that is right — so a tool carrying
+   * one is how a test reaches the mark, not how it reaches a field.
+   */
+  dataParameter?: { name: string, label: string, optional?: boolean }
+  /** A second one, for the mixed required/optional sentence. */
+  secondDataParameter?: { name: string, label: string, optional?: boolean }
 }
 
 const TOOL_A: AToolStep = {
@@ -146,11 +157,51 @@ function aTool(tool: AToolStep): GalaxyTool {
   }
 }
 
+/**
+ * A `data` parameter, as a tool declares one. Its `options` are the datasets
+ * Galaxy fills from a history; the endpoint empties them, so they are empty
+ * here too.
+ */
+function aDataParameter(name: string, label: string, optional: boolean): GalaxyDataToolParameter {
+  return {
+    model_class: 'DataToolParameter',
+    type: 'data',
+    name,
+    label,
+    argument: null,
+    help: '',
+    refresh_on_change: false,
+    optional,
+    hidden: false,
+    is_dynamic: false,
+    // `null`, as the real payload has it: `to_dict` fills this from
+    // `get_initial_value`, which for a data parameter is a scan of the
+    // requesting account's history rather than a declared default — so
+    // `blendtype` typing it as a `GalaxyDataToolValue` is wrong about
+    // reality. Every recorded data parameter carries `null` here. Cast
+    // because the declared type does not admit it, and nothing reads it.
+    value: null as unknown as GalaxyDataToolParameter['value'],
+    extensions: ['fasta'],
+    edam: { edam_formats: [], edam_data: [] },
+    multiple: false,
+    options: { hda: [], hdca: [] },
+  }
+}
+
 /** Every parameter a tool declares: its own, and any it shares with another version of itself. */
-function parametersOf(tool: AToolStep): GalaxyIntegerToolParameter[] {
-  const parameters = [anIntegerParameter(tool.parameter, tool.parameterLabel)]
+function parametersOf(tool: AToolStep): GalaxyToolParameters[] {
+  const parameters: GalaxyToolParameters[] = [anIntegerParameter(tool.parameter, tool.parameterLabel)]
   if (tool.sharedParameter) {
     parameters.push(anIntegerParameter(tool.sharedParameter.name, tool.sharedParameter.label))
+  }
+  for (const dataParameter of [tool.dataParameter, tool.secondDataParameter]) {
+    if (dataParameter) {
+      parameters.push(aDataParameter(
+        dataParameter.name,
+        dataParameter.label,
+        dataParameter.optional ?? true,
+      ))
+    }
   }
   return parameters
 }
@@ -160,7 +211,8 @@ function parametersOf(tool: AToolStep): GalaxyIntegerToolParameter[] {
  * name as well as the tool definition declaring it: `Step.vue` renders a
  * parameter only where the step's own model holds a value under that name.
  */
-function aToolStep(id: number, tool: AToolStep): DescribedStep {
+function aToolStep(id: number, tool: AToolStep, options: { feedData?: boolean } = {}): DescribedStep {
+  const dataParameter = tool.dataParameter
   return {
     id,
     type: 'tool',
@@ -172,8 +224,16 @@ function aToolStep(id: number, tool: AToolStep): DescribedStep {
     tool_inputs: {
       [tool.parameter]: '10',
       ...(tool.sharedParameter ? { [tool.sharedParameter.name]: '10' } : {}),
-    },
-    input_connections: {},
+      // Galaxy writes every data parameter of a tool step as a runtime
+      // value, whether or not an edge feeds it — that is the whole of what
+      // #97 established — so the marker is here in both cases and only
+      // `input_connections` differs.
+      ...(dataParameter ? { [dataParameter.name]: { __class__: 'RuntimeValue' } } : {}),
+      ...(tool.secondDataParameter ? { [tool.secondDataParameter.name]: { __class__: 'RuntimeValue' } } : {}),
+    } as DescribedStep['tool_inputs'],
+    input_connections: dataParameter && options.feedData
+      ? { [dataParameter.name]: { id: id - 1, output_name: 'output' } }
+      : {},
     outputs: [],
   }
 }
@@ -1196,5 +1256,163 @@ describe('a workflow the server could not describe', () => {
       expect(form.find('[data-testid="workflow-description-error"]').exists()).toBe(false)
     })
     expect(form.find('button[type="submit"]').attributes('disabled')).toBeUndefined()
+  })
+})
+
+/**
+ * #97. A `data` parameter of a tool step that no edge feeds.
+ *
+ * The ticket was filed as "the form never offers a data-typed
+ * `RuntimeValue`", and the filter it blamed turned out to be right: a data
+ * parameter is fed by a connection — from an upstream tool, or from one of
+ * the workflow's own input steps — and there is nothing a widget on the step
+ * panel could do about it. `replacement_for_input` (`workflow/run.py:290` at
+ * 22.05, `:460` at 26.1) reads `step.input_connections_by_name` and never
+ * looks at the marker.
+ *
+ * What is left is the case with no connection at all. Galaxy accepts that
+ * invocation and runs the step with the input empty —
+ * `DataToolParameter.from_json` returns `None` for a runtime value
+ * (`tools/parameters/basic.py:2039` at 22.05, `:2359` at 26.1) before it
+ * checks whether the parameter is required — so the reader is never told and never asked. These pin that
+ * they are told.
+ */
+describe('a data parameter nothing feeds', () => {
+  const NEEDS_DATA: AToolStep = {
+    ...TOOL_A,
+    dataParameter: { name: 'topology_file', label: 'Topology file', optional: true },
+  }
+
+  it('marks the step before submit, without refusing it', async () => {
+    workflowSteps = { 2: aToolStep(2, NEEDS_DATA) }
+    servedTools = [NEEDS_DATA, TOOL_B]
+    const form = await mountForm()
+
+    const alert = await vi.waitFor(() => {
+      const found = form.find('[data-testid="unconnected-inputs"]')
+      expect(found.exists(), 'the form marked the step before submit').toBe(true)
+      return found
+    })
+    // The summary names the step and says what will happen, which is the
+    // whole point: "will run without it" is a different sentence from the
+    // refusal `blocking-tools` renders.
+    expect(alert.text()).toContain('Topology file')
+    expect(alert.text()).toContain('nothing is connected to it')
+    expect(alert.text()).toContain('will run without it')
+    expect(alert.text()).toContain(NEEDS_DATA.name)
+
+    // Galaxy is willing to run this, so the form must be too. Both halves
+    // matter: an enabled button that a guard refuses anyway would look
+    // identical on screen and send nothing.
+    expect(form.find('button[type="submit"]').attributes('disabled')).toBeUndefined()
+    expect(form.find('[data-testid="blocking-tools"]').exists()).toBe(false)
+  })
+
+  it('says the step will fail when the parameter is required', async () => {
+    const REQUIRES_DATA: AToolStep = {
+      ...TOOL_A,
+      dataParameter: { name: 'sequence', label: 'Replicon file', optional: false },
+    }
+    workflowSteps = { 2: aToolStep(2, REQUIRES_DATA) }
+    servedTools = [REQUIRES_DATA, TOOL_B]
+    const form = await mountForm()
+
+    const alert = await vi.waitFor(() => {
+      const found = form.find('[data-testid="unconnected-inputs"]')
+      expect(found.exists()).toBe(true)
+      return found
+    })
+    // A reader told "will run without it" about an input the tool cannot run
+    // without has been told the wrong thing. The required input is named
+    // rather than called "it", so the sentence keeps its shape when a mixed
+    // list names some of its entries and not others.
+    //
+    // And it says "cannot run", not "will fail", because the two releases
+    // this project meets disagree about what happens: 22.05 accepts the
+    // invocation and the step fails, 26.1 refuses the invocation outright
+    // (`ParameterValueError` from `from_json`, once
+    // `replace_optional_connections` has turned the marker into `None`). A
+    // sentence promising that the analysis starts would be false on 26.1.
+    expect(alert.text()).toContain('This step cannot run without Replicon file')
+    expect(alert.text()).not.toContain('will run without')
+    expect(alert.text(), 'no release-dependent promise about starting').not.toContain('The analysis will start')
+  })
+
+  it('names only the required ones in a mixed list', async () => {
+    // "this step will fail without them" over a list whose other entries are
+    // optional is wrong about those entries, and a tool with several dataset
+    // inputs rarely has them all optional — so the mixed list is the case
+    // that arises, not the edge case.
+    const MIXED: AToolStep = {
+      ...TOOL_A,
+      dataParameter: { name: 'sequence', label: 'Replicon file', optional: false },
+      secondDataParameter: { name: 'topology_file', label: 'Topology file', optional: true },
+    }
+    workflowSteps = { 2: aToolStep(2, MIXED) }
+    servedTools = [MIXED, TOOL_B]
+    const form = await mountForm()
+
+    const alert = await vi.waitFor(() => {
+      const found = form.find('[data-testid="unconnected-inputs"]')
+      expect(found.exists()).toBe(true)
+      return found
+    })
+    // Both are named as unconnected; only the required one is named as fatal.
+    expect(alert.text()).toContain('Replicon file, Topology file are set to be supplied')
+    expect(alert.text()).toContain('cannot run without Replicon file')
+    expect(alert.text()).not.toContain('cannot run without Replicon file, Topology file')
+  })
+
+  it('marks nothing when an edge feeds it', async () => {
+    // The `ccqtl-wf` case the ticket was filed on: the marker still says
+    // `RuntimeValue`, and the connection is what decides.
+    workflowSteps = { 2: aToolStep(2, NEEDS_DATA, { feedData: true }) }
+    servedTools = [NEEDS_DATA, TOOL_B]
+    const form = await mountForm()
+    await toolStepsReady(form, [NEEDS_DATA])
+
+    expect(form.find('[data-testid="unconnected-inputs"]').exists()).toBe(false)
+    expect(form.find('[data-testid="step-unconnected-2"]').exists()).toBe(false)
+  })
+
+  it('marks nothing for a workflow whose tools declare no data parameter', async () => {
+    // Acceptance criterion 4, at the level of the form: a workflow this
+    // ticket has no business touching renders exactly as it did.
+    workflowSteps = { 2: aToolStep(2, TOOL_A), 3: aToolStep(3, TOOL_B) }
+    const form = await mountForm()
+    await toolStepsReady(form, [TOOL_A, TOOL_B])
+
+    expect(form.find('[data-testid="unconnected-inputs"]').exists()).toBe(false)
+  })
+
+  it('marks the step in its own panel too, beside the parameters it does offer', async () => {
+    workflowSteps = { 2: aToolStep(2, NEEDS_DATA) }
+    servedTools = [NEEDS_DATA, TOOL_B]
+    const form = await mountForm()
+    await toolStepsReady(form, [NEEDS_DATA])
+    const shown = await parametersShownFor(form, NEEDS_DATA)
+
+    // Both in one panel. The step is editable — the mark is a warning, not
+    // the `#96` "cannot be edited" state — so the parameters it does offer
+    // have to still be there.
+    expect(shown, 'the panel says an input is unconnected').toContain('Topology file')
+    expect(shown, 'the panel still offers the parameters it has').toContain(NEEDS_DATA.parameterLabel)
+  })
+
+  it('leaves an unavailable tool\'s step marked as unavailable, not as unconnected', async () => {
+    // A step with no definition cannot be judged: deciding that a parameter
+    // is data-typed needs the tool. It is already marked, with the reason it
+    // cannot be edited, and marking it twice for two different reasons —
+    // neither of which the reader can act on differently — would be worse
+    // than saying the one thing that is true.
+    workflowSteps = { 2: aToolStep(2, NEEDS_DATA) }
+    servedTools = [NEEDS_DATA, TOOL_B]
+    unavailableTools = [{ toolId: NEEDS_DATA.id, toolVersion: NEEDS_DATA.version, reason: 'not_installed' }]
+    const form = await mountForm()
+
+    await vi.waitFor(() => {
+      expect(form.find('[data-testid="blocking-tools"]').exists()).toBe(true)
+    })
+    expect(form.find('[data-testid="unconnected-inputs"]').exists()).toBe(false)
   })
 })
