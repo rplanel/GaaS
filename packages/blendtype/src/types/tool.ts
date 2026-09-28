@@ -61,7 +61,18 @@ export interface GalaxyBooleanToolParameter extends BaseToolParameter {
 export interface GalaxyDataToolParameter extends BaseToolParameter {
   model_class: 'DataToolParameter'
   type: Extract<GalaxyToolParameterType, 'data'>
-  value: Extract<GalaxyToolParameterValue, GalaxyDataToolValue>
+  /**
+   * Nullable by construction, and `null` on every data parameter in every
+   * recording — 24 of them across the two fixtures recorded with tools.
+   *
+   * `to_dict` fills this key from `get_initial_value`, which for a data
+   * parameter is a scan of the *requesting account's* history rather than a
+   * declared default. So it is not a property of the tool at all: it is the
+   * per-request, per-account content the description endpoint strips as
+   * `withoutDatasetOptions`, and an account whose history holds no matching
+   * dataset gets `null`.
+   */
+  value: Extract<GalaxyToolParameterValue, GalaxyDataToolValue> | null
   extensions: string[]
   edam: {
     edam_formats: string[]

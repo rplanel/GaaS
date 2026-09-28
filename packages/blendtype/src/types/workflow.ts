@@ -46,6 +46,15 @@ export interface WorkflowInputStep {
   step_output: string
 }
 
+/**
+ * The values one tool step of a workflow was saved with, by parameter name.
+ *
+ * This is the decoded `tool_state`: Galaxy's `state.encode(nested=True)`,
+ * which is arbitrary JSON and not a flat map of strings. Galaxy's own
+ * bookkeeping rides in it too — `__page__`, `__rerun_remap_job_id__` — so a
+ * reader drops what it does not recognise rather than expecting a fixed set
+ * of keys.
+ */
 export interface WorkflowToolParameters {
   [paramName: string]: WorkflowParameterValue
 }
@@ -53,7 +62,84 @@ export interface WorkflowToolParameters {
 export interface WorkflowConditionalParametersValue {
   [paramName: string]: WorkflowParameterValue
 }
-export type WorkflowParameterValue = string | string[] | WorkflowConditionalParametersValue
+
+/**
+ * A value a stored definition leaves to be filled when the workflow runs.
+ *
+ * Galaxy writes two spellings and reads them as one thing: `is_runtime_value`
+ * answers true for `RuntimeValue` and `ConnectedValue` alike
+ * (`tools/parameters/basic.py:80` at 22.05, moved to
+ * `tools/parameters/workflow_utils.py:50` by 26.1 with its test unchanged).
+ * Which one gets written is decided at *save* time by `add_dummy_datasets`,
+ * so the marker says nothing about what will happen at run time — what
+ * decides that is the step's connection, which `replacement_for_input` reads
+ * and nothing else (#97). One concept to Galaxy, so one type here.
+ *
+ * Every data parameter of a stored tool step is one of these — Galaxy says so
+ * in as many words, "All data parameters are represented as runtime values"
+ * (`workflow/modules.py:602` at 22.05, `:1029` at 26.1). The converse does
+ * **not** hold, and the recordings are where that shows: `__APPLY_RULES__`
+ * carries a marker under `collapsible_value` inside each of its rule
+ * objects, which is no parameter of any kind. So finding one says the run
+ * will fill it, not that a dataset is what gets filled in.
+ *
+ * 52 `ConnectedValue` and 10 `RuntimeValue` across the four recorded live
+ * payloads, and more again in the exports.
+ */
+export interface WorkflowRuntimeValue {
+  __class__: 'RuntimeValue' | 'ConnectedValue'
+}
+
+/**
+ * One instance of a `repeat` parameter, as the saved state keeps it.
+ *
+ * A tool declares one blueprint for its repeat block and the state holds
+ * however many instances the author added, each as an object carrying its own
+ * `__index__` alongside the block's own parameters. `__index__` is the number
+ * Galaxy gave the instance when it was added and the one its connections are
+ * keyed by (`datasets_3|input`) — never its position in the array, which a
+ * deleted middle entry makes different (#97).
+ *
+ * Measured on `conditional-repeat-runtime`: `__BUILD_LIST__` on step 2 keeps
+ * five `datasets` entries, and `__MERGE_COLLECTION__` on steps 3 and 4 two
+ * `inputs` entries each.
+ */
+export interface WorkflowRepeatInstanceValue {
+  __index__: number
+  [paramName: string]: WorkflowParameterValue
+}
+
+/**
+ * One value of a saved tool state.
+ *
+ * As wide as JSON, and deliberately: `tool_state` is whatever a tool's own
+ * form put there, and the recordings show it. `number`, `boolean` and `null`
+ * are all in `integron_finder`'s state on step 1 of
+ * `conditional-repeat-runtime` (`__page__: 0`, `gbk: true`,
+ * `type_replicon: null`); the lists run from `string[]` on step 5 of `fan-in`
+ * through `number[]` and a list of plain objects carrying no `__index__` at
+ * all in `__APPLY_RULES__`'s `rules` and `mapping`, on step 11 of the inner
+ * subworkflow of `subworkflow-nested`. A member narrow enough to refuse any
+ * of those would be a member that lies, which is what #102 was.
+ *
+ * So what the union is *for* is naming the three shapes that carry meaning,
+ * as the types a reader narrows to: `WorkflowRuntimeValue` for a value the
+ * run will fill, `WorkflowRepeatInstanceValue` for one instance of a repeat,
+ * and `WorkflowConditionalParametersValue` for the plain nesting a
+ * `conditional` or a `section` saves. Which shapes the recordings *actually*
+ * hold is pinned in `packages/ui/test/characterisation/parameterValueTypes.test.ts`,
+ * whose walk names each of them and refuses anything else — narrower than
+ * this union on purpose, so that a re-recording carrying something new fails
+ * a test rather than passing silently.
+ */
+export type WorkflowParameterValue
+  = | string
+    | number
+    | boolean
+    | null
+    | WorkflowRuntimeValue
+    | WorkflowParameterValue[]
+    | WorkflowConditionalParametersValue
 
 export interface WorkflowStep {
   id: number
@@ -61,7 +147,13 @@ export interface WorkflowStep {
   tool_id: null | string
   tool_version: null | string
   annotation: null | string
-  tool_inputs: WorkflowToolParameters
+  /**
+   * `null` on a `subworkflow` step, which runs no tool and so saved no tool
+   * state — measured on steps 8 and 12 of `subworkflow-nested` at 26.1,
+   * where `tool_id` and `tool_version` are `null` beside it. Every other
+   * step type carries an object, empty or not.
+   */
+  tool_inputs: WorkflowToolParameters | null
   input_steps: Record<string, WorkflowInputStep>
 }
 
@@ -69,6 +161,8 @@ export interface WorkflowToolStep extends WorkflowStep {
   type: 'tool'
   tool_id: string
   tool_version: string
+  /** Never `null` on a tool step: the `null` above belongs to a subworkflow one. */
+  tool_inputs: WorkflowToolParameters
 }
 
 export interface GalaxyWorkflowsItem {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { GalaxyToolParameters } from 'blendtype'
+import type { GalaxyToolParameters, WorkflowToolParameters } from 'blendtype'
 import type { DescribedStep } from 'nuxt-galaxy'
 import type { GalaxyToolInputComponent } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 
@@ -10,9 +10,14 @@ export interface Props {
   parametersInputsComponent:
     | Record<string, GalaxyToolInputComponent>
     | undefined
-  workflowParametersModel:
-    | Record<string, string | string[] | Record<string, any>>
-    | undefined
+  /**
+   * The values the revision was saved with, which is `DescribedStep.tool_inputs`
+   * handed straight on. Named rather than spelled out: this used to carry its
+   * own copy of `WorkflowParameterValue`, and the copy went stale the moment
+   * #102 found that a saved value can also be a number, a boolean, `null` or
+   * a repeat's instances.
+   */
+  workflowParametersModel: WorkflowToolParameters | undefined
 }
 
 const props = withDefaults(defineProps<Props>(), {

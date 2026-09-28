@@ -176,11 +176,10 @@ function aDataParameter(name: string, label: string, optional: boolean): GalaxyD
     is_dynamic: false,
     // `null`, as the real payload has it: `to_dict` fills this from
     // `get_initial_value`, which for a data parameter is a scan of the
-    // requesting account's history rather than a declared default — so
-    // `blendtype` typing it as a `GalaxyDataToolValue` is wrong about
-    // reality. Every recorded data parameter carries `null` here. Cast
-    // because the declared type does not admit it, and nothing reads it.
-    value: null as unknown as GalaxyDataToolParameter['value'],
+    // requesting account's history rather than a declared default. Every
+    // recorded data parameter carries `null` here, and since #102 the
+    // declared type says so, so this no longer needs a cast.
+    value: null,
     extensions: ['fasta'],
     edam: { edam_formats: [], edam_data: [] },
     multiple: false,
