@@ -1,4 +1,4 @@
-import type { GalaxyTool, WorkflowStepConnections, WorkflowToolParameters } from 'blendtype'
+import type { GalaxyTool, WorkflowRuntimeValue, WorkflowStepConnections, WorkflowToolParameters } from 'blendtype'
 import { describe, expect, it } from 'vitest'
 import { DATASET_INPUT_TYPES, unconnectedDatasetInputs } from '../../../src/runtime/app/utils/unconnectedDatasetInputs'
 
@@ -26,8 +26,10 @@ import { DATASET_INPUT_TYPES, unconnectedDatasetInputs } from '../../../src/runt
  *
  * `GalaxyToolParameters` has no `repeat`, no `section` and no
  * `data_collection` member, and those are half of what there is to test here,
- * so a fixture typed against it could not express the cases. `name` and
- * `type` are still checked, which is what the subject reads.
+ * so a fixture typed against it could not express the cases — which is the
+ * one thing #102 left alone, the parameter *kinds* being the section/repeat
+ * ticket's. `name` and `type` are still checked, which is what the subject
+ * reads.
  */
 interface AToolInput { name: string, type: string, [key: string]: unknown }
 
@@ -41,29 +43,25 @@ function tool(inputs: AToolInput[]): GalaxyTool {
 }
 
 /** A saved data value, whichever of the two spellings Galaxy chose. */
-function runtime(kind: 'RuntimeValue' | 'ConnectedValue' = 'RuntimeValue') {
+function runtime(kind: 'RuntimeValue' | 'ConnectedValue' = 'RuntimeValue'): WorkflowRuntimeValue {
   return { __class__: kind }
 }
 
 /**
- * One step, cast at these two fields and nowhere else.
+ * One step, checked against the declared types rather than cast to them.
  *
- * Neither declared type can express what this file is about.
- * `WorkflowToolParameters` types a value as
- * `string | string[] | WorkflowConditionalParametersValue`, so it admits
- * neither a `{"__class__": …}` marker nor a repeat's array of instance
- * objects — both of which Galaxy really sends, and both of which are
- * recorded in the fixtures. Narrowing the cast to the two fields keeps the
- * rest of the fixture checked, which `as never` on the whole object did not.
+ * Both casts this used to carry are gone with #102: `WorkflowToolParameters`
+ * admitted neither a `{"__class__": …}` marker as its own thing nor a
+ * repeat's array of instance objects, so the shapes every assertion below is
+ * _about_ were the shapes the declared type said were impossible. They are
+ * `WorkflowRuntimeValue` and `WorkflowRepeatInstanceValue[]` now, and the
+ * fixtures here are ordinary values of the type the subject takes.
  */
 function step(
-  tool_inputs: Record<string, unknown>,
-  input_connections: Record<string, unknown> = {},
+  tool_inputs: WorkflowToolParameters,
+  input_connections: WorkflowStepConnections = {},
 ): { tool_inputs: WorkflowToolParameters, input_connections: WorkflowStepConnections } {
-  return {
-    tool_inputs: tool_inputs as WorkflowToolParameters,
-    input_connections: input_connections as WorkflowStepConnections,
-  }
+  return { tool_inputs, input_connections }
 }
 
 describe('a top-level data parameter', () => {

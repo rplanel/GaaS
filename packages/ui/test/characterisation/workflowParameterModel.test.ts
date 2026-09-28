@@ -190,7 +190,7 @@ describe('the model the invoke form derives, per recorded workflow', () => {
       // could deliver silently.
       const model = parameterValuesFromLive(ccqtl.live)
       expect(model['5']!.adjust).toEqual({ kind: 'scalar', type: 'string' })
-      expect((ccqtl.live.steps['5']!).tool_inputs.adjust).toBe('false')
+      expect(ccqtl.live.steps['5']!.tool_inputs!.adjust).toBe('false')
     })
   })
 
@@ -226,7 +226,7 @@ describe('the model the invoke form derives, per recorded workflow', () => {
       // not a key. Pinned separately because a derivation that read the first
       // block's case and applied it to the rest would look correct above and
       // be wrong here.
-      const blocks = nested.live.steps['2']!.tool_inputs.datasets as unknown as { id_cond: { __current_case__: number } }[]
+      const blocks = nested.live.steps['2']!.tool_inputs!.datasets as unknown as { id_cond: { __current_case__: number } }[]
       expect(blocks.map(block => block.id_cond.__current_case__)).toEqual([1, 1, 1, 1, 0])
     })
 
@@ -240,7 +240,7 @@ describe('the model the invoke form derives, per recorded workflow', () => {
     it('writes a boolean as a real boolean at 26.1', () => {
       const model = parameterValuesFromLive(nested.live)
       expect(model['1']!.gbk).toEqual({ kind: 'scalar', type: 'boolean' })
-      expect((nested.live.steps['1']!).tool_inputs.gbk).toBe(true)
+      expect(nested.live.steps['1']!.tool_inputs!.gbk).toBe(true)
     })
 
     it('keeps a section nested rather than flattening it', () => {
@@ -349,7 +349,7 @@ describe('what a step actually puts on screen', () => {
     const step = ccqtl.live.steps['4']!
     const tool = ccqtl.tools[`${step.tool_id}@${step.tool_version}`]!
     const exported = (ccqtl.exported.steps as Record<string, { input_connections: Record<string, unknown> }>)['4']!
-    const runtimeNames = Object.entries(step.tool_inputs)
+    const runtimeNames = Object.entries(step.tool_inputs!)
       .filter(([, value]) => (value as { __class__?: string })?.__class__ === 'RuntimeValue')
       .map(([name]) => name)
       .sort()

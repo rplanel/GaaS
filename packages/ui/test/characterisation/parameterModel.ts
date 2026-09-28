@@ -130,7 +130,8 @@ interface LiveStep {
   type?: string
   tool_id?: string | null
   tool_version?: string | null
-  tool_inputs?: Record<string, unknown>
+  /** `null` on a subworkflow step, which ran no tool and saved no state. */
+  tool_inputs?: Record<string, unknown> | null
   input_steps?: Record<string, unknown>
 }
 

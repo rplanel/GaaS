@@ -50,6 +50,12 @@ could not be published. Two levels deep on purpose: the graph draws a
 subworkflow as one step that opens onto its own graph, and a recording only one
 level deep would let a normaliser that fails to recurse pass.
 
+It turned out to pin one more thing, found in #102 rather than aimed at: on a
+subworkflow step the live payload writes `tool_inputs: null`, and the saved
+state of the two `__APPLY_RULES__` steps *inside* its subworkflows holds lists
+of plain objects carrying no `__index__` — so only the export shows them, the
+live payload having nothing to say about a subworkflow's own steps at all.
+
 **Why two instances.** No workflow in Pasteur's account carries a conditional,
 a repeat or a fan-in; a survey of 160 published workflows on usegalaxy.eu found
 only four carrying all five shapes at once, the smallest of them 57 steps. The
