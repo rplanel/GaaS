@@ -57,8 +57,22 @@ export interface WorkflowGraphNodeData {
   readonly annotation: string | null
   /** Whether opening this node draws a workflow of its own (Q19). */
   readonly isSubworkflow: boolean
-  /** Whether the step can be fed at all, which decides if it has a target handle. */
+  /** Whether the step can be fed at all, which decides if it is given any target handle. */
   readonly acceptsInput: boolean
+  /**
+   * One anchor per output an edge leaves from, and one per input an edge
+   * arrives at, in a stable order.
+   *
+   * **One anchor per node is not enough, and that is the whole of AC2.** Two
+   * edges from one step into one input of another — `fan-in` step 19, fed by
+   * step 14's `proviruses` and `viruses` — leave and arrive at the same point
+   * if the node has a single handle: two edges in the DOM, one line on
+   * screen, with the two labels stacked on top of each other. A reader cannot
+   * tell that from a single connection, which is the failure reading the
+   * stored definition exists to avoid.
+   */
+  readonly sourceHandles: string[]
+  readonly targetHandles: string[]
 }
 
 export interface WorkflowGraphNode {
@@ -84,6 +98,9 @@ export interface WorkflowGraphEdge {
   readonly id: string
   readonly source: string
   readonly target: string
+  /** The output it leaves from and the input it arrives at, by name — the anchors on each node. */
+  readonly sourceHandle: string
+  readonly targetHandle: string
   /** The name of the input this connection feeds, which is what the edge is labelled with. */
   readonly label: string
 }
@@ -104,20 +121,6 @@ export interface WorkflowGraph {
    * all of them. Named so the canvas can say so.
    */
   readonly dangling: string[]
-}
-
-/**
- * What a tool is called, from the id Galaxy knows it by.
- *
- * A toolshed guid ends in `…/<name>/<version>`, so the name is its
- * second-to-last segment; a built-in id (`Cut1`, `__BUILD_LIST__`) has no
- * segments and is its own name. The *version* is never read out of the id
- * this way — only the first kind carries one — which is why every caller
- * takes it from the step's `tool_version` instead (#100).
- */
-export function toolDisplayName(toolId: string): string {
-  const segments = toolId.split('/')
-  return (segments.length >= 2 ? segments.at(-2) : toolId) || toolId
 }
 
 /**
@@ -147,8 +150,36 @@ export function stepNodeLabel(step: DescribedStep): string {
   return `Step ${step.id}`
 }
 
-/** Every incoming connection of a step, whichever of the two shapes the export wrote. */
-function connectionsOf(step: DescribedStep): { inputName: string, from: string, outputName: string }[] {
+/** One edge feeding a step: which input, from which step's which output. */
+export interface StepConnection {
+  /** The name of the input this connection feeds. */
+  readonly inputName: string
+  /** The upstream step's key, which is its `order_index`. */
+  readonly from: string
+  readonly outputName: string
+}
+
+/**
+ * The identity of the edge one connection draws into one step.
+ *
+ * The output's name is in it, not only the two steps and the input: one
+ * upstream step can feed one input from two of its outputs — `fan-in` step 19
+ * does — and without it the two collide and Vue Flow draws one of them. One
+ * function because the panel keys its list of the same edges by it.
+ */
+export function edgeId(connection: StepConnection, intoStepId: string): string {
+  return `${connection.from}:${connection.outputName}->${intoStepId}:${connection.inputName}`
+}
+
+/**
+ * Every incoming connection of a step, whichever of the two shapes the export
+ * wrote.
+ *
+ * Exported because the panel lists the same edges the canvas draws, and
+ * walked twice the two could disagree about how many there are — which is the
+ * one thing a graph must not be wrong about.
+ */
+export function connectionsOf(step: DescribedStep): StepConnection[] {
   return Object.entries(step.input_connections ?? {}).flatMap(([inputName, value]) =>
     // One input may be fed by several outputs. A singleton list is collapsed
     // to a bare object on the way out of Galaxy — a back-compat hack its own
@@ -177,6 +208,7 @@ export function workflowGraph(
 ): WorkflowGraph {
   const entries = Object.entries(steps)
   const known = new Set(entries.map(([stepId]) => stepId))
+  const anchors = anchorsOf(entries)
 
   const sides = handleSides(direction)
   const nodes = entries.map(([stepId, step]) => ({
@@ -198,6 +230,8 @@ export function workflowGraph(
       // step with nothing feeding it is a step waiting for an edge (#97), not
       // a step that takes none.
       acceptsInput: !isInputStep(step),
+      sourceHandles: anchors[stepId]?.source ?? [],
+      targetHandles: anchors[stepId]?.target ?? [],
     },
   }))
 
@@ -209,19 +243,65 @@ export function workflowGraph(
         return []
       }
       return [{
-        // The output's name is in the id because two edges can join the same
-        // pair of steps through one input, from two different outputs — the
-        // fan-in `subworkflow-nested`'s sibling recording pins. Without it
-        // they would collide and Vue Flow would render one.
-        id: `${connection.from}:${connection.outputName}->${stepId}:${connection.inputName}`,
+        id: edgeId(connection, stepId),
         source: connection.from,
         target: stepId,
+        // Named anchors, so two edges between one pair of steps through one
+        // input leave from the two different outputs they really come from
+        // rather than from one point on top of each other.
+        sourceHandle: connection.outputName,
+        targetHandle: connection.inputName,
         label: connection.inputName,
       }]
     }),
   )
 
   return { nodes: layOut(nodes, edges, direction), edges, dangling }
+}
+
+/**
+ * Which outputs and inputs of each step an edge can meet, by step key.
+ *
+ * The outputs are the step's own declared list **union every output name a
+ * downstream connection reads from it**, and the union is not belt and
+ * braces. Galaxy writes `outputs: []` on a subworkflow step whatever the
+ * workflow inside it produces, naming the real ones in `workflow_outputs`
+ * instead, so a subworkflow feeding a downstream step declares no output for
+ * the edge to leave from. Read only from the connections and an output
+ * nothing consumes would have no anchor, which is harmless now and would
+ * matter the moment an output handle is shown.
+ *
+ * The inputs are the names something actually feeds. An input with no
+ * connection gets no anchor: there is no edge to meet it, and #97's mark is
+ * how a reader is told about one that should have had one.
+ *
+ * Sorted, so the anchors keep their places between renders rather than
+ * reordering with whatever order the export happened to list them in.
+ */
+function anchorsOf(entries: [string, DescribedStep][]): Record<string, { source: string[], target: string[] }> {
+  const anchors: Record<string, { source: Set<string>, target: Set<string> }> = {}
+  const of = (stepId: string) => {
+    anchors[stepId] ??= { source: new Set(), target: new Set() }
+    return anchors[stepId]
+  }
+
+  for (const [stepId, step] of entries) {
+    const own = of(stepId)
+    for (const output of step.outputs) {
+      own.source.add(output.name)
+    }
+    for (const connection of connectionsOf(step)) {
+      own.target.add(connection.inputName)
+      of(connection.from).source.add(connection.outputName)
+    }
+  }
+
+  return Object.fromEntries(
+    Object.entries(anchors).map(([stepId, { source, target }]) => [
+      stepId,
+      { source: [...source].sort(), target: [...target].sort() },
+    ]),
+  )
 }
 
 /**

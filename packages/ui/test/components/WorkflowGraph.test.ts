@@ -16,15 +16,12 @@
 import type { DescribedStep } from 'nuxt-galaxy'
 import { UApp } from '#components'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
-import { galaxyWorkflowExportSchema } from 'blendtype'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, ref } from 'vue'
-// The normaliser the description endpoint answers with — see the note in
-// `../utils/workflowGraph.test.ts` for why it is reached by path.
-import { describedStepsOf } from '../../../nuxt-galaxy/src/runtime/server/utils/grizzle/storedDefinition'
 import Graph from '../../app/components/galaxy/workflow/Graph.vue'
 import GraphView from '../../app/components/galaxy/workflow/GraphView.vue'
-import { FIXTURES, loadFixture } from '../characterisation/fixtures'
+import { FIXTURES } from '../characterisation/fixtures'
+import { aStep, describedSteps } from '../describedSteps'
 
 /**
  * Which side of the small-screen breakpoint the view is mounted on.
@@ -44,28 +41,6 @@ vi.mock('../../app/composables/useDefinedBreakpoints', () => ({
   }),
 }))
 
-/** One recording's stored definition, normalised exactly as the endpoint normalises it. */
-function describedSteps(slug: string): Record<string, DescribedStep> {
-  return describedStepsOf(galaxyWorkflowExportSchema.loose().parse(loadFixture(slug).exported))
-}
-
-function aStep(id: number, over: Partial<DescribedStep> = {}): DescribedStep {
-  return {
-    id,
-    type: 'tool',
-    label: null,
-    uuid: `uuid-${id}`,
-    annotation: null,
-    tool_id: 'toolshed.g2.bx.psu.edu/repos/iuc/foo/foo/1.2.3',
-    tool_version: '1.2.3',
-    tool_inputs: {},
-    input_connections: {},
-    outputs: [],
-    subworkflow: null,
-    ...over,
-  }
-}
-
 /**
  * The canvas, or the whole view, inside a `UApp` — which `USlideover` needs
  * for its portal target.
@@ -81,6 +56,28 @@ async function mountIn(component: unknown, props: Record<string, unknown>) {
       [h(component as never, props)],
     )),
   }))
+}
+
+/**
+ * The canvas with `steps` a test can replace, for the claims about what
+ * survives a change of revision.
+ *
+ * `wrapper.setProps` cannot serve: the wrapper is the sized `UApp` host, so it
+ * would set a prop on that and never reach the canvas.
+ */
+async function mountReactive(steps: Record<string, DescribedStep>) {
+  const current = ref(steps)
+  const wrapper = await mountSuspended(defineComponent({
+    setup: () => () => h(UApp, () => h(
+      'div',
+      { style: 'width: 1200px; height: 800px' },
+      [h(Graph, { steps: current.value })],
+    )),
+  }))
+  function setSteps(next: Record<string, DescribedStep>) {
+    current.value = next
+  }
+  return { wrapper, setSteps }
 }
 
 /**
@@ -126,6 +123,39 @@ describe('galaxyWorkflowGraph', () => {
     expect(wrapper.find('[data-id="14:viruses->19:batchmode|input_fastas"]').exists()).toBe(true)
   })
 
+  it('anchors the two edges of a fan-in at the two outputs they really come from', async () => {
+    // The half of AC2 the assertion above cannot see. Both edges were in the
+    // DOM from the start, but every node had a single source handle, so the
+    // two left and arrived at the same point with the same label: one line on
+    // screen, two labels stacked on it, and a reader unable to tell that from
+    // a single connection.
+    const wrapper = await mountIn(Graph, { steps: describedSteps(FIXTURES.fanIn) })
+    mounted = wrapper
+
+    // Step 14 feeds step 19's one input from two of its outputs, so it has an
+    // anchor for each rather than one for both.
+    const anchors = wrapper.findAll('.vue-flow__node[data-id="14"] .vue-flow__handle[data-handlepos]')
+      .map(handle => handle.attributes('data-handleid'))
+    expect(anchors).toContain('proviruses')
+    expect(anchors).toContain('viruses')
+
+    // And they are at different places along the node's edge, which is what
+    // makes the two lines distinguishable rather than coincident.
+    const offsets = wrapper.findAll('.vue-flow__node[data-id="14"] .vue-flow__handle')
+      .filter(handle => ['proviruses', 'viruses'].includes(handle.attributes('data-handleid') ?? ''))
+      .map(handle => handle.attributes('style'))
+    expect(new Set(offsets).size).toBe(2)
+  })
+
+  it('still anchors a step that neither declares an output nor is read from', async () => {
+    // A node with no handle at all is one Vue Flow can route no edge to, so a
+    // single-step workflow must not render handle-less.
+    const wrapper = await mountIn(Graph, { steps: { 0: aStep(0, { type: 'data_input', tool_id: null, tool_version: null }) } })
+    mounted = wrapper
+
+    expect(wrapper.findAll('.vue-flow__node[data-id="0"] .vue-flow__handle').length).toBeGreaterThan(0)
+  })
+
   it('names a connection pointing at no step instead of dropping it silently', async () => {
     const wrapper = await mountIn(Graph, {
       steps: {
@@ -166,6 +196,56 @@ describe('galaxyWorkflowGraph', () => {
     // The level comes with it, so whatever renders the selection can name the
     // steps feeding it without knowing how deep the canvas has been drilled.
     expect(Object.keys((selections[0] as { level: Record<string, unknown> }).level)).toEqual(Object.keys(steps))
+  })
+
+  it('forgets a reader\'s place when a different revision arrives, and keeps it across a refetch', async () => {
+    // Two defects in one assertion. The reset was keyed on the steps' *ids*,
+    // which are `order_index`es — so any two workflows of the same length
+    // shared them, and since the analysis page mounts this panel without a
+    // `:key`, routing from one analysis to another kept the first one's
+    // drill-down. Keyed on the object instead, the Retry beside an
+    // unavailable tool would throw the reader's place away on every refetch.
+    const nested = describedSteps(FIXTURES.subworkflowNested)
+    const { wrapper, setSteps } = await mountReactive(nested)
+    mounted = wrapper
+
+    await wrapper.find('[data-testid="open-subworkflow-8"]').trigger('click')
+    await nextTick()
+    expect(wrapper.find('[data-testid="graph-trail-8"]').exists()).toBe(true)
+
+    // A refetch of the same revision: a new object, the same steps.
+    setSteps({ ...nested })
+    await nextTick()
+    expect(wrapper.find('[data-testid="graph-trail-8"]').exists()).toBe(true)
+
+    // A different revision, of the same length: different uuids, so the place
+    // goes.
+    setSteps(Object.fromEntries(
+      Object.entries(nested).map(([stepId, step]) => [stepId, { ...step, uuid: `other-${stepId}` }]),
+    ))
+    await nextTick()
+    expect(wrapper.find('[data-testid="graph-trail-8"]').exists()).toBe(false)
+  })
+
+  it('falls back to the deepest drawable level rather than a blank canvas', async () => {
+    // Reachable when a refetch answers a revision that no longer declares the
+    // step a reader had drilled into. Drawn at the raw path, the canvas went
+    // blank *and* the breadcrumb vanished with it, so there was no way back.
+    const nested = describedSteps(FIXTURES.subworkflowNested)
+    const { wrapper, setSteps } = await mountReactive(nested)
+    mounted = wrapper
+
+    await wrapper.find('[data-testid="open-subworkflow-8"]').trigger('click')
+    await nextTick()
+    expect(wrapper.findAll('.vue-flow__node')).toHaveLength(9)
+
+    // The same steps by uuid — so the reset above does not fire — but step 8
+    // embeds nothing any more.
+    setSteps({ ...nested, 8: { ...nested['8']!, subworkflow: null } })
+    await nextTick()
+
+    expect(wrapper.findAll('.vue-flow__node')).toHaveLength(14)
+    expect(wrapper.find('[data-testid="graph-trail-root"]').exists()).toBe(false)
   })
 
   it('leaves no stored layout behind, so the next render lays the graph out again', async () => {
@@ -302,6 +382,29 @@ describe('galaxyWorkflowGraphView', () => {
     await nextTick()
 
     expect(wrapper.findAll('.vue-flow__node')).toHaveLength(9)
+  })
+
+  it('lays the graph out downwards when asked, and says which way it will go next', async () => {
+    // Q6 is "left-to-right **by default**", so there is another way to lay it
+    // out. The button carries no visible label — it read `LR`/`TB`, the
+    // layout library's vocabulary — so what it will do is in its aria-label
+    // and its icon, and that is what is asserted.
+    const wrapper = await mountIn(GraphView, { steps })
+    mounted = wrapper
+
+    const posOf = () => wrapper.find('.vue-flow__node[data-id="9"] .vue-flow__handle[data-handlepos]')
+      .attributes('data-handlepos')
+    expect(posOf()).toBe('left')
+
+    const toggle = wrapper.find('[data-testid="graph-direction"]')
+    expect(toggle.attributes('aria-label')).toBe('Lay the graph out downwards')
+    await toggle.trigger('click')
+    await nextTick()
+
+    // The anchors moved to the top and bottom, which is what routes the
+    // edges the other way about.
+    expect(posOf()).toBe('top')
+    expect(toggle.attributes('aria-label')).toBe('Lay the graph out left to right')
   })
 
   it('becomes a slideover below the small-screen breakpoint', async () => {

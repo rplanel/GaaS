@@ -9,15 +9,8 @@
  * is what the endpoint serves.
  */
 
-import type { DescribedStep } from 'nuxt-galaxy'
-import { galaxyWorkflowExportSchema } from 'blendtype'
 import { describe, expect, it } from 'vitest'
-// Reached by path, and deliberately: this is the normaliser the description
-// endpoint answers with, and the graph is only correct if it draws what that
-// function really produces. `nuxt-galaxy`'s `exports` field offers no subpath
-// for it, and copying it here would make this suite agree with a copy of the
-// thing it is meant to be testing against.
-import { describedStepsOf } from '../../../nuxt-galaxy/src/runtime/server/utils/grizzle/storedDefinition'
+import { toolDisplayName } from '../../app/utils/toolName'
 import {
   handleSides,
   NODE_HEIGHT,
@@ -25,34 +18,10 @@ import {
   stepNodeLabel,
   stepsAtPath,
   subworkflowTrail,
-  toolDisplayName,
   workflowGraph,
 } from '../../app/utils/workflowGraph'
-import { FIXTURES, loadFixture } from '../characterisation/fixtures'
-
-/** One recording's stored definition, normalised exactly as the endpoint normalises it. */
-function describedSteps(slug: string): Record<string, DescribedStep> {
-  const parsed = galaxyWorkflowExportSchema.loose().parse(loadFixture(slug).exported)
-  return describedStepsOf(parsed)
-}
-
-/** A step built by hand, for the claims that are about this code and not about Galaxy. */
-function aStep(id: number, over: Partial<DescribedStep> = {}): DescribedStep {
-  return {
-    id,
-    type: 'tool',
-    label: null,
-    uuid: `uuid-${id}`,
-    annotation: null,
-    tool_id: 'toolshed.g2.bx.psu.edu/repos/iuc/foo/foo/1.2.3',
-    tool_version: '1.2.3',
-    tool_inputs: {},
-    input_connections: {},
-    outputs: [],
-    subworkflow: null,
-    ...over,
-  }
-}
+import { FIXTURES } from '../characterisation/fixtures'
+import { aStep, describedSteps } from '../describedSteps'
 
 describe('workflowGraph', () => {
   it('draws one node per step and one edge per connection', () => {
@@ -102,6 +71,57 @@ describe('workflowGraph', () => {
 
     expect(edges.map(edge => edge.label)).toEqual(['input1'])
     expect(dangling).toEqual(['7 → 1.other'])
+  })
+
+  it('anchors each edge at the output it leaves and the input it arrives at', () => {
+    // One anchor per node is not enough: two edges from one step into one
+    // input of another leave and arrive at the same point, so they draw as a
+    // single line with both labels stacked on it.
+    const { edges, nodes } = workflowGraph(describedSteps(FIXTURES.fanIn))
+
+    const intoOneInput = edges.filter(edge => edge.target === '19' && edge.label === 'batchmode|input_fastas')
+    expect(intoOneInput.map(edge => edge.sourceHandle).sort()).toEqual(['proviruses', 'viruses'])
+    expect(intoOneInput.map(edge => edge.targetHandle)).toEqual(['batchmode|input_fastas', 'batchmode|input_fastas'])
+
+    // And step 14 carries an anchor for each of them.
+    const source = nodes.find(node => node.id === '14')!
+    expect(source.data.sourceHandles).toContain('proviruses')
+    expect(source.data.sourceHandles).toContain('viruses')
+  })
+
+  it('anchors an output of a subworkflow step, which declares none', () => {
+    // Galaxy writes `outputs: []` on a subworkflow step whatever the workflow
+    // inside it produces, naming the real ones in `workflow_outputs`. Read
+    // only from the declared list, a subworkflow feeding a downstream step
+    // would have no anchor for the edge to leave from — and the recording has
+    // exactly that: step 8 declares nothing, and step 10 reads from it.
+    const steps = describedSteps(FIXTURES.subworkflowNested)
+    expect(steps['8']!.outputs).toEqual([])
+
+    const { nodes, edges } = workflowGraph(steps)
+    const read = edges.find(edge => edge.source === '8')!
+    expect(read.sourceHandle).toBe('Seurat input for gene expression (filtered)')
+    expect(nodes.find(node => node.id === '8')!.data.sourceHandles).toContain(read.sourceHandle)
+  })
+
+  it('gives an input nothing feeds no anchor, and an unread output none either', () => {
+    const { nodes } = workflowGraph({
+      0: aStep(0, { type: 'data_input', tool_id: null, tool_version: null, outputs: [{ name: 'output', type: 'input' }] }),
+      1: aStep(1, {
+        input_connections: { fed: { id: 0, output_name: 'output' } },
+        outputs: [{ name: 'produced', type: 'txt' }],
+      }),
+    })
+
+    const fed = nodes.find(node => node.id === '1')!
+    // Only the input something feeds: there is no edge to meet an anchor for
+    // the others, and #97's mark is how a reader hears about one that should
+    // have had an edge.
+    expect(fed.data.targetHandles).toEqual(['fed'])
+    // A declared output keeps its anchor whether or not anything reads it,
+    // so the day an output handle is shown it is already there.
+    expect(fed.data.sourceHandles).toEqual(['produced'])
+    expect(nodes.find(node => node.id === '0')!.data.targetHandles).toEqual([])
   })
 
   it('lays out left to right by default and top to bottom on request', () => {

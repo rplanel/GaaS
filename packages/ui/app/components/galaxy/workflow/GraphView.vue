@@ -18,12 +18,10 @@ import { useDefinedBreakpoints } from '../../../composables/useDefinedBreakpoint
  * which per-step marks they hand the canvas.
  */
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   /** The revision's steps, keyed by `order_index`, as the description endpoint answers them. */
   steps: Record<string, DescribedStep>
-  /** How tall the canvas is. A graph needs room; how much is the screen's business, not this component's. */
-  height?: string
-}>(), { height: 'h-[60vh]' })
+}>()
 
 const { isSmallDesktopOrMobile } = useDefinedBreakpoints()
 
@@ -32,7 +30,6 @@ const selection = ref<GraphSelection | undefined>(undefined)
 
 const graph = useTemplateRef<{
   fit: () => void
-  focus: (stepIds: string[]) => void
   clearSelection: () => void
   openSubworkflow: (stepId: string) => void
 } | null>('graph')
@@ -57,10 +54,6 @@ const detailOpen = computed({
   },
 })
 
-function onSelect(next: GraphSelection | undefined) {
-  selection.value = next
-}
-
 function openSubworkflow(stepId: string) {
   graph.value?.openSubworkflow(stepId)
 }
@@ -78,6 +71,11 @@ watch(isSmallDesktopOrMobile, () => graph.value?.fit())
         {{ stepCount }} step{{ stepCount === 1 ? '' : 's' }}
       </p>
       <div class="flex items-center gap-1">
+        <!--
+          Icon and label only. It read `LR` / `TB` on screen, which is the
+          layout library's vocabulary and not a word a reader has any reason
+          to know.
+        -->
         <UButton
           size="xs"
           variant="ghost"
@@ -86,9 +84,7 @@ watch(isSmallDesktopOrMobile, () => graph.value?.fit())
           :aria-label="direction === 'LR' ? 'Lay the graph out downwards' : 'Lay the graph out left to right'"
           data-testid="graph-direction"
           @click="direction = direction === 'LR' ? 'TB' : 'LR'"
-        >
-          {{ direction }}
-        </UButton>
+        />
         <UButton
           size="xs"
           variant="ghost"
@@ -101,7 +97,8 @@ watch(isSmallDesktopOrMobile, () => graph.value?.fit())
       </div>
     </div>
 
-    <div class="flex gap-4 min-h-0" :class="height">
+    <!-- A graph needs room, and this is how much of the viewport it is given. -->
+    <div class="flex gap-4 min-h-0 h-[60vh]">
       <!--
         A border rather than a ring: the canvas clips what overflows it, and a
         ring is a shadow drawn outside the box, so its edges are cut off and
@@ -117,7 +114,7 @@ watch(isSmallDesktopOrMobile, () => graph.value?.fit())
             ref="graph"
             :steps="steps"
             :direction="direction"
-            @select="onSelect"
+            @select="next => selection = next"
           />
           <template #fallback>
             <div class="size-full grid place-items-center text-sm text-dimmed">

@@ -199,6 +199,35 @@ describe('the workflow the analysis history panel describes', () => {
 })
 
 /**
+ * #89. The graph is drawn from the revision the analysis ran, beside the jobs
+ * rather than instead of them. Asserted here because a component nothing
+ * mounts is a component nobody sees, and the graph's own suite proves only
+ * that it draws when it is handed steps.
+ */
+describe('the graph beside the jobs', () => {
+  it('draws the revision the analysis ran', async () => {
+    const panel = await mountPanel(7)
+
+    await vi.waitFor(() => {
+      expect(panel.find('[data-testid="workflow-graph-view"]').exists()).toBe(true)
+      // The one step the described revision declares, as a node.
+      expect(panel.find('[data-testid="workflow-node-2"]').exists()).toBe(true)
+    })
+  })
+
+  it('is left out when the revision could not be described, rather than drawn empty', async () => {
+    // A failed description leaves `steps` empty, and an empty canvas reads as
+    // a workflow of no steps. The alert beside it is what says otherwise.
+    const panel = await mountPanel(9)
+
+    await vi.waitFor(() => {
+      expect(panel.find('[data-testid="workflow-description-error"]').exists()).toBe(true)
+    })
+    expect(panel.find('[data-testid="workflow-graph-view"]').exists()).toBe(false)
+  })
+})
+
+/**
  * #87. Only the tool names and parameter labels on this page come from
  * Galaxy. The inputs, the jobs and their states, stdout, stderr and the
  * outputs all come from this server's own database, and a reader who opened

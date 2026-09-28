@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { VueFlowStore } from '@vue-flow/core'
 import type { DescribedStep } from 'nuxt-galaxy'
-import type { GraphDirection } from '../../../utils/workflowGraph'
+import type { GraphDirection, WorkflowGraphNodeData } from '../../../utils/workflowGraph'
 import { computed, nextTick, ref, useId, watch } from '#imports'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { Handle, Panel, VueFlow } from '@vue-flow/core'
+import { stepKind } from '../../../utils/stepKind'
 import { handleSides, NODE_HEIGHT, NODE_WIDTH, stepsAtPath, subworkflowTrail, workflowGraph } from '../../../utils/workflowGraph'
 
 /**
@@ -77,13 +78,25 @@ const selectedStepId = ref<string | undefined>(undefined)
  */
 const flowId = `workflow-graph-${useId()}`
 
-/** The steps of the level being drawn, or the workflow itself at the root. */
-const levelSteps = computed(() => stepsAtPath(props.steps, path.value) ?? {})
-
-const graph = computed(() => workflowGraph(levelSteps.value, props.direction))
-
 /** The subworkflows drilled into, so a reader can get back out again. */
 const trail = computed(() => subworkflowTrail(props.steps, path.value))
+
+/**
+ * The path actually drawn, which is the trail's and not `path`'s.
+ *
+ * `subworkflowTrail` stops where a path stops resolving, so this is the
+ * deepest level still drawable. Drawing at the raw path instead left a reader
+ * on a blank canvas **with no breadcrumb to leave by**: `stepsAtPath` answered
+ * nothing, and the trail — being empty — hid the way out. Reachable whenever
+ * the description is refetched and the revision no longer declares the step
+ * that was drilled into.
+ */
+const drawnPath = computed(() => trail.value.map(crumb => crumb.stepId))
+
+/** The steps of the level being drawn, or the workflow itself at the root. */
+const levelSteps = computed(() => stepsAtPath(props.steps, drawnPath.value) ?? {})
+
+const graph = computed(() => workflowGraph(levelSteps.value, props.direction))
 
 /**
  * Where the handles sit, which is what actually routes an edge: Vue Flow
@@ -95,24 +108,60 @@ const trail = computed(() => subworkflowTrail(props.steps, path.value))
  */
 const sides = computed(() => handleSides(props.direction))
 
+/**
+ * Where one of several anchors sits along the side of a node.
+ *
+ * Vue Flow stacks every handle of a side at the same point unless it is told
+ * otherwise, and stacked anchors are what made two edges look like one. They
+ * are spread evenly, so the *n*th of *m* sits at `(n + 1) / (m + 1)` of the
+ * way along — which keeps a single anchor centred, as it was.
+ */
+function anchorOffset(index: number, count: number): Record<string, string> {
+  const along = `${((index + 1) / (count + 1)) * 100}%`
+  return props.direction === 'LR' ? { top: along } : { left: along }
+}
+
+/**
+ * The anchors to draw on one side of a node, always at least one.
+ *
+ * A node with no handle at all is one Vue Flow can route no edge to, so a
+ * step nothing feeds and nothing reads still gets an unnamed anchor: a
+ * single-step workflow would otherwise render handle-less and then refuse an
+ * edge the moment something fed it.
+ *
+ * Out of the template because the two sides were an unreadable nested
+ * ternary in a `v-for` expression, and because a typed array is what lets
+ * `anchorOffset` be handed a number rather than Vue's `string | number`.
+ */
+function anchorsOn(data: WorkflowGraphNodeData, side: 'source' | 'target'): string[] {
+  if (side === 'target' && !data.acceptsInput) {
+    return []
+  }
+  const named = side === 'source' ? data.sourceHandles : data.targetHandles
+  return named.length > 0 ? named : ['']
+}
+
+/**
+ * What a reader is told about a connection that could not be drawn.
+ *
+ * A function rather than an expression in the template: stated inline, the
+ * singular/plural rule appeared four times in one attribute and could not be
+ * read at all.
+ */
+function describeDangling(dangling: readonly string[]): { title: string, description: string } {
+  const several = dangling.length > 1
+  return {
+    title: `${dangling.length} connection${several ? 's' : ''} could not be drawn`,
+    description: `${dangling.join(', ')} — ${several ? 'these connections name steps' : 'this connection names a step'} `
+      + `this workflow does not declare, so the graph above is missing ${several ? 'them' : 'it'}. `
+      + 'Republishing this version is what mends it.',
+  }
+}
+
 const flow = ref<VueFlowStore | undefined>(undefined)
 
 function onPaneReady(instance: VueFlowStore) {
   flow.value = instance
-}
-
-/**
- * Bring named steps into view.
- *
- * A canvas can hold a node off-screen, or at a zoom nobody can read, which a
- * form never could — so anything that needs to point at a step has to be able
- * to move the view onto it rather than leave the reader to find it. #91 marks
- * the steps that would refuse a submission and needs exactly this.
- */
-function focus(stepIds: string[]) {
-  if (stepIds.length > 0) {
-    flow.value?.fitView({ nodes: stepIds, padding: 0.4, duration: 400, maxZoom: 1.2 })
-  }
 }
 
 function fit() {
@@ -126,7 +175,7 @@ function select(stepId: string | undefined) {
     emit('select', undefined)
     return
   }
-  emit('select', { stepId, step, path: [...path.value], level: levelSteps.value })
+  emit('select', { stepId, step, path: [...drawnPath.value], level: levelSteps.value })
 }
 
 /**
@@ -136,10 +185,13 @@ function select(stepId: string | undefined) {
  * not on the canvas any more.
  */
 function open(stepId: string) {
-  if (levelSteps.value[stepId]?.subworkflow === null) {
+  // The step has to exist *and* embed a workflow. Testing only for `null`
+  // let an unknown id through — `undefined` is not `null` — and pushed it
+  // onto the path, which drew nothing and hid the breadcrumb with it.
+  if (levelSteps.value[stepId]?.subworkflow == null) {
     return
   }
-  path.value = [...path.value, stepId]
+  path.value = [...drawnPath.value, stepId]
   select(undefined)
 }
 
@@ -150,7 +202,6 @@ function goTo(to: readonly string[]) {
 }
 
 defineExpose({
-  focus,
   fit,
   clearSelection: () => select(undefined),
   /** Draw a subworkflow's own graph, as pressing the node's own control does. */
@@ -158,16 +209,20 @@ defineExpose({
 })
 
 /**
- * A different workflow is a different graph, so nothing about where the
+ * A different revision is a different graph, so nothing about where the
  * reader had got to in the last one survives.
  *
- * Keyed on the step *ids*, not on the object: the description is refetched
- * whenever the Retry beside an unavailable tool is pressed, and a new object
- * describing the same revision must not throw away the subworkflow a reader
- * is looking at.
+ * Keyed on the steps' **uuids**, not on the object and not on their ids. Not
+ * the object, because the description is refetched whenever the Retry beside
+ * an unavailable tool is pressed and a new object describing the same
+ * revision must not throw away the subworkflow a reader is looking at. Not
+ * the ids either, which was the first attempt: those are `order_index`es, so
+ * any two workflows of the same length have the same ones — and since the
+ * analysis page mounts this panel without a `:key`, routing from one analysis
+ * to another reused the component and kept the first one's drill-down.
  */
 watch(
-  () => Object.keys(props.steps).join(','),
+  () => Object.values(props.steps).map(step => step.uuid).join(','),
   () => {
     path.value = []
     select(undefined)
@@ -176,7 +231,7 @@ watch(
 
 // Re-laying out moves every node at once, so the view is fitted again rather
 // than left pointing at where the graph used to be.
-watch([() => props.direction, path], () => nextTick(fit))
+watch([() => props.direction, drawnPath], () => nextTick(fit))
 </script>
 
 <template>
@@ -252,8 +307,7 @@ watch([() => props.direction, path], () => nextTick(fit))
         icon="i-lucide:unlink"
         class="max-w-xs"
         data-testid="graph-dangling"
-        :title="`${graph.dangling.length} connection${graph.dangling.length > 1 ? 's' : ''} could not be drawn`"
-        :description="`${graph.dangling.join(', ')} — ${graph.dangling.length > 1 ? 'these connections name steps' : 'this connection names a step'} this workflow does not declare, so the graph above is missing ${graph.dangling.length > 1 ? 'them' : 'it'}. Republishing this version is what mends it.`"
+        v-bind="describeDangling(graph.dangling)"
       />
     </Panel>
 
@@ -264,17 +318,50 @@ watch([() => props.direction, path], () => nextTick(fit))
         :style="{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }"
         :data-testid="`workflow-node-${id}`"
       >
-        <Handle v-if="data.acceptsInput" type="target" :position="sides.target" />
-        <Handle type="source" :position="sides.source" />
+        <!--
+          One anchor per output, and one per input something feeds, spaced
+          along the node's edge. A single pair per node drew the two edges of
+          a fan-in as one line with both labels stacked on it — present in
+          the DOM, indistinguishable on screen, which is the failure a graph
+          cannot signal.
+
+          A step with no anchors still gets one, unnamed: a node with no
+          handle at all is one Vue Flow can route no edge to, and a workflow
+          of one step would otherwise render handle-less and then refuse an
+          edge the moment something fed it.
+        -->
+        <Handle
+          v-for="(inputName, index) in anchorsOn(data, 'target')"
+          :id="inputName || undefined"
+          :key="`target-${inputName}`"
+          type="target"
+          :position="sides.target"
+          :style="anchorOffset(index, anchorsOn(data, 'target').length)"
+        />
+        <Handle
+          v-for="(outputName, index) in anchorsOn(data, 'source')"
+          :id="outputName || undefined"
+          :key="`source-${outputName}`"
+          type="source"
+          :position="sides.source"
+          :style="anchorOffset(index, anchorsOn(data, 'source').length)"
+        />
 
         <div class="flex items-center justify-between gap-2">
+          <!--
+            The glossary's word for what kind of step this is, never Galaxy's
+            identifier: a badge reading `data_input` puts an API field name in
+            front of a reader. Colour and icon come from the same map, which
+            is also what stops them being two ternary cascades over the same
+            booleans.
+          -->
           <UBadge
             size="xs"
             variant="subtle"
-            :color="data.isSubworkflow ? 'info' : data.acceptsInput ? 'primary' : 'neutral'"
-            :icon="data.isSubworkflow ? 'i-lucide:workflow' : data.acceptsInput ? 'i-lucide:wrench' : 'i-material-symbols:dataset'"
+            :color="stepKind(data.step.type).color"
+            :icon="stepKind(data.step.type).icon"
           >
-            {{ data.step.type }}
+            {{ stepKind(data.step.type).word }}
           </UBadge>
           <div class="flex items-center gap-1">
             <!--

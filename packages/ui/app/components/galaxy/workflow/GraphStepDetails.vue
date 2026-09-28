@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { GraphSelection } from './Graph.vue'
 import { computed } from '#imports'
-import { stepNodeLabel, toolDisplayName } from '../../../utils/workflowGraph'
+import { stepKind } from '../../../utils/stepKind'
+import { toolDisplayName } from '../../../utils/toolName'
+import { connectionsOf, edgeId, stepNodeLabel } from '../../../utils/workflowGraph'
 
 /**
  * What the panel beside the canvas says about the selected step (#89).
@@ -25,28 +27,28 @@ const emit = defineEmits<{ open: [stepId: string] }>()
 /**
  * Every edge feeding the selected step, named by the step it comes from.
  *
- * The upstream step is named by its own label rather than by its index alone,
- * because the index is what the node shows and the label is what the reader
- * recognises. Both, in fact: `#3 Align the reads` reads as the node does.
+ * Walked by `connectionsOf`, the same function the canvas draws its edges
+ * with, and keyed by the same `edgeId`. Walked twice the two could disagree
+ * about how many edges there are — a panel listing one where the canvas draws
+ * two would be the fan-in defect again, in words instead of pixels.
+ *
+ * The upstream step is named by its own label as well as its index, because
+ * the index is what the node shows and the label is what a reader
+ * recognises: `#3 Align the reads` reads as the node does.
  */
 const incoming = computed(() => {
   const selection = props.selection
   if (selection === undefined) {
     return []
   }
-  return Object.entries(selection.step.input_connections ?? {}).flatMap(([inputName, value]) =>
-    // One or several per input, whichever shape the export wrote (#82).
-    (Array.isArray(value) ? value : [value]).map((connection) => {
-      const from = selection.level[String(connection.id)]
-      return {
-        key: `${connection.id}:${connection.output_name}->${inputName}`,
-        inputName,
-        fromStepId: String(connection.id),
-        fromLabel: from === undefined ? null : stepNodeLabel(from),
-        outputName: connection.output_name,
-      }
-    }),
-  )
+  return connectionsOf(selection.step).map((connection) => {
+    const from = selection.level[connection.from]
+    return {
+      ...connection,
+      key: edgeId(connection, selection.stepId),
+      fromLabel: from === undefined ? null : stepNodeLabel(from),
+    }
+  })
 })
 
 const toolName = computed(() => {
@@ -78,8 +80,14 @@ const nestedStepCount = computed(() =>
           </p>
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          <UBadge size="xs" variant="subtle" color="neutral">
-            {{ selection.step.type }}
+          <!-- The glossary's word for the kind of step, never Galaxy's identifier. -->
+          <UBadge
+            size="xs"
+            variant="subtle"
+            :color="stepKind(selection.step.type).color"
+            :icon="stepKind(selection.step.type).icon"
+          >
+            {{ stepKind(selection.step.type).word }}
           </UBadge>
           <span class="text-xs text-dimmed">#{{ selection.stepId }}</span>
         </div>
@@ -139,10 +147,10 @@ const nestedStepCount = computed(() =>
                 shown as a blank.
               -->
               <template v-if="edge.fromLabel === null">
-                #{{ edge.fromStepId }} (no such step) · {{ edge.outputName }}
+                #{{ edge.from }} (no such step) · {{ edge.outputName }}
               </template>
               <template v-else>
-                #{{ edge.fromStepId }} {{ edge.fromLabel }} · {{ edge.outputName }}
+                #{{ edge.from }} {{ edge.fromLabel }} · {{ edge.outputName }}
               </template>
             </dd>
           </template>

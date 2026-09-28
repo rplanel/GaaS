@@ -24,7 +24,7 @@ import { describeStartAnalysisFailure, unexplainedStartAnalysisFailure } from '.
 // and twice would be two answers to "what is this tool called" — the version
 // is still read off `tool_version`, never out of the id, since only a
 // toolshed guid carries one (#100).
-import { toolDisplayName } from '../../../utils/workflowGraph'
+import { toolDisplayName } from '../../../utils/toolName'
 
 // type Database = SupabaseTypes.Database
 export type UploadedDatasetDb = Database['galaxy']['Views']['uploaded_datasets_with_storage_path']['Row']

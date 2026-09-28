@@ -294,6 +294,45 @@ One thing shared rather than copied: Galaxy's naming of an input step moved to
 twice, a node and a form field could have named one input two different
 plausible things.
 
+#### What a review of it found
+
+**Two edges in the DOM are not two edges on screen.** The first cut gave each
+node one source anchor and one target anchor, and the tests asserted that both
+edges of a fan-in existed — which they did. On screen they left and arrived at
+the same two points, carried the same label, and drew as **one line with two
+labels stacked on it**. AC2 passed its assertion and failed at the only thing
+it is for: a reader could not tell that from a single connection, which is the
+same failure as dropping the edge. So a node now carries one anchor per output
+and one per input something feeds, spread along its side, and an edge names
+both.
+
+The anchors cannot come from `outputs` alone. Galaxy writes `outputs: []` on a
+subworkflow step whatever the workflow inside it produces, naming the real ones
+in `workflow_outputs` — and `subworkflow-nested` has exactly that: step 8
+declares nothing and step 10 reads `Seurat input for gene expression
+(filtered)` from it. So they are the declared list **union** every output name a
+downstream connection reads, and a step that is neither fed nor read still gets
+one unnamed anchor, because a node with no handle is one Vue Flow can route no
+edge to.
+
+**Two ways to be left looking at the wrong graph.** Resetting the drill-down on
+the steps' *ids* did not reset it at all between workflows: those are
+`order_index`es, so any two workflows of the same length share them, and the
+analysis page mounts the panel without a `:key`. It is keyed on the steps'
+uuids now, which still survives the refetch that the Retry beside an
+unavailable tool triggers. And the canvas drew at the raw path rather than at
+the trail's, so a refetch answering a revision that no longer declares the step
+a reader had drilled into left them on a **blank canvas with no breadcrumb to
+leave by** — the trail was empty, so the way out was hidden. Both now read one
+`drawnPath`, which is the deepest level that still resolves.
+
+Smaller things the review was right about: the badge rendered Galaxy's
+identifier (`data_input`) where `CONTEXT.md` asks for the glossary's words; the
+direction button read `LR`/`TB`, the layout library's vocabulary; `focus()` was
+exposed for #91 and called by nothing; and nothing asserted that the canvas
+reached the analysis page at all, which is the one failure a component suite
+structurally cannot see.
+
 ### Verdict on the refactor
 
 Refactor the **Galaxy-side fetching**. Leave the **Supabase side alone** — jobs,
