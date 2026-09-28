@@ -50,13 +50,18 @@
  */
 
 import type {
+  GalaxyBooleanToolParameter,
   GalaxyDataToolParameter,
   GalaxyDataToolValue,
+  GalaxyFloatToolParameter,
+  GalaxyIntegerToolParameter,
+  GalaxyMultipleSelectToolParameter,
+  GalaxySingleSelectToolParameter,
   WorkflowConditionalParametersValue,
   WorkflowParameterValue,
   WorkflowRepeatInstanceValue,
 } from 'blendtype'
-import { isWorkflowRepeatInstanceValue, isWorkflowRuntimeValue } from 'blendtype'
+import { booleanToolParameterValue, isWorkflowRepeatInstanceValue, isWorkflowRuntimeValue } from 'blendtype'
 import { describe, expect, it } from 'vitest'
 import { FIXTURES, loadFixture } from './fixtures'
 
@@ -224,9 +229,10 @@ function admitNestedList(
   return values.map((entry, position) => admitFields(`${where}[${position}]`, entry, tally))
 }
 
+// ------------------------------------------- one admit per declared parameter
+
 /** One recorded data parameter's `value`, retyped as the declared type. */
-function admitDataParameterValue(where: string, value: unknown, tally: Tally): GalaxyDataToolParameter['value'] {
-  tally.placed += 1
+function admitDataParameterValue(where: string, value: unknown): GalaxyDataToolParameter['value'] {
   if (value === null) {
     return value
   }
@@ -234,6 +240,69 @@ function admitDataParameterValue(where: string, value: unknown, tally: Tally): G
     return value
   }
   throw new TypeError(`${where}: GalaxyDataToolParameter['value'] does not admit ${preview(value)}`)
+}
+
+/**
+ * One recorded boolean parameter's `value`.
+ *
+ * Both spellings, because the wire type changed between the two releases and
+ * the recordings straddle the change: `"false"` from `ccqtl_genome_scan` at
+ * 22.05, nine real `false`s from `integron_finder` at 26.1 (#110).
+ */
+function admitBooleanParameterValue(where: string, value: unknown): GalaxyBooleanToolParameter['value'] {
+  if (value === null || typeof value === 'boolean' || typeof value === 'string') {
+    return value
+  }
+  throw new TypeError(`${where}: GalaxyBooleanToolParameter['value'] does not admit ${preview(value)}`)
+}
+
+/**
+ * One recorded select parameter's `value`, against the subtype it actually is.
+ *
+ * Dispatched on `multiple` rather than admitted against the base, because the
+ * base is not what a reader gets: `GalaxySingleSelectToolParameter` narrows
+ * `value` back to `string`, and widening only the base would have left the
+ * recorded `type_replicon` refused by the very interface it belongs to (#110).
+ */
+function admitSelectParameterValue(
+  where: string,
+  value: unknown,
+  multiple: unknown,
+): GalaxySingleSelectToolParameter['value'] | GalaxyMultipleSelectToolParameter['value'] {
+  if (multiple === true) {
+    if (value === null) {
+      return value
+    }
+    if (Array.isArray(value) && isStringArray(value)) {
+      return value
+    }
+    throw new TypeError(`${where}: GalaxyMultipleSelectToolParameter['value'] does not admit ${preview(value)}`)
+  }
+  if (value === null || typeof value === 'string') {
+    return value
+  }
+  throw new TypeError(`${where}: GalaxySingleSelectToolParameter['value'] does not admit ${preview(value)}`)
+}
+
+/**
+ * One recorded integer or float parameter's `value`.
+ *
+ * Here to keep them **string**, which is what they are on both releases:
+ * `IntegerToolParameter`'s doctest asserts `('value', u'10')` and
+ * `FloatToolParameter`'s `('value', u'3.141592')`, byte-identical at 22.05 and
+ * 26.1, and the 26.1 recording carries `dist_thresh: "4000"`. They inherit
+ * `TextToolParameter`, which 26.1 did not change the way it changed
+ * `BooleanToolParameter` — so this is the assertion that would notice if a
+ * later release changed them too, rather than a reader finding out (#110).
+ */
+function admitNumericParameterValue(
+  where: string,
+  value: unknown,
+): GalaxyIntegerToolParameter['value'] | GalaxyFloatToolParameter['value'] {
+  if (typeof value === 'string') {
+    return value
+  }
+  throw new TypeError(`${where}: an integer or float parameter's declared value is a string, not ${preview(value)}`)
 }
 
 // -------------------------------------------------------------- the payloads
@@ -309,41 +378,113 @@ function exportStates(exported: unknown, prefix = 'step'): Found[] {
   return states
 }
 
+/** One declared parameter of a recorded tool, by Galaxy's own prefixed name. */
+interface DeclaredParameter {
+  where: string
+  node: Record<string, unknown>
+}
+
 /**
- * Every data parameter a recorded tool declares, by Galaxy's own prefixed
- * name, with the `value` it was recorded with.
+ * Every parameter a recorded tool declares, nesting included.
  *
  * The walk is structural and over `unknown` for the reason
- * `unconnectedDatasetInputs` is: a data parameter sits inside a conditional's
- * case, a repeat block or a section, and only the first of those three is in
- * `GalaxyToolParameters` at all.
+ * `unconnectedDatasetInputs` is: a parameter sits inside a conditional's case,
+ * a repeat block or a section, and none of those three is in
+ * `GalaxyToolParameters` at all (#101 owns that). Walking *through* them
+ * without typing them is what lets this reach the nine parameters under
+ * `integron_finder`'s `settings` section, which is where half the recorded
+ * booleans and every recorded integer live.
+ *
+ * A conditional's `test_param` is visited too, and it is not an afterthought:
+ * Galaxy requires it to be a `select` or a `boolean`, so it is exactly one of
+ * the two kinds #110 is about.
  */
-function dataParameterValues(tool: unknown, prefix = ''): Found[] {
+function declaredParameters(tool: unknown, prefix = ''): DeclaredParameter[] {
   const nodes = isRecord(tool) && Array.isArray(tool.inputs) ? tool.inputs : []
-  const found: Found[] = []
+  const found: DeclaredParameter[] = []
   for (const node of nodes) {
     if (!isRecord(node) || typeof node.name !== 'string') {
       continue
     }
     const name = `${prefix}${node.name}`
-    if (node.type === 'data') {
-      found.push({ where: name, value: node.value })
-      continue
-    }
     if (node.type === 'section' || node.type === 'repeat') {
-      found.push(...dataParameterValues(node, `${name}|`))
+      found.push({ where: name, node })
+      found.push(...declaredParameters(node, `${name}|`))
       continue
     }
     if (node.type === 'conditional') {
+      found.push({ where: name, node })
+      if (isRecord(node.test_param)) {
+        found.push({ where: `${name}|${String(node.test_param.name)}`, node: node.test_param })
+      }
       // Every case, not the one a revision happens to be on: this is about
       // what the tool declares, and each case declares its own parameters.
-      const cases = Array.isArray(node.cases) ? node.cases : []
-      for (const one of cases) {
-        found.push(...dataParameterValues(one, `${name}|`))
+      for (const one of Array.isArray(node.cases) ? node.cases : []) {
+        found.push(...declaredParameters(one, `${name}|`))
       }
+      continue
     }
+    found.push({ where: name, node })
   }
   return found
+}
+
+/**
+ * The `model_class`es this project declares no type for, and so cannot check a
+ * `value` against.
+ *
+ * Named rather than skipped: asserted as an exact set below, so a recording
+ * that brings a *new* unmodelled kind fails a test instead of being walked
+ * past in silence. Every one of these is #101's — three nesting kinds and
+ * `data_collection` — except `TextToolParameter`, which is simply absent from
+ * `GalaxyToolParameterType` and has no ticket of its own yet.
+ */
+const UNMODELLED_KINDS = ['DataCollectionToolParameter', 'Repeat', 'Section', 'TextToolParameter']
+
+/**
+ * One declared parameter's `value`, admitted against the type its
+ * `model_class` names. Returns the kind when there is no type to check it
+ * against, so the caller can pin that set rather than lose it.
+ */
+function admitDeclaredValue(where: string, node: Record<string, unknown>, tally: Tally): string | undefined {
+  const kind = String(node.model_class)
+  const value = node.value
+  switch (kind) {
+    case 'DataToolParameter':
+      tally.placed += 1
+      admitDataParameterValue(where, value)
+      return undefined
+    case 'BooleanToolParameter': {
+      tally.placed += 1
+      const admitted = admitBooleanParameterValue(where, value)
+      // And through the published reader, against every recorded boolean:
+      // whichever release wrote it, a caller must end up with a boolean or
+      // `null` and never the string a 22.05 payload carries — which is the
+      // whole of what #110 is for. Asserted here rather than only in
+      // `blendtype`'s own unit tests because this is where the values are
+      // real: `"false"` from Pasteur, `false` from usegalaxy.eu.
+      const read = booleanToolParameterValue({ value: admitted, optional: Boolean(node.optional) })
+      if (read !== null && typeof read !== 'boolean') {
+        throw new TypeError(`${where}: booleanToolParameterValue answered ${preview(read)}`)
+      }
+      return undefined
+    }
+    case 'SelectToolParameter':
+      tally.placed += 1
+      admitSelectParameterValue(where, value, node.multiple)
+      return undefined
+    case 'IntegerToolParameter':
+    case 'FloatToolParameter':
+      tally.placed += 1
+      admitNumericParameterValue(where, value)
+      return undefined
+    case 'Conditional':
+      // No `value` of its own — `test_param` carries it, and the walk above
+      // hands that over separately.
+      return undefined
+    default:
+      return kind
+  }
 }
 
 // ----------------------------------------------------------------- the suite
@@ -366,7 +507,7 @@ describe('the saved tool state of every recorded step is a WorkflowToolParameter
   }
 })
 
-describe('the value of every recorded data parameter is one its declared type admits', () => {
+describe('the value of every recorded parameter is one its declared type admits', () => {
   for (const slug of Object.values(FIXTURES)) {
     const fixture = loadFixture(slug)
     // `fan-in` and `subworkflow-nested` were recorded `--no-tools`: what they
@@ -376,13 +517,17 @@ describe('the value of every recorded data parameter is one its declared type ad
       continue
     }
 
-    it(`${slug} — every data parameter of every tool it pins`, () => {
+    it(`${slug} — every parameter of every tool it pins`, () => {
       const tally: Tally = { placed: 0 }
       const refused: string[] = []
+      const unmodelled = new Set<string>()
       for (const [toolKey, tool] of Object.entries(fixture.tools)) {
-        for (const { where, value } of dataParameterValues(tool)) {
+        for (const { where, node } of declaredParameters(tool)) {
           try {
-            admitDataParameterValue(`${toolKey} · ${where}`, value, tally)
+            const kind = admitDeclaredValue(`${toolKey} · ${where}`, node, tally)
+            if (kind !== undefined) {
+              unmodelled.add(kind)
+            }
           }
           catch (error) {
             refused.push(error instanceof Error ? error.message : String(error))
@@ -391,6 +536,37 @@ describe('the value of every recorded data parameter is one its declared type ad
       }
       expect(refused).toEqual([])
       expect(tally.placed).toBeGreaterThan(0)
+      // Every kind walked past is one this project declares no type for, and
+      // the set is exact so a new one announces itself.
+      expect([...unmodelled].sort().every(kind => UNMODELLED_KINDS.includes(kind)), [...unmodelled].sort().join(', ')).toBe(true)
     })
   }
+})
+
+describe('the kinds the recordings carry that nothing here types', () => {
+  it('are the four #101 and the text parameter owe, and no others', () => {
+    // Read off the recordings rather than listed by hand, so that a
+    // re-recording bringing a fifth kind fails here. `Section`, `Repeat` and
+    // `DataCollectionToolParameter` are #101's; `TextToolParameter` has no
+    // ticket yet and is the one worth noticing.
+    const kinds = new Set<string>()
+    const tally: Tally = { placed: 0 }
+    for (const slug of Object.values(FIXTURES)) {
+      const fixture = loadFixture(slug)
+      for (const tool of Object.values(fixture.tools)) {
+        for (const { where, node } of declaredParameters(tool)) {
+          try {
+            const kind = admitDeclaredValue(where, node, tally)
+            if (kind !== undefined) {
+              kinds.add(kind)
+            }
+          }
+          catch {
+            // A refusal is the other suite's business; this one counts kinds.
+          }
+        }
+      }
+    }
+    expect([...kinds].sort()).toEqual(UNMODELLED_KINDS)
+  })
 })

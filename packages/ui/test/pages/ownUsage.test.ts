@@ -140,13 +140,30 @@ describe('own usage page', () => {
   })
 
   it('fetches again when refresh is pressed, however recently the page loaded', async () => {
-    const wrapper = await mountPage()
-    const servedBeforeRefresh = timesServed
+    // Its own window, used by no other test in this file, and the mount's own
+    // request waited for before the button is pressed. Both matter, and for
+    // the same reason: the page calls `refetch`, which Colada folds into a
+    // request that is already open rather than starting a second one. Mounted
+    // on a shared range this read from an earlier test's cache entry while its
+    // own request was still in flight — `mountPage` waits for a *tile*, which
+    // a warm cache renders at once — so the press landed inside that window,
+    // served the reader correctly, and incremented nothing. The assertion then
+    // waited out its timeout for a request that was never going to be made.
+    //
+    // Passing or failing turned on scheduling alone, which is why adding one
+    // unrelated test elsewhere in the suite was enough to turn it red (#110).
+    // `usage-loading` is no use as the signal: it keys off `!stats`, so a warm
+    // cache never renders it however many requests are open.
+    const servedBeforeMount = timesServed
+    const wrapper = await mountPage('/?from=2026-05-01&to=2026-05-10')
+    await vi.waitFor(() => {
+      expect(timesServed).toBe(servedBeforeMount + 1)
+    })
 
     await wrapper.find('[data-testid="usage-refresh"]').trigger('click')
 
     await vi.waitFor(() => {
-      expect(timesServed).toBe(servedBeforeRefresh + 1)
+      expect(timesServed).toBe(servedBeforeMount + 2)
     })
   })
 })
