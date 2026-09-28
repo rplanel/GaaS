@@ -373,10 +373,14 @@ If the invoke path needs work, that is a separate ask.
 - **`require_exact_tool_versions` defaults to `true`** on `InvokeWorkflowPayload`,
   on both 22.05 and 26.1. Combined with a bound revision pin, an uninstalled
   tool version means Galaxy refuses the whole invocation. Q22 is justified.
-- **`syncAnalysisEffect` drops mapped jobs.** It writes a job row only
-  `if (step.job_id)` —
-  `packages/nuxt-galaxy/src/runtime/server/utils/grizzle/sync/analysis.ts:259`.
-  **Pre-existing defect, independent of the graph.**
+- **`syncAnalysisEffect` dropped mapped jobs.** It wrote a job row only
+  `if (step.job_id)`, which a mapped step never carries. Pre-existing defect,
+  independent of the graph. **Fixed in #84**: the sync now fetches with
+  `step_details=true` and writes one row per entry of the step's `jobs` array,
+  all at the step's `order_index`. Verified against both releases' source —
+  22.05 builds `rval["jobs"]` in `WorkflowInvocationStep.to_dict(view="element")`
+  from the `jobs` property, which returns `implicit_collection_jobs.job_list`;
+  26.1 does the same through `get_jobs_dict()`.
 - **Vue Flow renders nodes inline** (`NodeRenderer.vue`, `v-for` of
   `NodeWrapper`, `v-memo`), with **no Teleport** — so `provide`/`inject` reaches
   into nodes and `UForm` works inside one. Prototype B proved this, then
@@ -700,7 +704,11 @@ drop-and-republish, not a migration.
 3. **Sync fix: record mapped jobs**, via `step_details=true` and the per-step
    `jobs` array — not `legacy_job_state`, not `step_jobs_summary`. Independent of
    the graph, fixes a real defect, and is the prerequisite for Q18. Can go in
-   parallel with 1 and 2.
+   parallel with 1 and 2. **Done in #84.** One caveat the fix surfaced: the
+   invocation's `outputs` map holds only labelled **dataset** outputs, a mapped
+   step's output is a collection under `output_collections`, and
+   `analysis_outputs.job_id` names a single job — so the output-dataset sync
+   stays bound to a step that ran exactly one job, as it already was.
 4. **Q13(a) + Q13(b)** — the normalising endpoint and the composable, reading
    the live proxy exactly as today. Zero behaviour change; buys the
    deduplication, the caching, and one copy of the widget derivation. Q22's

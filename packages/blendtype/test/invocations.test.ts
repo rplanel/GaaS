@@ -44,6 +44,32 @@ describe('getInvocationEffect', () => {
         }),
         Effect.runPromise,
       ))
+
+    it('should ask for step details when requested, so a mapped step carries its jobs', () =>
+      pipe(
+        Effect.gen(function* () {
+          const trackingLayer = createUrlTrackingLayer(mockGalaxyInvocation)
+          yield* getInvocationEffect('inv/abc', { stepDetails: true }).pipe(
+            Effect.provide(trackingLayer),
+          )
+          expect(trackingLayer.getLastUrl()).toBe('api/invocations/inv%2Fabc')
+          expect(trackingLayer.getLastOptions()?.query).toEqual({ step_details: true })
+        }),
+        Effect.runPromise,
+      ))
+
+    it('should send no query when step details are not requested', () =>
+      pipe(
+        Effect.gen(function* () {
+          const trackingLayer = createUrlTrackingLayer(mockGalaxyInvocation)
+          yield* getInvocationEffect('inv-1', { stepDetails: false }).pipe(
+            Effect.provide(trackingLayer),
+          )
+          expect(trackingLayer.getLastUrl()).toBe('api/invocations/inv-1')
+          expect(trackingLayer.getLastOptions()).not.toHaveProperty('query')
+        }),
+        Effect.runPromise,
+      ))
   })
 
   describe('error cases', () => {
