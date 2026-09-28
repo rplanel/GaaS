@@ -4,7 +4,7 @@ import type { Database } from '../../../../types/database'
 import * as bt from 'blendtype'
 import { Data, Duration, Effect, Schedule } from 'effect'
 import { buildMonitoringUpdatePayload, deriveInvocationOutcomeFromJobsSummary, isInvocationTerminalState } from '../analysisMonitoring'
-import { syncJobEffect } from './job'
+import { isRecordedJobCurrent, selectRecordedJobsEffect, syncJobEffect } from './job'
 import { acquireSyncLock, releaseSyncLock } from './lock'
 import { syncOutputDatasetEffect } from './output'
 
@@ -48,6 +48,18 @@ export function isTransientError(error: unknown): boolean {
   return transientIndicators.some(indicator => message.includes(indicator))
 }
 
+/** A Galaxy job of an invocation step, with the step's own report of it. */
+interface StepGalaxyJob {
+  galaxyJobId: string
+  /**
+   * What the step says about the job, which is what a re-sync compares
+   * against the recorded row (#106). Absent for the `job_id` fallback: a
+   * payload fetched without step details reports no job fields at all, so
+   * such a job is always fetched.
+   */
+  reported?: bt.GalaxyInvocationStepJob
+}
+
 /**
  * Every Galaxy job an invocation step ran.
  *
@@ -62,11 +74,11 @@ export function isTransientError(error: unknown): boolean {
  * disagree — but if one ever did, dropping a job Galaxy named in `job_id`
  * is the failure this exists to prevent.
  */
-function stepGalaxyJobIds(step: bt.GalaxyInvocationStep): string[] {
+function stepGalaxyJobs(step: bt.GalaxyInvocationStep): StepGalaxyJob[] {
   if (step.jobs?.length) {
-    return step.jobs.map(job => job.id)
+    return step.jobs.map(job => ({ galaxyJobId: job.id, reported: job }))
   }
-  return step.job_id ? [step.job_id] : []
+  return step.job_id ? [{ galaxyJobId: step.job_id }] : []
 }
 
 export function getAnalysisStderrEffect(
@@ -280,14 +292,31 @@ export function syncAnalysisEffect(
       )
     }
 
+    // Read once, before the loop: a mapped step asks after one job per
+    // element, and a row-by-row lookup would only move #106's N+1 from
+    // Galaxy to Postgres.
+    const recordedJobs = yield* selectRecordedJobsEffect(supabase, analysisId)
+    let skipped = 0
+
     for (const step of invocation.steps || []) {
-      const galaxyJobIds = stepGalaxyJobIds(step)
-      if (galaxyJobIds.length === 0) {
+      const stepJobs = stepGalaxyJobs(step)
+      if (stepJobs.length === 0) {
         continue
       }
 
       const jobDbIds: number[] = []
-      for (const galaxyJobId of galaxyJobIds) {
+      for (const { galaxyJobId, reported } of stepJobs) {
+        // The invocation has already told us this job's state and update
+        // time, so a job that matches what we recorded has nothing to write
+        // and costs no `GET /api/jobs/{id}` (#106). Its row id still feeds
+        // the output sync below.
+        const recorded = recordedJobs.get(galaxyJobId)
+        if (recorded && reported && isRecordedJobCurrent(recorded, reported)) {
+          jobDbIds.push(recorded.id)
+          skipped++
+          continue
+        }
+
         jobDbIds.push(yield* syncJobEffect(
           galaxyJobId,
           // every job of a mapped step belongs to the one step, so they all
@@ -324,6 +353,10 @@ export function syncAnalysisEffect(
           galaxyLayer,
         )
       }
+    }
+
+    if (skipped > 0) {
+      yield* Effect.logDebug('unchanged jobs left unfetched', { skipped })
     }
 
     const { error: historyError } = yield* Effect.tryPromise({

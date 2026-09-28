@@ -13,6 +13,11 @@ export const jobs = galaxy.table(
     state: jobStateEnum('state').$type<JobState>().notNull(),
     toolId: varchar('tool_id', { length: 256 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    // What Galaxy last reported as the job's `update_time`, so a re-sync can
+    // tell an unchanged job from a changed one without fetching it (#106).
+    // Nullable: a row written before this column existed has none, and a
+    // missing value reads as "unknown", which always refetches.
+    updateTime: timestamp('update_time', { withTimezone: true }),
     exitCode: integer('exit_code'),
     stdout: text('stdout'),
     stderr: text('stderr'),
