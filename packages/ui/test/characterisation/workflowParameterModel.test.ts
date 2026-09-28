@@ -21,15 +21,19 @@
  *    reader.
  *
  * Where the derivation exists in the application it is driven through the
- * real composable rather than copied, so that changing the composable breaks
- * this suite. Only the export-side derivation is written here, because
- * nothing in the application reads a stored definition yet; that function is
- * #88's acceptance contract.
+ * real code rather than copied, so that changing that code breaks this
+ * suite: the model through the real composable, and what the endpoint
+ * answers with through the server's own normaliser (#103). The one
+ * derivation written out here is the export-side one in `parameterModel.ts`,
+ * and it stays a copy on purpose — it was #88's acceptance contract, and it
+ * is the independent reading the normaliser is measured against.
  */
 
 import { mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
+import { describedInputsOf } from 'nuxt-galaxy'
 import { describe, expect, it } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
+import { describedSteps } from '../describedSteps'
 import { FIXTURES, loadFixture } from './fixtures'
 import {
   describeParameters,
@@ -49,6 +53,19 @@ const fanIn = loadFixture(FIXTURES.fanIn)
  * reads (#87): a revision's steps, its inputs and the definitions of the
  * tools it pins, in one answer.
  *
+ * The steps and inputs are the recorded **export** taken through
+ * `describedStepsOf` and `describedInputsOf` — the server's own normalisers,
+ * the ones the endpoint itself calls (#88). Nothing is spelled out per field
+ * here: a stub that patches the fields its assertions happen to need can
+ * only answer "did I mean to change this" about those fields, and #97 found
+ * that the hard way — one assertion silently could not run, and a field
+ * nothing asserts on yet would not have announced itself (#103).
+ *
+ * Reaching the normalisers is settled and not a reach into `runtime/server/`
+ * by path: both are published from `nuxt-galaxy`'s own entry, for the
+ * reasons written beside them there, and `../describedSteps` is where the
+ * rest of the suites already go through them (#89).
+ *
  * One registration per fixture, where there used to be one per fixture plus
  * one per tool. `registerEndpoint` matches literally, so each tool needed
  * its own path — and a toolshed guid carries its version inside the id
@@ -58,38 +75,17 @@ const fanIn = loadFixture(FIXTURES.fanIn)
  * registered one. No tool id travels in a path any more, so none of that
  * applies; the `+` is inside the JSON body, where nothing decodes it.
  */
-/**
- * The recorded steps with their connections in the spelling the endpoint
- * serves them in.
- *
- * Since #88 the endpoint's `steps` are `DescribedStep`, whose connections are
- * `input_connections` — the *export*'s spelling, chosen because the live
- * payload's `input_steps` is built by assigning into a dict in a loop and so
- * cannot express a fan-in. The registration below has served the live payload
- * verbatim since #86, which was faithful then and is one field short now.
- *
- * Only that one field is filled in, from the export, which is where the
- * endpoint reads it from too. Serving the whole described step instead would
- * mean re-deriving it here from the server's own normaliser, which is #88's
- * acceptance contract and already has its own tests; this keeps the suite
- * driving the real composable against the field it really receives.
- */
-function servedSteps(fixture: typeof ccqtl): Record<string, unknown> {
-  const exportedSteps = (fixture.exported.steps ?? {}) as Record<string, { input_connections?: unknown }>
-  return Object.fromEntries(
-    Object.entries(fixture.live.steps).map(([stepId, step]) => [
-      stepId,
-      { ...step, input_connections: exportedSteps[stepId]?.input_connections ?? {} },
-    ]),
-  )
-}
-
 for (const fixture of [ccqtl, nested, fanIn]) {
+  // Normalised once per fixture rather than inside the handler: the real
+  // endpoint reads one row that never changes, so every request for this
+  // revision is answered from the same description.
+  const steps = describedSteps(fixture.slug)
+  const inputs = describedInputsOf(steps)
   registerEndpoint(
     `/api/galaxy/workflows/${fixture.manifest.workflowId}/revisions/${fixture.manifest.revision}/description`,
     () => ({
-      steps: servedSteps(fixture),
-      inputs: fixture.live.inputs,
+      steps,
+      inputs,
       tools: fixture.tools,
       unavailable: [],
     }),
@@ -116,14 +112,16 @@ async function inSetup<T>(use: () => T): Promise<T> {
 }
 
 /**
- * The live model, taken through the composable the invoke form uses.
+ * One recording's description, taken through the composable the invoke form
+ * reads it with — which is to say through the endpoint's answer, not past
+ * it.
  *
  * #86 drove the two composables #87 deleted, on purpose: so that changing
  * them would break this suite. The seam has moved to the one that replaced
  * them; every assertion below is the one it was.
  */
-async function liveModelThroughComposables(fixture: typeof ccqtl) {
-  const { workflowSteps, workflowParametersModel, toolsObj, toolInputParameters, unconnectedInputsByStep } = await inSetup(() =>
+async function modelThroughComposable(fixture: typeof ccqtl) {
+  const { workflowSteps, workflowInputs, workflowParametersModel, toolsObj, toolInputParameters, unconnectedInputsByStep } = await inSetup(() =>
     useGalaxyWorkflowDescription(ref(fixture.manifest.workflowId), ref(fixture.manifest.revision)),
   )
   await expect.poll(() => Object.keys(workflowSteps.value).length).toBeGreaterThan(0)
@@ -135,7 +133,7 @@ async function liveModelThroughComposables(fixture: typeof ccqtl) {
   // what is rendered did.
   await expect.poll(() => Object.keys(toolsObj.value).length).toBe(Object.keys(fixture.tools).length)
 
-  return { workflowParametersModel, toolInputParameters, toolsObj, unconnectedInputsByStep }
+  return { workflowSteps, workflowInputs, workflowParametersModel, toolInputParameters, toolsObj, unconnectedInputsByStep }
 }
 
 describe('the model the invoke form derives, per recorded workflow', () => {
@@ -309,7 +307,7 @@ describe('what a step actually puts on screen', () => {
     // parameter, `Step.vue` renders only where the step's own model has a
     // value under that name, and what a reader sees is the overlap. Driven
     // through the real composable so that changing it breaks this.
-    const { workflowParametersModel, toolInputParameters } = await liveModelThroughComposables(ccqtl)
+    const { workflowParametersModel, toolInputParameters } = await modelThroughComposable(ccqtl)
 
     const step4 = ccqtl.live.steps['4']!
     const declared = toolInputParameters.value[`${step4.tool_id}@${step4.tool_version}`]!.map(input => input.name)
@@ -357,13 +355,13 @@ describe('what a step actually puts on screen', () => {
     // nested recording below: a workflow whose data parameters are all
     // connected or declared as inputs is unchanged by this ticket. Driven
     // through the real composable, so a rule that over-reports breaks here.
-    const { unconnectedInputsByStep } = await liveModelThroughComposables(ccqtl)
+    const { unconnectedInputsByStep } = await modelThroughComposable(ccqtl)
 
     expect(unconnectedInputsByStep.value).toEqual({})
   })
 
   it('offers no parameter for a data input step, which declares no tool', async () => {
-    const { workflowParametersModel } = await liveModelThroughComposables(ccqtl)
+    const { workflowParametersModel } = await modelThroughComposable(ccqtl)
     expect(Object.keys(workflowParametersModel.value).sort()).toEqual(['2', '3', '4', '5', '6'])
   })
 
@@ -372,7 +370,7 @@ describe('what a step actually puts on screen', () => {
     // is in this recording rather than in `ccqtl-today`. Three shapes at once,
     // and every one of them decided by the absence of an edge rather than by
     // which marker Galaxy wrote.
-    const { unconnectedInputsByStep } = await liveModelThroughComposables(nested)
+    const { unconnectedInputsByStep } = await modelThroughComposable(nested)
 
     expect(Object.keys(unconnectedInputsByStep.value).sort()).toEqual(['1', '2'])
 
@@ -412,9 +410,81 @@ describe('what a step actually puts on screen', () => {
     // It cannot pin more than that. With no definition there are no types to
     // over-report from, so this says the missing case is *handled*, not that
     // the rule is right; the nested recording above is what says that.
-    const { unconnectedInputsByStep } = await liveModelThroughComposables(fanIn)
+    const { unconnectedInputsByStep } = await modelThroughComposable(fanIn)
 
     expect(unconnectedInputsByStep.value).toEqual({})
+  })
+})
+
+/**
+ * The half of the endpoint's answer the suite could not see until #103.
+ *
+ * The stub served the live payload, and a live step carries no `label`, no
+ * `uuid` and no `outputs` at all — measured in the first test below rather
+ * than argued — so these three were unobservable here however faithfully the
+ * endpoint served them. They are pinned now for the reason the rest of this
+ * file exists: a change to `describedStepsOf` should be a failing assertion,
+ * not a field nobody happens to be looking at.
+ */
+describe('what the endpoint says that the live payload cannot', () => {
+  it('is said by no recorded live step, on either Galaxy release', () => {
+    for (const fixture of [ccqtl, nested, fanIn]) {
+      for (const [stepId, step] of Object.entries(fixture.live.steps)) {
+        const keys = Object.keys(step)
+        expect(keys, `${fixture.slug} step ${stepId}`).not.toContain('label')
+        expect(keys, `${fixture.slug} step ${stepId}`).not.toContain('uuid')
+        expect(keys, `${fixture.slug} step ${stepId}`).not.toContain('outputs')
+      }
+    }
+  })
+
+  it('names the steps the author named, and leaves the rest null', async () => {
+    // `null` and not `''`: the export writes the empty string for a step
+    // nobody named as readily as it writes nothing, and the contract promises
+    // one spelling for absent.
+    const { workflowSteps } = await modelThroughComposable(ccqtl)
+    const labels = Object.fromEntries(
+      Object.entries(workflowSteps.value).map(([stepId, step]) => [stepId, step.label]),
+    )
+    expect(labels).toEqual({
+      0: 'Phenotype dataset',
+      1: 'Covariate dataset',
+      2: null,
+      3: null,
+      4: null,
+      5: null,
+      6: null,
+    })
+  })
+
+  it('carries each step\'s own uuid, taken from the revision that was asked for', async () => {
+    // The live payload carries one uuid for the whole workflow,
+    // `latest_workflow_uuid`, and it is the newest revision's whatever
+    // revision was requested. The export is the revision, so its step uuids
+    // are that revision's.
+    const { workflowSteps } = await modelThroughComposable(ccqtl)
+    const exported = ccqtl.exported.steps as Record<string, { uuid: string }>
+    for (const [stepId, step] of Object.entries(workflowSteps.value)) {
+      expect(step.uuid, stepId).toBe(exported[stepId]!.uuid)
+    }
+  })
+
+  it('carries the outputs a step declares, which is what an output handle is drawn for', async () => {
+    const { workflowSteps } = await modelThroughComposable(ccqtl)
+    expect(workflowSteps.value['3']!.outputs.map(output => output.name))
+      .toEqual(['lod', 'out', 'covar_modmat'])
+    // A data input step declares none, and that is Galaxy's own answer
+    // rather than a gap in the normaliser.
+    expect(workflowSteps.value['0']!.outputs).toEqual([])
+  })
+
+  it('derives the declared inputs from the definition, and agrees with Galaxy on this revision', async () => {
+    // `describedInputsOf` re-derives what `GET /api/workflows/{id}` answers
+    // with, because the export carries no `inputs` list of its own. Agreeing
+    // is the measured fact and not a guarantee: this recording is of the
+    // *latest* revision, which is the one Galaxy's own list describes.
+    const { workflowInputs } = await modelThroughComposable(ccqtl)
+    expect(workflowInputs.value).toEqual(ccqtl.live.inputs)
   })
 })
 

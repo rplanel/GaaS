@@ -38,9 +38,17 @@ export interface WorkflowFixture {
   /** The directory name, which is also how the suite names the case. */
   slug: string
   manifest: Manifest
-  /** `GET /api/workflows/{id}` — what the description endpoint reads and serves as its `steps` and `inputs`. */
+  /**
+   * `GET /api/workflows/{id}` — what the description endpoint read and
+   * served verbatim until #88. Kept because it is the payload the stored
+   * definition is measured against, not because anything serves it now.
+   */
   live: GalaxyWorkflow
-  /** `GET /api/workflows/{id}/download?style=export` — what publishing stores. */
+  /**
+   * `GET /api/workflows/{id}/download?style=export` — what publishing
+   * stores, and so what the description endpoint describes a revision from
+   * since #88.
+   */
   exported: Record<string, unknown>
   /** `GET /api/tools/{id}?io_details=true&tool_version=…`, by `toolId@version`. */
   tools: Record<string, GalaxyTool>
