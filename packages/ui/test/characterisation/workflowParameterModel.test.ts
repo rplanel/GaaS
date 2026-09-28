@@ -58,11 +58,37 @@ const fanIn = loadFixture(FIXTURES.fanIn)
  * registered one. No tool id travels in a path any more, so none of that
  * applies; the `+` is inside the JSON body, where nothing decodes it.
  */
+/**
+ * The recorded steps with their connections in the spelling the endpoint
+ * serves them in.
+ *
+ * Since #88 the endpoint's `steps` are `DescribedStep`, whose connections are
+ * `input_connections` — the *export*'s spelling, chosen because the live
+ * payload's `input_steps` is built by assigning into a dict in a loop and so
+ * cannot express a fan-in. The registration below has served the live payload
+ * verbatim since #86, which was faithful then and is one field short now.
+ *
+ * Only that one field is filled in, from the export, which is where the
+ * endpoint reads it from too. Serving the whole described step instead would
+ * mean re-deriving it here from the server's own normaliser, which is #88's
+ * acceptance contract and already has its own tests; this keeps the suite
+ * driving the real composable against the field it really receives.
+ */
+function servedSteps(fixture: typeof ccqtl): Record<string, unknown> {
+  const exportedSteps = (fixture.exported.steps ?? {}) as Record<string, { input_connections?: unknown }>
+  return Object.fromEntries(
+    Object.entries(fixture.live.steps).map(([stepId, step]) => [
+      stepId,
+      { ...step, input_connections: exportedSteps[stepId]?.input_connections ?? {} },
+    ]),
+  )
+}
+
 for (const fixture of [ccqtl, nested, fanIn]) {
   registerEndpoint(
     `/api/galaxy/workflows/${fixture.manifest.workflowId}/revisions/${fixture.manifest.revision}/description`,
     () => ({
-      steps: fixture.live.steps,
+      steps: servedSteps(fixture),
       inputs: fixture.live.inputs,
       tools: fixture.tools,
       unavailable: [],
@@ -97,7 +123,7 @@ async function inSetup<T>(use: () => T): Promise<T> {
  * them; every assertion below is the one it was.
  */
 async function liveModelThroughComposables(fixture: typeof ccqtl) {
-  const { workflowSteps, workflowParametersModel, toolsObj, toolInputParameters } = await inSetup(() =>
+  const { workflowSteps, workflowParametersModel, toolsObj, toolInputParameters, unsuppliedByStep } = await inSetup(() =>
     useGalaxyWorkflowDescription(ref(fixture.manifest.workflowId), ref(fixture.manifest.revision)),
   )
   await expect.poll(() => Object.keys(workflowSteps.value).length).toBeGreaterThan(0)
@@ -109,7 +135,7 @@ async function liveModelThroughComposables(fixture: typeof ccqtl) {
   // what is rendered did.
   await expect.poll(() => Object.keys(toolsObj.value).length).toBe(Object.keys(fixture.tools).length)
 
-  return { workflowParametersModel, toolInputParameters, toolsObj }
+  return { workflowParametersModel, toolInputParameters, toolsObj, unsuppliedByStep }
 }
 
 describe('the model the invoke form derives, per recorded workflow', () => {
@@ -126,9 +152,13 @@ describe('the model the invoke form derives, per recorded workflow', () => {
 
     it('reads a runtime parameter as one, and a connected input as connected', () => {
       const model = parameterValuesFromLive(ccqtl.live)
-      // Step 4 is the one the census found: every input it takes is left to
-      // be supplied at run time, which is the shape the form has to offer a
-      // field for rather than treat as a value.
+      // Step 4 is the one the census found: Galaxy saved every data input it
+      // takes as `RuntimeValue` rather than `ConnectedValue`. #97 settled that
+      // this is a difference in what the editor wrote, not in what will
+      // happen — all four are connected, and the marker is not what Galaxy
+      // consults at invoke. The suite still records which marker each carries,
+      // because that is what the recording says; what changed is what it
+      // means, which the `unsuppliedByStep` tests below pin.
       expect(model['4']).toMatchObject({
         clean_pr: { kind: 'RuntimeValue' },
         covar_modmat: { kind: 'RuntimeValue' },
@@ -291,19 +321,24 @@ describe('what a step actually puts on screen', () => {
     expect(renderedParameterNames(declared, saved)).toEqual(['n_perm', 'strat_covar'])
   })
 
-  it('offers nothing for a runtime parameter that is data-typed', () => {
-    // Surfaced by the recording, and worth its own name: on step 4 Galaxy
-    // saved `crossdata`, `clean_pr`, `kloco` and `covar_modmat` as
-    // `RuntimeValue` — it expects them to be supplied when the workflow runs
-    // — but all four are `data` parameters, and the composable filters those
-    // out before the panel is built. So GaaS never asks for them and the
-    // reader has no way to provide them.
+  it('offers nothing for a runtime parameter that is data-typed, because an edge feeds it', () => {
+    // Updated deliberately by #97, which is the ticket this test was written
+    // to provoke. What it recorded is unchanged and still asserted below: on
+    // step 4 Galaxy saved `crossdata`, `clean_pr`, `kloco` and `covar_modmat`
+    // as `RuntimeValue`, all four are `data` parameters, and the composable
+    // drops every `data` parameter before the panel is built.
     //
-    // Pinned as it is, not as it should be: a characterisation suite records
-    // the behaviour so a change to it is visible. Whether this is a defect is
-    // a separate question from whether it is what happens today.
+    // What changed is the conclusion. #86 read this as a defect — "GaaS never
+    // asks for them and the reader has no way to provide them" — on the
+    // premise that a `RuntimeValue` is a request for a value. It is not.
+    // Every one of the four is **connected**, to step 2 or step 3, and
+    // `replacement_for_input` (`workflow/run.py:290`) fills a data input from
+    // `step.input_connections_by_name` without ever reading the marker. The
+    // graph supplies them, the invocation succeeds, and offering a field for
+    // them would have been wrong.
     const step = ccqtl.live.steps['4']!
     const tool = ccqtl.tools[`${step.tool_id}@${step.tool_version}`]!
+    const exported = (ccqtl.exported.steps as Record<string, { input_connections: Record<string, unknown> }>)['4']!
     const runtimeNames = Object.entries(step.tool_inputs)
       .filter(([, value]) => (value as { __class__?: string })?.__class__ === 'RuntimeValue')
       .map(([name]) => name)
@@ -312,12 +347,74 @@ describe('what a step actually puts on screen', () => {
     expect(runtimeNames).toEqual(['clean_pr', 'covar_modmat', 'crossdata', 'kloco'])
     for (const name of runtimeNames) {
       expect(tool.inputs.find(input => input.name === name)?.type, name).toBe('data')
+      // The assertion #86 did not make, and the one that reverses its reading.
+      expect(Object.keys(exported.input_connections), name).toContain(name)
     }
+  })
+
+  it('marks no step, because every data parameter it takes is fed', async () => {
+    // Acceptance criterion 4 of #97, and the control for the tests on the
+    // nested recording below: a workflow whose data parameters are all
+    // connected or declared as inputs is unchanged by this ticket. Driven
+    // through the real composable, so a rule that over-reports breaks here.
+    const { unsuppliedByStep } = await liveModelThroughComposables(ccqtl)
+
+    expect(unsuppliedByStep.value).toEqual({})
   })
 
   it('offers no parameter for a data input step, which declares no tool', async () => {
     const { workflowParametersModel } = await liveModelThroughComposables(ccqtl)
     expect(Object.keys(workflowParametersModel.value).sort()).toEqual(['2', '3', '4', '5', '6'])
+  })
+
+  it('marks the steps of the nested recording whose data parameters nothing feeds', async () => {
+    // The case #97 turned out to be about, which the ticket did not name: it
+    // is in this recording rather than in `ccqtl-today`. Three shapes at once,
+    // and every one of them decided by the absence of an edge rather than by
+    // which marker Galaxy wrote.
+    const { unsuppliedByStep } = await liveModelThroughComposables(nested)
+
+    expect(Object.keys(unsuppliedByStep.value).sort()).toEqual(['1', '2'])
+
+    // Step 1, `integron_finder`. `sequence` is connected and absent from this
+    // list; `topology_file` is `RuntimeValue` with no edge, and
+    // `covar_matrix` is the same two levels down inside sections — which the
+    // form renders nowhere at all, so it is both invisible and unsettable.
+    expect(unsuppliedByStep.value['1']).toEqual([
+      {
+        name: 'topology_file',
+        label: 'Select a topology file from your history',
+        optional: true,
+      },
+      {
+        name: 'settings|attc_settings|covar_matrix',
+        label: 'Covariance Matrix',
+        optional: true,
+      },
+    ])
+
+    // Step 2, `__BUILD_LIST__`: five repeat entries against three
+    // connections, so the last two are bare. They say `ConnectedValue` — the
+    // marker #86 read as "the graph supplies this" — with no connection to
+    // supply them, which is why the rule reads the edge and not the marker.
+    expect(unsuppliedByStep.value['2']!.map(parameter => parameter.name))
+      .toEqual(['datasets_3|input', 'datasets_4|input'])
+  })
+
+  it('marks no step of the fan-in recording, which has no tool definitions to judge by', async () => {
+    // Deciding that a parameter is data-typed needs the tool definition, and
+    // this recording was made without any — a fan-in lives entirely in the
+    // connections — so all twenty-two of its tool steps resolve to no
+    // definition at all. That makes it the case that pins the guard: without
+    // it the derivation reads `inputs` off `undefined` and the whole
+    // description throws, emptying both screens rather than marking nothing.
+    //
+    // It cannot pin more than that. With no definition there are no types to
+    // over-report from, so this says the missing case is *handled*, not that
+    // the rule is right; the nested recording above is what says that.
+    const { unsuppliedByStep } = await liveModelThroughComposables(fanIn)
+
+    expect(unsuppliedByStep.value).toEqual({})
   })
 })
 

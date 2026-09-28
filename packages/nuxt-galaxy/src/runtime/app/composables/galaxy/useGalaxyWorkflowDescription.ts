@@ -5,22 +5,31 @@ import type {
   GalaxyToolParameters,
   WorkflowToolParameters,
 } from 'blendtype'
+import type { UnsuppliedDataParameter } from '../../../shared/unsuppliedDataParameters'
 import type { DescribedStep, DescribedToolStep, UnavailableTool } from '../../../types/nuxt-galaxy'
 import { computed, toRaw, toValue, watch } from '#imports'
 import { useQuery } from '@pinia/colada'
 import { log } from 'evlog/client'
 import { toolKey } from '../../../shared/toolKey'
+import { unsuppliedDataParameters } from '../../../shared/unsuppliedDataParameters'
 import { galaxyWorkflowDescriptionQuery } from '../../queries/galaxy/workflows'
 
 /**
  * A tool parameter the invoke form offers a widget for: everything a tool
  * declares except its `data` parameters.
  *
- * The filter moved here from `useGalaxyTool`, deliberately and unchanged.
- * It is the reason a `data` parameter left as a `RuntimeValue` — one the
- * workflow expects to be supplied at run time — is never asked for, which
- * #86's recordings pinned as today's behaviour. Whether that is right is
- * **#97**; this ticket only had to re-place the filter, not re-decide it.
+ * The filter moved here from `useGalaxyTool`, deliberately and unchanged, and
+ * **#97 settled that it is right**. A data parameter of a tool step is fed by
+ * an edge — from an upstream tool, or from one of the workflow's own
+ * `data_input` steps — and there is nothing for a widget on the step panel to
+ * do about it.
+ *
+ * What #97 found is that the filter was never the defect. The four
+ * `RuntimeValue` data inputs on `ccqtl-wf` step 4 that #86's recordings
+ * pinned as unoffered are all four **connected**; the marker is what Galaxy's
+ * editor happened to save, not a request for a value. The real gap is a data
+ * parameter with no edge at all, which no filter can fix and which
+ * `unsuppliedByStep` names instead.
  */
 export type ToolInputParameter = Exclude<GalaxyToolParameters, GalaxyDataToolParameter>
 
@@ -36,6 +45,25 @@ export type ToolInputParameter = Exclude<GalaxyToolParameters, GalaxyDataToolPar
  * would submit wrong.
  */
 const BLOCKS_SUBMIT: ReadonlySet<UnavailableTool['reason']> = new Set(['not_installed', 'version_mismatch'])
+
+/**
+ * Why a step is marked for a data parameter nothing supplies (#97).
+ *
+ * Both branches say the analysis will start, because it will: Galaxy does not
+ * refuse this invocation. What differs is what the step then does with an
+ * empty input, and a required parameter is the case worth spelling out
+ * separately — a reader who is told "will run without it" about an input the
+ * tool cannot run without has been told the wrong thing.
+ */
+export function describeUnsuppliedDataParameters(unsupplied: UnsuppliedDataParameter[]): string {
+  const names = unsupplied.map(parameter => parameter.label).join(', ')
+  const plural = unsupplied.length > 1
+  const them = plural ? 'them' : 'it'
+  const subject = `${names} ${plural ? 'are' : 'is'} set to be supplied when the workflow runs, but nothing is connected to ${them}.`
+  return unsupplied.some(parameter => !parameter.optional)
+    ? `${subject} The analysis will start, and this step will fail without ${them}.`
+    : `${subject} The analysis will start, and this step will run without ${them}.`
+}
 
 /** How a tool is named in a sentence a reader has to act on. */
 export function describeUnavailableTool(tool: UnavailableTool): string {
@@ -181,6 +209,37 @@ export function useGalaxyWorkflowDescription(
     }, {})
   })
 
+  /**
+   * The step ids with a data parameter nothing will supply, and which ones
+   * (#97) — steps with none are absent rather than present and empty.
+   *
+   * Galaxy accepts such an invocation and runs the step with the input empty:
+   * `DataToolParameter.from_json` returns `None` for a runtime value before it
+   * checks whether the parameter is required, so nothing refuses and nothing
+   * is said. So this marks the step and does **not** block submit, which is
+   * Q10's rule — mark only what would refuse the submission, and this would
+   * not refuse it.
+   *
+   * A step whose tool is unavailable is skipped, not reported clean. Deciding
+   * that a parameter is data-typed needs the definition, and there is none;
+   * `unavailableByStep` already marks those steps with the reason, so a step
+   * is never silently both.
+   */
+  const unsuppliedByStep = computed<Record<string, UnsuppliedDataParameter[]>>(() => {
+    const tools = toValue(toolsObj)
+    return Object.entries(toValue(workflowToolSteps)).reduce<Record<string, UnsuppliedDataParameter[]>>((acc, [stepId, step]) => {
+      const tool = tools[toolKey(step.tool_id, step.tool_version)]
+      if (tool === undefined) {
+        return acc
+      }
+      const unsupplied = unsuppliedDataParameters(tool, step)
+      if (unsupplied.length > 0) {
+        acc[stepId] = unsupplied
+      }
+      return acc
+    }, {})
+  })
+
   /** Every tool the revision pins that came back as something other than itself. */
   const unavailableTools = computed<UnavailableTool[]>(() => toValue(description)?.unavailable ?? [])
 
@@ -219,6 +278,7 @@ export function useGalaxyWorkflowDescription(
     unavailableTools,
     blockingTools,
     unavailableByStep,
+    unsuppliedByStep,
     isLoading,
     error,
     /**
