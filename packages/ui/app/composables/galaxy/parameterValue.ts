@@ -4,9 +4,9 @@
  * drift apart on the question (#95).
  *
  * Everything the two sides must answer identically lives here: which values
- * are omitted, and how a conditional's name is joined and taken apart again.
- * A separator written out at each end is the kind of agreement that holds
- * right up until one end changes.
+ * are omitted, and how a nested parameter's name is joined and taken apart
+ * again. A separator written out at each end is the kind of agreement that
+ * holds right up until one end changes.
  *
  * Not auto-imported: Nuxt scans only the top level of `composables/`, so
  * everything under `composables/galaxy/` is reached by path — which is why
@@ -15,8 +15,37 @@
 
 import type { WorkflowConditionalParametersValue } from 'blendtype'
 
-/** What Galaxy joins a conditional's name to its input's with. */
+/**
+ * What Galaxy joins a parent's name to its input's with.
+ *
+ * One separator for all three nestings, because `visit_input_values` builds
+ * the same prefix for a conditional, a section and a repeat instance:
+ * `f"{name_prefix + input.name}|"` for the first two and
+ * `f"{input.name}_{i}|"` for the third, so the pipe is what separates the
+ * levels in every case (`tools/parameters/__init__.py:172-215` at 22.05,
+ * `:236-279` at 26.1).
+ */
 const CONDITIONAL_SEPARATOR = '|'
+
+/**
+ * What Galaxy joins a repeat's name to one instance's number with — and the
+ * number is the instance's **position**, never the `__index__` it carries.
+ *
+ * `visit_input_values` overwrites the stored index with the position
+ * immediately before building the name:
+ *
+ *     for i, d in enumerate(values):
+ *         d["__index__"] = i
+ *         new_name_prefix = name_prefix + f"{input.name}_{i}|"
+ *
+ * — `tools/parameters/__init__.py:174-176` at 22.05, `:238-240` at 26.1. In
+ * practice the two always agree, for that same reason: every save-time visit
+ * renumbers them, so a state Galaxy wrote has contiguous indices. They part
+ * company only on state that has been edited elsewhere, and there the
+ * position is the one Galaxy will look up. #101's acceptance criteria asked
+ * for the opposite and were corrected against this.
+ */
+const REPEAT_INSTANCE_SEPARATOR = '_'
 
 /**
  * Whether a parameter is a conditional, whose inputs Galaxy expects flattened
@@ -58,4 +87,29 @@ export function flattenKey(parent: string, child: string): string {
 /** `flattenKey` read backwards: the path a submitted name stands for. */
 export function splitKey(name: string): string[] {
   return name.split(CONDITIONAL_SEPARATOR)
+}
+
+/** The name one instance of a repeat is submitted under. */
+export function repeatInstanceKey(parent: string, position: number): string {
+  return `${parent}${REPEAT_INSTANCE_SEPARATOR}${position}`
+}
+
+/**
+ * `repeatInstanceKey` read backwards, and the one place the two sides have to
+ * be careful rather than merely consistent.
+ *
+ * A name is ambiguous in this direction: `datasets_0` is one instance of a
+ * repeat called `datasets`, and it is also a perfectly legal name for a
+ * conditional or a section. Galaxy never has to choose — it reads the
+ * tool's declaration — and the decoder has none, holding only the stored
+ * dict. So this answers the *shape* of the name and leaves the decision to
+ * the caller, which makes it on the marker the encoder sends alongside:
+ * an instance carries `__index__` and nothing else does.
+ */
+export function splitRepeatInstanceKey(name: string): { parent: string, position: number } | undefined {
+  const match = /^(.+)_(\d+)$/.exec(name)
+  if (match === null || match[1] === undefined || match[2] === undefined) {
+    return undefined
+  }
+  return { parent: match[1], position: Number(match[2]) }
 }

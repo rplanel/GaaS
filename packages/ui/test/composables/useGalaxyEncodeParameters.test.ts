@@ -150,6 +150,103 @@ describe('the model measured in #95', () => {
   })
 })
 
+describe('a section, which nests as deeply as the tool declares (#101)', () => {
+  it('flattens every level, not only the first', () => {
+    // What this used to emit: `settings|attc_settings` carrying the whole
+    // nested object. Galaxy finished the job itself — `_flatten_step_params`
+    // recurses — so the leaves arrived correctly and the partial flattening
+    // was redundant rather than wrong (#98). It is the *decoder* that could
+    // not read a name it had never written, and a section that renders is
+    // the first thing to write one.
+    expect(encode({ 1: { settings: { attc_settings: { dist_thresh: '4000' } } } })['1'])
+      .toEqual({ 'settings|attc_settings|dist_thresh': '4000' })
+  })
+
+  it('keeps a falsy leaf at the third level, as it does at the first two', () => {
+    expect(encode({ 1: { settings: { protein_settings: { func_annot: false, gone: undefined } } } })['1'])
+      .toEqual({ 'settings|protein_settings|func_annot': false })
+  })
+})
+
+describe('a repeat, whose instances Galaxy will not read as a list (#101, #98)', () => {
+  /** `__BUILD_LIST__` step 2 of `conditional-repeat-runtime`, cut to two blocks. */
+  const TWO_BLOCKS = {
+    datasets: [
+      { __index__: 0, id_cond: { __current_case__: 1, id_select: 'identifier' }, input: { __class__: 'ConnectedValue' } },
+      { __index__: 1, id_cond: { __current_case__: 0, id_select: 'idx' }, input: { __class__: 'ConnectedValue' } },
+    ],
+  }
+
+  it('names each instance so that Galaxy looks it up, instead of sending a list it ignores', () => {
+    // A list is not a dict, so `_flatten_step_params` assigns it whole under
+    // `datasets`, which matches no declared input and is silently dropped —
+    // Galaxy's own TODO on that function names the gap. The names below are
+    // what `visit_input_values` builds instead.
+    expect(encode({ 1: TWO_BLOCKS })['1']).toEqual({
+      'datasets_0|__index__': 0,
+      'datasets_0|id_cond|__current_case__': 1,
+      'datasets_0|id_cond|id_select': 'identifier',
+      'datasets_0|input|__class__': 'ConnectedValue',
+      'datasets_1|__index__': 1,
+      'datasets_1|id_cond|__current_case__': 0,
+      'datasets_1|id_cond|id_select': 'idx',
+      'datasets_1|input|__class__': 'ConnectedValue',
+    })
+  })
+
+  it('numbers an instance by its position, not by the __index__ it carries', () => {
+    // The correction #101 made to its own ticket, read off the source. The
+    // AC asked for the saved `__index__` "and not the position"; Galaxy does
+    // the opposite, and does it in one statement:
+    //
+    //     for i, d in enumerate(values):
+    //         d["__index__"] = i
+    //         new_name_prefix = name_prefix + f"{input.name}_{i}|"
+    //
+    // — `tools/parameters/__init__.py:174-176` at 22.05, `:238-240` at 26.1.
+    // The stored index is overwritten with the position before the name is
+    // built, so a gapped state addressed by `__index__` would send
+    // `gapped_2|…` for a block Galaxy has already renumbered to 1, and the
+    // edit would land on nothing. The value is still whatever the model
+    // holds; only the name is Galaxy's.
+    expect(encode({ 1: { gapped: [{ __index__: 0, x: 'a' }, { __index__: 2, x: 'b' }] } })['1'])
+      .toEqual({
+        'gapped_0|__index__': 0,
+        'gapped_0|x': 'a',
+        'gapped_1|__index__': 2,
+        'gapped_1|x': 'b',
+      })
+  })
+
+  it('submits __index__ itself, which is inert in Galaxy and load-bearing here', () => {
+    // The same bargain `__current_case__` already has. `__index__` matches no
+    // declared input of the repeat, so `compute_runtime_state` never looks it
+    // up and `visit_input_values` overwrites it regardless. What it does do
+    // is tell the decoder that `datasets_0` is one block of a repeat rather
+    // than a conditional that happens to be named `datasets_0` — without it
+    // the way back would be a guess about a name ending in an underscore and
+    // a digit.
+    const encoded = encode({ 1: TWO_BLOCKS })['1']!
+    expect(Object.keys(encoded).filter(name => name.endsWith('|__index__')))
+      .toEqual(['datasets_0|__index__', 'datasets_1|__index__'])
+  })
+
+  it('leaves a list alone unless every entry is an instance', () => {
+    // `__APPLY_RULES__` saves `rules` and `mapping` as lists of plain objects
+    // with no `__index__` between them, on step 11 of the inner subworkflow
+    // of `subworkflow-nested`. Those are one parameter's value, not a
+    // repeat's arity, and flattening them by position would invent names no
+    // tool declares.
+    expect(encode({ 1: { rules: [{ type: 'add_column_metadata' }], picks: ['a', 'b'] } })['1'])
+      .toEqual({ rules: [{ type: 'add_column_metadata' }], picks: ['a', 'b'] })
+  })
+
+  it('omits an instance value that is genuinely absent, at repeat depth too', () => {
+    expect(encode({ 1: { datasets: [{ __index__: 0, kept: 0, gone: undefined }] } })['1'])
+      .toEqual({ 'datasets_0|__index__': 0, 'datasets_0|kept': 0 })
+  })
+})
+
 describe('the shapes the guard must not touch', () => {
   it('keeps a multi-select array whole rather than flattening it by index', () => {
     expect(encode({ 1: { picks: ['a', 'b'], empty: [] } })['1'])
