@@ -14,8 +14,8 @@ useless. If a payload needs to change, re-record it.
 
 | File | Galaxy call |
 |---|---|
-| `workflow.live.json` | `GET /api/workflows/{id}` — what the description endpoint reads and serves as its `steps` and `inputs` |
-| `workflow.export.json` | `GET /api/workflows/{id}/download?style=export` — what publishing stores in `galaxy.workflows.definition` |
+| `workflow.live.json` | `GET /api/workflows/{id}` — what the description endpoint read and served verbatim until #88 |
+| `workflow.export.json` | `GET /api/workflows/{id}/download?style=export` — what publishing stores in `galaxy.workflows.definition`, and what the description endpoint describes a revision from since #88 |
 | `revisions.json` | `GET /api/workflows/{id}/versions` |
 | `tools/*.json` | `GET /api/tools/{id}?io_details=true&tool_version=…`, one per distinct `toolId@version` |
 | `manifest.json` | Which instance, which Galaxy version, which revision, which command, and the shape census |
@@ -23,6 +23,15 @@ useless. If a payload needs to change, re-record it.
 The calls are spelled exactly as `blendtype` spells them (`getWorkflowEffect`,
 `exportWorkflowEffect`, `getWorkflowRevisionsEffect`, `getToolEffect`), so what
 is on disk is what the application sees.
+
+**There is no recording of what the endpoint answers with, on purpose.** Since
+#88 that answer is the export normalised by `describedStepsOf` and
+`describedInputsOf`, and the suites build it at test time by calling those —
+`../../describedSteps.ts` is the way in. A recorded `description.json` would
+freeze the normaliser's behaviour as it was on the day it was recorded, so
+changing the normaliser would leave every suite green; calling it means the
+change is a failing assertion (#103). Nothing here has to be re-recorded when
+the normaliser changes.
 
 ## The recordings
 

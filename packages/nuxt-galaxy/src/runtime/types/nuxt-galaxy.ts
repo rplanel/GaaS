@@ -144,16 +144,23 @@ export type { AnalysisBody } from '../server/utils/analysisBody'
  */
 export type { DescribedStep, DescribedSubworkflow, DescribedToolStep, DescribedWorkflowInput } from '../server/utils/grizzle/storedDefinition'
 /**
- * The normaliser that produces the shape above, published beside it.
+ * The two normalisers that produce the shapes above, published beside them.
  *
- * It is the definition of this contract rather than an implementation detail
- * of one endpoint: a consumer holding a stored export — or a suite proving
- * what a graph draws from one — needs the same normalisation the endpoint
- * applies, and the alternative is reaching into `runtime/server/` by path or
- * keeping a second copy that can drift. Pure: it reads an export and touches
- * neither the database nor Galaxy.
+ * They are the definition of this contract rather than an implementation
+ * detail of one endpoint: a consumer holding a stored export — or a suite
+ * proving what a graph draws from one, or what the description endpoint
+ * serves — needs the same normalisation the endpoint applies, and the
+ * alternative is reaching into `runtime/server/` by path or keeping a second
+ * copy that can drift. Both are pure — `describedStepsOf` reads an export
+ * and `describedInputsOf` reads the steps it returned — and neither touches
+ * the database or Galaxy.
+ *
+ * `describedInputsOf` is published beside `describedStepsOf` because the
+ * endpoint's answer is the pair — `steps` and the `inputs` derived from
+ * them — and a caller that could build only the first half would have to
+ * write the second one itself (#103).
  */
-export { describedStepsOf } from '../server/utils/grizzle/storedDefinition'
+export { describedInputsOf, describedStepsOf } from '../server/utils/grizzle/storedDefinition'
 /**
  * The state of a version (#76): whether it can still run, as
  * `GET /api/db/workflows/:id/state` reads it live from Galaxy and the admin
