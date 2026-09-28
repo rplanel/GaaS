@@ -60,6 +60,10 @@ _Avoid_: Node, task, stage
 A step that runs a whole workflow of its own rather than one tool. It is one step of the workflow that contains it, with one step index and one job-free place in the graph; the steps inside it have their own indices, which belong to it and not to the workflow around it. The graph draws it as a single step that opens onto that workflow's own graph, never expanded into the steps around it.
 _Avoid_: Nested workflow, sub-pipeline, group of steps
 
+**Mapped step**:
+One step that runs once per element of a collection it is given, rather than once in total. It stays one step with one step index, and its jobs — one per element, each with its own state — all belong to that index. Galaxy holds them in an implicit collection rather than against the step, so a mapped step reports no single job and is the reason a step index names many jobs rather than at most one.
+_Avoid_: Parallel step, batch step, scattered step, collection step
+
 **Step state**:
 What one step of one analysis has come to, read per step and never aggregated: Not started, Running, Succeeded, Failed, Cancelled or Skipped. A step state is not an Outcome — an analysis has exactly one Outcome, and it is not the sum of its step states. Not started covers a step nothing has run yet, including one the analysis has scheduled but not begun.
 _Avoid_: Job state, node status, step outcome, progress

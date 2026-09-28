@@ -70,6 +70,10 @@ function expectedPayload(galaxyJobId: string, galaxyJob: bt.ShowFullJobResponse,
   }
 }
 
+function expectedPayload3(galaxyJobId: string, galaxyJob: bt.ShowFullJobResponse, isSync: boolean) {
+  return { ...expectedPayload(galaxyJobId, galaxyJob, isSync), step_id: 3 }
+}
+
 describe('syncJobEffect', () => {
   const layer = createMockGalaxyLayer(mockGalaxyJob)
 
@@ -95,6 +99,22 @@ describe('syncJobEffect', () => {
 
     expect(result).toBe(7)
     expect(supabase.schema('galaxy').from('jobs').update).toHaveBeenCalledWith(expectedPayload('gjid', mockGalaxyJob, true))
+  })
+
+  it('re-syncing a recorded job updates its row and inserts nothing', async () => {
+    // What keeps a re-synced invocation from duplicating rows: the lookup is
+    // on `(galaxy_id, analysis_id)`, so every job of a mapped step resolves
+    // to the row it wrote last time, whatever step id it shares with others.
+    const supabase = createMockSupabase({
+      singleResult: { data: { id: 7 }, error: null },
+      updateResult: { data: null, error: null },
+    })
+
+    await Effect.runPromise(syncJobEffect('gjid', 3, 1, 'owner', supabase, layer))
+
+    const jobs = supabase.schema('galaxy').from('jobs')
+    expect(jobs.update).toHaveBeenCalledWith(expectedPayload3('gjid', mockGalaxyJob, true))
+    expect(jobs.insert).not.toHaveBeenCalled()
   })
 
   it('sets is_sync to false for non-terminal Galaxy states', async () => {

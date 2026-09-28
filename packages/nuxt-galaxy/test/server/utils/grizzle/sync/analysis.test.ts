@@ -316,6 +316,165 @@ describe('syncAnalysisEffect', () => {
     expect(historyUpdateCall).toEqual([{ state: 'ok', is_sync: true }])
   })
 
+  describe('a step that maps over a collection', () => {
+    // The outer `beforeEach` re-arms the doubles but keeps their call log, and
+    // every assertion here reads that log.
+    beforeEach(() => {
+      vi.mocked(syncJobEffect).mockClear()
+      vi.mocked(syncOutputDatasetEffect).mockClear()
+    })
+
+    function step(overrides: Partial<bt.GalaxyInvocationStep> = {}): bt.GalaxyInvocationStep {
+      return {
+        model_class: 'WorkflowInvocationStep',
+        id: 'step-1',
+        update_time: '2024-01-01T00:00:00.000Z',
+        job_id: null,
+        workflow_step_id: 'ws-1',
+        state: 'ok' as bt.JobState,
+        order_index: 1,
+        workflow_step_label: 'a step',
+        workflow_step_uuid: 'wsu-1',
+        ...overrides,
+      }
+    }
+
+    function job(id: string): bt.GalaxyInvocationStepJob {
+      return { model_class: 'Job', id, state: 'ok' as bt.JobState }
+    }
+
+    /**
+     * What Galaxy returns for a mapped step: no `job_id`, and every job of
+     * the implicit collection under `jobs`, all at the one `order_index`.
+     */
+    function mappedStep(galaxyJobIds: string[]): bt.GalaxyInvocationStep {
+      return step({
+        id: 'step-mapped',
+        workflow_step_id: 'ws-mapped',
+        order_index: 3,
+        workflow_step_label: 'map over inputs',
+        jobs: galaxyJobIds.map(job),
+      })
+    }
+
+    function invocationWith(steps: bt.GalaxyInvocationStep[]): bt.GalaxyInvocation {
+      return { ...scheduledInvocation, state: 'completed', steps }
+    }
+
+    /** The `(galaxy job id, step id)` pairs `syncJobEffect` was asked to write. */
+    function syncedJobs(): [string, number][] {
+      return vi.mocked(syncJobEffect).mock.calls.map(call => [call[0], call[1]])
+    }
+
+    it('asks Galaxy for step details, without which a mapped step reports no jobs', async () => {
+      const queries: unknown[] = []
+      const layer = Layer.effect(
+        bt.GalaxyFetch,
+        Effect.sync(() =>
+          (async (_url: string, options?: { query?: unknown }) => {
+            queries.push(options?.query)
+            return invocationWith([])
+          }) as unknown as Context.Tag.Service<typeof bt.GalaxyFetch>,
+        ),
+      )
+      const supabase = createMockSupabase({
+        analysisSelectResult: { data: baseAnalysisRow, error: null },
+      })
+
+      await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+      expect(queries[0]).toEqual({ step_details: true })
+    })
+
+    it('records one job row per element, all at the step order_index', async () => {
+      const supabase = createMockSupabase({
+        analysisSelectResult: { data: baseAnalysisRow, error: null },
+      })
+      const layer = createMockGalaxyLayer(
+        invocationWith([mappedStep(['job-a', 'job-b', 'job-c'])]),
+      )
+
+      await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+      expect(syncedJobs()).toEqual([
+        ['job-a', 3],
+        ['job-b', 3],
+        ['job-c', 3],
+      ])
+    })
+
+    it('records the one job of an unmapped step exactly once, not once per source', async () => {
+      const supabase = createMockSupabase({
+        analysisSelectResult: { data: baseAnalysisRow, error: null },
+      })
+      // Galaxy reports an ordinary step's job in both places. Reading both
+      // would write the same galaxy id twice, which `jobs.galaxy_id` refuses.
+      const layer = createMockGalaxyLayer(invocationWith([
+        step({ job_id: 'galaxy-job-1', jobs: [job('galaxy-job-1')] }),
+      ]))
+
+      await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+      expect(syncedJobs()).toEqual([['galaxy-job-1', 1]])
+    })
+
+    it('falls back to job_id when a step carries no jobs array', async () => {
+      const supabase = createMockSupabase({
+        analysisSelectResult: { data: baseAnalysisRow, error: null },
+      })
+      const layer = createMockGalaxyLayer(invocationWith([
+        step({ job_id: 'galaxy-job-1', order_index: 2 }),
+      ]))
+
+      await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+      expect(syncedJobs()).toEqual([['galaxy-job-1', 2]])
+    })
+
+    it('falls back to job_id when the jobs array is empty, rather than dropping the job', async () => {
+      const supabase = createMockSupabase({
+        analysisSelectResult: { data: baseAnalysisRow, error: null },
+      })
+      const layer = createMockGalaxyLayer(invocationWith([
+        step({ job_id: 'galaxy-job-1', jobs: [], order_index: 2 }),
+      ]))
+
+      await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+      expect(syncedJobs()).toEqual([['galaxy-job-1', 2]])
+    })
+
+    it('records nothing for a step that ran no job', async () => {
+      const supabase = createMockSupabase({
+        analysisSelectResult: { data: baseAnalysisRow, error: null },
+      })
+      const layer = createMockGalaxyLayer(invocationWith([
+        step({ id: 'step-0', workflow_step_id: 'ws-0', order_index: 0, jobs: [] }),
+      ]))
+
+      await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+      expect(syncJobEffect).not.toHaveBeenCalled()
+    })
+
+    it('leaves a mapped step out of the output-dataset sync, which takes one job', async () => {
+      const supabase = createMockSupabase({
+        analysisSelectResult: { data: baseAnalysisRow, error: null },
+      })
+      const layer = createMockGalaxyLayer({
+        ...invocationWith([mappedStep(['job-a', 'job-b'])]),
+        outputs: {
+          out1: { id: 'dataset-1', src: 'hda', label: 'out1', workflow_step_id: 'ws-mapped' },
+        },
+      })
+
+      await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
+
+      expect(syncJobEffect).toHaveBeenCalledTimes(2)
+      expect(syncOutputDatasetEffect).not.toHaveBeenCalled()
+    })
+  })
+
   it('updates monitoring outcome when invocation reaches a terminal state', async () => {
     const completedInvocation: bt.GalaxyInvocation = {
       ...scheduledInvocation,

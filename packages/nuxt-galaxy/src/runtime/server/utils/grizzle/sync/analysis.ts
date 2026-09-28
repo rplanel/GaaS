@@ -48,6 +48,27 @@ export function isTransientError(error: unknown): boolean {
   return transientIndicators.some(indicator => message.includes(indicator))
 }
 
+/**
+ * Every Galaxy job an invocation step ran.
+ *
+ * A step that maps over a collection runs one job per element and carries
+ * none of them in `job_id`; `jobs` — populated only under
+ * `step_details=true` — is the one place they appear against their step. It
+ * also holds the single job of an ordinary step, so it is read first and
+ * `job_id` is the fallback for a payload fetched without step details.
+ *
+ * Empty counts as absent rather than as an answer. On both 22.05 and 26.1 a
+ * step with a `job_id` always reports that job in `jobs`, so the two cannot
+ * disagree — but if one ever did, dropping a job Galaxy named in `job_id`
+ * is the failure this exists to prevent.
+ */
+function stepGalaxyJobIds(step: bt.GalaxyInvocationStep): string[] {
+  if (step.jobs?.length) {
+    return step.jobs.map(job => job.id)
+  }
+  return step.job_id ? [step.job_id] : []
+}
+
 export function getAnalysisStderrEffect(
   supabase: SupabaseClient<Database>,
   analysisId: number,
@@ -176,7 +197,10 @@ export function syncAnalysisEffect(
 
     yield* Effect.logDebug('fetching invocation', { galaxyInvocationId: analysis.galaxy_id })
     const invocation = yield* bt
-      .getInvocationEffect(analysis.galaxy_id)
+      // `step_details` is what makes a mapped step's jobs reachable: without
+      // it Galaxy reports `job_id: null` for the step and says nothing about
+      // the jobs the implicit collection holds (#84).
+      .getInvocationEffect(analysis.galaxy_id, { stepDetails: true })
       .pipe(
         bt.toGalaxyServiceUnavailable,
         Effect.provide(galaxyLayer),
@@ -257,29 +281,48 @@ export function syncAnalysisEffect(
     }
 
     for (const step of invocation.steps || []) {
-      if (step.job_id) {
-        const jobDbId = yield* syncJobEffect(
-          step.job_id,
+      const galaxyJobIds = stepGalaxyJobIds(step)
+      if (galaxyJobIds.length === 0) {
+        continue
+      }
+
+      const jobDbIds: number[] = []
+      for (const galaxyJobId of galaxyJobIds) {
+        jobDbIds.push(yield* syncJobEffect(
+          galaxyJobId,
+          // every job of a mapped step belongs to the one step, so they all
+          // carry its `order_index`; `jobs.step_id` bears no constraint
           step.order_index,
           analysisId,
           ownerId,
           supabase,
           galaxyLayer,
+        ))
+      }
+
+      // `analysis_outputs.job_id` names a single job, and the invocation's
+      // `outputs` map holds only the workflow's labelled dataset outputs — a
+      // mapped step's output is a collection and appears under
+      // `output_collections`, which this sync does not read. So a step with
+      // more than one job has nothing here to attach, and attaching the same
+      // dataset to each of its jobs would write one row and re-upload the
+      // file once per element.
+      if (jobDbIds.length !== 1) {
+        continue
+      }
+      const outputs = Object.values(invocation.outputs || {}).filter(
+        output => output.workflow_step_id === step.workflow_step_id,
+      )
+      for (const output of outputs) {
+        yield* syncOutputDatasetEffect(
+          output.id,
+          analysisId,
+          analysis.history_id,
+          jobDbIds[0]!,
+          ownerId,
+          supabase,
+          galaxyLayer,
         )
-        const outputs = Object.values(invocation.outputs || {}).filter(
-          output => output.workflow_step_id === step.workflow_step_id,
-        )
-        for (const output of outputs) {
-          yield* syncOutputDatasetEffect(
-            output.id,
-            analysisId,
-            analysis.history_id,
-            jobDbId,
-            ownerId,
-            supabase,
-            galaxyLayer,
-          )
-        }
       }
     }
 
