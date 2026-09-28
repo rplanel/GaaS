@@ -65,12 +65,22 @@ export interface GalaxyDataToolParameter extends BaseToolParameter {
    * Nullable by construction, and `null` on every data parameter in every
    * recording — 24 of them across the two fixtures recorded with tools.
    *
-   * `to_dict` fills this key from `get_initial_value`, which for a data
-   * parameter is a scan of the *requesting account's* history rather than a
-   * declared default. So it is not a property of the tool at all: it is the
-   * per-request, per-account content the description endpoint strips as
-   * `withoutDatasetOptions`, and an account whose history holds no matching
-   * dataset gets `null`.
+   * `ToolParameter.to_dict` fills the key with
+   * `value_to_basic(self.get_initial_value(trans, other_values), …)` —
+   * verbatim on both releases (`tools/parameters/basic.py:302` at 22.05,
+   * `:373` at 26.1) — and for a data parameter `get_initial_value` is not a
+   * declared default at all. It is, in order: a `RuntimeValue()` if the
+   * request is in workflow-building mode, `None` if the parameter is
+   * `optional`, and otherwise a scan of the *requesting account's* history
+   * for a dataset of a matching extension (`basic.py:1853` at 22.05, `:2059`
+   * at 26.1).
+   *
+   * So two of those three paths give `null`, which is what all 24 recorded
+   * data parameters carry: the description endpoint reads tools outside
+   * building mode, so an optional parameter answers `null` outright and a
+   * required one answers `null` whenever that account's history holds nothing
+   * that fits. Which is also why this is the per-request, per-account content
+   * the endpoint strips as `withoutDatasetOptions`.
    */
   value: Extract<GalaxyToolParameterValue, GalaxyDataToolValue> | null
   extensions: string[]

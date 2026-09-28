@@ -38,26 +38,37 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * That every data parameter of a stored tool step is a runtime marker comes
- * from `add_dummy_datasets`, which writes one for each, and is borne out by
- * every recording. Galaxy says so in as many words too — "All data parameters
- * are represented as runtime values" — though in the narrower setting of
+ * That every data parameter of a stored tool step carries one of the two
+ * markers is two functions' doing, not one — the correction made while
+ * checking this file's citations against the source (#102):
+ *
+ * - `BaseDataToolParameter.get_initial_value` returns `RuntimeValue()` from
+ *   its first branch whenever `workflow_building_mode is ENABLED`, so opening
+ *   a workflow in the editor makes every data parameter a runtime value
+ *   before anything looks at the graph (`tools/parameters/basic.py:1853` at
+ *   22.05, `:2059` at 26.1).
+ * - `ToolModule.add_dummy_datasets` then returns `ConnectedValue()` for each
+ *   input a connection names (`workflow/modules.py:1710` at 22.05, `:2688`
+ *   at 26.1).
+ *
+ * Galaxy says the first part in as many words too — "All data parameters are
+ * represented as runtime values" — though in the narrower setting of
  * `SubworkflowModule.get_runtime_inputs`, explaining why that function skips
  * them, rather than as a declaration about tool state.
  *
- * Which spelling gets written is decided at *save* time by
- * `add_dummy_datasets`, so it says nothing about what will happen at run
- * time, and `isWorkflowRuntimeValue` draws no distinction between the two for
- * the same reason Galaxy's `is_runtime_value` draws none. That is the
- * correction #97 rests on: the ticket read `RuntimeValue` as "the reader must
- * supply this" and `ConnectedValue` as "an edge supplies this", where the
- * recordings show both markers on both kinds of parameter and a marker is not
- * what Galaxy consults.
+ * Both are *save*-time decisions, so the marker says nothing about what will
+ * happen at run time, and `isWorkflowRuntimeValue` draws no distinction
+ * between the two for the reason Galaxy draws none: `ConnectedValue`
+ * subclasses `RuntimeValue`, and `is_runtime_value` tests the base class.
+ * That is the correction #97 rests on — the ticket read `RuntimeValue` as
+ * "the reader must supply this" and `ConnectedValue` as "an edge supplies
+ * this", where the recordings show both markers on both kinds of parameter
+ * and a marker is not what Galaxy consults.
  *
  * Checked on both releases this project meets, because the recordings span
- * them and the function moved house between them. The test for the two
- * markers is character for character the same (`dict` widened to
- * `MutableMapping`, which changes nothing here):
+ * them and the marker test moved house between them. It is character for
+ * character the same (`dict` widened to `MutableMapping`, which changes
+ * nothing here):
  *
  * - 22.05: `tools/parameters/basic.py:80`, comment at `workflow/modules.py:602`
  * - 26.1: `tools/parameters/workflow_utils.py:50`, comment at `workflow/modules.py:1029`

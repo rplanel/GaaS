@@ -66,22 +66,41 @@ export interface WorkflowConditionalParametersValue {
 /**
  * A value a stored definition leaves to be filled when the workflow runs.
  *
- * Galaxy writes two spellings and reads them as one thing: `is_runtime_value`
- * answers true for `RuntimeValue` and `ConnectedValue` alike
- * (`tools/parameters/basic.py:80` at 22.05, moved to
- * `tools/parameters/workflow_utils.py:50` by 26.1 with its test unchanged).
- * Which one gets written is decided at *save* time by `add_dummy_datasets`,
- * so the marker says nothing about what will happen at run time — what
- * decides that is the step's connection, which `replacement_for_input` reads
- * and nothing else (#97). One concept to Galaxy, so one type here.
+ * One type for both spellings because upstream makes them one thing twice
+ * over: `ConnectedValue` *subclasses* `RuntimeValue`, and `is_runtime_value`
+ * answers true for either — `isinstance(value, RuntimeValue) or (… value.get
+ * ("__class__") in ["RuntimeValue", "ConnectedValue"])`, at
+ * `tools/parameters/basic.py:80` on 22.05 and moved whole to
+ * `tools/parameters/workflow_utils.py:50` by 26.1, its test unchanged but for
+ * `dict` widening to `MutableMapping`.
  *
- * Every data parameter of a stored tool step is one of these — Galaxy says so
- * in as many words, "All data parameters are represented as runtime values"
- * (`workflow/modules.py:602` at 22.05, `:1029` at 26.1). The converse does
- * **not** hold, and the recordings are where that shows: `__APPLY_RULES__`
- * carries a marker under `collapsible_value` inside each of its rule
- * objects, which is no parameter of any kind. So finding one says the run
- * will fill it, not that a dataset is what gets filled in.
+ * Which spelling gets written is decided at *save* time, by two different
+ * functions:
+ *
+ * - `RuntimeValue()` comes from `BaseDataToolParameter.get_initial_value`,
+ *   whose **first** branch returns one whenever
+ *   `workflow_building_mode is ENABLED` — so opening a workflow in the editor
+ *   makes every data parameter a runtime value before anything looks at the
+ *   graph (`basic.py:1853` at 22.05, `:2059` at 26.1).
+ * - `ConnectedValue()` comes from `ToolModule.add_dummy_datasets`, which
+ *   returns one for each input a connection names (`workflow/modules.py:1710`
+ *   at 22.05, `:2688` at 26.1).
+ *
+ * Which is why every data parameter of a stored tool step carries one or the
+ * other, and why the marker still says nothing about what will happen at run
+ * time: what decides *that* is the step's connection, which
+ * `replacement_for_input` reads and nothing else (`workflow/run.py:290` at
+ * 22.05, `:460` at 26.1) — the correction #97 rests on.
+ *
+ * Galaxy says the first part in as many words too, "All data parameters are
+ * represented as runtime values" (`workflow/modules.py:602` at 22.05,
+ * `:1029` at 26.1), though in the narrower setting of
+ * `SubworkflowModule.get_runtime_inputs`.
+ *
+ * The converse does **not** hold, and the recordings are where that shows:
+ * `__APPLY_RULES__` carries a marker under `collapsible_value` inside each of
+ * its rule objects, which is no parameter of any kind. So finding one says
+ * the run will fill it, not that a dataset is what gets filled in.
  *
  * 52 `ConnectedValue` and 10 `RuntimeValue` across the four recorded live
  * payloads, and more again in the exports.
@@ -103,6 +122,15 @@ export interface WorkflowRuntimeValue {
  * Measured on `conditional-repeat-runtime`: `__BUILD_LIST__` on step 2 keeps
  * five `datasets` entries, and `__MERGE_COLLECTION__` on steps 3 and 4 two
  * `inputs` entries each.
+ *
+ * Required here, though upstream is one step weaker than that:
+ * `Repeat.value_to_basic` writes the key only `if "__index__" in d`, and
+ * `value_from_basic` back-fills `d.get("__index__", i)` from the position
+ * "for backward compatibility" (`tools/parameters/grouping.py`, the same on
+ * both releases). So an instance without one is Galaxy's own legacy state
+ * rather than an impossibility — `isWorkflowRepeatInstanceValue` answers
+ * false for it, and a caller that meets one is looking at state older than
+ * the key.
  */
 export interface WorkflowRepeatInstanceValue {
   __index__: number
@@ -138,6 +166,12 @@ export interface WorkflowRepeatInstanceValue {
  * `isWorkflowRepeatInstanceValue` below are how a reader gets to either type,
  * and are the reason both are named rather than written inline at each site
  * that asks.
+ *
+ * That the union ends up as wide as JSON is not this client giving up, it is
+ * agreement with upstream: Galaxy's own response model types the field
+ * `tool_inputs: Any = Field(None, title="Tool Inputs", description="TODO")`
+ * (`lib/galaxy/schema/schema.py`, `WorkflowStepBase`, both releases). There
+ * is no narrower contract to import.
  *
  * Which shapes the recordings *actually* hold is pinned in
  * `packages/ui/test/characterisation/parameterValueTypes.test.ts`, whose walk
@@ -194,12 +228,25 @@ export interface WorkflowStep {
   tool_version: null | string
   annotation: null | string
   /**
-   * `null` on a `subworkflow` step, which runs no tool and so saved no tool
-   * state — measured on steps 8 and 12 of `subworkflow-nested` at 26.1,
-   * where `tool_id` and `tool_version` are `null` beside it. Every other
-   * step type carries an object, empty or not.
+   * Absent or `null` on a `subworkflow` step, which runs no tool and so
+   * saved no tool state. Both, because two layers disagree: the manager
+   * _deletes_ the key — `del step_dict["tool_inputs"]`, beside `tool_id` and
+   * `tool_version`, at `managers/workflows.py:1537` on 22.05 and `:1941` on
+   * 26.1 — and 26.1's response model then puts it back as its default,
+   * `tool_inputs: Any = Field(None, …)` on `WorkflowStepBase`
+   * (`schema/schema.py:2629`).
+   *
+   * So 26.1 serves `null`, which is what steps 8 and 12 of
+   * `subworkflow-nested` were recorded with. 22.05 declares the same field
+   * `Field(...)` — *required* — on a route that did not run the model, so it
+   * is expected to omit the key; that half is read off the source and not
+   * measured, no recorded 22.05 workflow having a subworkflow step. Optional
+   * as well as nullable for that reason: `undefined` is the reading this
+   * client cannot rule out, and it is not the same as `null` to a caller.
+   *
+   * Every other step type carries an object, empty or not.
    */
-  tool_inputs: WorkflowToolParameters | null
+  tool_inputs?: WorkflowToolParameters | null
   input_steps: Record<string, WorkflowInputStep>
 }
 
@@ -207,7 +254,14 @@ export interface WorkflowToolStep extends WorkflowStep {
   type: 'tool'
   tool_id: string
   tool_version: string
-  /** Never `null` on a tool step: the `null` above belongs to a subworkflow one. */
+  /**
+   * Present and non-`null` on a tool step: what the base declares belongs to
+   * a subworkflow one. Galaxy draws the same line and says why it has not
+   * moved the fields itself — "TODO: these should move to ToolStep, however
+   * we might be breaking scripts that iterate over steps and assume tool_id
+   * is a valid key for every step" (`schema/schema.py`, above `tool_id`).
+   * Nothing iterates over steps here assuming that, so the narrowing is free.
+   */
   tool_inputs: WorkflowToolParameters
 }
 
