@@ -29,11 +29,11 @@
  * is the independent reading the normaliser is measured against.
  */
 
+import type { WorkflowFixture } from './fixtures'
 import { mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
-import { describedInputsOf } from 'nuxt-galaxy'
 import { describe, expect, it } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
-import { describedSteps } from '../describedSteps'
+import { describedRevision } from '../describedSteps'
 import { FIXTURES, loadFixture } from './fixtures'
 import {
   describeParameters,
@@ -79,13 +79,22 @@ for (const fixture of [ccqtl, nested, fanIn]) {
   // Normalised once per fixture rather than inside the handler: the real
   // endpoint reads one row that never changes, so every request for this
   // revision is answered from the same description.
-  const steps = describedSteps(fixture.slug)
-  const inputs = describedInputsOf(steps)
+  const { steps, inputs } = describedRevision(fixture)
   registerEndpoint(
     `/api/galaxy/workflows/${fixture.manifest.workflowId}/revisions/${fixture.manifest.revision}/description`,
     () => ({
       steps,
       inputs,
+      // The half of the answer a recording cannot supply. The endpoint
+      // splits the tools a revision pins into the ones Galaxy resolved and
+      // the ones it did not, and which side a tool falls on depends on what
+      // that Galaxy holds when the question is asked — not on the revision.
+      // So `tools` is every definition the recording captured, and
+      // `unavailable` is empty because a recording has no way to say
+      // otherwise. `test/components/InvokeForm.test.ts` is where an
+      // unresolved tool is exercised; nothing here can pin that pairing, and
+      // the test below asserting that the recorded tools are exactly the
+      // pins the definition declares is as close as a recording gets.
       tools: fixture.tools,
       unavailable: [],
     }),
@@ -120,7 +129,7 @@ async function inSetup<T>(use: () => T): Promise<T> {
  * them would break this suite. The seam has moved to the one that replaced
  * them; every assertion below is the one it was.
  */
-async function modelThroughComposable(fixture: typeof ccqtl) {
+async function descriptionThroughComposable(fixture: WorkflowFixture) {
   const { workflowSteps, workflowInputs, workflowParametersModel, toolsObj, toolInputParameters, unconnectedInputsByStep } = await inSetup(() =>
     useGalaxyWorkflowDescription(ref(fixture.manifest.workflowId), ref(fixture.manifest.revision)),
   )
@@ -307,9 +316,12 @@ describe('what a step actually puts on screen', () => {
     // parameter, `Step.vue` renders only where the step's own model has a
     // value under that name, and what a reader sees is the overlap. Driven
     // through the real composable so that changing it breaks this.
-    const { workflowParametersModel, toolInputParameters } = await modelThroughComposable(ccqtl)
+    const { workflowParametersModel, toolInputParameters, workflowSteps } = await descriptionThroughComposable(ccqtl)
 
-    const step4 = ccqtl.live.steps['4']!
+    // The pin read off the step the endpoint served, not off the recording
+    // beside it. The two agree on every recorded step, and reaching past the
+    // answer for a field the answer carries is the habit #103 was about.
+    const step4 = workflowSteps.value['4']!
     const declared = toolInputParameters.value[`${step4.tool_id}@${step4.tool_version}`]!.map(input => input.name)
     const saved = describeParameters(workflowParametersModel.value['4']!)
 
@@ -355,13 +367,13 @@ describe('what a step actually puts on screen', () => {
     // nested recording below: a workflow whose data parameters are all
     // connected or declared as inputs is unchanged by this ticket. Driven
     // through the real composable, so a rule that over-reports breaks here.
-    const { unconnectedInputsByStep } = await modelThroughComposable(ccqtl)
+    const { unconnectedInputsByStep } = await descriptionThroughComposable(ccqtl)
 
     expect(unconnectedInputsByStep.value).toEqual({})
   })
 
   it('offers no parameter for a data input step, which declares no tool', async () => {
-    const { workflowParametersModel } = await modelThroughComposable(ccqtl)
+    const { workflowParametersModel } = await descriptionThroughComposable(ccqtl)
     expect(Object.keys(workflowParametersModel.value).sort()).toEqual(['2', '3', '4', '5', '6'])
   })
 
@@ -370,7 +382,7 @@ describe('what a step actually puts on screen', () => {
     // is in this recording rather than in `ccqtl-today`. Three shapes at once,
     // and every one of them decided by the absence of an edge rather than by
     // which marker Galaxy wrote.
-    const { unconnectedInputsByStep } = await modelThroughComposable(nested)
+    const { unconnectedInputsByStep } = await descriptionThroughComposable(nested)
 
     expect(Object.keys(unconnectedInputsByStep.value).sort()).toEqual(['1', '2'])
 
@@ -410,7 +422,7 @@ describe('what a step actually puts on screen', () => {
     // It cannot pin more than that. With no definition there are no types to
     // over-report from, so this says the missing case is *handled*, not that
     // the rule is right; the nested recording above is what says that.
-    const { unconnectedInputsByStep } = await modelThroughComposable(fanIn)
+    const { unconnectedInputsByStep } = await descriptionThroughComposable(fanIn)
 
     expect(unconnectedInputsByStep.value).toEqual({})
   })
@@ -420,29 +432,19 @@ describe('what a step actually puts on screen', () => {
  * The half of the endpoint's answer the suite could not see until #103.
  *
  * The stub served the live payload, and a live step carries no `label`, no
- * `uuid` and no `outputs` at all — measured in the first test below rather
- * than argued — so these three were unobservable here however faithfully the
- * endpoint served them. They are pinned now for the reason the rest of this
- * file exists: a change to `describedStepsOf` should be a failing assertion,
- * not a field nobody happens to be looking at.
+ * `uuid` and no `outputs` at all — measured under "the recordings
+ * themselves" below rather than argued here — so these three were
+ * unobservable however faithfully the endpoint served them. They are pinned
+ * now for the reason the rest of this file exists: a change to
+ * `describedStepsOf` should be a failing assertion, not a field nobody
+ * happens to be looking at.
  */
 describe('what the endpoint says that the live payload cannot', () => {
-  it('is said by no recorded live step, on either Galaxy release', () => {
-    for (const fixture of [ccqtl, nested, fanIn]) {
-      for (const [stepId, step] of Object.entries(fixture.live.steps)) {
-        const keys = Object.keys(step)
-        expect(keys, `${fixture.slug} step ${stepId}`).not.toContain('label')
-        expect(keys, `${fixture.slug} step ${stepId}`).not.toContain('uuid')
-        expect(keys, `${fixture.slug} step ${stepId}`).not.toContain('outputs')
-      }
-    }
-  })
-
   it('names the steps the author named, and leaves the rest null', async () => {
     // `null` and not `''`: the export writes the empty string for a step
     // nobody named as readily as it writes nothing, and the contract promises
     // one spelling for absent.
-    const { workflowSteps } = await modelThroughComposable(ccqtl)
+    const { workflowSteps } = await descriptionThroughComposable(ccqtl)
     const labels = Object.fromEntries(
       Object.entries(workflowSteps.value).map(([stepId, step]) => [stepId, step.label]),
     )
@@ -457,20 +459,31 @@ describe('what the endpoint says that the live payload cannot', () => {
     })
   })
 
-  it('carries each step\'s own uuid, taken from the revision that was asked for', async () => {
-    // The live payload carries one uuid for the whole workflow,
-    // `latest_workflow_uuid`, and it is the newest revision's whatever
-    // revision was requested. The export is the revision, so its step uuids
-    // are that revision's.
-    const { workflowSteps } = await modelThroughComposable(ccqtl)
+  it('gives every step a uuid of its own, which the stored definition is the only source of', async () => {
+    // What this pins and what it does not. The live payload carries no step
+    // uuid at all and one workflow-level `latest_workflow_uuid`, which is
+    // the newest revision's whichever revision was asked for — so before
+    // #103 a served step had no uuid whatsoever, and that is the regression
+    // this catches.
+    //
+    // It does **not** show that the uuid belongs to the revision requested
+    // rather than to the latest: `describedStepsOf` copies the export's
+    // uuid straight through, and all three recordings are of the latest
+    // revision, so the two answers coincide here. Telling them apart needs
+    // a recording of an older revision, which no fixture is.
+    const { workflowSteps } = await descriptionThroughComposable(ccqtl)
     const exported = ccqtl.exported.steps as Record<string, { uuid: string }>
-    for (const [stepId, step] of Object.entries(workflowSteps.value)) {
+    const served = Object.entries(workflowSteps.value)
+
+    for (const [stepId, step] of served) {
       expect(step.uuid, stepId).toBe(exported[stepId]!.uuid)
     }
+    expect(new Set(served.map(([, step]) => step.uuid)).size).toBe(served.length)
+    expect(served.map(([, step]) => step.uuid)).not.toContain(ccqtl.live.latest_workflow_uuid)
   })
 
   it('carries the outputs a step declares, which is what an output handle is drawn for', async () => {
-    const { workflowSteps } = await modelThroughComposable(ccqtl)
+    const { workflowSteps } = await descriptionThroughComposable(ccqtl)
     expect(workflowSteps.value['3']!.outputs.map(output => output.name))
       .toEqual(['lod', 'out', 'covar_modmat'])
     // A data input step declares none, and that is Galaxy's own answer
@@ -483,7 +496,7 @@ describe('what the endpoint says that the live payload cannot', () => {
     // with, because the export carries no `inputs` list of its own. Agreeing
     // is the measured fact and not a guarantee: this recording is of the
     // *latest* revision, which is the one Galaxy's own list describes.
-    const { workflowInputs } = await modelThroughComposable(ccqtl)
+    const { workflowInputs } = await descriptionThroughComposable(ccqtl)
     expect(workflowInputs.value).toEqual(ccqtl.live.inputs)
   })
 })
@@ -496,6 +509,41 @@ describe('the recordings themselves', () => {
       expect(fixture.manifest.command).toContain('record-workflow-fixtures')
       expect(typeof fixture.manifest.revision).toBe('number')
     }
+  })
+
+  it('say nothing in their live payload about a step\'s label, uuid or outputs', () => {
+    // Why the stub could not serve the live payload and still be what the
+    // endpoint serves (#103). Measured on both releases rather than read off
+    // Galaxy's source: `_workflow_to_dict_instance` writes none of the
+    // three, so a suite fed the live payload could not observe them at all.
+    for (const fixture of [ccqtl, nested, fanIn]) {
+      for (const [stepId, step] of Object.entries(fixture.live.steps)) {
+        const keys = Object.keys(step)
+        expect(keys, `${fixture.slug} step ${stepId}`).not.toContain('label')
+        expect(keys, `${fixture.slug} step ${stepId}`).not.toContain('uuid')
+        expect(keys, `${fixture.slug} step ${stepId}`).not.toContain('outputs')
+      }
+    }
+  })
+
+  it('hold a tool definition for exactly the tools their stored definition pins', () => {
+    // The recorder reads the pins off the **live** payload and the endpoint
+    // reads them off the export, so the keys the stub serves its `tools`
+    // under are only the right ones while the two agree. Asserted rather
+    // than assumed: a recording whose export pinned a version the recorder
+    // never fetched would serve a step no definition at all, and the panel
+    // would render empty for a reason no test names.
+    for (const fixture of [ccqtl, nested]) {
+      const pinned = Object.values(describedRevision(fixture).steps)
+        .filter(step => step.type === 'tool' && step.tool_id !== null && step.tool_version !== null)
+        .map(step => `${step.tool_id}@${step.tool_version}`)
+      expect(new Set(Object.keys(fixture.tools)), fixture.slug).toEqual(new Set(pinned))
+    }
+    // `fan-in` was recorded `--no-tools`, so it pins tools and holds none.
+    // That is the recording saying so, and it is why `unavailable` cannot be
+    // derived from one: nothing here distinguishes a tool nobody recorded
+    // from a tool Galaxy does not have.
+    expect(Object.keys(fanIn.tools)).toEqual([])
   })
 
   it('were served the tool versions they asked for', () => {

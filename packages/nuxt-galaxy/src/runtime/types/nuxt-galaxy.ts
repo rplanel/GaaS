@@ -151,8 +151,9 @@ export type { DescribedStep, DescribedSubworkflow, DescribedToolStep, DescribedW
  * proving what a graph draws from one, or what the description endpoint
  * serves — needs the same normalisation the endpoint applies, and the
  * alternative is reaching into `runtime/server/` by path or keeping a second
- * copy that can drift. Both are pure: they read an export and touch neither
- * the database nor Galaxy.
+ * copy that can drift. Both are pure — `describedStepsOf` reads an export
+ * and `describedInputsOf` reads the steps it returned — and neither touches
+ * the database or Galaxy.
  *
  * `describedInputsOf` is published beside `describedStepsOf` because the
  * endpoint's answer is the pair — `steps` and the `inputs` derived from
