@@ -90,8 +90,12 @@ src/
 │   ├── shared/             # The few pure helpers BOTH halves must agree on
 │   │                       # byte-for-byte (e.g. the `<toolId>@<version>` key
 │   │                       # the endpoint serves under and the composable
-│   │                       # looks up with). No imports, no side effects;
-│   │                       # anything with a direction belongs in app/ or server/
+│   │                       # looks up with, and Galaxy's own naming of an
+│   │                       # input step). No runtime imports, no side effects;
+│   │                       # anything with a direction belongs in app/ or
+│   │                       # server/. A type-only import from `blendtype` is
+│   │                       # fine: it is erased, so it gives the file no
+│   │                       # direction and pulls nothing into either bundle
 │   └── types/
 │       ├── database.ts     # Generated Supabase types
 │       └── nuxt-galaxy.ts  # Module types
