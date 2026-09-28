@@ -528,11 +528,62 @@ describe('what the step of an export keeps', () => {
     workflow_outputs: [],
     position: { left: 480.5, top: 212 },
     when: '$(inputs.run_it)',
-    subworkflow: { a_galaxy_workflow: 'true', steps: { 0: { id: 0, type: 'data_input' } } },
     an_unmodelled_galaxy_key: 'kept',
   }
 
-  const withFanIn = { ...mockRawExport, steps: { 2: fanIn } }
+  /**
+   * A step that runs a whole workflow, shaped as Galaxy really writes one.
+   *
+   * It omits `content_id`, `tool_state`, `tool_version` and `errors` — not
+   * `null`, absent — and writes `tool_id` as `null`. Measured on three
+   * published workflows on usegalaxy.eu at 26.1.2, where the schema refused
+   * every one of them until #89, so no workflow holding a subworkflow step
+   * could be published at all.
+   */
+  const subworkflowStep = {
+    id: 3,
+    annotation: '',
+    name: 'Trim and map',
+    label: 'Trim and map',
+    tool_id: null,
+    type: 'subworkflow',
+    uuid: 'step-3-uuid',
+    input_connections: { 'Trim and map': { id: 2, output_name: 'out_file1' } },
+    inputs: [{ description: '', name: 'Trim and map' }],
+    // Galaxy writes `[]` here on a subworkflow step and names its real
+    // outputs in `workflow_outputs`.
+    outputs: [],
+    workflow_outputs: [],
+    position: { left: 720, top: 212 },
+    when: null,
+    subworkflow: {
+      'a_galaxy_workflow': 'true',
+      'format-version': '0.1',
+      'name': 'Trim and map',
+      'annotation': '',
+      'uuid': 'nested-uuid',
+      'steps': {
+        0: {
+          annotation: '',
+          id: 0,
+          name: 'Input dataset',
+          content_id: null,
+          label: 'Nested reads',
+          tool_id: null,
+          type: 'data_input',
+          uuid: 'nested-step-0-uuid',
+          tool_state: '{"optional": false}',
+          tool_version: null,
+          input_connections: {},
+          inputs: [{ description: '', name: 'Nested reads' }],
+          outputs: [],
+          workflow_outputs: [],
+        },
+      },
+    },
+  }
+
+  const withFanIn = { ...mockRawExport, steps: { 2: fanIn, 3: subworkflowStep } }
 
   function exported() {
     return pipe(
@@ -561,11 +612,36 @@ describe('what the step of an export keeps', () => {
     expect(connections).toHaveLength(2)
   })
 
-  it('keeps the position, the condition and the subworkflow', async () => {
+  it('keeps the position and the condition of a step', async () => {
     const step = (await exported()).steps['2']!
     expect(step.position).toEqual({ left: 480.5, top: 212 })
     expect(step.when).toBe('$(inputs.run_it)')
-    expect(step.subworkflow).toEqual({ a_galaxy_workflow: 'true', steps: { 0: { id: 0, type: 'data_input' } } })
+  })
+
+  it('accepts a subworkflow step, which it refused outright until #89', async () => {
+    // Galaxy leaves `content_id`, `tool_state` and `tool_version` out of one
+    // and `type` was not in the enum, so the export was refused and the
+    // version never stored.
+    const step = (await exported()).steps['3']!
+    expect(step.type).toBe('subworkflow')
+    expect(step.tool_id).toBeNull()
+    expect(step.tool_state).toBeUndefined()
+    expect(step.tool_version).toBeUndefined()
+    expect(step.content_id).toBeUndefined()
+  })
+
+  it('keeps the whole nested workflow a subworkflow step embeds', async () => {
+    // Its steps and their connections, because something now draws them: a
+    // subworkflow is one node that opens onto its own graph (Q19), and the
+    // nested export is the only description of it there is — it carries a
+    // name and a uuid but no stored workflow id.
+    const nested = (await exported()).steps['3']!.subworkflow
+    expect(nested?.name).toBe('Trim and map')
+    expect(Object.keys(nested?.steps ?? {})).toEqual(['0'])
+    expect(nested?.steps['0']!.label).toBe('Nested reads')
+    // And what it does not model is kept rather than stripped, one level
+    // down as well: this is #82's trap inside a nested export.
+    expect(nested).toMatchObject({ 'format-version': '0.1', 'uuid': 'nested-uuid' })
   })
 
   // The guard for the defect itself: the nested schema must not strip. A key
@@ -579,7 +655,7 @@ describe('what the step of an export keeps', () => {
   // A workflow built through the API was never laid out, and Galaxy writes
   // that as a null position or leaves it out. Neither is a broken export.
   it('accepts a step that was never laid out, however Galaxy says so', async () => {
-    const { position: _dropped, when: _w, subworkflow: _s, ...bare } = fanIn
+    const { position: _dropped, when: _w, ...bare } = fanIn
     const laidOut = await pipe(
       exportWorkflowEffect('wf-export-id'),
       Effect.provide(createSuccessLayer({

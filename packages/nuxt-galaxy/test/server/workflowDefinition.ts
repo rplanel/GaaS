@@ -1,4 +1,4 @@
-import type { GalaxyWorkflowExport, WorkflowStepConnection, WorkflowStepExport } from 'blendtype'
+import type { GalaxyWorkflowExport, WorkflowStepConnection, WorkflowStepExport, WorkflowSubworkflowExport } from 'blendtype'
 
 /**
  * Builders for a stored `definition` — the `json` column publishing fills
@@ -96,6 +96,66 @@ export function toolStep(
     type: 'tool',
     uuid: `uuid-${id}`,
     workflow_outputs: [],
+    ...overrides,
+  }
+}
+
+/**
+ * The workflow a subworkflow step embeds, as an export writes it.
+ *
+ * The same shape as a whole definition **without `version`**: Galaxy adds
+ * that to a downloaded dict and not to a nested one, so a nested export is
+ * not a revision anything can pin (#89). Measured on `subworkflow-nested`.
+ */
+export function nestedWorkflow(
+  name: string,
+  steps: Record<string, WorkflowStepExport>,
+): WorkflowSubworkflowExport {
+  // `uuid`, `annotation` and `tags` are on a real nested export and are not
+  // here: the schema leaves them to its catchall and nothing reads them, so a
+  // fixture carrying them would suggest they are depended on.
+  return { name, steps }
+}
+
+/**
+ * A step that runs a whole workflow of its own.
+ *
+ * Its shape is the reason `WorkflowStepExport` has optional keys at all:
+ * Galaxy leaves `content_id`, `tool_state`, `tool_version` and `errors`
+ * **out** of a subworkflow step — not `null`, absent — and writes `tool_id`
+ * as `null`. This builder omits exactly those three, so a schema that made
+ * any of them required again would fail to parse what it produces, as it did
+ * before #89.
+ *
+ * `nestedSteps` may itself hold a subworkflow step: that is the recursion
+ * `describedStepsOf` walks and the one a reader drills into.
+ */
+export function subworkflowStep(
+  id: number,
+  name: string,
+  nestedSteps: Record<string, WorkflowStepExport>,
+  overrides: Partial<WorkflowStepExport> = {},
+): WorkflowStepExport {
+  return {
+    annotation: '',
+    id,
+    input_connections: { [name]: connection(id - 1) },
+    inputs: [{ description: '', name }],
+    label: name,
+    // What Galaxy calls the step is the *subworkflow's* name, while `label`
+    // is what the author called the node in the outer editor.
+    name,
+    // Empty even when a downstream step reads from this one: Galaxy names a
+    // subworkflow's real outputs in `workflow_outputs` and writes `outputs`
+    // as `[]`.
+    outputs: [],
+    position: { left: 480, top: id * 120 },
+    tool_id: null,
+    type: 'subworkflow',
+    uuid: `uuid-${id}`,
+    when: null,
+    workflow_outputs: [],
+    subworkflow: nestedWorkflow(name, nestedSteps),
     ...overrides,
   }
 }

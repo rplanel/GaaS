@@ -1,0 +1,92 @@
+{
+  "recordedAt": "2026-09-28",
+  "instance": "usegalaxy.eu",
+  "toolsRecorded": false,
+  "galaxyVersion": "26.1.2.dev0",
+  "workflowId": "3975af16fc2a407e",
+  "workflowName": "Single-Cell RNA-seq Preprocessing: 10X Genomics CellPlex Multiplexed Samples (release v0.6.6)",
+  "revision": 1,
+  "command": "node scripts/record-workflow-fixtures.mts 3975af16fc2a407e --instance https://usegalaxy.eu --no-tools --name subworkflow-nested",
+  "datasetOptionsRedacted": true,
+  "shapes": {
+    "live": {
+      "0": [],
+      "1": [],
+      "2": [
+        "data_input"
+      ],
+      "3": [
+        "data_input"
+      ],
+      "4": [],
+      "5": [],
+      "6": [],
+      "7": [],
+      "8": [
+        "subworkflow"
+      ],
+      "9": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "10": [
+        "ConnectedValue",
+        "conditional",
+        "repeat"
+      ],
+      "11": [
+        "ConnectedValue"
+      ],
+      "12": [
+        "subworkflow"
+      ],
+      "13": [
+        "ConnectedValue",
+        "conditional",
+        "repeat"
+      ]
+    },
+    "export": {
+      "0": [],
+      "1": [],
+      "2": [
+        "data_input"
+      ],
+      "3": [
+        "data_input"
+      ],
+      "4": [],
+      "5": [],
+      "6": [],
+      "7": [],
+      "8": [
+        "subworkflow"
+      ],
+      "9": [
+        "ConnectedValue",
+        "conditional"
+      ],
+      "10": [
+        "ConnectedValue",
+        "conditional",
+        "repeat"
+      ],
+      "11": [
+        "ConnectedValue"
+      ],
+      "12": [
+        "subworkflow"
+      ],
+      "13": [
+        "ConnectedValue",
+        "conditional",
+        "repeat"
+      ]
+    }
+  },
+  "missingShapes": [
+    "RuntimeValue",
+    "fan-in"
+  ],
+  "tools": {}
+}

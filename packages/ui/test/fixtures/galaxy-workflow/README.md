@@ -24,13 +24,22 @@ The calls are spelled exactly as `blendtype` spells them (`getWorkflowEffect`,
 `exportWorkflowEffect`, `getWorkflowRevisionsEffect`, `getToolEffect`), so what
 is on disk is what the application sees.
 
-## The three recordings
+## The recordings
 
 | Directory | Instance | Galaxy | Steps | Why it is here |
 |---|---|---|---|---|
 | `ccqtl-today` | galaxy.pasteur.fr | 22.05.1 | 7 | The baseline: what production reads today. A data input and a `RuntimeValue`. |
 | `conditional-repeat-runtime` | usegalaxy.eu | 26.1 | 5 | A conditional inside a repeat, a conditional inside a section, a repeat, a `RuntimeValue`. |
 | `fan-in` | usegalaxy.eu | 26.1 | 23 | An input fed by two upstream outputs, keyed `batchmode\|input_fastas`. Export only — a fan-in lives in the connections and never reaches a tool definition. |
+| `subworkflow-nested` | usegalaxy.eu | 26.1 | 14 | A subworkflow step, and a subworkflow inside that subworkflow (#89). Export only, as `fan-in` is. |
+
+**What `subworkflow-nested` was recorded for.** The export schema *refused* a
+subworkflow step outright: Galaxy omits `content_id`, `tool_state`,
+`tool_version` and `errors` on one and writes `tool_id` as `null`, and
+`subworkflow` was not in the step-type enum at all — so a workflow holding one
+could not be published. Two levels deep on purpose: the graph draws a
+subworkflow as one step that opens onto its own graph, and a recording only one
+level deep would let a normaliser that fails to recurse pass.
 
 **Why two instances.** No workflow in Pasteur's account carries a conditional,
 a repeat or a fan-in; a survey of 160 published workflows on usegalaxy.eu found
@@ -55,7 +64,12 @@ node scripts/record-workflow-fixtures.mts 95dfc6403c0edd08 \
   --instance https://usegalaxy.eu --name conditional-repeat-runtime
 node scripts/record-workflow-fixtures.mts 5a30e01ff719f396 \
   --instance https://usegalaxy.eu --name fan-in --no-tools
+node scripts/record-workflow-fixtures.mts 3975af16fc2a407e \
+  --instance https://usegalaxy.eu --name subworkflow-nested --no-tools
 ```
+
+Each directory's `manifest.json` carries the command that reproduces it,
+`--instance` and `--no-tools` included.
 
 Each command replaces its directory wholesale. Read the diff before committing
 it: a re-recording that changes the derived model is the suite telling you
@@ -75,6 +89,9 @@ node scripts/record-workflow-fixtures.mts --survey \
 ```
 
 Both print a yes/no verdict per workflow against the five shapes #86 names.
+The survey's columns carry a sixth, `subworkflow`, which the verdict does not:
+the verdict answers "does this exercise what #86 asked for", and a sixth shape
+there would report every fixture already committed as incomplete.
 
 ## Two things the recorder does on purpose
 

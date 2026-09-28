@@ -31,7 +31,7 @@ import {
   mockGalaxyWorkflowExport,
   mockSupabaseUser,
 } from '../../fixtures'
-import { connection, dataInputStep, toolStep, workflowDefinition } from '../../workflowDefinition'
+import { connection, dataInputStep, subworkflowStep, toolStep, workflowDefinition } from '../../workflowDefinition'
 
 // Mock getCurrentUserEffect. The module's error classes are kept real so
 // `toBeInstanceOf` below compares against the class production throws.
@@ -596,13 +596,10 @@ describe('publishVersion', () => {
       })
     })
 
-    it('keeps the layout, the condition and the subworkflow of a step', async () => {
+    it('keeps the layout and the condition of a step', async () => {
       const conditional = workflowDefinition({
         0: dataInputStep(0, 'Input FASTQ'),
-        1: toolStep(1, CAT, '1.0.0', {
-          when: '$(inputs.run_it)',
-          subworkflow: { a_galaxy_workflow: 'true', steps: { 0: { id: 0, type: 'data_input' } } },
-        }),
+        1: toolStep(1, CAT, '1.0.0', { when: '$(inputs.run_it)' }),
       })
 
       const { exit, mockClient } = publish({ galaxyLayer: galaxyHolding(conditional).layer })
@@ -611,7 +608,38 @@ describe('publishVersion', () => {
       const step = storedDefinition(mockClient).steps['1']!
       expect(step.position).toEqual({ left: 240, top: 120 })
       expect(step.when).toBe('$(inputs.run_it)')
-      expect(step.subworkflow).toEqual({ a_galaxy_workflow: 'true', steps: { 0: { id: 0, type: 'data_input' } } })
+    })
+
+    it('keeps the whole nested workflow of a subworkflow step, two levels down', async () => {
+      // A subworkflow step is the shape that could not be published at all
+      // until #89: Galaxy omits `content_id`, `tool_state` and `tool_version`
+      // on one, and `type: 'subworkflow'` was not in the enum, so the export
+      // was refused and the version never stored.
+      //
+      // This assertion used to hang a hand-shaped `subworkflow` off a *tool*
+      // step, which Galaxy never writes, and asserted it survived verbatim —
+      // true only because the field was modelled as an opaque object. Now
+      // that a reader drills into it, what has to survive is the nested
+      // steps and their connections.
+      const withSubworkflow = workflowDefinition({
+        0: dataInputStep(0, 'Input FASTQ'),
+        1: subworkflowStep(1, 'Trim and map', {
+          0: dataInputStep(0, 'Nested reads'),
+          1: subworkflowStep(1, 'Inner', { 0: dataInputStep(0, 'Innermost reads') }),
+        }),
+      })
+
+      const { exit, mockClient } = publish({ galaxyLayer: galaxyHolding(withSubworkflow).layer })
+
+      expect(Exit.isSuccess(await exit)).toBe(true)
+      const step = storedDefinition(mockClient).steps['1']!
+      expect(step.type).toBe('subworkflow')
+      expect(step.subworkflow?.name).toBe('Trim and map')
+      expect(Object.keys(step.subworkflow?.steps ?? {})).toEqual(['0', '1'])
+      expect(step.subworkflow?.steps['1']!.subworkflow?.name).toBe('Inner')
+      expect(step.subworkflow?.steps['1']!.input_connections).toEqual({
+        Inner: { id: 0, output_name: 'output' },
+      })
     })
 
     it('stores the export whole, not the subset the client models', async () => {

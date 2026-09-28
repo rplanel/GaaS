@@ -22,6 +22,7 @@
     "cleandep": "rm -rf node_modules .data .nuxt .playground/.nuxt .playground/.output .playground/node_modules .playground/.data"
   },
   "dependencies": {
+    "@dagrejs/dagre": "catalog:",
     "@iconify-json/eos-icons": "catalog:",
     "@iconify-json/ep": "catalog:",
     "@iconify-json/lucide": "catalog:",
@@ -48,6 +49,9 @@
     "@uwdata/mosaic-core": "catalog:dataviz",
     "@uwdata/mosaic-sql": "catalog:dataviz",
     "@uwdata/vgplot": "catalog:dataviz",
+    "@vue-flow/background": "catalog:",
+    "@vue-flow/controls": "catalog:",
+    "@vue-flow/core": "catalog:",
     "@vueuse/core": "catalog:",
     "apache-arrow": "catalog:",
     "blendtype": "workspace:*",

@@ -66,7 +66,7 @@ export function loadFixture(slug: string): WorkflowFixture {
 }
 
 /**
- * The three recordings, and what each is here to pin.
+ * The recordings, and what each is here to pin.
  *
  * No single real workflow carries all five shapes #86 names at a size worth
  * committing: a survey of 160 published workflows on usegalaxy.eu found only
@@ -95,4 +95,17 @@ export const FIXTURES = {
    * the array-valued connection.
    */
   fanIn: 'fan-in',
+  /**
+   * A subworkflow step, and a subworkflow inside that subworkflow — the shape
+   * the export schema refused outright until #89, which meant a workflow
+   * holding one could not be published at all.
+   *
+   * Two levels deep on purpose: the graph draws a subworkflow as one node and
+   * drills into its nested definition when the node is opened (Q19), and a
+   * recording only one level deep would let a normaliser that fails to
+   * recurse pass. Recorded without tool definitions, as `fan-in` is: what it
+   * pins lives in the step shape and the connections, and never reaches a
+   * tool.
+   */
+  subworkflowNested: 'subworkflow-nested',
 } as const

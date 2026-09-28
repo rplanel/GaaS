@@ -1,4 +1,5 @@
-import type { GalaxyWorkflowExport, WorkflowStepConnections, WorkflowStepExport, WorkflowStepType, WorkflowToolParameters } from 'blendtype'
+import type { GalaxyWorkflowExport, WorkflowStepConnections, WorkflowStepExport, WorkflowStepType, WorkflowSubworkflowExport, WorkflowToolParameters } from 'blendtype'
+import { inputStepLabel, isInputStep } from '../../../shared/stepLabel'
 
 /**
  * One step of a revision, as this application describes it (#88).
@@ -23,9 +24,10 @@ import type { GalaxyWorkflowExport, WorkflowStepConnections, WorkflowStepExport,
  * array of them**, which is the fact a graph is drawn from.
  *
  * What is kept in the row but deliberately left out of this shape:
- * `position` (Q6 auto-lays the graph out), `when`, `subworkflow`,
- * `workflow_outputs`, `tool_shed_repository` and `post_job_actions`. Nothing
- * reads them yet, and the contract widens when a reader appears.
+ * `position` (Q6 auto-lays the graph out), `when`, `workflow_outputs`,
+ * `tool_shed_repository` and `post_job_actions`. Nothing reads them yet, and
+ * the contract widens when a reader appears — which is what happened to
+ * `subworkflow` in #89.
  */
 export interface DescribedStep {
   /** The step's `order_index`: the key of `steps`, the `id` a connection names, and a job row's `step_id`. */
@@ -41,8 +43,54 @@ export interface DescribedStep {
   readonly tool_inputs: WorkflowToolParameters
   /** Every incoming edge, by the name of the input it feeds; one or several per input. */
   readonly input_connections: WorkflowStepConnections
-  /** The outputs the step declares, which is what an output handle can be drawn for. The live payload has no such list at all. */
+  /**
+   * The outputs the step declares, which is what an output handle can be
+   * drawn for. The live payload has no such list at all.
+   *
+   * **Empty on a subworkflow step**, even one something downstream reads
+   * from: Galaxy writes `outputs: []` there and names the real outputs in
+   * `workflow_outputs` instead (measured on `subworkflow-nested`). So an
+   * incoming connection can name an `output_name` that appears in no
+   * upstream step's `outputs`. Nothing is wrong with the edge — the graph
+   * draws one source handle per node rather than one per output — but
+   * anything that enumerates handles per output has to know.
+   */
   readonly outputs: { readonly name: string, readonly type: string }[]
+  /**
+   * The workflow a `subworkflow` step runs, normalised the same way its
+   * parent is, or `null` on every other step type (#89).
+   *
+   * Here because the graph draws a subworkflow as **one** node and, when a
+   * reader opens that node, draws the nested definition's own shape — never
+   * expanded inline (Q19). The nested export is the only description of the
+   * subworkflow there is: it carries a `uuid` and a `name` but no stored
+   * workflow id, so there is nothing else to look up and nothing to fetch.
+   */
+  readonly subworkflow: DescribedSubworkflow | null
+}
+
+/**
+ * The workflow a `subworkflow` step runs, as this application describes it.
+ *
+ * Its `steps` are `DescribedStep`s like any others, and may hold a further
+ * subworkflow step of their own — `subworkflow-nested` is recorded two levels
+ * deep for exactly that reason. It is **not** a revision: the nested export
+ * carries no `version`, so nothing can be pinned to it and no invocation can
+ * run it on its own.
+ *
+ * Two fields, because two have readers. The nested export also carries a
+ * `uuid`, an `annotation`, tags and a creator; they stay in the row and out
+ * of this contract until something reads them, as `position` and `when` do.
+ */
+export interface DescribedSubworkflow {
+  /**
+   * What the subworkflow is called, or `null` for a nested export that does
+   * not say. Needed because the step's own `label` is `null` for a
+   * subworkflow node the author never named, and then this is the only name
+   * there is to draw on it.
+   */
+  readonly name: string | null
+  readonly steps: Record<string, DescribedStep>
 }
 
 /** A step that runs a tool, which is the only kind offered parameters. */
@@ -62,26 +110,6 @@ export interface DescribedWorkflowInput {
   /** Always empty, as Galaxy's own reading of it is. It is the reader who supplies a value. */
   readonly value: string
   readonly uuid: string
-}
-
-/**
- * The step types Galaxy counts as inputs — `Workflow.input_step_types` — and
- * what it calls one of them that carries no label and no name.
- *
- * One map rather than a set beside a lookup table: which types are inputs
- * and what an unnamed one is called are the same three facts, and stated
- * twice they can drift apart. Taken from `_workflow_to_dict_instance`
- * (`managers/workflows.py:1896` on 26.1 and `:1499` on 22.05 — the same
- * three strings on both).
- */
-const DEFAULT_INPUT_LABELS = {
-  data_input: 'Input Dataset',
-  data_collection_input: 'Input Dataset Collection',
-  parameter_input: 'Input Parameter',
-} as const satisfies Partial<Record<WorkflowStepType, string>>
-
-function isInputStep(step: DescribedStep): step is DescribedStep & { type: keyof typeof DEFAULT_INPUT_LABELS } {
-  return step.type in DEFAULT_INPUT_LABELS
 }
 
 /**
@@ -175,8 +203,39 @@ function toolInputsOf(step: WorkflowStepExport): WorkflowToolParameters {
   }
 }
 
-/** Every step of a stored definition, normalised, keyed by `order_index` as the export keys them. */
-export function describedStepsOf(definition: GalaxyWorkflowExport): Record<string, DescribedStep> {
+/**
+ * The workflow a `subworkflow` step embeds, normalised, or `null` for a step
+ * that embeds none.
+ *
+ * Recursive, because a subworkflow's own steps may hold another subworkflow
+ * step: `describedStepsOf` calls back into this for each of them. The
+ * recursion terminates on Galaxy's own export, which is built the same way
+ * and so cannot be deeper than Galaxy could serialise.
+ */
+function describedSubworkflowOf(nested: WorkflowSubworkflowExport | null | undefined): DescribedSubworkflow | null {
+  if (nested === null || nested === undefined) {
+    return null
+  }
+  return {
+    // Empty-as-`null`, as a step's own annotation is: one spelling for "the
+    // author wrote nothing here" across the whole contract, and one branch
+    // for a nested export that names itself with `''` and one that omits the
+    // key altogether.
+    name: nested.name === undefined || nested.name === '' ? null : nested.name,
+    steps: describedStepsOf(nested),
+  }
+}
+
+/**
+ * Every step of a stored definition, normalised, keyed by `order_index` as
+ * the export keys them.
+ *
+ * Takes only the `steps` of a definition rather than the whole of one,
+ * because a nested subworkflow export is the same shape **minus `version`**
+ * and has to go through the same normaliser. Every whole export satisfies
+ * this too, so no caller changed.
+ */
+export function describedStepsOf(definition: Pick<GalaxyWorkflowExport, 'steps'>): Record<string, DescribedStep> {
   const described: Record<string, DescribedStep> = {}
   for (const [stepId, step] of Object.entries(definition.steps ?? {})) {
     described[stepId] = {
@@ -189,10 +248,15 @@ export function describedStepsOf(definition: GalaxyWorkflowExport): Record<strin
       // the screens read promises.
       annotation: step.annotation === '' ? null : step.annotation,
       tool_id: step.tool_id,
-      tool_version: step.tool_version,
+      // `?? null` because the export leaves the key **out** of a subworkflow
+      // step rather than writing `null`, and this contract promises one
+      // spelling for absent. `tool_id` needs no such treatment: Galaxy does
+      // write that one, as `null` (#89).
+      tool_version: step.tool_version ?? null,
       tool_inputs: toolInputsOf(step),
       input_connections: step.input_connections ?? {},
       outputs: step.outputs ?? [],
+      subworkflow: describedSubworkflowOf(step.subworkflow),
     }
   }
   return described
@@ -207,8 +271,10 @@ export function describedStepsOf(definition: GalaxyWorkflowExport): Record<strin
  * Re-derived here rather than read from the live payload because the stored
  * definition is now the source (#88) and it carries no `inputs` list — the
  * export is the workflow, not a reading of it. The three default labels and
- * the order of the fallbacks are Galaxy's own, checked against
- * `managers/workflows.py` on both 22.05 and 26.1.
+ * the order of the fallbacks are Galaxy's own and live in
+ * `shared/stepLabel`, because the graph has to label the same steps as nodes
+ * — including the input steps of a nested subworkflow, for which no `inputs`
+ * list is derived at all (#89).
  */
 export function describedInputsOf(steps: Record<string, DescribedStep>): Record<string, DescribedWorkflowInput> {
   const inputs: Record<string, DescribedWorkflowInput> = {}
@@ -216,9 +282,8 @@ export function describedInputsOf(steps: Record<string, DescribedStep>): Record<
     if (!isInputStep(step)) {
       continue
     }
-    const named = step.tool_inputs.name
     inputs[String(step.id)] = {
-      label: step.label || (typeof named === 'string' && named ? named : DEFAULT_INPUT_LABELS[step.type]),
+      label: inputStepLabel(step),
       value: '',
       uuid: step.uuid,
     }

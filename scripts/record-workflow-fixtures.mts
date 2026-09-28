@@ -198,7 +198,7 @@ function redactDatasetOptions(value: unknown): { value: unknown, redacted: numbe
 
 // ----------------------------------------------------------------- census
 
-type Shape = 'data_input' | 'conditional' | 'repeat' | 'RuntimeValue' | 'ConnectedValue' | 'fan-in'
+type Shape = 'data_input' | 'conditional' | 'repeat' | 'RuntimeValue' | 'ConnectedValue' | 'fan-in' | 'subworkflow'
 
 /**
  * What a parameter state contains, by the markers Galaxy writes into it: a
@@ -268,6 +268,12 @@ function census(steps: Record<string, Record<string, unknown>>): CensusRow[] {
       const shapes = shapesIn(stateOf(step))
       if (step.type === 'data_input')
         shapes.add('data_input')
+      // Read off the step's own type rather than out of its state: a
+      // subworkflow step carries no `tool_state` at all — Galaxy leaves the
+      // key out, along with `content_id`, `tool_version` and `errors` — so
+      // there is nothing for `shapesIn` to find (#89).
+      if (step.type === 'subworkflow')
+        shapes.add('subworkflow')
       // The export keys connections by input name and makes the value an
       // array when several outputs feed one input; the live show's
       // `input_steps` is keyed the same way but assigned in a loop, so it
@@ -302,6 +308,19 @@ function reportCensus(label: string, rows: CensusRow[]) {
 
 /** The five shapes #86 names, and whether this workflow exercises each. */
 const REQUIRED_SHAPES: Shape[] = ['data_input', 'conditional', 'repeat', 'RuntimeValue', 'fan-in']
+
+/**
+ * The columns the survey prints, which is #86's five plus `subworkflow`.
+ *
+ * Kept apart from `REQUIRED_SHAPES` on purpose: the verdict answers "does
+ * this workflow exercise what #86 asked for", and adding a sixth shape to
+ * that question would report every fixture already committed as incomplete.
+ * The survey answers a different one — "is this a candidate worth recording"
+ * — and #89 needed a subworkflow candidate that these columns could not
+ * name, so finding the one now under `subworkflow-nested/` took a throwaway
+ * script instead of the tool written for it.
+ */
+const SURVEYED_SHAPES: Shape[] = [...REQUIRED_SHAPES, 'subworkflow']
 
 function reportVerdict(rows: CensusRow[]): Shape[] {
   const present = new Set(rows.flatMap(row => row.shapes))
@@ -377,7 +396,7 @@ async function survey(base: string, key: string | undefined, options: Options) {
   }
   console.log(`${listed.length} workflow(s) to census\n`)
 
-  const header = REQUIRED_SHAPES.map(shape => shape.slice(0, 4).padEnd(4)).join(' ')
+  const header = SURVEYED_SHAPES.map(shape => shape.slice(0, 4).padEnd(4)).join(' ')
   console.log(`  ${'id'.padEnd(16)} ${header} ${'steps'.padStart(5)}  name`)
 
   const covered: { id: string, name: string, shapes: Shape[], steps: number }[] = []
@@ -399,14 +418,14 @@ async function survey(base: string, key: string | undefined, options: Options) {
       continue
     }
     const present = new Set(rows.flatMap(row => row.shapes))
-    const marks = REQUIRED_SHAPES.map(shape => (present.has(shape) ? 'yes ' : '  . ')).join(' ')
-    const hits = REQUIRED_SHAPES.filter(shape => present.has(shape))
+    const marks = SURVEYED_SHAPES.map(shape => (present.has(shape) ? 'yes ' : '  . ')).join(' ')
+    const hits = SURVEYED_SHAPES.filter(shape => present.has(shape))
     covered.push({ id: workflow.id, name: workflow.name, shapes: hits, steps: rows.length })
     console.log(`  ${workflow.id.padEnd(16)} ${marks} ${String(rows.length).padStart(5)}  ${workflow.name} ${workflow.note}`.trimEnd())
   }
 
   const everywhere = new Set(covered.flatMap(row => row.shapes))
-  const unreachable = REQUIRED_SHAPES.filter(shape => !everywhere.has(shape))
+  const unreachable = SURVEYED_SHAPES.filter(shape => !everywhere.has(shape))
   console.log(
     unreachable.length === 0
       ? '\nEvery shape #86 asks for exists somewhere in what was surveyed.'
@@ -549,8 +568,16 @@ async function main() {
     workflowId,
     workflowName: live.name,
     revision: revision ?? exported.version,
+    // Spelled so that running it reproduces this directory. `--instance`
+    // has to be in it: without it the command names the *configured*
+    // Galaxy, and every fixture recorded from a public instance carried a
+    // re-record line that would read a different one — or fail for want of
+    // a key.
     command: `node scripts/record-workflow-fixtures.mts ${workflowId}`
-      + `${revision === undefined ? '' : ` --revision ${revision}`} --name ${slug}`,
+      + `${options.instance === undefined ? '' : ` --instance ${options.instance}`}`
+      + `${revision === undefined ? '' : ` --revision ${revision}`}`
+      + `${options.noTools ? ' --no-tools' : ''}`
+      + ` --name ${slug}`,
     datasetOptionsRedacted: !options.keepDatasetOptions,
     shapes: {
       live: Object.fromEntries(liveRows.map(row => [row.stepId, row.shapes])),

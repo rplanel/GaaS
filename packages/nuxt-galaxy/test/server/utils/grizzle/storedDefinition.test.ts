@@ -1,7 +1,7 @@
 import type { WorkflowStepExport } from 'blendtype'
 import { describe, expect, it } from 'vitest'
 import { describedInputsOf, describedStepsOf, predatesWidenedSchema } from '../../../../src/runtime/server/utils/grizzle/storedDefinition'
-import { connection, dataInputStep, toolStep, workflowDefinition } from '../../workflowDefinition'
+import { connection, dataInputStep, subworkflowStep, toolStep, workflowDefinition } from '../../workflowDefinition'
 
 /**
  * #88. The stored definition, read as the one shape this application
@@ -159,6 +159,90 @@ describe('describedInputsOf', () => {
     const inputs = describedInputsOf(describedStepsOf(workflowDefinition({
       0: dataInputStep(0, 'Reads'),
       1: toolStep(1, FOO, '1.2.3+galaxy0'),
+    })))
+
+    expect(Object.keys(inputs)).toEqual(['0'])
+  })
+})
+
+describe('describedStepsOf, on a subworkflow step', () => {
+  it('normalises the nested definition the step embeds', () => {
+    const steps = describedStepsOf(workflowDefinition({
+      0: dataInputStep(0, 'Reads'),
+      1: subworkflowStep(1, 'Trim and map', {
+        0: dataInputStep(0, 'Nested reads'),
+        1: toolStep(1, FOO, '1.2.3+galaxy0'),
+      }),
+    }))
+
+    // One node with a whole workflow behind it, never expanded into the
+    // parent's own steps (Q19): the outer definition still has exactly two.
+    expect(Object.keys(steps)).toEqual(['0', '1'])
+    expect(steps['1']!.type).toBe('subworkflow')
+    expect(steps['1']!.subworkflow?.name).toBe('Trim and map')
+    expect(Object.keys(steps['1']!.subworkflow?.steps ?? {})).toEqual(['0', '1'])
+  })
+
+  it('normalises a nested step exactly as it normalises an outer one', () => {
+    const steps = describedStepsOf(workflowDefinition({
+      0: dataInputStep(0, 'Reads'),
+      1: subworkflowStep(1, 'Trim and map', {
+        0: dataInputStep(0, 'Nested reads'),
+        1: toolStep(1, FOO, '1.2.3+galaxy0', { tool_state: '{"n": "7"}' }),
+      }),
+    }))
+
+    // The whole point of one shape for one thing: a reader who drills into
+    // the node gets steps it can draw with the same code, connections and
+    // decoded state included.
+    const nested = steps['1']!.subworkflow!.steps['1']!
+    expect(nested.tool_inputs).toEqual({ n: '7' })
+    expect(nested.input_connections).toEqual({ input1: { id: 0, output_name: 'output' } })
+    expect(nested.subworkflow).toBeNull()
+  })
+
+  it('walks a subworkflow nested inside a subworkflow', () => {
+    // Two levels, as `subworkflow-nested` really is. A normaliser that read
+    // the first level and stopped would pass every test above.
+    const steps = describedStepsOf(workflowDefinition({
+      0: dataInputStep(0, 'Reads'),
+      1: subworkflowStep(1, 'Outer', {
+        0: dataInputStep(0, 'Nested reads'),
+        1: subworkflowStep(1, 'Inner', {
+          0: dataInputStep(0, 'Innermost reads'),
+          1: toolStep(1, BAR, '2.0.0'),
+        }),
+      }),
+    }))
+
+    const inner = steps['1']!.subworkflow!.steps['1']!
+    expect(inner.subworkflow?.name).toBe('Inner')
+    expect(inner.subworkflow!.steps['1']!.tool_id).toBe(BAR)
+  })
+
+  it('answers null for the three keys Galaxy leaves out, and for a step that embeds nothing', () => {
+    const steps = describedStepsOf(workflowDefinition({
+      0: dataInputStep(0, 'Reads'),
+      1: subworkflowStep(1, 'Trim and map', { 0: dataInputStep(0, 'Nested reads') }),
+    }))
+
+    // A subworkflow step carries no tool, and the contract promises one
+    // spelling for absent — the export writes `tool_id: null` but omits
+    // `tool_version` and `tool_state` entirely.
+    expect(steps['1']!.tool_id).toBeNull()
+    expect(steps['1']!.tool_version).toBeNull()
+    expect(steps['1']!.tool_inputs).toEqual({})
+    // And the other way round: every step that is not a subworkflow says so.
+    expect(steps['0']!.subworkflow).toBeNull()
+  })
+
+  it('declares no workflow input for a subworkflow step', () => {
+    // Galaxy's `input_step_types` lists the three input types and not this
+    // one, so a subworkflow step is not something a datamap supplies — even
+    // though the workflow behind it has inputs of its own.
+    const inputs = describedInputsOf(describedStepsOf(workflowDefinition({
+      0: dataInputStep(0, 'Reads'),
+      1: subworkflowStep(1, 'Trim and map', { 0: dataInputStep(0, 'Nested reads') }),
     })))
 
     expect(Object.keys(inputs)).toEqual(['0'])

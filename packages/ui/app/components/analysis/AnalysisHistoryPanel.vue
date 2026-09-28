@@ -92,6 +92,14 @@ const {
   error: workflowError,
 } = useGalaxyWorkflowDescription(workflowGalaxyId, workflowRevision)
 
+/**
+ * Whether the revision could be described at all.
+ *
+ * `workflowSteps` is `{}` both while the one request is in flight and when it
+ * failed, and an empty canvas reads as a workflow of no steps either way.
+ */
+const hasSteps = computed(() => Object.keys(toValue(workflowSteps)).length > 0)
+
 const { getToolParameters, getParametersInputComponent } = useAnalysisTools(toolsObj)
 const { jobs, jobsAccordionItems, jobsMap, jobDetailsAccordionItems } = useAnalysisJob(detailedAnalysis, toolsObj)
 
@@ -289,6 +297,23 @@ const sortedOutputs = computed(() => {
         </UButton>
       </template>
     </UAlert>
+    <!--
+      The shape of what ran, drawn from the revision this analysis was started
+      against (#89). Above the jobs rather than instead of them: the graph says
+      how the steps are joined, which a list cannot, and the list says what each
+      one did, which #90 will bring onto the canvas as per-step marks.
+
+      Only when there are steps to draw. A description that failed leaves this
+      out and says so in the alert above, rather than showing an empty canvas
+      that looks like a workflow of no steps.
+    -->
+    <template v-if="hasSteps">
+      <USeparator label="Graph" />
+      <UPageCard variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+        <GalaxyWorkflowGraphView :steps="workflowSteps" />
+      </UPageCard>
+    </template>
+
     <USeparator label="Inputs" />
     <UPageCard variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
       <GalaxyAnalysisIoDatasetsList :items="inputs" />

@@ -1,0 +1,504 @@
+{
+  "model_class": "StoredWorkflow",
+  "id": "3975af16fc2a407e",
+  "create_time": "2026-06-25T00:46:56.567150",
+  "update_time": "2026-06-25T00:46:57.599140",
+  "name": "Single-Cell RNA-seq Preprocessing: 10X Genomics CellPlex Multiplexed Samples (release v0.6.6)",
+  "url": "/api/workflows/3975af16fc2a407e",
+  "published": true,
+  "annotations": null,
+  "tags": [
+    "name:single-cell"
+  ],
+  "deleted": false,
+  "hidden": false,
+  "owner": "iwc",
+  "latest_workflow_uuid": "7a2c914e-bc94-4e49-9d31-ec16def44c3f",
+  "number_of_steps": null,
+  "show_in_tool_panel": null,
+  "annotation": "Comprehensive preprocessing for 10X Genomics CellPlex multiplexed single-cell RNA-seq data. Processes Cell Multiplexing Oligo (CMO) FASTQ files with CITE-seq-Count including required CellPlex-specific translation steps. Simultaneously processes gene expression FASTQ files with STARsolo and DropletUtils for alignment and cell filtering, and formats outputs for seamless import into Seurat/Scanpy (Read10X function).",
+  "license": "MIT",
+  "version": 1,
+  "inputs": {
+    "0": {
+      "label": "fastq PE collection GEX",
+      "value": "",
+      "uuid": "aebda84d-4554-4e87-9d7c-9060e5c73c4a"
+    },
+    "1": {
+      "label": "reference genome",
+      "value": "",
+      "uuid": "3b88066f-516c-429a-83a4-cabaa617b29c"
+    },
+    "2": {
+      "label": "gtf",
+      "value": "",
+      "uuid": "f5c4af10-a5e0-4cae-a8cd-f796a29b9797"
+    },
+    "3": {
+      "label": "cellranger_barcodes_3M-february-2018.txt",
+      "value": "",
+      "uuid": "c438a0cb-c08d-45ca-b95b-d362ba79231e"
+    },
+    "4": {
+      "label": "Barcode Size is same size of the Read",
+      "value": "",
+      "uuid": "427a4d07-f3ec-472c-9977-e5b0431e17f3"
+    },
+    "5": {
+      "label": "fastq PE collection CMO",
+      "value": "",
+      "uuid": "3dbe34e9-1948-4b69-9515-568d02c4f37f"
+    },
+    "6": {
+      "label": "sample name and CMO sequence collection",
+      "value": "",
+      "uuid": "641ad74f-2ba8-4864-bb1f-add9e40e7e38"
+    },
+    "7": {
+      "label": "Number of expected cells",
+      "value": "",
+      "uuid": "50c3f7a9-709e-4159-ab04-47c88096efbc"
+    }
+  },
+  "creator": [
+    {
+      "class": "Person",
+      "name": "Lucille Delisle",
+      "address": null,
+      "alternateName": null,
+      "email": null,
+      "faxNumber": null,
+      "identifier": "https://orcid.org/0000-0002-1964-4960",
+      "image": null,
+      "telephone": null,
+      "url": null,
+      "familyName": null,
+      "givenName": null,
+      "honorificPrefix": null,
+      "honorificSuffix": null,
+      "jobTitle": null
+    },
+    {
+      "class": "Person",
+      "name": "Mehmet Tekman",
+      "address": null,
+      "alternateName": null,
+      "email": null,
+      "faxNumber": null,
+      "identifier": "https://orcid.org/0000-0002-4181-2676",
+      "image": null,
+      "telephone": null,
+      "url": null,
+      "familyName": null,
+      "givenName": null,
+      "honorificPrefix": null,
+      "honorificSuffix": null,
+      "jobTitle": null
+    },
+    {
+      "class": "Person",
+      "name": "Hans-Rudolf Hotz",
+      "address": null,
+      "alternateName": null,
+      "email": null,
+      "faxNumber": null,
+      "identifier": "https://orcid.org/0000-0002-2799-424X",
+      "image": null,
+      "telephone": null,
+      "url": null,
+      "familyName": null,
+      "givenName": null,
+      "honorificPrefix": null,
+      "honorificSuffix": null,
+      "jobTitle": null
+    },
+    {
+      "class": "Person",
+      "name": "Daniel Blankenberg",
+      "address": null,
+      "alternateName": null,
+      "email": null,
+      "faxNumber": null,
+      "identifier": "https://orcid.org/0000-0002-6833-9049",
+      "image": null,
+      "telephone": null,
+      "url": null,
+      "familyName": null,
+      "givenName": null,
+      "honorificPrefix": null,
+      "honorificSuffix": null,
+      "jobTitle": null
+    },
+    {
+      "class": "Person",
+      "name": "Wendi Bacon",
+      "address": null,
+      "alternateName": null,
+      "email": null,
+      "faxNumber": null,
+      "identifier": "https://orcid.org/0000-0002-8170-8806",
+      "image": null,
+      "telephone": null,
+      "url": null,
+      "familyName": null,
+      "givenName": null,
+      "honorificPrefix": null,
+      "honorificSuffix": null,
+      "jobTitle": null
+    }
+  ],
+  "creator_deleted": false,
+  "doi": null,
+  "steps": {
+    "0": {
+      "id": 0,
+      "annotation": "reads containing genes",
+      "input_steps": {},
+      "when": null,
+      "tool_id": null,
+      "tool_uuid": null,
+      "tool_version": null,
+      "tool_inputs": {
+        "collection_type": "list:paired",
+        "column_definitions": null,
+        "fields": null,
+        "optional": false,
+        "tag": ""
+      },
+      "type": "data_collection_input"
+    },
+    "1": {
+      "id": 1,
+      "annotation": "Choose your reference genome",
+      "input_steps": {},
+      "when": null,
+      "tool_id": null,
+      "tool_uuid": null,
+      "tool_version": null,
+      "tool_inputs": {
+        "optional": false,
+        "parameter_type": "text",
+        "restrictOnConnections": true,
+        "validators": []
+      },
+      "type": "parameter_input"
+    },
+    "2": {
+      "id": 2,
+      "annotation": "Gene annotations",
+      "input_steps": {},
+      "when": null,
+      "tool_id": null,
+      "tool_uuid": null,
+      "tool_version": null,
+      "tool_inputs": {
+        "optional": false,
+        "tag": ""
+      },
+      "type": "data_input"
+    },
+    "3": {
+      "id": 3,
+      "annotation": "Available at https://zenodo.org/record/3457880/files/3M-february-2018.txt.gz",
+      "input_steps": {},
+      "when": null,
+      "tool_id": null,
+      "tool_uuid": null,
+      "tool_version": null,
+      "tool_inputs": {
+        "optional": false,
+        "tag": ""
+      },
+      "type": "data_input"
+    },
+    "4": {
+      "id": 4,
+      "annotation": "Barcode Size is same size of the Read",
+      "input_steps": {},
+      "when": null,
+      "tool_id": null,
+      "tool_uuid": null,
+      "tool_version": null,
+      "tool_inputs": {
+        "optional": false,
+        "parameter_type": "boolean",
+        "validators": []
+      },
+      "type": "parameter_input"
+    },
+    "5": {
+      "id": 5,
+      "annotation": "reads containing CMO",
+      "input_steps": {},
+      "when": null,
+      "tool_id": null,
+      "tool_uuid": null,
+      "tool_version": null,
+      "tool_inputs": {
+        "collection_type": "list:paired",
+        "column_definitions": null,
+        "fields": null,
+        "optional": false,
+        "tag": ""
+      },
+      "type": "data_collection_input"
+    },
+    "6": {
+      "id": 6,
+      "annotation": "csv: first column is the sequence and second column is the name",
+      "input_steps": {},
+      "when": null,
+      "tool_id": null,
+      "tool_uuid": null,
+      "tool_version": null,
+      "tool_inputs": {
+        "collection_type": "list",
+        "column_definitions": null,
+        "fields": null,
+        "format": [
+          "csv"
+        ],
+        "optional": false,
+        "tag": ""
+      },
+      "type": "data_collection_input"
+    },
+    "7": {
+      "id": 7,
+      "annotation": "Used by CITE-seq-Count, does not really seem to impact result. You can use 24000.",
+      "input_steps": {},
+      "when": null,
+      "tool_id": null,
+      "tool_uuid": null,
+      "tool_version": null,
+      "tool_inputs": {
+        "optional": false,
+        "parameter_type": "integer",
+        "validators": []
+      },
+      "type": "parameter_input"
+    },
+    "8": {
+      "id": 8,
+      "annotation": null,
+      "input_steps": {
+        "fastq PE collection": {
+          "source_step": 0,
+          "step_output": "output"
+        },
+        "reference genome": {
+          "source_step": 1,
+          "step_output": "output"
+        },
+        "gtf": {
+          "source_step": 2,
+          "step_output": "output"
+        },
+        "cellranger_barcodes_3M-february-2018.txt": {
+          "source_step": 3,
+          "step_output": "output"
+        },
+        "Barcode Size is same size of the Read": {
+          "source_step": 4,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": null,
+      "tool_uuid": null,
+      "tool_version": null,
+      "tool_inputs": null,
+      "type": "subworkflow",
+      "workflow_id": "ab6250bbf8198eb3"
+    },
+    "9": {
+      "id": 9,
+      "annotation": null,
+      "input_steps": {
+        "whitelist": {
+          "source_step": 3,
+          "step_output": "output"
+        },
+        "input_types|input_collection": {
+          "source_step": 5,
+          "step_output": "output"
+        },
+        "tags": {
+          "source_step": 6,
+          "step_output": "output"
+        },
+        "expected_cells": {
+          "source_step": 7,
+          "step_output": "output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/cite_seq_count/cite_seq_count/1.4.4+galaxy0",
+      "tool_uuid": null,
+      "tool_version": "1.4.4+galaxy0",
+      "tool_inputs": {
+        "__page__": null,
+        "__rerun_remap_job_id__": null,
+        "bc_collapsing_dist": "1",
+        "dense": false,
+        "expected_cells": {
+          "__class__": "ConnectedValue"
+        },
+        "first_n": "0",
+        "input_types": {
+          "__current_case__": 1,
+          "input_collection": {
+            "__class__": "ConnectedValue"
+          },
+          "use": "list_paired"
+        },
+        "max_error": "2",
+        "no_umi_correction": false,
+        "params": {
+          "__current_case__": 1,
+          "chemistry": "v3"
+        },
+        "sliding_window": false,
+        "start_trim": "0",
+        "tags": {
+          "__class__": "ConnectedValue"
+        },
+        "umi_collapsing_dist": "2",
+        "unmapped": {
+          "__current_case__": 0,
+          "output": "false"
+        },
+        "whitelist": {
+          "__class__": "ConnectedValue"
+        }
+      },
+      "type": "tool"
+    },
+    "10": {
+      "id": 10,
+      "annotation": null,
+      "input_steps": {
+        "style_cond|type_cond|pick_from_0|value": {
+          "source_step": 8,
+          "step_output": "Seurat input for gene expression (filtered)"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/pick_value/pick_value/0.2.0",
+      "tool_uuid": null,
+      "tool_version": "0.2.0",
+      "tool_inputs": {
+        "__page__": null,
+        "__rerun_remap_job_id__": null,
+        "style_cond": {
+          "__current_case__": 0,
+          "pick_style": "first",
+          "type_cond": {
+            "__current_case__": 4,
+            "param_type": "data",
+            "pick_from": [
+              {
+                "__index__": 0,
+                "value": {
+                  "__class__": "ConnectedValue"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "type": "tool"
+    },
+    "11": {
+      "id": 11,
+      "annotation": null,
+      "input_steps": {
+        "infile": {
+          "source_step": 9,
+          "step_output": "output_barcodes_filtered"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/bgruening/text_processing/tp_awk_tool/9.5+galaxy3",
+      "tool_uuid": null,
+      "tool_version": "9.5+galaxy3",
+      "tool_inputs": {
+        "__page__": null,
+        "__rerun_remap_job_id__": null,
+        "code": "{split($1,a,\"\"); a[8]=a[8]==\"A\"?\"T\":a[8]==\"T\"?\"A\":a[8]==\"C\"?\"G\":\"C\"; a[9]=a[9]==\"A\"?\"T\":a[9]==\"T\"?\"A\":a[9]==\"C\"?\"G\":\"C\"; print a[1]a[2]a[3]a[4]a[5]a[6]a[7]a[8]a[9]a[10]a[11]a[12]a[13]a[14]a[15]a[16]}",
+        "infile": {
+          "__class__": "ConnectedValue"
+        },
+        "variables": []
+      },
+      "type": "tool"
+    },
+    "12": {
+      "id": 12,
+      "annotation": null,
+      "input_steps": {
+        "STARsolo Matrix Gene Counts": {
+          "source_step": 9,
+          "step_output": "output_matrix_filtered"
+        },
+        "STARsolo Genes": {
+          "source_step": 9,
+          "step_output": "output_features_filtered"
+        },
+        "STARsolo Barcodes": {
+          "source_step": 11,
+          "step_output": "outfile"
+        }
+      },
+      "when": null,
+      "tool_id": null,
+      "tool_uuid": null,
+      "tool_version": null,
+      "tool_inputs": null,
+      "type": "subworkflow",
+      "workflow_id": "3c8146ecc3430591"
+    },
+    "13": {
+      "id": 13,
+      "annotation": null,
+      "input_steps": {
+        "style_cond|type_cond|pick_from_0|value": {
+          "source_step": 12,
+          "step_output": "STARsolo cell ranger-like output"
+        }
+      },
+      "when": null,
+      "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/pick_value/pick_value/0.2.0",
+      "tool_uuid": null,
+      "tool_version": "0.2.0",
+      "tool_inputs": {
+        "__page__": null,
+        "__rerun_remap_job_id__": null,
+        "style_cond": {
+          "__current_case__": 0,
+          "pick_style": "first",
+          "type_cond": {
+            "__current_case__": 4,
+            "param_type": "data",
+            "pick_from": [
+              {
+                "__index__": 0,
+                "value": {
+                  "__class__": "ConnectedValue"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "type": "tool"
+    }
+  },
+  "importable": true,
+  "email_hash": "1b188539bf7f007d46333dea6b2f19ae",
+  "readme": null,
+  "help": null,
+  "slug": null,
+  "source_metadata": null
+}

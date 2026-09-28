@@ -142,7 +142,7 @@ export type { AnalysisBody } from '../server/utils/analysisBody'
  * definition, rather than either the live Galaxy payload's spelling or the
  * export's.
  */
-export type { DescribedStep, DescribedToolStep, DescribedWorkflowInput } from '../server/utils/grizzle/storedDefinition'
+export type { DescribedStep, DescribedSubworkflow, DescribedToolStep, DescribedWorkflowInput } from '../server/utils/grizzle/storedDefinition'
 /**
  * The state of a version (#76): whether it can still run, as
  * `GET /api/db/workflows/:id/state` reads it live from Galaxy and the admin

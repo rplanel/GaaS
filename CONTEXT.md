@@ -56,6 +56,10 @@ _Avoid_: Author, creator
 One numbered operation of a workflow: an input it declares, a parameter it takes, or a tool it runs. A step is named by its index, which is the same number in the workflow, in the analysis and in the graph, so the three always mean the same step.
 _Avoid_: Node, task, stage
 
+**Subworkflow**:
+A step that runs a whole workflow of its own rather than one tool. It is one step of the workflow that contains it, with one step index and one job-free place in the graph; the steps inside it have their own indices, which belong to it and not to the workflow around it. The graph draws it as a single step that opens onto that workflow's own graph, never expanded into the steps around it.
+_Avoid_: Nested workflow, sub-pipeline, group of steps
+
 **Step state**:
 What one step of one analysis has come to, read per step and never aggregated: Not started, Running, Succeeded, Failed, Cancelled or Skipped. A step state is not an Outcome — an analysis has exactly one Outcome, and it is not the sum of its step states. Not started covers a step nothing has run yet, including one the analysis has scheduled but not begun.
 _Avoid_: Job state, node status, step outcome, progress

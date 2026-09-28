@@ -1,5 +1,15 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+/* Vue Flow ships its layout in CSS, so a canvas is unusable without these and
+   the theme file is what draws the edges at all. In the layer's stylesheet
+   rather than in the graph component, because this is the layer that declares
+   the dependency and every consumer extending it gets the canvas working
+   without repeating the imports. After `@nuxt/ui` so its utilities still win.
+   (#89) */
+@import '@vue-flow/core/dist/style.css';
+@import '@vue-flow/core/dist/theme-default.css';
+@import '@vue-flow/controls/dist/style.css';
 @keyframes shimmer {
   0% {
     background-position: 0% center;

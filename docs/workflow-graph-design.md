@@ -240,6 +240,60 @@ Two refusals, both 409 and both mended by republishing the version:
   writing both, the characterisation suite says so before this check starts
   refusing every row.
 
+### Q6, Q9 and Q19 as built (#89)
+
+The canvas is `GalaxyWorkflowGraph`, and it takes no `mode` — Q2' as written.
+It is handed `steps` exactly as `useGalaxyWorkflowDescription` answers them,
+so the screen that supplies them is the only thing that differs between
+following an invocation and starting one. `GalaxyWorkflowGraphView` is the
+canvas and the panel as a pair, with the panel beside it above the `lg`
+breakpoint and a `USlideover` below it (Q9), and a `#detail` slot so that
+#90's job block and #91's parameter form go in without a second canvas. It is
+mounted in `AnalysisHistoryPanel`, which already reads the revision the
+analysis ran.
+
+The derivation is `app/utils/workflowGraph.ts` and not the component: what has
+to be right is that *every* connection becomes an edge, and that is a claim
+about a function, testable without a viewport. An edge's identity carries the
+output's name as well as the two steps and the input, because one upstream
+step can feed one input from two of its outputs — `fan-in` step 19 does — and
+without it the two edges collide and Vue Flow draws one. A connection naming a
+step the level does not hold is **named in words on the canvas** rather than
+dropped: Vue Flow silently omits an edge whose source matches no node, which
+is the one failure a graph cannot signal.
+
+Dagre lays it out left to right by default, dragging is on, and no position is
+written anywhere (Q6). The export's own `position` is deliberately not read: a
+layout from another application's editor is not readable here.
+
+**Q19 needed an export-schema fix first, and that was not foreseen.**
+`workflowStepExportSchema` *refused* a subworkflow step — Galaxy omits
+`content_id`, `tool_state`, `tool_version` and `errors` on one, writes
+`tool_id` as `null`, and `subworkflow` was not in `workflowStepTypes` at all —
+so a workflow holding one could not be published, and the acceptance criterion
+was unreachable rather than merely unimplemented. Measured on three published
+workflows at usegalaxy.eu 26.1.2, all three of which failed to parse. The
+nested export is now modelled, recursively, with only `steps` required: it is
+parsed on the publish path, so a required key Galaxy ever omits is a workflow
+nobody can publish, and `steps` earns the exception only because a nested
+export whose steps cannot be read would be *drawn*, as a graph with no nodes.
+`subworkflow-nested` is recorded two levels deep so a normaliser that fails to
+recurse cannot pass.
+
+What a subworkflow node **links out to** is its own nested definition, drawn
+on the same canvas with a trail back. That is the only target there is: the
+nested export carries a `name` and a `uuid` but no stored workflow id, so
+nothing about it can be looked up on Galaxy. No inline expansion, as Q19 says.
+In follow mode the nested steps are still job-free — a job row's `step_id` is
+the *outer* step's order index — so the selection carries the path it was made
+on and only an empty path names a step #90 can mark.
+
+One thing shared rather than copied: Galaxy's naming of an input step moved to
+`runtime/shared/stepLabel`, because the graph labels the input steps of a
+*nested* subworkflow, for which no `inputs` list is derived at all. Written
+twice, a node and a form field could have named one input two different
+plausible things.
+
 ### Verdict on the refactor
 
 Refactor the **Galaxy-side fetching**. Leave the **Supabase side alone** — jobs,
@@ -619,5 +673,8 @@ drop-and-republish, not a migration.
    fan-in edges and carries no per-revision uuid for Q11. **Done in #88**, with
    Q11's refusal, and with #100 folded in — see "Q12 and Q11 as built" above.
 6. **Follow-mode graph** — may ship before 4 and 5, since it needs no tool
-   definitions.
-7. **Invoke-mode graph.**
+   definitions. **The canvas is done in #89**, with Q6, Q9 and Q19 — see
+   "Q6, Q9 and Q19 as built" above, including the export-schema fix Q19
+   turned out to need. The per-step marks that make it *follow* anything are
+   #90.
+7. **Invoke-mode graph** — #91, on the same canvas.

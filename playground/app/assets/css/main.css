@@ -1,10 +1,9 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
-/* Vue Flow ships its layout in CSS, so the canvas on /test/workflow-graph is
-   unusable without these; the theme file is what draws the edges. */
-@import '@vue-flow/core/dist/style.css';
-@import '@vue-flow/core/dist/theme-default.css';
-@import '@vue-flow/controls/dist/style.css';
+/* Vue Flow's own stylesheets are no longer imported here: `@gaas/ui` declares
+   the dependency and imports them in its own stylesheet since #89, and this
+   app extends that layer through `@gaas/wiki`. Importing them again would
+   emit every rule twice. */
 
 @source "../../../../node_modules/@gaas/ui";

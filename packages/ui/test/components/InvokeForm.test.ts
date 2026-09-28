@@ -235,6 +235,9 @@ function aToolStep(id: number, tool: AToolStep, options: { feedData?: boolean } 
       ? { [dataParameter.name]: { id: id - 1, output_name: 'output' } }
       : {},
     outputs: [],
+    // A tool step runs no workflow of its own; only a `subworkflow` step does
+    // (#89), and this form offers parameters for neither.
+    subworkflow: null,
   }
 }
 
