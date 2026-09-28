@@ -4,7 +4,7 @@ import type { Mock } from 'vitest'
 import type { Database } from '../../../../../src/runtime/types/database'
 import { Effect } from 'effect'
 import { describe, expect, it, vi } from 'vitest'
-import { isRecordedJobCurrent, selectRecordedJobsEffect, syncJobEffect, SyncJobError } from '../../../../../src/runtime/server/utils/grizzle/sync/job'
+import { selectRecordedJobsEffect, syncJobEffect, SyncJobError, unchangedRecordedJob } from '../../../../../src/runtime/server/utils/grizzle/sync/job'
 import { createFailingGalaxyLayer, createMockGalaxyLayer, expectFailure, mockGalaxyJob } from '../../../fixtures'
 
 interface MockSupabaseConfig {
@@ -258,7 +258,7 @@ describe('selectRecordedJobsEffect', () => {
   })
 })
 
-describe('isRecordedJobCurrent', () => {
+describe('unchangedRecordedJob', () => {
   const recorded = {
     id: 7,
     galaxy_id: 'job-a',
@@ -274,29 +274,45 @@ describe('isRecordedJobCurrent', () => {
     update_time: '2024-05-06T07:08:09.123456',
   }
 
-  it('reads the same instant in a Postgres offset and a naive Galaxy timestamp', () => {
-    expect(isRecordedJobCurrent(recorded, reported)).toBe(true)
+  it('returns the row when a Postgres offset and a naive Galaxy timestamp name one instant', () => {
+    // The row is the answer, not just a yes: its id stands in for the fetch.
+    expect(unchangedRecordedJob(recorded, reported)).toBe(recorded)
+  })
+
+  it('reads a space-separated timestamp as the same instant as the T form', () => {
+    // Postgres writes the space form. Left unzoned it would parse as local
+    // time, and the row would compare equal or not with the server's zone.
+    const spaceSeparatedRow = { ...recorded, update_time: '2024-05-06 07:08:09.123+00' }
+    expect(unchangedRecordedJob(spaceSeparatedRow, reported)).toBe(spaceSeparatedRow)
+    expect(unchangedRecordedJob(recorded, { ...reported, update_time: '2024-05-06 07:08:09.123456' }))
+      .toBe(recorded)
   })
 
   it('rejects a job whose state moved on', () => {
-    expect(isRecordedJobCurrent(recorded, { ...reported, state: 'error' as bt.JobState })).toBe(false)
+    expect(unchangedRecordedJob(recorded, { ...reported, state: 'error' as bt.JobState })).toBeNull()
   })
 
   it('rejects a job Galaxy has touched since', () => {
-    expect(isRecordedJobCurrent(recorded, { ...reported, update_time: '2024-05-06T07:09:00' })).toBe(false)
+    expect(unchangedRecordedJob(recorded, { ...reported, update_time: '2024-05-06T07:09:00' })).toBeNull()
   })
 
   it('rejects a row recorded before there was an update time to record', () => {
-    expect(isRecordedJobCurrent({ ...recorded, update_time: null }, reported)).toBe(false)
+    expect(unchangedRecordedJob({ ...recorded, update_time: null }, reported)).toBeNull()
   })
 
   it('rejects a job the invocation reports without an update time', () => {
     // 22.05 carries `update_time` in the step entry, but a payload fetched
     // without step details reports no job fields at all.
-    expect(isRecordedJobCurrent(recorded, { ...reported, update_time: undefined })).toBe(false)
+    expect(unchangedRecordedJob(recorded, { ...reported, update_time: undefined })).toBeNull()
   })
 
   it('rejects an unparseable update time rather than calling it a match', () => {
-    expect(isRecordedJobCurrent({ ...recorded, update_time: 'not a date' }, { ...reported, update_time: 'not a date' })).toBe(false)
+    expect(unchangedRecordedJob({ ...recorded, update_time: 'not a date' }, { ...reported, update_time: 'not a date' })).toBeNull()
+  })
+
+  it('rejects a job with no row and a job with no report', () => {
+    // The two cases the caller would otherwise have to guard itself.
+    expect(unchangedRecordedJob(undefined, reported)).toBeNull()
+    expect(unchangedRecordedJob(recorded, undefined)).toBeNull()
   })
 })

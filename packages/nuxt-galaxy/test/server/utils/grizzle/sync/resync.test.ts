@@ -248,6 +248,15 @@ describe('re-syncing a mapped analysis', () => {
       ['job-b', 'ok', true],
       ['job-c', 'ok', true],
     ])
+    // Every row carries the `tool_id` the fetch returned, and the step's own
+    // entries carry none — which is why a job with no row has to be fetched:
+    // `jobs.tool_id` is notNull(), and 22.05 reports it nowhere else.
+    expect(secondPoll.every(job => !('tool_id' in job))).toBe(true)
+    expect(rows('jobs').map(row => row.tool_id)).toEqual([
+      mockGalaxyJob.tool_id,
+      mockGalaxyJob.tool_id,
+      mockGalaxyJob.tool_id,
+    ])
     expect(rows('jobs').at(2)?.update_time).toBe('2024-05-06T07:11:00.000Z')
   })
 

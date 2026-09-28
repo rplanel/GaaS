@@ -26,49 +26,62 @@ export type RecordedJob = Pick<
  * returns never depends on where the server sits; nor does the row, since
  * what is stored is the normalised instant and not the string Galaxy sent.
  *
+ * The pattern matches a date and time and nothing after it, which is exactly
+ * the shape that carries no zone — `T` or a space between them, since
+ * Postgres writes the space form and Galaxy the `T` one. A value with an
+ * offset does not match and is parsed as it stands, and neither does a date
+ * alone, which is already UTC by specification.
+ *
  * Milliseconds, not the microseconds Galaxy sends: both sides lose the same
  * digits, so the comparison stays symmetric.
  */
+const ZONELESS_TIMESTAMP = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)$/
+
 function galaxyTimeMillis(value: string | null | undefined): number | null {
   if (!value)
     return null
-  const zoned = value.includes('T') && !/(?:Z|[+-]\d{2}:?\d{2})$/.test(value)
-    ? `${value}Z`
-    : value
-  const millis = Date.parse(zoned)
+  const zoneless = ZONELESS_TIMESTAMP.exec(value)
+  const millis = Date.parse(zoneless ? `${zoneless[1]}T${zoneless[2]}Z` : value)
   return Number.isNaN(millis) ? null : millis
 }
 
 /**
- * The instant to record for a job, as an explicit UTC string, so that reading
- * the row back does not depend on the database session's timezone.
+ * A job's update time as an explicit UTC string, which is what the row holds,
+ * so that reading it back does not depend on the database session's timezone.
  */
-function recordableUpdateTime(value: string | null | undefined): string | null {
+function utcUpdateTime(value: string | null | undefined): string | null {
   const millis = galaxyTimeMillis(value)
   return millis === null ? null : new Date(millis).toISOString()
 }
 
 /**
- * Whether the row already recorded for a job says the same as the invocation's
- * own report of it, in which case `GET /api/jobs/{id}` has nothing to add and
- * the round trip is skipped (#106).
+ * The row already recorded for a job when it says the same as the invocation's
+ * own report of that job, and `null` otherwise. A row means
+ * `GET /api/jobs/{id}` has nothing to add, so the round trip is skipped and
+ * the row's id stands in for what the fetch would have returned (#106).
  *
  * `state` and `update_time` are the two fields to compare and the only two
  * there are: both are in `Job.dict_collection_visible_keys` on 22.05 and on
  * 26.1, while `tool_id` joined it only in 26.1 and `stderr`/`stdout` are in
  * neither. So a job with no recorded row still needs the full fetch, and so
- * does one that cannot be compared — a row written before there was an update
- * time to record, or a job an invocation fetched without step details reports
- * without one.
+ * does one that cannot be compared:
+ *
+ * - no row, because no sync has written one yet;
+ * - no report, because the step named the job in `job_id` alone and a payload
+ *   fetched without step details carries no job fields;
+ * - no update time on either side — a row written before there was one to
+ *   record, or a report that omits it.
  */
-export function isRecordedJobCurrent(
-  recorded: RecordedJob,
-  reported: bt.GalaxyInvocationStepJob,
-): boolean {
-  if (recorded.state !== reported.state)
-    return false
+export function unchangedRecordedJob(
+  recorded: RecordedJob | undefined,
+  reported: bt.GalaxyInvocationStepJob | undefined,
+): RecordedJob | null {
+  if (!recorded || !reported || recorded.state !== reported.state)
+    return null
   const recordedMillis = galaxyTimeMillis(recorded.update_time)
-  return recordedMillis !== null && recordedMillis === galaxyTimeMillis(reported.update_time)
+  if (recordedMillis === null || recordedMillis !== galaxyTimeMillis(reported.update_time))
+    return null
+  return recorded
 }
 
 /**
@@ -170,7 +183,7 @@ export function syncJobEffect(
       created_at: galaxyJob.create_time,
       // What a later sync compares against the invocation's own report of
       // this job, to decide whether it has to be fetched at all (#106).
-      update_time: recordableUpdateTime(galaxyJob.update_time),
+      update_time: utcUpdateTime(galaxyJob.update_time),
       is_sync: isTerminal,
     }
 

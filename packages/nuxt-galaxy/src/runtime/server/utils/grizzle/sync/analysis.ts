@@ -4,7 +4,7 @@ import type { Database } from '../../../../types/database'
 import * as bt from 'blendtype'
 import { Data, Duration, Effect, Schedule } from 'effect'
 import { buildMonitoringUpdatePayload, deriveInvocationOutcomeFromJobsSummary, isInvocationTerminalState } from '../analysisMonitoring'
-import { isRecordedJobCurrent, selectRecordedJobsEffect, syncJobEffect } from './job'
+import { selectRecordedJobsEffect, syncJobEffect, unchangedRecordedJob } from './job'
 import { acquireSyncLock, releaseSyncLock } from './lock'
 import { syncOutputDatasetEffect } from './output'
 
@@ -310,9 +310,9 @@ export function syncAnalysisEffect(
         // time, so a job that matches what we recorded has nothing to write
         // and costs no `GET /api/jobs/{id}` (#106). Its row id still feeds
         // the output sync below.
-        const recorded = recordedJobs.get(galaxyJobId)
-        if (recorded && reported && isRecordedJobCurrent(recorded, reported)) {
-          jobDbIds.push(recorded.id)
+        const unchanged = unchangedRecordedJob(recordedJobs.get(galaxyJobId), reported)
+        if (unchanged) {
+          jobDbIds.push(unchanged.id)
           skipped++
           continue
         }
