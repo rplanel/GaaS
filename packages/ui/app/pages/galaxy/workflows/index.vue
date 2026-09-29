@@ -1,4 +1,11 @@
 <script setup lang="ts">
+// The listing behind this page is the service account's entire Galaxy, so
+// `GET /api/galaxy/workflows` is admin-only since #99. Without this the page
+// took the 403 silently and drew an empty list.
+definePageMeta({
+  middleware: 'admin',
+})
+
 const breadcrumbsItems = ref([
   {
     label: 'Home',

@@ -88,6 +88,11 @@ src/
 │   ├── server/
 │   │   ├── api/            # API handlers
 │   │   ├── lib/migrate.js  # Migration utilities
+│   │   ├── middleware/     # Nitro server middleware, registered with
+│   │   │                   # `addServerHandler({ middleware: true })` and so
+│   │   │                   # run for every request before any route. Today:
+│   │   │                   # `galaxyGuard`, which settles who may call each
+│   │   │                   # `/api/galaxy/*` endpoint (#99)
 │   │   ├── plugins/        # Nitro plugins
 │   │   └── utils/          # Server utilities
 │   ├── shared/             # The few pure helpers BOTH halves must agree on
@@ -172,7 +177,7 @@ Measured against h3 1.15.11's router, not assumed (#28):
   not match the route and never reaches the handler.
 - It *can* be the empty string, but only when the parameter is **not the
   final segment**. An empty segment satisfies a middle parameter, so
-  `/api/galaxy/tools//1.0` matches with `toolId === ''`, while
+  `/api/galaxy/workflows//versions` matches with `workflowId === ''`, while
   `/api/db/analyses/` does not match `[analysisId]` at all.
 
 So a falsy parameter is reachable for a middle parameter and unreachable for

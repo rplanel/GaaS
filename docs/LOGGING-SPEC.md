@@ -8,7 +8,7 @@ For high-level project conventions (stack versions, layer boundaries, testing ru
 
 These conventions apply to the six GaaS logging surfaces:
 
-1. **Server API routes** — `packages/nuxt-galaxy/src/runtime/server/api/**/*.ts`
+1. **Server API routes and middleware** — `packages/nuxt-galaxy/src/runtime/server/api/**/*.ts` and `packages/nuxt-galaxy/src/runtime/server/middleware/**/*.ts`. Middleware logs as a server route does: `useLogger(event)`, a stable `handler`, and `user.id` once a user is known — a request refused before it reaches a route is the only record that refusal leaves
 2. **Scheduled tasks / scripts** — `packages/nuxt-galaxy/src/runtime/server/tasks/**/*.ts`, `packages/nuxt-galaxy/bin/*.mjs`, and `packages/nuxt-galaxy/src/runtime/server/lib/*.ts`
 3. **Client composables and components** — `packages/nuxt-galaxy/src/runtime/app/composables/**/*.ts`, `packages/ui/app/composables/**/*.ts`, `packages/ui/app/components/**/*.vue`, and `packages/wiki/app/**/*.ts` / `*.vue`
 4. **Module lifecycle and build-time scripts** — `packages/nuxt-galaxy/src/module.ts`, `packages/wiki/nuxt.config.ts` build-time hooks, and similar module setup code

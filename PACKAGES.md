@@ -193,11 +193,16 @@ SUPABASE_KEY="your-supabase-anon-key"
 
 #### Galaxy Endpoints
 
-- `GET /api/galaxy/instance` - Galaxy instance information
-- `GET /api/galaxy/histories` - List Galaxy histories
-- `GET /api/galaxy/workflows` - List Galaxy workflows
-- `GET /api/galaxy/workflows/:workflowId` - Get specific workflow
-- `GET /api/galaxy/tools/:toolId/:toolVersion` - Get tool information
+Access is `open`, `session` (any signed-in user) or `admin`, enforced for all of
+them by one Nitro middleware; see the nuxt-galaxy server docs.
+
+- `GET /api/galaxy/health` - Galaxy connectivity check — `open`
+- `GET /api/galaxy/instance` - Galaxy instance information — `session`
+- `GET /api/galaxy/histories` - List the caller's own histories — `session`
+- `GET /api/galaxy/workflows/:workflowId/revisions/:revision/description` - Describe one revision in a single call — `session`
+- `GET /api/galaxy/workflows` - List Galaxy workflows — `admin`
+- `GET /api/galaxy/workflows/:workflowId/versions` - List a stored workflow's revisions — `admin`
+- `GET /api/galaxy/workflows/:workflowId/revisions/:revision/tools` - Check one revision's tools — `admin`
 
 #### Database Endpoints
 

@@ -5,7 +5,7 @@ import { Drizzle } from '../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../../utils/galaxy'
 import { deleteAnalysis } from '../../../utils/grizzle/analyses'
-import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from '../../../utils/grizzle/supabase'
+import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClient } from '../../../utils/grizzle/supabase'
 import { toHttpError } from '../../../utils/httpError'
 
 export default defineEventHandler(async (event) => {
@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
     event,
     program.pipe(
       toGalaxyServiceUnavailable,
-      Effect.provide(Layer.mergeAll(Drizzle.Live, ServerSupabaseClient.Live, ServerSupabaseClaims.Live, useGalaxyLayer())),
+      Effect.provide(Layer.mergeAll(Drizzle.Live, ServerSupabaseClient.Live, useGalaxyLayer())),
       Effect.exit,
     ),
   )

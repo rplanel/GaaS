@@ -3,10 +3,8 @@ import { useRuntimeConfig } from '#imports'
 import * as bt from 'blendtype'
 import { Cause, Effect, Option } from 'effect'
 import { defineEventHandler, getRouterParam } from 'h3'
-import { Drizzle } from '../../../../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../../../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../../../../../utils/galaxy'
-import { ServerSupabaseClaims, ServerSupabaseClient } from '../../../../../../utils/grizzle/supabase'
 import { missingToolsEffect, pinnedTools } from '../../../../../../utils/grizzle/workflowTools'
 import { requestedRevisionParam } from '../../../../../../utils/revisionParam'
 
@@ -21,6 +19,11 @@ import { requestedRevisionParam } from '../../../../../../utils/revisionParam'
  * and each distinct tool it pins is looked up at its pinned version; the
  * answer names the missing ones and says how many were checked. Nothing is
  * read from the database, and nothing is written anywhere.
+ *
+ * Administrators only, and not because of anything in this file: the level is
+ * `admin` in `galaxyAccess.ts`, and the `galaxyGuard` middleware settles it
+ * before the request arrives (#99). It matters more here than next door — the
+ * export this runs reaches any stored workflow, published in GaaS or not.
  */
 export default defineEventHandler(async (event) => {
   const { public: { galaxy: { url } } } = useRuntimeConfig()
@@ -40,9 +43,6 @@ export default defineEventHandler(async (event) => {
     return runGalaxyEffect(event, program.pipe(
       bt.toGalaxyServiceUnavailable,
       Effect.provide(useGalaxyLayer()),
-      Effect.provide(Drizzle.Live),
-      Effect.provide(ServerSupabaseClaims.Live),
-      Effect.provide(ServerSupabaseClient.Live),
       Effect.matchCause({
         onFailure: (cause) => {
           const optionFailure = Cause.failureOption(cause)
