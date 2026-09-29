@@ -260,7 +260,7 @@ const sortedOutputs = computed(() => {
               <template
                 v-if="selection
                   && selection.path.length === 0
-                  && marks[selection.stepId]?.phase !== 'unmarked'"
+                  && marks[selection.stepId]?.state !== 'unmarked'"
               >
                 <USeparator label="Jobs" />
                 <GalaxyAnalysisJobs

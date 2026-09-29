@@ -8,9 +8,9 @@ import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { Handle, Panel, VueFlow } from '@vue-flow/core'
 import { stepKind } from '../../../utils/stepKind'
-import { stepMarkSummary } from '../../../utils/stepMarks'
-import { stepPhaseAccent, stepPhaseLook } from '../../../utils/stepPhase'
-import { handleSides, NODE_HEIGHT, NODE_WIDTH, stepsAtPath, subworkflowTrail, workflowGraph } from '../../../utils/workflowGraph'
+import { stepMarkSummary, UNMARKED_STEP } from '../../../utils/stepMarks'
+import { stepStateAccent, stepStateLook } from '../../../utils/stepStateLook'
+import { animatedEdges, handleSides, NODE_HEIGHT, NODE_WIDTH, stepsAtPath, subworkflowTrail, workflowGraph } from '../../../utils/workflowGraph'
 
 /**
  * A workflow revision drawn as a graph (#89).
@@ -55,7 +55,7 @@ const props = withDefaults(defineProps<{
   steps: Record<string, DescribedStep>
   direction?: GraphDirection
   /**
-   * What each step's jobs are doing, keyed as `steps` is (#90).
+   * What each step of the workflow has come to, keyed as `steps` is (#90).
    *
    * Of the **workflow itself**, never of a subworkflow: see `markedSteps`.
    * Omitted by whichever screen is not following an invocation, and then no
@@ -120,7 +120,39 @@ const levelSteps = computed(() => stepsAtPath(props.steps, drawnPath.value) ?? {
  */
 const markedSteps = computed(() => (drawnPath.value.length === 0 ? props.marks : {}))
 
-const graph = computed(() => workflowGraph(levelSteps.value, props.direction, markedSteps.value))
+/**
+ * The shape, which depends on the steps and the direction and on nothing
+ * else — so the array handed to Vue Flow is the *same* one however the jobs
+ * move. Vue Flow re-parses a changed `nodes` array and
+ * `Object.assign(existingNode, node)` writes the laid-out position back over
+ * a dragged one (`vue-flow-core.mjs:3573`), so recomputing this when a mark
+ * changes would undo a reader's drag on every realtime refetch (Q6).
+ */
+const graph = computed(() => workflowGraph(levelSteps.value, props.direction))
+
+/** The edges, which do move with the jobs — an edge has no position to lose. */
+const edges = computed(() => animatedEdges(graph.value.edges, markedSteps.value))
+
+/**
+ * What to draw on each node beyond its shape, resolved once per render.
+ *
+ * A record rather than six lookups per node in the template: the state, its
+ * drawing, its colour and its badge were each looked up separately, most of
+ * them behind a `!`, and six lookups of one thing are six chances to look up
+ * different things.
+ */
+const nodeStates = computed(() => {
+  const marks = markedSteps.value
+  return Object.fromEntries(graph.value.nodes.map((node) => {
+    const mark = marks[node.id] ?? UNMARKED_STEP
+    return [node.id, {
+      state: mark.state,
+      look: stepStateLook(mark.state),
+      accent: stepStateAccent(mark.state) ?? 'transparent',
+      summary: stepMarkSummary(mark),
+    }]
+  }))
+})
 
 /**
  * Where the handles sit, which is what actually routes an edge: Vue Flow
@@ -269,7 +301,7 @@ watch([() => props.direction, drawnPath], () => nextTick(fit))
   <VueFlow
     :id="flowId"
     :nodes="graph.nodes"
-    :edges="graph.edges"
+    :edges="edges"
     :min-zoom="0.2"
     :max-zoom="2"
     :nodes-draggable="true"
@@ -348,10 +380,10 @@ watch([() => props.direction, drawnPath], () => nextTick(fit))
         :style="{
           width: `${NODE_WIDTH}px`,
           height: `${NODE_HEIGHT}px`,
-          borderInlineStartColor: stepPhaseAccent(data.mark.phase) ?? 'transparent',
+          borderInlineStartColor: nodeStates[id]?.accent,
         }"
         :data-testid="`workflow-node-${id}`"
-        :data-phase="data.mark.phase"
+        :data-state="nodeStates[id]?.state"
       >
         <!--
           One anchor per output, and one per input something feeds, spaced
@@ -407,13 +439,13 @@ watch([() => props.direction, drawnPath], () => nextTick(fit))
               are the word itself, so the phase is never colour alone.
             -->
             <UIcon
-              v-if="stepPhaseLook(data.mark.phase)"
-              :name="stepPhaseLook(data.mark.phase)!.icon"
+              v-if="nodeStates[id]?.look"
+              :name="nodeStates[id]!.look!.icon"
               class="size-4"
-              :style="{ color: stepPhaseAccent(data.mark.phase) }"
+              :style="{ color: nodeStates[id]!.accent }"
               role="img"
-              :aria-label="stepPhaseLook(data.mark.phase)!.word"
-              :title="stepPhaseLook(data.mark.phase)!.word"
+              :aria-label="nodeStates[id]!.look!.word"
+              :title="nodeStates[id]!.look!.word"
               :data-testid="`node-mark-${id}`"
             />
             <!--
@@ -458,14 +490,14 @@ watch([() => props.direction, drawnPath], () => nextTick(fit))
             coloured Done is noise.
           -->
           <UBadge
-            v-if="stepMarkSummary(data.mark)"
+            v-if="nodeStates[id]?.summary"
             size="xs"
             variant="soft"
             class="shrink-0"
-            :color="stepPhaseLook(data.mark.phase)?.color ?? 'neutral'"
+            :color="nodeStates[id]!.look?.color ?? 'neutral'"
             :data-testid="`node-count-${id}`"
           >
-            {{ stepMarkSummary(data.mark) }}
+            {{ nodeStates[id]!.summary }}
           </UBadge>
         </div>
       </div>

@@ -17,8 +17,7 @@ import type { GalaxyState, InvocationState } from 'blendtype'
 import { GalaxyStates, InvocationStates, JobStates } from 'blendtype'
 import { describe, expect, it } from 'vitest'
 import { galaxyStateLook } from '../../app/utils/galaxyStateLook'
-import { jobStatePhase } from '../../app/utils/stepMarks'
-import { jobPhaseLook } from '../../app/utils/stepPhase'
+import { jobStateLook } from '../../app/utils/stepStateLook'
 
 const EVERY_STATE = [...new Set<GalaxyState | InvocationState>([...GalaxyStates, ...InvocationStates])]
 
@@ -44,7 +43,7 @@ describe('galaxyStateLook', () => {
   it.each(JobStates)('draws the job state %s exactly as the canvas draws it', (state) => {
     // A colour has to mean the same thing in the jobs list and on the node
     // beside it, so the two read one map rather than two that agree today.
-    expect(galaxyStateLook(state)).toEqual(jobPhaseLook(jobStatePhase(state)))
+    expect(galaxyStateLook(state)).toEqual(jobStateLook(state))
   })
 
   it('tells a reader something rather than nothing about a state it does not know', () => {

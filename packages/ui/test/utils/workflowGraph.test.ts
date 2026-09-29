@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest'
 import { stepMarks } from '../../app/utils/stepMarks'
 import { toolDisplayName } from '../../app/utils/toolName'
 import {
+  animatedEdges,
   handleSides,
   NODE_HEIGHT,
   NODE_WIDTH,
@@ -290,27 +291,33 @@ describe('subworkflowTrail', () => {
   })
 })
 
-describe('workflowGraph, marked with what a running invocation is doing', () => {
+describe('workflowGraph, and what a running invocation adds to it', () => {
   /** The marks a canvas is handed, derived as the panel derives them (#90). */
   function marksFor(steps: Record<string, ReturnType<typeof aStep>>, jobs: { step_id: number, state: JobState }[]) {
     return stepMarks(steps, jobs)
   }
 
-  it('carries each step\'s mark onto its node', () => {
+  it('lays a level out identically however its jobs are doing', () => {
+    // The whole reason a mark is not in the node data. Vue Flow re-parses a
+    // changed `nodes` array and `Object.assign(existingNode, node)` writes
+    // the laid-out position back over a dragged one, so a node array that
+    // moved with the jobs would undo a reader's drag on every realtime
+    // refetch (Q6). The layout takes no marks at all, so it cannot.
     const steps = { 0: aStep(0), 1: aStep(1) }
-    const { nodes } = workflowGraph(steps, 'LR', marksFor(steps, [{ step_id: 0, state: 'running' }]))
+    const before = workflowGraph(steps, 'LR').nodes
+    const after = workflowGraph(steps, 'LR').nodes
 
-    expect(nodes.find(node => node.id === '0')?.data.mark.phase).toBe('running')
-    expect(nodes.find(node => node.id === '1')?.data.mark.phase).toBe('pending')
+    expect(after.map(node => node.position)).toEqual(before.map(node => node.position))
+    expect(after.map(node => node.data)).toEqual(before.map(node => node.data))
   })
 
-  it('leaves every node unmarked when no marks are supplied', () => {
+  it('leaves every edge still when no marks are supplied', () => {
     // Invoke-mode, and the canvas before #90: one canvas, no mode (Q2'), so
     // supplying nothing has to draw exactly what #89 drew.
-    const { nodes, edges } = workflowGraph(describedSteps(FIXTURES.ccqtlToday))
+    const { edges } = workflowGraph(describedSteps(FIXTURES.ccqtlToday))
 
-    expect(nodes.every(node => node.data.mark.phase === 'unmarked')).toBe(true)
     expect(edges.every(edge => edge.animated === false)).toBe(true)
+    expect(animatedEdges(edges, {}).every(edge => edge.animated === false)).toBe(true)
   })
 
   it('animates an edge while its source step is running, and no other', () => {
@@ -320,15 +327,27 @@ describe('workflowGraph, marked with what a running invocation is doing', () => 
       0: aStep(0, { type: 'data_input', tool_id: null, tool_version: null }),
       1: aStep(1, { input_connections: { input: { id: 0, output_name: 'output' } } }),
       2: aStep(2, { input_connections: { input: { id: 1, output_name: 'out_file1' } } }),
+      // A fourth step so that step 2 has an outgoing edge of its own; an
+      // edge only exists where something reads from the step.
+      3: aStep(3, { input_connections: { input: { id: 2, output_name: 'out_file1' } } }),
     }
-    const { edges } = workflowGraph(steps, 'LR', marksFor(steps, [
+    const running = animatedEdges(workflowGraph(steps, 'LR').edges, marksFor(steps, [
       { step_id: 1, state: 'running' },
       { step_id: 2, state: 'queued' },
     ]))
 
-    expect(edges.find(edge => edge.source === '1')?.animated).toBe(true)
+    expect(running.find(edge => edge.source === '1')?.animated).toBe(true)
     // Step 0 is an input step: it runs no job, so nothing leaving it ever
     // animates, whatever is happening downstream.
-    expect(edges.find(edge => edge.source === '0')?.animated).toBe(false)
+    expect(running.find(edge => edge.source === '0')?.animated).toBe(false)
+
+    // And it stops again when the step does, which a single snapshot of a
+    // running invocation cannot see.
+    const finished = animatedEdges(workflowGraph(steps, 'LR').edges, marksFor(steps, [
+      { step_id: 1, state: 'ok' },
+      { step_id: 2, state: 'running' },
+    ]))
+    expect(finished.find(edge => edge.source === '1')?.animated).toBe(false)
+    expect(finished.find(edge => edge.source === '2')?.animated).toBe(true)
   })
 })

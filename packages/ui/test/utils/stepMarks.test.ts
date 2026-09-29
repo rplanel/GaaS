@@ -53,10 +53,10 @@ describe('stepMarks', () => {
       ['parameter_input'],
       ['data_collection_input'],
       ['subworkflow'],
-    ] as const)('is unmarked rather than pending: %s', (type) => {
+    ] as const)('is unmarked rather than Not started: %s', (type) => {
       const marks = stepMarks(steps({ id: 0, type }), [])
 
-      expect(marks['0']?.phase).toBe('unmarked')
+      expect(marks['0']?.state).toBe('unmarked')
       expect(marks['0']?.isRunning).toBe(false)
       expect(marks['0']?.total).toBe(0)
     })
@@ -64,27 +64,27 @@ describe('stepMarks', () => {
     it('stays unmarked even if a job row somehow names it', () => {
       const marks = stepMarks(steps({ id: 0, type: 'subworkflow' }), [aJob(0, 'running')])
 
-      expect(marks['0']?.phase).toBe('unmarked')
+      expect(marks['0']?.state).toBe('unmarked')
       expect(marks['0']?.isRunning).toBe(false)
     })
   })
 
   describe('a step that could run a job', () => {
-    it('is pending while it has none recorded', () => {
+    it('is Not started while it has none recorded', () => {
       const marks = stepMarks(steps({ id: 0 }), [])
 
-      expect(marks['0']?.phase).toBe('pending')
+      expect(marks['0']?.state).toBe('notStarted')
       expect(marks['0']?.total).toBe(0)
     })
 
-    it('is pending, not skipped, when nothing ran — these are different things', () => {
+    it('is Not started, not Skipped, when nothing ran — these are different things', () => {
       const marks = stepMarks(steps({ id: 0 }, { id: 1 }), [aJob(1, 'skipped')])
 
       // AC4: a conditional Galaxy declined to run writes a real job row in
       // state `skipped` (`tools/actions/__init__.py:755`); a step whose turn
       // has not come writes nothing at all.
-      expect(marks['0']?.phase).toBe('pending')
-      expect(marks['1']?.phase).toBe('skipped')
+      expect(marks['0']?.state).toBe('notStarted')
+      expect(marks['1']?.state).toBe('skipped')
     })
 
     it('is drawn as paused when Galaxy paused its job', () => {
@@ -94,7 +94,7 @@ describe('stepMarks', () => {
       // all (#118).
       const marks = stepMarks(steps({ id: 0 }), [aJob(0, 'paused')])
 
-      expect(marks['0']?.phase).toBe('paused')
+      expect(marks['0']?.state).toBe('paused')
       expect(marks['0']?.isRunning).toBe(false)
     })
 
@@ -107,15 +107,15 @@ describe('stepMarks', () => {
       ['running', 'running'],
       ['paused', 'paused'],
       ['skipped', 'skipped'],
-      ['ok', 'ok'],
-      ['error', 'error'],
-      ['failed', 'error'],
-      ['stop', 'error'],
-      ['stopped', 'error'],
-      ['deleted', 'deleted'],
-      ['deleting', 'deleted'],
-    ] as const)('draws a lone %s job as %s', (state, phase) => {
-      expect(stepMarks(steps({ id: 0 }), [aJob(0, state)])['0']?.phase).toBe(phase)
+      ['ok', 'succeeded'],
+      ['error', 'failed'],
+      ['failed', 'failed'],
+      ['stop', 'failed'],
+      ['stopped', 'failed'],
+      ['deleted', 'cancelled'],
+      ['deleting', 'cancelled'],
+    ] as const)('reads a lone %s job as the step state %s', (state, stepState) => {
+      expect(stepMarks(steps({ id: 0 }), [aJob(0, state)])['0']?.state).toBe(stepState)
     })
 
     it('animates the edges leaving it only while it is running', () => {
@@ -149,21 +149,25 @@ describe('stepMarks', () => {
 
       expect(mark?.total).toBe(30)
       expect(mark?.counts).toEqual([
-        { state: 'ok', count: 12 },
+        { state: 'succeeded', count: 12 },
         { state: 'running', count: 3 },
         { state: 'queued', count: 15 },
       ])
     })
 
     it('takes the most telling of its states as the one it is drawn in', () => {
-      const phaseOf = (jobs: MarkableJob[]) => stepMarks(steps({ id: 0 }), jobs)['0']?.phase
+      const stateOf = (jobs: MarkableJob[]) => stepMarks(steps({ id: 0 }), jobs)['0']?.state
 
-      expect(phaseOf(mapped)).toBe('running')
-      expect(phaseOf([aJob(0, 'ok'), aJob(0, 'error')])).toBe('error')
-      expect(phaseOf([aJob(0, 'running'), aJob(0, 'error')])).toBe('error')
-      expect(phaseOf([aJob(0, 'ok'), aJob(0, 'paused')])).toBe('paused')
-      expect(phaseOf([aJob(0, 'ok'), aJob(0, 'skipped')])).toBe('skipped')
-      expect(phaseOf([aJob(0, 'ok'), aJob(0, 'ok')])).toBe('ok')
+      expect(stateOf(mapped)).toBe('running')
+      expect(stateOf([aJob(0, 'ok'), aJob(0, 'error')])).toBe('failed')
+      expect(stateOf([aJob(0, 'running'), aJob(0, 'error')])).toBe('failed')
+      expect(stateOf([aJob(0, 'ok'), aJob(0, 'paused')])).toBe('paused')
+      expect(stateOf([aJob(0, 'ok'), aJob(0, 'skipped')])).toBe('skipped')
+      expect(stateOf([aJob(0, 'ok'), aJob(0, 'ok')])).toBe('succeeded')
+      // Two of Galaxy's job states, one step state: a step with an errored
+      // job and a stopped one has two failures, not one of each.
+      expect(stepMarks(steps({ id: 0 }), [aJob(0, 'error'), aJob(0, 'stopped')])['0']?.counts)
+        .toEqual([{ state: 'failed', count: 2 }])
     })
   })
 
@@ -175,7 +179,7 @@ describe('stepMarks', () => {
     const marks = stepMarks(steps({ id: 0 }), [aJob(0, 'ok'), aJob(99, 'error')])
 
     expect(Object.keys(marks)).toEqual(['0'])
-    expect(marks['0']?.phase).toBe('ok')
+    expect(marks['0']?.state).toBe('succeeded')
   })
 
   it('reads an absent job list as no jobs at all', () => {
@@ -183,7 +187,7 @@ describe('stepMarks', () => {
     // being fetched, and an empty canvas is not the moment to throw.
     const marks = stepMarks(steps({ id: 0 }), undefined)
 
-    expect(marks['0']?.phase).toBe('pending')
+    expect(marks['0']?.state).toBe('notStarted')
   })
 })
 
@@ -194,21 +198,23 @@ describe('stepMarkSummary', () => {
       ...Array.from({ length: 3 }, () => aJob(0, 'running')),
     ])['0']!
 
-    // The `ok` count leads as a fraction so the total is always on the badge;
-    // the rest follow as plain counts. A badge that named only some of the
-    // states would be the count read as the whole of a step again.
-    expect(stepMarkSummary(mark)).toBe('12/15 ok, 3 running')
+    // The Succeeded count leads as a fraction so the total is always on the
+    // badge; the rest follow as plain counts. A badge that named only some
+    // of the states would be the count read as the whole of a step again.
+    // In the glossary's words throughout — `12/15 ok, 3 running` put two
+    // Galaxy identifiers on the node.
+    expect(stepMarkSummary(mark)).toBe('12/15 Succeeded, 3 Running')
   })
 
   it('leads with the total even when nothing has finished', () => {
     const mark = stepMarks(steps({ id: 0 }), Array.from({ length: 30 }, () => aJob(0, 'queued')))['0']!
 
-    expect(stepMarkSummary(mark)).toBe('0/30 ok, 30 queued')
+    expect(stepMarkSummary(mark)).toBe('0/30 Succeeded, 30 Queued')
   })
 
   it('says nothing for a step with one job or none', () => {
     // A single job's state is already the node's colour, and a badge reading
-    // "1/1 ok" beside it is noise.
+    // "1/1 Succeeded" beside it is noise.
     const marks = stepMarks(steps({ id: 0 }, { id: 1 }, { id: 2, type: 'data_input' }), [aJob(0, 'ok')])
 
     expect(stepMarkSummary(marks['0']!)).toBeNull()

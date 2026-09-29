@@ -9,7 +9,7 @@
  * is the same failure #90 exists to fix on the canvas, in the list beside
  * it.
  *
- * **A job state is not decided here.** Those come from `jobPhaseLook`, the
+ * **A job state is not decided here.** Those come from `jobStateLook`, the
  * map the canvas draws its nodes from, so a colour means the same thing in
  * the jobs accordion as on the node it belongs to. What is left is the
  * states no job is ever in — an invocation's own scheduling states and a
@@ -20,8 +20,7 @@
 import type { GalaxyState, InvocationState, JobState } from 'blendtype'
 import type { StateLook } from './stateLook'
 import { JobStates } from 'blendtype'
-import { jobStatePhase } from './stepMarks'
-import { jobPhaseLook } from './stepPhase'
+import { jobStateLook } from './stepStateLook'
 
 /** Every state that is not a job state: an invocation's, or a dataset's. */
 const NOT_A_JOB_STATE = {
@@ -105,7 +104,7 @@ function isJobState(state: string): state is JobState {
 /** How to draw one state, whatever kind of thing it belongs to. */
 export function galaxyStateLook(state: GalaxyState | InvocationState): StateLook {
   if (isJobState(state)) {
-    return jobPhaseLook(jobStatePhase(state))
+    return jobStateLook(state)
   }
   return (NOT_A_JOB_STATE as Record<string, StateLook | undefined>)[state] ?? UNKNOWN
 }

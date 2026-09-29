@@ -470,19 +470,19 @@ describe('the graph following a running invocation', () => {
     const panel = await mountPanel(7)
 
     await vi.waitFor(() => {
-      expect(panel.find('[data-testid="workflow-node-2"]').attributes('data-phase')).toBe('ok')
+      expect(panel.find('[data-testid="workflow-node-2"]').attributes('data-state')).toBe('succeeded')
     })
     // AC6: the input step runs no job, so it is never coloured by run state.
-    expect(panel.find('[data-testid="workflow-node-1"]').attributes('data-phase')).toBe('unmarked')
+    expect(panel.find('[data-testid="workflow-node-1"]').attributes('data-state')).toBe('unmarked')
   })
 
   it('takes the mapped step\'s count from every one of its rows', async () => {
     const panel = await mountPanel(10)
 
     await vi.waitFor(() => {
-      expect(panel.find('[data-testid="node-count-2"]').text()).toBe('1/3 ok, 1 error, 1 running')
+      expect(panel.find('[data-testid="node-count-2"]').text()).toBe('1/3 Succeeded, 1 Failed, 1 Running')
     })
-    expect(panel.find('[data-testid="workflow-node-3"]').attributes('data-phase')).toBe('paused')
+    expect(panel.find('[data-testid="workflow-node-3"]').attributes('data-state')).toBe('paused')
     // One job, so no count badge: the node's own colour already says it.
     expect(panel.find('[data-testid="node-count-3"]').exists()).toBe(false)
   })

@@ -23,7 +23,7 @@ const props = withDefaults(defineProps<{
   /** The revision's steps, keyed by `order_index`, as the description endpoint answers them. */
   steps: Record<string, DescribedStep>
   /**
-   * What each step's jobs are doing, keyed as `steps` is (#90). Passed
+   * What each step of the workflow has come to, keyed as `steps` is (#90). Passed
    * straight to the canvas; omitted by a screen that is not following an
    * invocation.
    */

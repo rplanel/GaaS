@@ -65,8 +65,8 @@ One step that runs once per element of a collection it is given, rather than onc
 _Avoid_: Parallel step, batch step, scattered step, collection step
 
 **Step state**:
-What one step of one analysis has come to, read per step and never aggregated: Not started, Running, Succeeded, Failed, Cancelled or Skipped. A step state is not an Outcome — an analysis has exactly one Outcome, and it is not the sum of its step states. Not started covers a step nothing has run yet, including one the analysis has scheduled but not begun.
-_Avoid_: Job state, node status, step outcome, progress
+What one step of one analysis has come to, read per step and never aggregated: Not started, Queued, Running, Paused, Succeeded, Failed, Cancelled or Skipped. A step state is not an Outcome — an analysis has exactly one Outcome, and it is not the sum of its step states. Not started covers a step nothing has run yet. Queued covers one whose job Galaxy has accepted but not begun; Paused covers one whose job Galaxy paused because its input failed or was itself paused. A step that runs no job of its own — an input step, or a subworkflow step — has no step state at all, and is drawn without one rather than as Not started.
+_Avoid_: Job state, node status, step outcome, progress, phase
 
 **Input**:
 One place a workflow takes a dataset from the user, declared as a `data_input` or `data_collection_input` step and named by the label its author gave it, or by its step index where there is none. An input is the place, not the dataset that fills it: an analysis supplies one dataset per input the workflow declares, except the optional ones. Galaxy counts a parameter step as an input too, so where the two must be told apart the phrase is *dataset input*.

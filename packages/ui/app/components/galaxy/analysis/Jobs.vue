@@ -103,12 +103,6 @@ const entries = computed(() => {
   })
 })
 
-type JobEntry = (typeof entries.value)[number]
-
-const byValue = computed<Record<string, JobEntry>>(() =>
-  Object.fromEntries(entries.value.map(entry => [entry.value, entry])),
-)
-
 /**
  * The three sections every job has. One array rather than one per job: they
  * were identical, and building a record of copies only invited them to stop
@@ -152,7 +146,7 @@ function getParametersInputComponent(stepId: string) {
   >
     <template #leading="{ item }">
       <div>
-        <GalaxyStatus :state="byValue[item.value]?.job.state" size="25" />
+        <GalaxyStatus :state="item.job.state" size="25" />
       </div>
     </template>
     <template #default="{ item }">
@@ -163,7 +157,7 @@ function getParametersInputComponent(stepId: string) {
       <span :data-testid="`job-trigger-${item.value}`">{{ item.label }}</span>
     </template>
     <template #body="{ item }">
-      <div v-if="byValue[item.value]" class="p-4">
+      <div class="p-4">
         <UAccordion :items="DETAILS">
           <template #parameters>
             <div v-if="workflowSteps && workflowParametersModel" class="p-2">
@@ -175,9 +169,9 @@ function getParametersInputComponent(stepId: string) {
                 all (#96): a tool that failed is never indistinguishable from
                 a tool with no parameters.
               -->
-              <div v-if="unavailableByStep[byValue[item.value]!.stepId]" data-testid="step-parameters-unlabelled">
+              <div v-if="unavailableByStep[item.stepId]" data-testid="step-parameters-unlabelled">
                 <p class="text-sm opacity-60 px-4 py-2">
-                  {{ describeUnavailableTool(unavailableByStep[byValue[item.value]!.stepId]!) }}, so these are its raw parameter names.
+                  {{ describeUnavailableTool(unavailableByStep[item.stepId]!) }}, so these are its raw parameter names.
                   <!--
                     The description is cached without expiry, so a Galaxy
                     that was briefly unreachable when this analysis was first
@@ -196,7 +190,7 @@ function getParametersInputComponent(stepId: string) {
                   </UButton>
                 </p>
                 <dl class="grid grid-cols-[auto_1fr] gap-x-4 px-4 py-2 text-sm">
-                  <template v-for="(value, name) in workflowParametersModel[byValue[item.value]!.stepId]" :key="name">
+                  <template v-for="(value, name) in workflowParametersModel[item.stepId]" :key="name">
                     <dt class="font-medium break-all">
                       {{ name }}
                     </dt>
@@ -214,24 +208,24 @@ function getParametersInputComponent(stepId: string) {
               <GalaxyWorkflowStep
                 v-else
                 variant="display"
-                :workflow-step="workflowSteps[byValue[item.value]!.stepId]"
-                :tool-parameters="getToolParameters(byValue[item.value]!.stepId)"
-                :parameters-inputs-component="getParametersInputComponent(byValue[item.value]!.stepId)"
-                :workflow-parameters-model="workflowParametersModel[byValue[item.value]!.stepId]"
+                :workflow-step="workflowSteps[item.stepId]"
+                :tool-parameters="getToolParameters(item.stepId)"
+                :parameters-inputs-component="getParametersInputComponent(item.stepId)"
+                :workflow-parameters-model="workflowParametersModel[item.stepId]"
               />
             </div>
           </template>
           <template #stdout>
             <div class="p-1">
               <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
-                <pre class="text-nowrap"> {{ byValue[item.value]!.job.stdout }}</pre>
+                <pre class="text-nowrap"> {{ item.job.stdout }}</pre>
               </div>
             </div>
           </template>
           <template #stderr>
             <div class="p-1">
               <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
-                <pre> {{ byValue[item.value]!.job.stderr }}</pre>
+                <pre> {{ item.job.stderr }}</pre>
               </div>
             </div>
           </template>

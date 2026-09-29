@@ -17,6 +17,7 @@ import type { JobState } from 'blendtype'
 import type { DescribedStep } from 'nuxt-galaxy'
 import { UApp } from '#components'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { useVueFlow } from '@vue-flow/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, ref } from 'vue'
 import Graph from '../../app/components/galaxy/workflow/Graph.vue'
@@ -445,8 +446,8 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     return stepMarks(steps, jobs)
   }
 
-  const phaseOf = (wrapper: { find: (s: string) => { attributes: (a: string) => string | undefined } }, id: string) =>
-    wrapper.find(`[data-testid="workflow-node-${id}"]`).attributes('data-phase')
+  const stateOf = (wrapper: { find: (s: string) => { attributes: (a: string) => string | undefined } }, id: string) =>
+    wrapper.find(`[data-testid="workflow-node-${id}"]`).attributes('data-state')
 
   it('colours each node by what that step is doing', async () => {
     // AC1. The input step at 0 runs no job and is never coloured by run
@@ -457,9 +458,9 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     })
     mounted = wrapper
 
-    expect(phaseOf(wrapper, '0')).toBe('unmarked')
-    expect(phaseOf(wrapper, '1')).toBe('running')
-    expect(phaseOf(wrapper, '2')).toBe('queued')
+    expect(stateOf(wrapper, '0')).toBe('unmarked')
+    expect(stateOf(wrapper, '1')).toBe('running')
+    expect(stateOf(wrapper, '2')).toBe('queued')
   })
 
   it('draws a skipped step differently from one that has not started', async () => {
@@ -472,8 +473,8 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     })
     mounted = wrapper
 
-    expect(phaseOf(wrapper, '1')).toBe('skipped')
-    expect(phaseOf(wrapper, '2')).toBe('pending')
+    expect(stateOf(wrapper, '1')).toBe('skipped')
+    expect(stateOf(wrapper, '2')).toBe('notStarted')
 
     // Distinct on screen, not only in an attribute: a different word and a
     // different icon, which is what a reader actually has to tell apart.
@@ -494,7 +495,7 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     })
     mounted = wrapper
 
-    expect(phaseOf(wrapper, '2')).toBe('paused')
+    expect(stateOf(wrapper, '2')).toBe('paused')
     expect(wrapper.find('[data-testid="node-mark-2"]').attributes('aria-label')).toBe('Paused')
     expect(wrapper.html().toLowerCase()).not.toContain('resume')
   })
@@ -523,7 +524,7 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     const wrapper = await mountIn(Graph, { steps: chain, marks: marks(chain, jobs) })
     mounted = wrapper
 
-    expect(wrapper.find('[data-testid="node-count-1"]').text()).toBe('12/15 ok, 3 running')
+    expect(wrapper.find('[data-testid="node-count-1"]').text()).toBe('12/15 Succeeded, 3 Running')
     // And a step with one job is not badged: its colour already says it.
     expect(wrapper.find('[data-testid="node-count-2"]').exists()).toBe(false)
   })
@@ -544,8 +545,44 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     await nextTick()
 
     expect(wrapper.find('[data-testid="graph-trail-8"]').exists()).toBe(true)
-    expect(phaseOf(wrapper, '0')).toBe('unmarked')
+    expect(stateOf(wrapper, '0')).toBe('unmarked')
     expect(wrapper.findAll('.vue-flow__edge.animated')).toHaveLength(0)
+  })
+
+  it('keeps a node where a reader dragged it when the marks change', async () => {
+    // Q6 says dragging is allowed, and #90 is what nearly took it away. Vue
+    // Flow re-parses whenever the `nodes` array changes and
+    // `Object.assign(existingNode, node)` puts the laid-out position back
+    // (`vue-flow-core.mjs:3573`), so carrying the marks *inside* the node
+    // data snapped every dragged node home on each realtime refetch — on the
+    // one screen where the marks change every few seconds.
+    const marked = ref(marks(chain, [{ step_id: 1, state: 'queued' }]))
+    const wrapper = await mountSuspended(defineComponent({
+      setup: () => () => h(UApp, () => h(
+        'div',
+        { style: 'width: 1200px; height: 800px' },
+        [h(Graph, { steps: chain, marks: marked.value })],
+      )),
+    }))
+    mounted = wrapper
+
+    // The store the canvas made for itself, reached the way the DOM names
+    // it, so the node can be moved exactly as a drag moves it.
+    const describedBy = wrapper.find('.vue-flow__node').attributes('aria-describedby')!
+    const flow = useVueFlow(describedBy.replace('vue-flow__node-desc-', ''))
+    const transform = () => wrapper.find('.vue-flow__node[data-id="1"]').attributes('style')
+
+    flow.updateNode('1', { position: { x: 999, y: 777 } })
+    await nextTick()
+    expect(transform(), 'the node moved').toContain('translate(999px,777px)')
+
+    marked.value = marks(chain, [{ step_id: 1, state: 'running' }])
+    await nextTick()
+
+    expect(transform(), 'and stayed where it was put').toContain('translate(999px,777px)')
+    // And the mark still arrived, which is what makes this a fix rather than
+    // a canvas that stopped listening.
+    expect(stateOf(wrapper, '1')).toBe('running')
   })
 
   it('draws no run state at all when the canvas is handed no marks', async () => {
@@ -553,7 +590,7 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     const wrapper = await mountIn(Graph, { steps: chain })
     mounted = wrapper
 
-    expect(phaseOf(wrapper, '1')).toBe('unmarked')
+    expect(stateOf(wrapper, '1')).toBe('unmarked')
     expect(wrapper.find('[data-testid="node-mark-1"]').exists()).toBe(false)
     expect(wrapper.findAll('.vue-flow__edge.animated')).toHaveLength(0)
   })
