@@ -4,6 +4,8 @@ export type GalaxyToolParameters = GalaxySelectToolParameter
   | GalaxyConditionalParameter
   | GalaxyIntegerToolParameter
   | GalaxyFloatToolParameter
+  | GalaxySectionToolParameter
+  | GalaxyRepeatToolParameter
 
 export interface GalaxyDataToolValue {
   values: {
@@ -12,7 +14,16 @@ export interface GalaxyDataToolValue {
   }[]
 }
 export type GalaxyToolParameterValue = string | string[] | GalaxyDataToolValue
-export type GalaxyToolParameterType = 'select' | 'boolean' | 'data' | 'float' | 'conditional' | 'integer'
+/**
+ * The `type` a tool's `to_dict` writes for a parameter or a group.
+ *
+ * Not the whole of Galaxy's list, and never was: `text` and `data_collection`
+ * are both declared by recorded tools and neither is here (#113, #114). What
+ * is here is what a component is mapped for — `useGalaxyToolInputComponent`
+ * reads this union as its key set, so a member without a component renders a
+ * parameter as nothing at all, which is the defect #101 was.
+ */
+export type GalaxyToolParameterType = 'select' | 'boolean' | 'data' | 'float' | 'conditional' | 'integer' | 'section' | 'repeat'
 interface BaseToolParameter {
   name: string
   label: string
@@ -202,6 +213,85 @@ export interface GalaxyConditionalParameter {
     props: GalaxyToolParameters
     instance: any
   } | undefined
+}
+
+/**
+ * A **group**, not a parameter: a titled box holding further inputs, which the
+ * saved state nests one level deeper under the group's name (#101).
+ *
+ * Deliberately not extending `BaseToolParameter`. Galaxy's `Section` is a
+ * `Group`, not a `ToolParameter`, and its `to_dict` writes exactly
+ * `dict_collection_visible_keys = ["name", "type", "title", "help", "expanded"]`
+ * plus the `inputs` list it appends by hand — character-identical at 22.05
+ * (`tools/parameters/grouping.py:172`, `:220`) and 26.1 (`:198`, `:248`). So a
+ * section has no `label`, no `argument`, no `optional`, no `value`, and
+ * inheriting the base would have declared six keys no release sends.
+ *
+ * `title` is a plain attribute initialised to `None`, so it is nullable —
+ * unlike a repeat's, which is a property falling back to the name. `help` is
+ * `None` on all four recorded sections.
+ *
+ * `model_class` comes from `dict_for`, which stamps every dictified object
+ * with its class name (`util/dictifiable.py`). Measured at 26.1, where the
+ * recordings are; read off the source for 22.05, which no recording covers
+ * because no workflow in Pasteur's account has a section.
+ *
+ * The prefix a section contributes to a parameter's submitted name is
+ * `f"{name_prefix + input.name}|"` — the same join a conditional makes, which
+ * is why `flattenKey` serves both.
+ */
+export interface GalaxySectionToolParameter {
+  model_class: 'Section'
+  type: Extract<GalaxyToolParameterType, 'section'>
+  name: string
+  title: string | null
+  help: string | null
+  /** Whether the tool asks for the box to start open. Nothing reads it yet. */
+  expanded: boolean
+  inputs: GalaxyToolParameters[]
+}
+
+/**
+ * A group the author may hold **several of**, each instance a bag of the same
+ * declared inputs (#101).
+ *
+ * The declaration is one blueprint; how many there are lives in the saved
+ * state, as a list of `WorkflowRepeatInstanceValue`. So a reader of a repeat
+ * walks the state and resolves each value against these `inputs`, never the
+ * other way round — the direction `unconnectedDatasetInputs` already takes.
+ *
+ * `dict_collection_visible_keys = ["name", "type", "title", "help", "default",
+ * "min", "max"]` on both releases (`grouping.py:80` at 22.05, `:100` at 26.1),
+ * with `inputs` appended by `to_dict`.
+ *
+ * `title` is a property returning `self._title or self.name`, so it is never
+ * null — the one member that differs from a section's. `min` and `max` are
+ * both nullable: 22.05 initialises them to `None` and serialises that
+ * straight, while 26.1 initialises `max` to `inf` and `to_dict` turns an
+ * infinite one back into `null` (`:187-188`).
+ *
+ * **`min`, `max` and `default` are declarations this project does not act on**,
+ * because #101 decided that adding and removing instances is out of scope —
+ * and not merely deferred. `compute_runtime_state` applies invocation
+ * parameters by walking the instances the *saved state* already holds, so a
+ * name addressing an instance that is not there matches nothing, and there is
+ * no spelling at all for removing one. Arity is a workflow-editor operation.
+ *
+ * The prefix an instance contributes is `f"{input.name}_{i}|"`, where `i` is
+ * its **position** in the list — `visit_input_values` overwrites
+ * `d["__index__"] = i` immediately before building it
+ * (`tools/parameters/__init__.py:175-176` at 22.05, `:239-240` at 26.1).
+ */
+export interface GalaxyRepeatToolParameter {
+  model_class: 'Repeat'
+  type: Extract<GalaxyToolParameterType, 'repeat'>
+  name: string
+  title: string
+  help: string | null
+  default: number
+  min: number | null
+  max: number | null
+  inputs: GalaxyToolParameters[]
 }
 
 export interface GalaxyToolOutput {

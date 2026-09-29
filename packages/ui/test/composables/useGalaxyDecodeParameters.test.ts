@@ -97,6 +97,149 @@ describe('encode then decode, which is what copying an analysis does', () => {
   })
 })
 
+describe('a name of three segments or more (#98, #101)', () => {
+  it('nests each level inside the one above, rather than beside it', () => {
+    // The bug #98 recorded and could not reach: the walk down the parents
+    // wrote every level at the **step root**, so a three-segment name came
+    // back as two siblings and the inner one was lost from its parent. It
+    // was unreachable while the encoder joined at most one level, and #101
+    // made it reachable the moment a section rendered.
+    expect(decode({ 3: { 'advanced|conflict|duplicate_options': 'keep_first' } })['3'])
+      .toEqual({ advanced: { conflict: { duplicate_options: 'keep_first' } } })
+  })
+
+  it('keeps siblings of an inner bag together', () => {
+    expect(decode({ 1: {
+      'settings|attc_settings|dist_thresh': '4000',
+      'settings|attc_settings|keep_palindromes': false,
+      'settings|protein_settings|func_annot': false,
+    } })['1']).toEqual({
+      settings: {
+        attc_settings: { dist_thresh: '4000', keep_palindromes: false },
+        protein_settings: { func_annot: false },
+      },
+    })
+  })
+})
+
+describe('a repeat read back out of a stored analysis (#101)', () => {
+  it('rebuilds the instances as a list, in position order', () => {
+    expect(decode({ 2: {
+      'datasets_1|__index__': 1,
+      'datasets_1|id_cond|id_select': 'idx',
+      'datasets_0|__index__': 0,
+      'datasets_0|id_cond|id_select': 'identifier',
+    } })['2']).toEqual({
+      datasets: [
+        { __index__: 0, id_cond: { id_select: 'identifier' } },
+        { __index__: 1, id_cond: { id_select: 'idx' } },
+      ],
+    })
+  })
+
+  it('orders by the position in the name, not by the __index__ the value carries', () => {
+    // Which is the same thing on any state Galaxy wrote, and not the same
+    // thing on one that has been edited elsewhere. The position is what the
+    // encoder will name it by next time, so it is what decides the order.
+    expect(decode({ 2: {
+      'gapped_0|__index__': 4,
+      'gapped_0|x': 'first',
+      'gapped_1|__index__': 2,
+      'gapped_1|x': 'second',
+    } })['2']).toEqual({
+      gapped: [
+        { __index__: 4, x: 'first' },
+        { __index__: 2, x: 'second' },
+      ],
+    })
+  })
+
+  it('leaves a bag that merely looks like an instance alone', () => {
+    // `datasets_0` is a legal name for a conditional or a section, and
+    // Galaxy tells them apart by reading the tool's declaration, which this
+    // side does not have. `__index__` is the marker the encoder sends for
+    // exactly this, so a bag without one stays a bag.
+    expect(decode({ 2: { 'datasets_0|id_select': 'idx' } })['2'])
+      .toEqual({ datasets_0: { id_select: 'idx' } })
+  })
+
+  it('leaves a repeat alone when a value already occupies its name', () => {
+    expect(decode({ 2: { 'datasets': 'taken', 'datasets_0|__index__': 0 } })['2'])
+      .toEqual({ datasets: 'taken', datasets_0: { __index__: 0 } })
+  })
+
+  it('rebuilds a repeat nested inside a section', () => {
+    expect(decode({ 2: {
+      'outer|inner_0|__index__': 0,
+      'outer|inner_0|x': 'a',
+      'outer|inner_1|__index__': 1,
+      'outer|inner_1|x': 'b',
+    } })['2']).toEqual({
+      outer: { inner: [{ __index__: 0, x: 'a' }, { __index__: 1, x: 'b' }] },
+    })
+  })
+})
+
+describe('the recorded step shapes, round-tripped', () => {
+  it('returns step 1 of conditional-repeat-runtime, sections and all', () => {
+    // `integron_finder`'s saved state, verbatim but for the bookkeeping keys.
+    // Two levels of section, a runtime marker inside them, and a `null` that
+    // #95 had to fight for.
+    const model = {
+      1: {
+        gbk: true,
+        local_max: true,
+        no_logfile: false,
+        sequence: { __class__: 'ConnectedValue' },
+        settings: {
+          attc_settings: {
+            calin_threshold: '2',
+            covar_matrix: { __class__: 'RuntimeValue' },
+            dist_thresh: '4000',
+            keep_palindromes: false,
+          },
+          protein_settings: { func_annot: false, no_proteins: false },
+        },
+        topology_file: { __class__: 'RuntimeValue' },
+        type_replicon: null,
+      },
+    }
+    expect(decode(encode(model))).toEqual(model)
+  })
+
+  it('returns step 2 of conditional-repeat-runtime, whose repeat blocks sit on two branches', () => {
+    const model = {
+      2: {
+        datasets: [
+          { __index__: 0, id_cond: { __current_case__: 1, id_select: 'identifier' }, input: { __class__: 'ConnectedValue' } },
+          { __index__: 1, id_cond: { __current_case__: 0, id_select: 'idx' }, input: { __class__: 'ConnectedValue' } },
+        ],
+      },
+    }
+    expect(decode(encode(model))).toEqual(model)
+  })
+})
+
+describe('the round trip over the shapes Galaxy leaves whole', () => {
+  it('returns step 3 of conditional-repeat-runtime, a conditional inside a section', () => {
+    const model = {
+      3: {
+        advanced: { conflict: { __current_case__: 3, duplicate_options: 'keep_first' } },
+        inputs: [
+          { __index__: 0, input: { __class__: 'RuntimeValue' } },
+          { __index__: 1, input: { __class__: 'RuntimeValue' } },
+        ],
+      },
+    }
+    expect(decode(encode(model))).toEqual(model)
+  })
+
+  it('returns a dataset reference unsplit', () => {
+    const model = { 1: { picked: { src: 'hda', id: 'abc123' } } }
+    expect(decode(encode(model))).toEqual(model)
+  })
+})
+
 describe('the shapes the guard must not touch', () => {
   it('keeps sibling entries of one conditional together rather than overwriting', () => {
     expect(decode({ 1: { 'adv|a': 0, 'adv|b': '', 'adv|c': 'x' } })['1'])

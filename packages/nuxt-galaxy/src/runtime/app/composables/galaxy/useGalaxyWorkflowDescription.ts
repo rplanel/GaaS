@@ -1,37 +1,26 @@
 import type { MaybeRefOrGetter } from '#imports'
 import type {
-  GalaxyDataToolParameter,
   GalaxyTool,
-  GalaxyToolParameters,
   WorkflowToolParameters,
 } from 'blendtype'
 import type { DescribedStep, DescribedToolStep, UnavailableTool } from '../../../types/nuxt-galaxy'
+import type { ToolInputParameter } from '../../utils/offeredToolInputs'
 import type { UnconnectedDatasetInput } from '../../utils/unconnectedDatasetInputs'
 import { computed, toRaw, toValue, watch } from '#imports'
 import { useQuery } from '@pinia/colada'
 import { log } from 'evlog/client'
 import { toolKey } from '../../../shared/toolKey'
 import { galaxyWorkflowDescriptionQuery } from '../../queries/galaxy/workflows'
-import { DATASET_INPUT_TYPES, unconnectedDatasetInputs } from '../../utils/unconnectedDatasetInputs'
+import { offeredToolInputs } from '../../utils/offeredToolInputs'
+import { unconnectedDatasetInputs } from '../../utils/unconnectedDatasetInputs'
 
 /**
- * A tool parameter the invoke form offers a widget for: everything a tool
- * declares except its `data` parameters.
- *
- * The filter moved here from `useGalaxyTool`, deliberately and unchanged, and
- * **#97 settled that it is right**. A data parameter of a tool step is fed by
- * an edge — from an upstream tool, or from one of the workflow's own
- * `data_input` steps — and there is nothing for a widget on the step panel to
- * do about it.
- *
- * What #97 found is that the filter was never the defect. The four
- * `RuntimeValue` data inputs on `ccqtl-wf` step 4 that #86's recordings
- * pinned as unoffered are all four **connected**; the marker is what Galaxy's
- * editor happened to save, not a request for a value. The real gap is a data
- * parameter with no edge at all, which no filter can fix and which
- * `unconnectedInputsByStep` names instead.
+ * Re-exported where it has always been imported from. The filter itself moved
+ * to `../../utils/offeredToolInputs` when #101 made it recursive, so that the
+ * judgement "this is fed by the graph, so offer no widget" sits beside
+ * `DATASET_INPUT_TYPES` and cannot drift from `unconnectedDatasetInputs`.
  */
-export type ToolInputParameter = Exclude<GalaxyToolParameters, GalaxyDataToolParameter>
+export type { ToolInputParameter }
 
 /**
  * The verdicts that would refuse the submission.
@@ -235,17 +224,23 @@ export function useGalaxyWorkflowDescription(
    */
   const toolsObj = computed<Record<string, GalaxyTool>>(() => toValue(description)?.tools ?? {})
 
-  /** The parameters each tool offers a widget for, by the same pin. */
+  /**
+   * The parameters each tool offers a widget for, by the same pin — pruned to
+   * the bottom, not just across the top (#101).
+   *
+   * `offeredToolInputs` reads the same set `unconnectedDatasetInputs` judges
+   * by, so the two cannot disagree about a dataset input at any depth. They
+   * did once, across the top: tested as `!== 'data'`, a `data_collection`
+   * parameter was offered a widget — which `Step.vue` renders as a blank,
+   * since no component is mapped for it — *and* reported as unconnected by
+   * the mark, telling the reader both that they may set it and that nothing
+   * is feeding it. `data_collection` is still absent from
+   * `GalaxyToolParameterType`, so the type system still has nothing to say
+   * (#114); the shared set is what holds the two sides together meanwhile.
+   */
   const toolInputParameters = computed(() => {
     return Object.entries(toValue(toolsObj)).reduce<Record<string, ToolInputParameter[]>>((acc, [key, tool]) => {
-      // Read from the same set `unconnectedDatasetInputs` judges by, so the
-      // two cannot disagree. Tested as `!== 'data'`, a `data_collection`
-      // parameter was offered a widget — which `Step.vue` renders as a blank,
-      // since no component is mapped for it — *and* reported as unconnected
-      // by the mark, telling the reader both that they may set it and that
-      // nothing is feeding it. `data_collection` is absent from
-      // `GalaxyToolParameterType`, so the type system had nothing to say.
-      acc[key] = tool.inputs.filter((input): input is ToolInputParameter => !DATASET_INPUT_TYPES.has(input.type))
+      acc[key] = offeredToolInputs(tool.inputs)
       return acc
     }, {})
   })

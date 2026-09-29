@@ -36,6 +36,7 @@ import { defineComponent, h, ref } from 'vue'
 import { describedRevision } from '../describedSteps'
 import { FIXTURES, loadFixture } from './fixtures'
 import {
+  declaredParameterNames,
   describeParameters,
   edgesOf,
   parameterValuesFromExport,
@@ -409,6 +410,89 @@ describe('what a step actually puts on screen', () => {
     // supply them, which is why the rule reads the edge and not the marker.
     expect(unconnectedInputsByStep.value['2']!.map(parameter => parameter.name))
       .toEqual(['datasets_3|input', 'datasets_4|input'])
+  })
+
+  it('offers the parameters inside a section, named the way Galaxy names them', async () => {
+    // #101. `integron_finder` keeps nine parameters two levels down inside
+    // `settings`, and until this ticket the panel rendered none of them: the
+    // widget filter ran across the top level only, and `section` was in
+    // neither `GalaxyToolParameterType` nor the component map, so a section
+    // arrived as a parameter with a value, no component and no recursion.
+    //
+    // Eight of the nine are offered, not nine. The ninth is `covar_matrix`,
+    // which is `data` — fed by an edge and never by this panel (#97) — so it
+    // is dropped here and named by `unconnectedInputsByStep` instead, in the
+    // assertion above. The two sides read the same `DATASET_INPUT_TYPES`
+    // precisely so that they cannot say both.
+    const { toolInputParameters, workflowSteps } = await descriptionThroughComposable(nested)
+    const step1 = workflowSteps.value['1']!
+    const offered = toolInputParameters.value[`${step1.tool_id}@${step1.tool_version}`]!
+
+    expect(declaredParameterNames(offered)).toEqual([
+      'local_max',
+      'type_replicon',
+      'promoter_attI',
+      'gbk',
+      'pdf',
+      'settings|attc_settings|dist_thresh',
+      'settings|attc_settings|calin_threshold',
+      'settings|attc_settings|max_attc_size',
+      'settings|attc_settings|min_attc_size',
+      'settings|attc_settings|keep_palindromes',
+      'settings|protein_settings|no_proteins',
+      'settings|protein_settings|union_integrases',
+      'settings|protein_settings|func_annot',
+      'no_logfile',
+    ])
+  })
+
+  it('keeps the section structure rather than flattening it into the top level', async () => {
+    // The names above would read the same if the filter had flattened the
+    // tree, and a flattened list is exactly what `Step.vue` cannot render:
+    // it looks each name up in the step's own model, where `dist_thresh`
+    // lives under `settings.attc_settings` and not at the top. So the shape
+    // is pinned as well as the names.
+    const { toolInputParameters, workflowSteps } = await descriptionThroughComposable(nested)
+    const step1 = workflowSteps.value['1']!
+    const offered = toolInputParameters.value[`${step1.tool_id}@${step1.tool_version}`]!
+
+    expect(offered.map(input => input.name)).toEqual([
+      'local_max',
+      'type_replicon',
+      'promoter_attI',
+      'gbk',
+      'pdf',
+      'settings',
+      'no_logfile',
+    ])
+    const settings = offered.find(input => input.name === 'settings')!
+    expect(settings.type).toBe('section')
+  })
+
+  it('offers what survives inside a repeat, and drops a repeat with nothing left', async () => {
+    // Both repeats in the recording, and they come out differently.
+    //
+    // `__BUILD_LIST__`'s `datasets` declares a `data` parameter and a
+    // conditional; the data one goes and the conditional stays, so the block
+    // still has something for a reader to set. `__MERGE_COLLECTION__`'s
+    // `inputs` declares one child and it is a `data_collection`, so nothing
+    // survives and the repeat is dropped whole rather than rendered as a
+    // titled empty box promising a form that is not there.
+    const { toolInputParameters, workflowSteps } = await descriptionThroughComposable(nested)
+
+    const buildList = workflowSteps.value['2']!
+    const buildListInputs = toolInputParameters.value[`${buildList.tool_id}@${buildList.tool_version}`]!
+    expect(declaredParameterNames(buildListInputs)).toEqual([
+      'datasets_*|id_cond|id_select',
+      // `case2` is the `manual` branch, whose one input is a `text`
+      // parameter — declared, offered, and still rendered as nothing,
+      // because no component is mapped for `text` (#113).
+      'datasets_*|id_cond|case2|identifier',
+    ])
+
+    const merge = workflowSteps.value['3']!
+    const mergeInputs = toolInputParameters.value[`${merge.tool_id}@${merge.tool_version}`]!
+    expect(mergeInputs.map(input => input.name)).toEqual(['advanced'])
   })
 
   it('marks no step of the fan-in recording, which has no tool definitions to judge by', async () => {

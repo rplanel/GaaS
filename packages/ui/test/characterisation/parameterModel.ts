@@ -278,3 +278,59 @@ export function renderedParameterNames(
 ): string[] {
   return toolInputNames.filter(name => name in stepParameters)
 }
+
+/**
+ * Every leaf a tool's parameter list declares, named as Galaxy prefixes it
+ * (#101).
+ *
+ * The walk `renderedParameterNames` above cannot make: it compares top-level
+ * names, and a `section` or a `repeat` holds its parameters a level down, so
+ * a suite that only ever looked at the top could not tell a section that
+ * renders its children from one that renders nothing. That was the defect.
+ *
+ * Reading the **declaration**, not the state, so the names below are
+ * blueprints and a repeat is written `name_*|` rather than with an index —
+ * how many instances there are lives in the saved state, and only a walk of
+ * the state can say. A conditional's cases are numbered, because the same
+ * parameter name is usually declared in several of them and the flat list
+ * would otherwise repeat itself with nothing to tell the entries apart.
+ *
+ * The separators are Galaxy's: `visit_input_values` builds a section's and a
+ * conditional's prefix as `f"{name_prefix + input.name}|"` and a repeat
+ * instance's as `f"{input.name}_{i}|"`, identically at 22.05
+ * (`tools/parameters/__init__.py:172-215`) and 26.1 (`:236-279`).
+ */
+export function declaredParameterNames(
+  inputs: readonly { name: string, type: string }[],
+  prefix = '',
+): string[] {
+  const names: string[] = []
+  for (const input of inputs) {
+    // Read structurally, as `unconnectedDatasetInputs` reads the same tree and
+    // for the same reason: a group's children and a conditional's cases are
+    // not on every member of `GalaxyToolParameters`, and narrowing to reach
+    // them would be a second copy of the walk under test.
+    const group = input as { inputs?: readonly { name: string, type: string }[] }
+    if (input.type === 'section') {
+      names.push(...declaredParameterNames(group.inputs ?? [], `${prefix}${input.name}|`))
+      continue
+    }
+    if (input.type === 'repeat') {
+      names.push(...declaredParameterNames(group.inputs ?? [], `${prefix}${input.name}_*|`))
+      continue
+    }
+    if (input.type === 'conditional') {
+      const conditional = input as unknown as {
+        test_param: { name: string }
+        cases: readonly { inputs: readonly { name: string, type: string }[] }[]
+      }
+      names.push(`${prefix}${input.name}|${conditional.test_param.name}`)
+      conditional.cases.forEach((one, index) => {
+        names.push(...declaredParameterNames(one.inputs, `${prefix}${input.name}|case${index}|`))
+      })
+      continue
+    }
+    names.push(`${prefix}${input.name}`)
+  }
+  return names
+}

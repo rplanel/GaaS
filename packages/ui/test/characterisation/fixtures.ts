@@ -117,3 +117,22 @@ export const FIXTURES = {
    */
   subworkflowNested: 'subworkflow-nested',
 } as const
+
+/**
+ * The recorded definition of the tool one step runs.
+ *
+ * Keyed off the step rather than off a literal tool id: a re-recording that
+ * moves to a new tool version leaves a literal resolving to `undefined`
+ * behind a `!`, and this throws with the step's own id instead. By the pin
+ * `<toolId>@<version>`, never the bare id, because one workflow may run the
+ * same tool at two versions and by id alone one step reads the other's
+ * definition (#100).
+ */
+export function toolOfStep(fixture: WorkflowFixture, step: string): GalaxyTool {
+  const definition = fixture.live.steps[step]
+  const tool = fixture.tools[`${definition?.tool_id}@${definition?.tool_version}`]
+  if (!tool) {
+    throw new Error(`step ${step} of ${fixture.slug} recorded no tool`)
+  }
+  return tool
+}

@@ -24,12 +24,12 @@ import { DATASET_INPUT_TYPES, unconnectedDatasetInputs } from '../../../src/runt
 /**
  * A tool input, named locally rather than taken from `blendtype`.
  *
- * `GalaxyToolParameters` has no `repeat`, no `section` and no
- * `data_collection` member, and those are half of what there is to test here,
- * so a fixture typed against it could not express the cases — which is the
- * one thing #102 left alone, the parameter *kinds* being the section/repeat
- * ticket's. `name` and `type` are still checked, which is what the subject
- * reads.
+ * Narrower than it was: #101 added `repeat` and `section` to
+ * `GalaxyToolParameters`, so only `data_collection` is still outside it
+ * (#114) — and a `data_collection` parameter is half of what there is to test
+ * here, so a fixture typed against the union still could not express the
+ * cases. `name` and `type` are what the subject reads, and are what this
+ * checks.
  */
 interface AToolInput { name: string, type: string, [key: string]: unknown }
 
@@ -193,12 +193,31 @@ describe('a nested data parameter', () => {
     expect(unsupplied.map(p => p.name)).toEqual(['datasets_3|input', 'datasets_4|input'])
   })
 
-  it('names a repeat instance by its own index, not by its position', () => {
-    // Deleting the middle entry of a repeat leaves the gap in the indices, and
-    // Galaxy keys the surviving connection by the index it kept. Read by
-    // position, `__index__: 2` would be looked up as `entries_1|input`, find
-    // the connection that belongs to the *other* entry, and report the fed one
-    // as unsupplied while staying silent about the bare one.
+  it('names a repeat instance by its position, not by the index it carries', () => {
+    // **Reversed by #101, against the source.** This asserted the opposite,
+    // on the premise that "Galaxy keys the connection by `__index__`". It
+    // does not. The name a connection is matched by at invoke is built by
+    // `visit_input_values`, which renumbers first:
+    //
+    //     for i, d in enumerate(values):
+    //         d["__index__"] = i
+    //         new_name_prefix = name_prefix + f"{input.name}_{i}|"
+    //
+    // `tools/parameters/__init__.py:174-176` at 22.05, `:238-240` at 26.1.
+    // `ToolModule.execute`'s callback takes that `prefixed_name`, and
+    // `replacement_for_input` looks it up in `step.input_connections_by_name`
+    // unchanged (`modules.py:1902-1920` and `run.py:296-298` at 22.05;
+    // `modules.py:2205` and `run.py:464-467` at 26.1).
+    //
+    // So on a gapped state the stored `entries_2|input` names an instance
+    // Galaxy has already renumbered to 1, and Galaxy will not find it either:
+    // *both* instances run with the input empty, which is what this now says.
+    // A gap cannot arise from Galaxy's own editor, which renumbers on every
+    // save — this is state edited elsewhere, and the reading that matches
+    // what would actually happen.
+    //
+    // It is also the reading `useGalaxyEncodeParameters` submits under, so
+    // the mark and the payload cannot spell one input two ways.
     const unsupplied = unconnectedDatasetInputs(
       tool([{ name: 'entries', type: 'repeat', inputs: [dataParam('input', { optional: true })] }]),
       step(
@@ -207,7 +226,23 @@ describe('a nested data parameter', () => {
       ),
     )
 
-    expect(unsupplied.map(p => p.name)).toEqual(['entries_0|input'])
+    expect(unsupplied.map(p => p.name)).toEqual(['entries_0|input', 'entries_1|input'])
+  })
+
+  it('counts an entry it cannot read as taking up its position', () => {
+    // Galaxy enumerates the whole list, so an entry with no `__index__` — the
+    // legacy state `Repeat.value_from_basic` back-fills — still occupies a
+    // position. Skipping it *and* its position would shift every instance
+    // after it onto the name of the one before.
+    const unsupplied = unconnectedDatasetInputs(
+      tool([{ name: 'entries', type: 'repeat', inputs: [dataParam('input', { optional: true })] }]),
+      step(
+        { entries: [{ input: runtime() }, { __index__: 1, input: runtime() }] },
+        {},
+      ),
+    )
+
+    expect(unsupplied.map(p => p.name)).toEqual(['entries_1|input'])
   })
 
   it('follows the case a conditional is actually on', () => {
