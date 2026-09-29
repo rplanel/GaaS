@@ -24,12 +24,12 @@ import { DATASET_INPUT_TYPES, unconnectedDatasetInputs } from '../../../src/runt
 /**
  * A tool input, named locally rather than taken from `blendtype`.
  *
- * `GalaxyToolParameters` has no `repeat`, no `section` and no
- * `data_collection` member, and those are half of what there is to test here,
- * so a fixture typed against it could not express the cases — which is the
- * one thing #102 left alone, the parameter *kinds* being the section/repeat
- * ticket's. `name` and `type` are still checked, which is what the subject
- * reads.
+ * Narrower than it was: #101 added `repeat` and `section` to
+ * `GalaxyToolParameters`, so only `data_collection` is still outside it
+ * (#114) — and a `data_collection` parameter is half of what there is to test
+ * here, so a fixture typed against the union still could not express the
+ * cases. `name` and `type` are what the subject reads, and are what this
+ * checks.
  */
 interface AToolInput { name: string, type: string, [key: string]: unknown }
 

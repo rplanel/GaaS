@@ -14,6 +14,8 @@ import {
   GalaxyDataToolParameter,
   GalaxyFloatToolParameter,
   GalaxyIntegerToolParameter,
+  GalaxyRepeatToolParameter,
+  GalaxySectionToolParameter,
   GalaxySelectToolParameter,
 } from '#components'
 import { computed, shallowRef, toValue } from 'vue'
@@ -27,6 +29,18 @@ export function useGalaxyToolInputComponent(toolParameters: MaybeRef<GalaxyToolP
   inputComponents: ComputedRef<GalaxyToolInputComponent[] | undefined>
   inputComponentsObject: ComputedRef<Record<string, GalaxyToolInputComponent> | undefined>
 } {
+  /**
+   * Which widget renders which parameter type — the map that has to cover
+   * `GalaxyToolParameterType`, because a type without an entry here resolves
+   * to `undefined` and `Step.vue` renders that as nothing at all.
+   *
+   * `section` and `repeat` joined it with #101. Neither is a widget: both are
+   * containers that render their own children through this same map, which is
+   * how a parameter at any depth reaches a component. `text` and
+   * `data_collection` are still missing, for different reasons — `text` has
+   * no component yet (#113) and a `data_collection` is fed by an edge, so the
+   * filter drops it before this map is consulted (#114).
+   */
   const classToComponent = shallowRef({
     select: GalaxySelectToolParameter,
     boolean: GalaxyBooleanToolParameter,
@@ -34,6 +48,8 @@ export function useGalaxyToolInputComponent(toolParameters: MaybeRef<GalaxyToolP
     data: GalaxyDataToolParameter,
     conditional: GalaxyConditional,
     integer: GalaxyIntegerToolParameter,
+    section: GalaxySectionToolParameter,
+    repeat: GalaxyRepeatToolParameter,
   })
 
   const inputComponentsObject = computed(() => {
