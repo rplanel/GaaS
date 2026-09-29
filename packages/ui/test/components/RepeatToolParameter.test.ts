@@ -15,24 +15,14 @@
  * removing one.
  */
 
-import type { GalaxyRepeatToolParameter, GalaxyTool, WorkflowParameterValue } from 'blendtype'
-import type { WorkflowFixture } from '../characterisation/fixtures'
+import type { GalaxyRepeatToolParameter, WorkflowParameterValue } from 'blendtype'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
 import Conditional from '../../app/components/galaxy/Conditional.vue'
 import RepeatToolParameter from '../../app/components/galaxy/RepeatToolParameter.vue'
-import { FIXTURES, loadFixture } from '../characterisation/fixtures'
+import { FIXTURES, loadFixture, toolOfStep } from '../characterisation/fixtures'
 
 const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
-
-function toolOf(fixture: WorkflowFixture, step: string): GalaxyTool {
-  const definition = fixture.live.steps[step]
-  const tool = fixture.tools[`${definition?.tool_id}@${definition?.tool_version}`]
-  if (!tool) {
-    throw new Error(`step ${step} of ${fixture.slug} recorded no tool`)
-  }
-  return tool
-}
 
 /**
  * `__BUILD_LIST__`'s `datasets` repeat, pruned through the production filter.
@@ -42,7 +32,7 @@ function toolOf(fixture: WorkflowFixture, step: string): GalaxyTool {
  * selector and nothing else, which is the whole of what this repeat offers.
  */
 function datasetsRepeat(): GalaxyRepeatToolParameter {
-  const [repeat] = offeredToolInputs(toolOf(nested, '2').inputs).filter(input => input.name === 'datasets')
+  const [repeat] = offeredToolInputs(toolOfStep(nested, '2').inputs).filter(input => input.name === 'datasets')
   if (repeat === undefined || repeat.type !== 'repeat') {
     throw new Error('__BUILD_LIST__ declares no offered datasets repeat')
   }

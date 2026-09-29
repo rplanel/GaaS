@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GalaxySectionToolParameter, WorkflowConditionalParametersValue, WorkflowParameterValue } from 'blendtype'
-import { isConditional } from '../../composables/galaxy/parameterValue'
+import { isParameterGroupValue } from '../../composables/galaxy/parameterValue'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
 export interface GalaxySectionToolParameterProps
@@ -33,7 +33,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: WorkflowConditionalParam
  * parameter the model has no value for.
  */
 const saved = computed<WorkflowConditionalParametersValue>(
-  () => isConditional(props.modelValue) ? props.modelValue : {},
+  () => isParameterGroupValue(props.modelValue) ? props.modelValue : {},
 )
 
 const { inputComponentsObject } = useGalaxyToolInputComponent(toRef(() => props.inputs))

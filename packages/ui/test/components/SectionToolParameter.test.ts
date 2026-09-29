@@ -15,26 +15,16 @@
  * string-typed integer and a real boolean.
  */
 
-import type { GalaxySectionToolParameter, GalaxyTool, WorkflowConditionalParametersValue } from 'blendtype'
-import type { WorkflowFixture } from '../characterisation/fixtures'
+import type { GalaxySectionToolParameter, WorkflowConditionalParametersValue } from 'blendtype'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
 import BooleanToolParameter from '../../app/components/galaxy/BooleanToolParameter.vue'
 import IntegerToolParameter from '../../app/components/galaxy/IntegerToolParameter.vue'
 import SectionToolParameter from '../../app/components/galaxy/SectionToolParameter.vue'
-import { isConditional } from '../../app/composables/galaxy/parameterValue'
-import { FIXTURES, loadFixture } from '../characterisation/fixtures'
+import { isParameterGroupValue } from '../../app/composables/galaxy/parameterValue'
+import { FIXTURES, loadFixture, toolOfStep } from '../characterisation/fixtures'
 
 const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
-
-function toolOf(fixture: WorkflowFixture, step: string): GalaxyTool {
-  const definition = fixture.live.steps[step]
-  const tool = fixture.tools[`${definition?.tool_id}@${definition?.tool_version}`]
-  if (!tool) {
-    throw new Error(`step ${step} of ${fixture.slug} recorded no tool`)
-  }
-  return tool
-}
 
 /**
  * The recorded `settings` section, with its dataset inputs pruned — which is
@@ -48,7 +38,7 @@ function toolOf(fixture: WorkflowFixture, step: string): GalaxyTool {
  * parameter is fed by an edge and never by this panel (#97).
  */
 function settingsSection(): GalaxySectionToolParameter {
-  const [section] = offeredToolInputs(toolOf(nested, '1').inputs).filter(input => input.name === 'settings')
+  const [section] = offeredToolInputs(toolOfStep(nested, '1').inputs).filter(input => input.name === 'settings')
   if (section === undefined || section.type !== 'section') {
     throw new Error('integron_finder declares no offered settings section')
   }
@@ -62,7 +52,7 @@ function settingsSection(): GalaxySectionToolParameter {
  */
 function savedSettings(): WorkflowConditionalParametersValue {
   const saved = nested.live.steps['1']?.tool_inputs?.settings
-  if (!isConditional(saved)) {
+  if (!isParameterGroupValue(saved)) {
     throw new TypeError('step 1 saved no settings bag')
   }
   return saved

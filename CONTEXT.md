@@ -88,6 +88,18 @@ _Avoid_: Setting, option, argument, field
 One of a step's parameters whose value is a group of further parameters, with a test parameter choosing which group applies. Galaxy names a parameter inside one by joining the two with a `|`, and records the chosen branch as `__current_case__`, which it recomputes on every run rather than trusting what it was sent. A conditional's alternatives are its *cases*.
 _Avoid_: Nested parameter, sub-parameter, group
 
+**Parameter group**:
+One of a step's parameters whose value is a bag of further parameters rather than a value of its own. There are three, and Galaxy models all three as a `Group`: a *conditional*, a *section* and a *repeat*. Galaxy names a parameter inside one by joining the names with a `|`, at every depth, so the submitted name of a leaf is the path to it. A group is not a widget: what renders is its children.
+_Avoid_: Container, nested parameter, composite
+
+**Section**:
+A parameter group that is only a titled box: the parameters inside it are the same parameters, kept together and saved one level deeper under the section's name. A section may hold another section. It carries no value of its own and nothing chooses between alternatives — that is a conditional.
+_Avoid_: Fieldset, panel, advanced options
+
+**Repeat**:
+A parameter group the workflow's author may hold several of, each *instance* a bag of the same declared parameters. The tool declares one blueprint and the saved state holds however many instances there are, so how many blocks a step has is read from the state and never from the declaration. Galaxy addresses an instance by its **position** in that list — it renumbers each instance's `__index__` to the position before building the name — while `__index__` is what identifies an instance on this side. An analysis cannot add or remove instances; only the workflow's author can.
+_Avoid_: Array parameter, list parameter, block (in anything a user reads)
+
 **Absent value**:
 A parameter the model holds nothing for, which is the only thing left out of what an analysis submits. A `0`, an empty string, a `null` or a `false` is a value somebody chose — the workflow's author or the reader — and is submitted like any other. Leaving one out is not a smaller version of submitting it: Galaxy substitutes the tool's own default, with no error and nothing on screen to say so. Absence is `undefined` and nothing else, at every depth of a step's parameters.
 _Avoid_: Empty, blank, missing, unset, falsy

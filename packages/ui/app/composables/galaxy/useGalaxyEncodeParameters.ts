@@ -1,9 +1,9 @@
-import type { WorkflowParameterValue, WorkflowRepeatInstanceValue, WorkflowToolParameters } from 'blendtype'
+import type { WorkflowConditionalParametersValue, WorkflowParameterValue, WorkflowRepeatInstanceValue, WorkflowToolParameters } from 'blendtype'
 import type { ComputedRef, MaybeRef } from 'vue'
 import type { EncodedGalaxyWorkflowParameter, WorkflowParametersModel } from './types'
 import { isWorkflowRepeatInstanceValue } from 'blendtype'
 import { computed, toValue } from 'vue'
-import { flattenKey, isConditional, isPresent, repeatInstanceKey } from './parameterValue'
+import { flattenKey, isParameterGroupValue, isPresent, repeatInstanceKey } from './parameterValue'
 
 /**
  * Whether a list is a repeat's instances rather than one parameter's value.
@@ -23,6 +23,32 @@ import { flattenKey, isConditional, isPresent, repeatInstanceKey } from './param
  */
 function isRepeatInstances(value: WorkflowParameterValue): value is WorkflowRepeatInstanceValue[] {
   return Array.isArray(value) && value.length > 0 && value.every(isWorkflowRepeatInstanceValue)
+}
+
+/**
+ * The two bags Galaxy's own flattener refuses to walk into, so this one must
+ * not either.
+ *
+ * `_flatten_step_params` recurses `if isinstance(value, dict) and (not ("src"
+ * in value and "id" in value) and key != "__POST_JOB_ACTIONS__")`
+ * (`workflow/run_request.py`, byte-identical at 22.05 and 26.1). Both
+ * exemptions are bags that mean something whole: a **dataset reference**,
+ * which the tool framework reads as one value and which split into `x|src`
+ * and `x|id` would match no declared input at all, and the post-job actions,
+ * which are not parameters.
+ *
+ * Latent rather than observed — the invoke form offers no widget for a
+ * dataset input, so nothing puts a reference in the model today. It is here
+ * because #98's whole argument is that this side and Galaxy's flattener
+ * produce the same names, and a divergence that only shows up once a
+ * dataset picker lands (#104) is one nobody would connect back to here.
+ *
+ * `segment` is the bare name, not the flattened key, because Galaxy compares
+ * the bare one: `key != "__POST_JOB_ACTIONS__"` inside a recursion whose
+ * `effective_key` is already prefixed.
+ */
+function isUnwalkedBag(segment: string, value: WorkflowConditionalParametersValue): boolean {
+  return segment === '__POST_JOB_ACTIONS__' || ('src' in value && 'id' in value)
 }
 
 /**
@@ -52,7 +78,7 @@ function isRepeatInstances(value: WorkflowParameterValue): value is WorkflowRepe
  * handled properly"*. Naming the instances here is what makes a repeat's
  * parameters reach the tool at all (#98).
  */
-function encodeInto(key: string, value: WorkflowParameterValue | undefined, parameters: WorkflowToolParameters): void {
+function encodeInto(key: string, segment: string, value: WorkflowParameterValue | undefined, parameters: WorkflowToolParameters): void {
   if (!isPresent(value)) {
     return
   }
@@ -60,18 +86,18 @@ function encodeInto(key: string, value: WorkflowParameterValue | undefined, para
     value.forEach((instance, position) => {
       const prefix = repeatInstanceKey(key, position)
       for (const name in instance) {
-        encodeInto(flattenKey(prefix, name), instance[name], parameters)
+        encodeInto(flattenKey(prefix, name), name, instance[name], parameters)
       }
     })
     return
   }
-  if (isConditional(value)) {
+  if (isParameterGroupValue(value) && !isUnwalkedBag(segment, value)) {
     for (const name in value) {
       // Bound to a local because the narrowing has to survive the assignment:
       // `name` is a plain `string`, so TypeScript cannot carry a guard on
       // `value[name]` past the loop body.
       const nested = value[name]
-      encodeInto(flattenKey(key, name), nested, parameters)
+      encodeInto(flattenKey(key, name), name, nested, parameters)
     }
     return
   }
@@ -86,7 +112,7 @@ export function useGalaxyEncodeParameters(parameterModel: MaybeRef<WorkflowParam
       for (const [stepId, params] of Object.entries(parametersVal)) {
         parameters[stepId] = {}
         for (const [key, param] of Object.entries(params)) {
-          encodeInto(key, param, parameters[stepId])
+          encodeInto(key, key, param, parameters[stepId])
         }
       }
     }

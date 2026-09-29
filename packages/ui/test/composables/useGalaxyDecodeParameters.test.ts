@@ -220,6 +220,26 @@ describe('the recorded step shapes, round-tripped', () => {
   })
 })
 
+describe('the round trip over the shapes Galaxy leaves whole', () => {
+  it('returns step 3 of conditional-repeat-runtime, a conditional inside a section', () => {
+    const model = {
+      3: {
+        advanced: { conflict: { __current_case__: 3, duplicate_options: 'keep_first' } },
+        inputs: [
+          { __index__: 0, input: { __class__: 'RuntimeValue' } },
+          { __index__: 1, input: { __class__: 'RuntimeValue' } },
+        ],
+      },
+    }
+    expect(decode(encode(model))).toEqual(model)
+  })
+
+  it('returns a dataset reference unsplit', () => {
+    const model = { 1: { picked: { src: 'hda', id: 'abc123' } } }
+    expect(decode(encode(model))).toEqual(model)
+  })
+})
+
 describe('the shapes the guard must not touch', () => {
   it('keeps sibling entries of one conditional together rather than overwriting', () => {
     expect(decode({ 1: { 'adv|a': 0, 'adv|b': '', 'adv|c': 'x' } })['1'])

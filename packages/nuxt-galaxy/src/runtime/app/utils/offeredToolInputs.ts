@@ -33,6 +33,10 @@ function isOffered(input: GalaxyToolParameters): input is ToolInputParameter {
  * than letting the panel say both "you may set this" and "nothing is feeding
  * this".
  *
+ * A section and a repeat are pruned identically here, though they render
+ * differently: both hold one list of declared children, and the arity that
+ * makes a repeat a repeat lives in the saved state, which this never reads.
+ *
  * A group left with **nothing** to offer is dropped whole rather than rendered
  * as an empty box: `__MERGE_COLLECTION__`'s `inputs` repeat declares one child
  * and it is a `data_collection`, so there is no form for a reader to fill in
@@ -50,14 +54,7 @@ export function offeredToolInputs(inputs: readonly GalaxyToolParameters[]): Tool
     if (!isOffered(input)) {
       continue
     }
-    if (input.type === 'section') {
-      const nested = offeredToolInputs(input.inputs)
-      if (nested.length > 0) {
-        offered.push({ ...input, inputs: nested })
-      }
-      continue
-    }
-    if (input.type === 'repeat') {
+    if (input.type === 'section' || input.type === 'repeat') {
       const nested = offeredToolInputs(input.inputs)
       if (nested.length > 0) {
         offered.push({ ...input, inputs: nested })

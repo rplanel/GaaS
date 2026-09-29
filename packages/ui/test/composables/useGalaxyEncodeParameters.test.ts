@@ -168,6 +168,50 @@ describe('a section, which nests as deeply as the tool declares (#101)', () => {
   })
 })
 
+describe('a conditional inside a section, which is #98\'s own case', () => {
+  it('names the leaf the way Galaxy resolves it', () => {
+    // Step 3 of `conditional-repeat-runtime`: `__MERGE_COLLECTION__` keeps
+    // its `conflict` conditional inside an `advanced` section, which is the
+    // shape #98 quoted and could reach only in the decode direction while
+    // the encoder joined one level.
+    expect(encode({ 3: { advanced: { conflict: { __current_case__: 3, duplicate_options: 'keep_first' } } } })['3'])
+      .toEqual({
+        'advanced|conflict|__current_case__': 3,
+        'advanced|conflict|duplicate_options': 'keep_first',
+      })
+  })
+})
+
+describe('the bags Galaxy\'s own flattener refuses to walk into', () => {
+  it('leaves a dataset reference whole', () => {
+    // `not ("src" in value and "id" in value)` in `_flatten_step_params`.
+    // Split into `picked|src` and `picked|id` the reference would match no
+    // declared input and the step would run with nothing.
+    expect(encode({ 1: { picked: { src: 'hda', id: 'abc123' } } })['1'])
+      .toEqual({ picked: { src: 'hda', id: 'abc123' } })
+  })
+
+  it('walks into a bag carrying only one of the two, as Galaxy does', () => {
+    // The condition is `and`, so a bag with `src` alone is an ordinary one.
+    expect(encode({ 1: { partial: { src: 'hda' } } })['1'])
+      .toEqual({ 'partial|src': 'hda' })
+  })
+
+  it('leaves __POST_JOB_ACTIONS__ whole, by its bare name at any depth', () => {
+    expect(encode({ 1: { __POST_JOB_ACTIONS__: { RenameDatasetActionout: { action_arguments: { newname: 'x' } } } } })['1'])
+      .toEqual({ __POST_JOB_ACTIONS__: { RenameDatasetActionout: { action_arguments: { newname: 'x' } } } })
+  })
+
+  it('still walks a runtime marker, which Galaxy also walks', () => {
+    // `{__class__: …}` has neither `src` nor `id`, so the flattener goes into
+    // it and yields `…|__class__` — a key no input claims, ignored. Alarming
+    // in a payload dump and identical to sending the marker nested, which is
+    // why it is not carved out (#98).
+    expect(encode({ 1: { topology_file: { __class__: 'RuntimeValue' } } })['1'])
+      .toEqual({ 'topology_file|__class__': 'RuntimeValue' })
+  })
+})
+
 describe('a repeat, whose instances Galaxy will not read as a list (#101, #98)', () => {
   /** `__BUILD_LIST__` step 2 of `conditional-repeat-runtime`, cut to two blocks. */
   const TWO_BLOCKS = {

@@ -16,9 +16,8 @@
  * fixture can only carry shapes somebody already thought of.
  */
 
-import type { GalaxyTool, WorkflowToolParameters } from 'blendtype'
+import type { WorkflowToolParameters } from 'blendtype'
 import type { DescribedStep } from 'nuxt-galaxy'
-import type { WorkflowFixture } from '../characterisation/fixtures'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
 import { toValue } from 'vue'
@@ -26,18 +25,9 @@ import BooleanToolParameter from '../../app/components/galaxy/BooleanToolParamet
 import IntegerToolParameter from '../../app/components/galaxy/IntegerToolParameter.vue'
 import Step from '../../app/components/galaxy/workflow/Step.vue'
 import { useGalaxyToolInputComponent } from '../../app/composables/galaxy/useGalaxyToolInputComponent'
-import { FIXTURES, loadFixture } from '../characterisation/fixtures'
+import { FIXTURES, loadFixture, toolOfStep } from '../characterisation/fixtures'
 
 const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
-
-function toolOf(fixture: WorkflowFixture, step: string): GalaxyTool {
-  const definition = fixture.live.steps[step]
-  const tool = fixture.tools[`${definition?.tool_id}@${definition?.tool_version}`]
-  if (!tool) {
-    throw new Error(`step ${step} of ${fixture.slug} recorded no tool`)
-  }
-  return tool
-}
 
 /**
  * One step's panel, built the way `InvokeForm` builds it: the offered
@@ -48,7 +38,7 @@ function toolOf(fixture: WorkflowFixture, step: string): GalaxyTool {
  */
 async function mountStep(step: string, variant: 'form' | 'display' = 'form') {
   const definition = nested.live.steps[step]!
-  const toolParameters = offeredToolInputs(toolOf(nested, step).inputs)
+  const toolParameters = offeredToolInputs(toolOfStep(nested, step).inputs)
   const { inputComponentsObject } = useGalaxyToolInputComponent(toolParameters)
   const workflowParametersModel = structuredClone(definition.tool_inputs) as WorkflowToolParameters
 

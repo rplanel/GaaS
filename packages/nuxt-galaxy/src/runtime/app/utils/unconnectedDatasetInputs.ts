@@ -6,7 +6,9 @@ import { isWorkflowRepeatInstanceValue, isWorkflowRuntimeValue } from 'blendtype
  *
  * `name` is Galaxy's own prefixed name — `settings|attc_settings|covar_matrix`,
  * `datasets_3|input` — because that is the spelling a connection is keyed by,
- * and so the only one the two sides can be compared in.
+ * and so the only one the two sides can be compared in. Inside a repeat the
+ * number is the instance's position in the saved list; see the walk below for
+ * why that is not the same claim as the `__index__` it carries.
  */
 export interface UnconnectedDatasetInput {
   readonly name: string
@@ -181,16 +183,35 @@ function walk(
       if (!Array.isArray(value)) {
         continue
       }
-      for (const instance of value) {
-        // The index the instance carries, never its position in the array:
-        // Galaxy keys the connection by `__index__`, and a repeat whose
-        // middle entry was deleted keeps the gap in its indices. That is the
-        // whole of what `isWorkflowRepeatInstanceValue` tests.
+      // The instance's **position** in the saved list, not the `__index__` it
+      // carries — corrected by #101 against the source, where this file used
+      // to say the opposite.
+      //
+      // `visit_input_values` overwrites the stored index with the position
+      // before it builds the name:
+      //
+      //     for i, d in enumerate(values):
+      //         d["__index__"] = i
+      //         new_name_prefix = name_prefix + f"{input.name}_{i}|"
+      //
+      // `tools/parameters/__init__.py:174-176` at 22.05, `:238-240` at 26.1.
+      // `ToolModule.execute`'s callback is what looks the resulting name up in
+      // `input_connections_by_name`, so the position is the spelling both this
+      // mark and the invocation are keyed by. They agree on any state Galaxy
+      // wrote, because every save-time visit renumbers the indices; on state
+      // edited elsewhere the position is the one that is right, and reading
+      // `__index__` here while `useGalaxyEncodeParameters` names the position
+      // would spell one input two ways in the same panel.
+      //
+      // Enumerated over the whole list, as Galaxy enumerates it, so an entry
+      // carrying no `__index__` still takes up a position rather than shifting
+      // the ones after it.
+      value.forEach((instance, position) => {
         if (!isWorkflowRepeatInstanceValue(instance)) {
-          continue
+          return
         }
-        walk(inputsOf(node), instance, `${prefix}${name}_${instance.__index__}|`, connections, found)
-      }
+        walk(inputsOf(node), instance, `${prefix}${name}_${position}|`, connections, found)
+      })
     }
   }
 }

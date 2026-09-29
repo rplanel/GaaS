@@ -3,7 +3,7 @@ import type { MaybeRef } from 'vue'
 import type { EncodedGalaxyWorkflowParameter } from './types'
 import { isWorkflowRepeatInstanceValue } from 'blendtype'
 import { computed, toValue } from 'vue'
-import { isConditional, isPresent, splitKey, splitRepeatInstanceKey } from './parameterValue'
+import { isParameterGroupValue, isPresent, splitKey, splitRepeatInstanceKey } from './parameterValue'
 
 /**
  * Put one stored value back where its name says it belongs.
@@ -16,7 +16,7 @@ import { isConditional, isPresent, splitKey, splitRepeatInstanceKey } from './pa
  * reachable the moment #101 made a section render, since a section is the
  * first thing to write a three-segment name.
  *
- * Whether a bag already sits at a name is asked with `isConditional`, not
+ * Whether a bag already sits at a name is asked with `isParameterGroupValue`, not
  * with truthiness: a falsy scalar parked there would otherwise read as
  * "nothing here", and the same fault would survive inside the fix for it.
  */
@@ -28,7 +28,7 @@ function nestInto(step: WorkflowToolParameters, name: string, value: WorkflowPar
   }
   let bag: WorkflowToolParameters | WorkflowConditionalParametersValue = step
   for (const segment of path.slice(0, -1)) {
-    if (!isConditional(bag[segment])) {
+    if (!isParameterGroupValue(bag[segment])) {
       bag[segment] = {}
     }
     bag = bag[segment] as WorkflowConditionalParametersValue
@@ -67,7 +67,7 @@ function collapseRepeats(bag: WorkflowToolParameters): WorkflowToolParameters {
   const instances = new Map<string, Map<number, WorkflowRepeatInstanceValue>>()
 
   for (const [name, value] of Object.entries(bag)) {
-    const nested = isConditional(value) ? collapseRepeats(value) : value
+    const nested = isParameterGroupValue(value) ? collapseRepeats(value) : value
     const split = splitRepeatInstanceKey(name)
     // `split.parent in bag` is the last guard: a stored analysis holding both
     // `datasets` and `datasets_0|…` is not one this encoder can produce, and
