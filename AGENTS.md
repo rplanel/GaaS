@@ -130,6 +130,10 @@ Quick orientation:
 **Never log secrets** — passwords, tokens, API keys such as `GALAXY_API_KEY` and Supabase service keys, full card numbers, session JWTs, or user tokens. Redaction is enabled in production, but choosing safe fields is the first line of defense.
 <!-- evlog:end -->
 
+`blendtype` is the exception: it is published on its own and never imports
+evlog. It logs through its own `BlendTypeLogger` context tag, which
+`runGalaxyEffect` / `runTaskEffect` answer with `BlendTypeLoggerEvlogLayer`.
+
 ## Section 4: Testing Rules
 
 ### Test Commands

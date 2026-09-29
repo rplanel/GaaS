@@ -314,3 +314,9 @@ Quick orientation:
 
 **Never log secrets** — passwords, tokens, API keys such as `GALAXY_API_KEY` and Supabase service keys, full card numbers, session JWTs, or user tokens. Redaction is enabled in production, but choosing safe fields is the first line of defense.
 <!-- evlog:end -->
+
+`blendtype` is published on its own and never imports evlog. It logs through its
+own `BlendTypeLogger` context tag, which `runGalaxyEffect` / `runTaskEffect`
+answer with `BlendTypeLoggerEvlogLayer` — so a Galaxy call's logs land on the
+same wide event as the handler that made it, with the library's context flat on
+the event rather than under `effectAnnotations`.

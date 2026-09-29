@@ -6,13 +6,14 @@ For high-level project conventions (stack versions, layer boundaries, testing ru
 
 ## Scope
 
-These conventions apply to the five GaaS logging surfaces:
+These conventions apply to the six GaaS logging surfaces:
 
 1. **Server API routes** — `packages/nuxt-galaxy/src/runtime/server/api/**/*.ts`
 2. **Scheduled tasks / scripts** — `packages/nuxt-galaxy/src/runtime/server/tasks/**/*.ts`, `packages/nuxt-galaxy/bin/*.mjs`, and `packages/nuxt-galaxy/src/runtime/server/lib/*.ts`
 3. **Client composables and components** — `packages/nuxt-galaxy/src/runtime/app/composables/**/*.ts`, `packages/ui/app/composables/**/*.ts`, `packages/ui/app/components/**/*.vue`, and `packages/wiki/app/**/*.ts` / `*.vue`
 4. **Module lifecycle and build-time scripts** — `packages/nuxt-galaxy/src/module.ts`, `packages/wiki/nuxt.config.ts` build-time hooks, and similar module setup code
-5. **Effect programs** — `packages/blendtype/src/**/*.ts` and `packages/nuxt-galaxy/src/runtime/server/utils/**/*.ts`
+5. **Effect programs** — `packages/nuxt-galaxy/src/runtime/server/utils/**/*.ts`
+6. **`blendtype`** — `packages/blendtype/src/**/*.ts`, which logs through its own context tag rather than evlog
 
 ## Quick-start API snippets
 
@@ -130,6 +131,36 @@ Execute these programs through `runGalaxyEffect` or `runTaskEffect` so the custo
 
 Identifiers go through `Effect.annotateLogs`, which the bridge writes as `effectAnnotations`, and a failure is logged as its `Cause`, which the bridge writes as `effectCause`. A plain object or error passed beside the message is stringified into the message text, where no query can reach it.
 
+### 6. `blendtype`
+
+`blendtype` is published on its own and must not depend on evlog, so it does not
+use the bridge above. It asks the Effect context for a `BlendTypeLogger` and
+leaves the destination to whoever runs it:
+
+```typescript
+import { blendTypeLog } from './logger'
+
+yield* blendTypeLog('info', '[downloadDatasetStreamEffect] start', { historyId, datasetId })
+```
+
+`blendTypeLog` requires nothing: with no `BlendTypeLogger` in context it falls
+back to Effect's own logger, which is what standalone `blendtype` and its tests
+see. Adding a log line therefore never changes an Effect's `R`, and no caller
+has to provide anything.
+
+Under `nuxt-galaxy` the answer is `BlendTypeLoggerEvlogLayer`, which
+`runGalaxyEffect` and `runTaskEffect` provide alongside `evlogEffectLogger`. It
+writes to the same request logger the handler uses, with the library's context
+**flat on the event** — `historyId`, not `effectAnnotations.historyId` — because
+it is a structured record the library chose, not Effect machinery the bridge had
+to serialise. Debug follows the same global-`log.debug` fallback as the bridge,
+for the same reason (see below).
+
+Inside `blendtype`, prefer `blendTypeLog` to `Effect.log*`: a raw `Effect.log`
+still reaches evlog through the default-logger replacement, but its context
+lands under `effectAnnotations` instead, so two queries are needed for one
+library.
+
 ## Expected wide-event shape
 
 Every request-scoped wide event contains at least the following base fields:
@@ -157,6 +188,7 @@ Every request-scoped wide event contains at least the following base fields:
 | Client composables | `action`, `tag` / `component`, client-side error codes |
 | Module lifecycle | `@nuxt/kit` logger tag (not a wide event) |
 | Effect programs | `effectSpans`, `effectAnnotations`, `effectCause` |
+| `blendtype` | whatever the call passed as context, flat (e.g. `historyId`, `datasetId`, `function`) |
 
 A surface is what the code does, not which directory its file sits in. `server/utils/**` code that logs to the request logger after the fold — `toHttpError`'s `"<handler> handler failed"` line — decorates the server-route wide event, so the cause it writes is `cause`. A cause raised inside a running effect reaches the bridge as a `Cause` and is written as `effectCause`, and only when the cause is non-empty, so an event carrying `effectCause` is one where something failed. Two names for two surfaces: a query for one never has to know about the other.
 

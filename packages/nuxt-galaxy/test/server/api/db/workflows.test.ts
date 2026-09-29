@@ -45,7 +45,9 @@ class MockServerSupabaseClaims extends Context.Tag('@nuxt-galaxy/ServerSupabaseC
 }
 
 // Mock blendtype
-vi.mock('blendtype', () => ({
+vi.mock('blendtype', async () => ({
+  // The real tag, not a stand-in: `evlog-effect` builds a Layer keyed on it.
+  BlendTypeLogger: (await vi.importActual<typeof import('blendtype')>('blendtype')).BlendTypeLogger,
   toGalaxyServiceUnavailable: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
   makeGalaxyLayer: vi.fn(() => Layer.empty),
 }))

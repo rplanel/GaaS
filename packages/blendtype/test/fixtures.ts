@@ -1,7 +1,9 @@
 import type { Context } from 'effect'
+import type { BlendTypeLogLevel } from '../src/logger'
 import type { GalaxyDataset, GalaxyHistoryDetailed, GalaxyInvocation, GalaxyTool, GalaxyVersion, GalaxyWorkflow, GalaxyWorkflowsItem, HistoryStateDetails, HistoryStateIds, InvocationJobsSummary, ShowFullJobResponse } from '../src/types'
 import { Effect, Exit, HashMap, Layer, Logger, LogLevel } from 'effect'
 import { GalaxyFetch } from '../src/galaxy'
+import { BlendTypeLogger } from '../src/logger'
 
 // ============================================================================
 // Test Fixtures - Reusable Mock Data
@@ -291,6 +293,30 @@ export function createLogCaptureLayer(messages: string[]): Layer.Layer<never> {
   return Logger.replace(Logger.defaultLogger, logger).pipe(
     Layer.merge(Logger.minimumLogLevel(LogLevel.Debug)),
   )
+}
+
+/** One line captured by {@link createBlendTypeLoggerCaptureLayer}. */
+export interface CapturedBlendTypeLog {
+  level: BlendTypeLogLevel
+  message: string
+  context: Record<string, unknown>
+}
+
+/**
+ * Creates a BlendTypeLogger layer that records every line `blendtype` emits,
+ * structured rather than formatted. Use it to assert on the level and the
+ * context keys a log carries; use `createLogCaptureLayer` when you want the
+ * rendered Effect log line instead.
+ */
+export function createBlendTypeLoggerCaptureLayer(
+  entries: CapturedBlendTypeLog[],
+): Layer.Layer<BlendTypeLogger> {
+  return Layer.succeed(BlendTypeLogger, {
+    log: (level, message, context) =>
+      Effect.sync(() => {
+        entries.push({ level, message, context: context ?? {} })
+      }),
+  })
 }
 
 /** The options an effect handed to `$fetch`, as far as tests read them. */

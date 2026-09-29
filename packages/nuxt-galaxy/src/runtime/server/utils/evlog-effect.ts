@@ -1,7 +1,8 @@
 import type { Effect as EffectType, LogSpan } from 'effect'
 import type { H3Event } from 'h3'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { Cause, Effect, HashMap, List, Logger, LogLevel } from 'effect'
+import { BlendTypeLogger } from 'blendtype'
+import { Cause, Effect, HashMap, Layer, List, Logger, LogLevel } from 'effect'
 import { log as evlogGlobal, useLogger } from 'evlog'
 
 const evlogAsyncStorage = new AsyncLocalStorage<ReturnType<typeof useLogger>>()
@@ -96,7 +97,10 @@ function mapEffectLogLevel(label: string): 'error' | 'warn' | 'info' | 'debug' {
 }
 
 function logToEvlogGlobal(level: 'error' | 'warn' | 'info' | 'debug', message: string, context: Record<string, unknown>): void {
-  const event = { message, ...context }
+  // `message` last: a caller's context is arbitrary (blendtype passes its own
+  // record), and a key called `message` overwriting the message would lose the
+  // one field every query starts from.
+  const event = { ...context, message }
   switch (level) {
     case 'error':
       evlogGlobal.error(event)
@@ -138,41 +142,67 @@ function logToRequestLog(
   }
 }
 
-export const evlogEffectLogger = Logger.make((options) => {
+/**
+ * Writes one line to whichever evlog logger is in scope: the request-scoped one
+ * when an `evlogAsyncStorage` run wraps the call, the global one otherwise.
+ */
+function writeToEvlog(
+  level: 'error' | 'warn' | 'info' | 'debug',
+  message: string,
+  context: Record<string, unknown>,
+): void {
   const requestLog = evlogAsyncStorage.getStore()
-  const text = formatEffectMessage(options.message)
-  const context = buildLogContext({
-    cause: options.cause,
-    spans: options.spans,
-    annotations: options.annotations,
-  })
-
-  const level = mapEffectLogLevel(options.logLevel.label)
-
   if (!requestLog) {
-    logToEvlogGlobal(level, text, context)
+    logToEvlogGlobal(level, message, context)
     return
   }
+  logToRequestLog(requestLog, level, message, context)
+}
 
-  logToRequestLog(requestLog, level, text, context)
+export const evlogEffectLogger = Logger.make((options) => {
+  writeToEvlog(
+    mapEffectLogLevel(options.logLevel.label),
+    formatEffectMessage(options.message),
+    buildLogContext({
+      cause: options.cause,
+      spans: options.spans,
+      annotations: options.annotations,
+    }),
+  )
 })
 
-function runWithEvlogLogger<T, E>(effect: EffectType.Effect<T, E, never>): Promise<T> {
+/**
+ * Answers `blendtype`'s request for a logger with this request's evlog logger.
+ *
+ * `blendtype` never imports evlog: it yields a `BlendTypeLogger` from the
+ * Effect context and leaves the destination to whoever runs it. Providing this
+ * Layer is what puts a log a Galaxy call emits on the same wide event as the
+ * handler that made it, with the library's own context flat on the event
+ * rather than buried under `effectAnnotations` the way a plain `Effect.log`
+ * routed through {@link evlogEffectLogger} would be.
+ */
+export const BlendTypeLoggerEvlogLayer: Layer.Layer<BlendTypeLogger> = Layer.succeed(
+  BlendTypeLogger,
+  { log: (level, message, context = {}) => Effect.sync(() => writeToEvlog(level, message, context)) },
+)
+
+function runWithEvlogLogger<T, E>(effect: EffectType.Effect<T, E, BlendTypeLogger>): Promise<T> {
   return Effect.runPromise(
     effect.pipe(
+      Effect.provide(BlendTypeLoggerEvlogLayer),
       Effect.provide(Logger.replace(Logger.defaultLogger, evlogEffectLogger)),
       Effect.provide(Logger.minimumLogLevel(LogLevel.Debug)),
     ),
   )
 }
 
-export function runGalaxyEffect<T, E>(event: H3Event, effect: EffectType.Effect<T, E, never>): Promise<T> {
+export function runGalaxyEffect<T, E>(event: H3Event, effect: EffectType.Effect<T, E, BlendTypeLogger>): Promise<T> {
   const requestLog = useLogger(event)
   requestLog.set({ handler: event.path, method: event.method })
 
   return evlogAsyncStorage.run(requestLog, () => runWithEvlogLogger(effect))
 }
 
-export function runTaskEffect<T, E>(taskLog: ReturnType<typeof useLogger>, effect: EffectType.Effect<T, E, never>): Promise<T> {
+export function runTaskEffect<T, E>(taskLog: ReturnType<typeof useLogger>, effect: EffectType.Effect<T, E, BlendTypeLogger>): Promise<T> {
   return evlogAsyncStorage.run(taskLog, () => runWithEvlogLogger(effect))
 }
