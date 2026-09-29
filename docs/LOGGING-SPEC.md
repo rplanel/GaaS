@@ -6,13 +6,14 @@ For high-level project conventions (stack versions, layer boundaries, testing ru
 
 ## Scope
 
-These conventions apply to the five GaaS logging surfaces:
+These conventions apply to the six GaaS logging surfaces:
 
 1. **Server API routes** — `packages/nuxt-galaxy/src/runtime/server/api/**/*.ts`
 2. **Scheduled tasks / scripts** — `packages/nuxt-galaxy/src/runtime/server/tasks/**/*.ts`, `packages/nuxt-galaxy/bin/*.mjs`, and `packages/nuxt-galaxy/src/runtime/server/lib/*.ts`
 3. **Client composables and components** — `packages/nuxt-galaxy/src/runtime/app/composables/**/*.ts`, `packages/ui/app/composables/**/*.ts`, `packages/ui/app/components/**/*.vue`, and `packages/wiki/app/**/*.ts` / `*.vue`
 4. **Module lifecycle and build-time scripts** — `packages/nuxt-galaxy/src/module.ts`, `packages/wiki/nuxt.config.ts` build-time hooks, and similar module setup code
-5. **Effect programs** — `packages/blendtype/src/**/*.ts` and `packages/nuxt-galaxy/src/runtime/server/utils/**/*.ts`
+5. **Effect programs** — `packages/nuxt-galaxy/src/runtime/server/utils/**/*.ts`
+6. **`blendtype`** — `packages/blendtype/src/**/*.ts`, which logs through its own context tag rather than evlog
 
 ## Quick-start API snippets
 

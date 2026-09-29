@@ -55,21 +55,22 @@ function logWithEffectLogger(
 }
 
 /**
- * The sink used when no other one is provided: forwards to Effect's own
- * logger, so standalone `blendtype` keeps the behaviour it always had.
- */
-export const blendTypeLoggerDefault: BlendTypeLoggerImpl = {
-  log: logWithEffectLogger,
-}
-
-/**
- * Layer form of {@link blendTypeLoggerDefault}. Providing it is optional —
- * {@link blendTypeLog} falls back to the same behaviour on its own — but it
- * makes the choice explicit when you build a Layer stack by hand.
+ * The sink `blendtype` behaves as when nothing else is provided: forwards to
+ * Effect's own logger, so standalone use keeps the behaviour it always had.
+ *
+ * Providing it is optional — {@link blendTypeLog} falls back to the same
+ * behaviour on its own — but it makes the choice explicit when you build a
+ * Layer stack by hand.
+ *
+ * Provide it at the outermost `Effect.provide` or not at all. Effect resolves
+ * a tag to the *innermost* Layer that supplies it, so providing this one deep
+ * inside a program silently overrides a host's logger wrapped around it, and
+ * the host sees nothing at all. Leaving it out has no such hazard: the
+ * fallback is a lookup miss, not a Layer that can win.
  */
 export const BlendTypeLoggerDefault: Layer.Layer<BlendTypeLogger> = Layer.succeed(
   BlendTypeLogger,
-  blendTypeLoggerDefault,
+  { log: logWithEffectLogger },
 )
 
 /**

@@ -1,5 +1,6 @@
 import type { Layer } from 'effect'
 import type { Buffer } from 'node:buffer'
+import type { BlendTypeLogLevel } from './logger'
 import type { GalaxyHistoryDetailed, GalaxyUploadedDataset } from './types'
 import { Console, Data, Effect } from 'effect'
 import * as tus from 'tus-js-client'
@@ -401,8 +402,8 @@ export function downloadDatasetStream(historyId: string, datasetId: string, laye
 
 export function downloadDatasetStreamEffect(historyId: string, datasetId: string): Effect.Effect<ReadableStream<Uint8Array> | NodeJS.ReadableStream | null, HistoryError, GalaxyFetch> {
   return Effect.gen(function* () {
-    const log = (message: string, extra: Record<string, unknown> = {}) =>
-      blendTypeLog('info', `[downloadDatasetStreamEffect] ${message}`, {
+    const log = (level: BlendTypeLogLevel, message: string, extra: Record<string, unknown> = {}) =>
+      blendTypeLog(level, `[downloadDatasetStreamEffect] ${message}`, {
         historyId,
         datasetId,
         function: 'downloadDatasetStreamEffect',
@@ -410,9 +411,9 @@ export function downloadDatasetStreamEffect(historyId: string, datasetId: string
       })
 
     const fetchApi = yield* GalaxyFetch
-    yield* log('start')
+    yield* log('info', 'start')
     const datasetDescription = yield* getDatasetEffect(datasetId, historyId).pipe(
-      Effect.tapError(error => log('error getting dataset', { error: error.message })),
+      Effect.tapError(error => log('error', 'error getting dataset', { error: error.message })),
       Effect.mapError(error =>
         new HistoryError({
           message: formatErrorMessage('dataset', datasetId, 'Error getting dataset', error),
@@ -422,18 +423,18 @@ export function downloadDatasetStreamEffect(historyId: string, datasetId: string
         }),
       ),
     )
-    yield* log('dataset file_size and state', { file_size: datasetDescription.file_size, state: datasetDescription.state })
+    yield* log('info', 'dataset file_size and state', { file_size: datasetDescription.file_size, state: datasetDescription.state })
     if (datasetDescription.file_size === 0) {
-      yield* log('returning null because file_size === 0')
+      yield* log('info', 'returning null because file_size === 0')
       return null
     }
     const url = `api/histories/${historyId}/contents/${datasetId}/display`
-    yield* log('fetching stream', { url })
+    yield* log('info', 'fetching stream', { url })
     const stream = yield* Effect.tryPromise<ReadableStream<Uint8Array> | NodeJS.ReadableStream, unknown>({
       try: () => fetchApi<ReadableStream<Uint8Array>, 'stream'>(url, { method: 'GET', responseType: 'stream' }),
       catch: caughtError => caughtError,
     }).pipe(
-      Effect.tapError(caughtError => log('error fetching stream', { error: String(caughtError) })),
+      Effect.tapError(caughtError => log('error', 'error fetching stream', { error: String(caughtError) })),
       Effect.mapError((caughtError: unknown) =>
         new HistoryError({
           message: formatErrorMessage('dataset', datasetId, 'Error downloading stream', caughtError),
@@ -443,7 +444,7 @@ export function downloadDatasetStreamEffect(historyId: string, datasetId: string
         }),
       ),
     )
-    yield* log('stream fetched successfully', { streamType: stream.constructor.name })
+    yield* log('info', 'stream fetched successfully', { streamType: stream.constructor.name })
     return stream
   }).pipe(withRetry)
 }

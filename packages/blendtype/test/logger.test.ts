@@ -1,8 +1,9 @@
 import type { CapturedBlendTypeLog } from './fixtures'
 import { Effect, Layer } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { downloadDatasetStream } from '../src/histories'
 import { blendTypeLog, BlendTypeLogger, BlendTypeLoggerDefault } from '../src/logger'
-import { createBlendTypeLoggerCaptureLayer, createLogCaptureLayer } from './fixtures'
+import { createBlendTypeLoggerCaptureLayer, createLogCaptureLayer, createSuccessLayer } from './fixtures'
 
 describe('blendTypeLog without a BlendTypeLogger in context', () => {
   it('falls back to Effect default logger at every level', async () => {
@@ -88,5 +89,49 @@ describe('blendTypeLog with a BlendTypeLogger in context', () => {
     )
 
     expect(seen).toEqual(['debug:custom'])
+  })
+})
+
+// The Promise wrappers take the Layer the caller already builds, and `Layer`
+// is covariant in what it provides — so merging a logger into it is the
+// injection point, without widening a single wrapper signature.
+describe('the Promise API', () => {
+  it('routes through a logger merged into the layer the caller already passes', async () => {
+    const entries: CapturedBlendTypeLog[] = []
+    const layer = Layer.merge(
+      createSuccessLayer({ file_size: 0, id: 'did', state: 'ok' }),
+      createBlendTypeLoggerCaptureLayer(entries),
+    )
+
+    const result = await downloadDatasetStream('hid', 'did', layer)
+
+    expect(result).toBeNull()
+    expect(entries.map(e => e.message)).toEqual([
+      '[downloadDatasetStreamEffect] start',
+      '[downloadDatasetStreamEffect] dataset file_size and state',
+      '[downloadDatasetStreamEffect] returning null because file_size === 0',
+    ])
+  })
+
+  it('logs through Effect default logger when the caller passes only a fetch layer', async () => {
+    // The wrapper calls `Effect.runPromise` itself, so there is no seam to
+    // inject a capture layer through: the console is what a standalone
+    // consumer actually sees, so it is what this asserts on.
+    const consoleLog = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    try {
+      const result = await downloadDatasetStream(
+        'hid',
+        'did',
+        createSuccessLayer({ file_size: 0, id: 'did', state: 'ok' }),
+      )
+
+      expect(result).toBeNull()
+      const written = consoleLog.mock.calls.map(call => call.join(' ')).join('\n')
+      expect(written).toContain('[downloadDatasetStreamEffect] start')
+    }
+    finally {
+      consoleLog.mockRestore()
+    }
   })
 })

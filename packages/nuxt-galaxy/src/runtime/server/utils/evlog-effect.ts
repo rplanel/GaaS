@@ -1,4 +1,3 @@
-import type { BlendTypeLoggerImpl } from 'blendtype'
 import type { Effect as EffectType, LogSpan } from 'effect'
 import type { H3Event } from 'h3'
 import { AsyncLocalStorage } from 'node:async_hooks'
@@ -98,7 +97,10 @@ function mapEffectLogLevel(label: string): 'error' | 'warn' | 'info' | 'debug' {
 }
 
 function logToEvlogGlobal(level: 'error' | 'warn' | 'info' | 'debug', message: string, context: Record<string, unknown>): void {
-  const event = { message, ...context }
+  // `message` last: a caller's context is arbitrary (blendtype passes its own
+  // record), and a key called `message` overwriting the message would lose the
+  // one field every query starts from.
+  const event = { ...context, message }
   switch (level) {
     case 'error':
       evlogGlobal.error(event)
@@ -140,23 +142,33 @@ function logToRequestLog(
   }
 }
 
-export const evlogEffectLogger = Logger.make((options) => {
+/**
+ * Writes one line to whichever evlog logger is in scope: the request-scoped one
+ * when an `evlogAsyncStorage` run wraps the call, the global one otherwise.
+ */
+function writeToEvlog(
+  level: 'error' | 'warn' | 'info' | 'debug',
+  message: string,
+  context: Record<string, unknown>,
+): void {
   const requestLog = evlogAsyncStorage.getStore()
-  const text = formatEffectMessage(options.message)
-  const context = buildLogContext({
-    cause: options.cause,
-    spans: options.spans,
-    annotations: options.annotations,
-  })
-
-  const level = mapEffectLogLevel(options.logLevel.label)
-
   if (!requestLog) {
-    logToEvlogGlobal(level, text, context)
+    logToEvlogGlobal(level, message, context)
     return
   }
+  logToRequestLog(requestLog, level, message, context)
+}
 
-  logToRequestLog(requestLog, level, text, context)
+export const evlogEffectLogger = Logger.make((options) => {
+  writeToEvlog(
+    mapEffectLogLevel(options.logLevel.label),
+    formatEffectMessage(options.message),
+    buildLogContext({
+      cause: options.cause,
+      spans: options.spans,
+      annotations: options.annotations,
+    }),
+  )
 })
 
 /**
@@ -169,22 +181,9 @@ export const evlogEffectLogger = Logger.make((options) => {
  * rather than buried under `effectAnnotations` the way a plain `Effect.log`
  * routed through {@link evlogEffectLogger} would be.
  */
-export const blendTypeEvlogLogger: BlendTypeLoggerImpl = {
-  log: (level, message, context = {}) =>
-    Effect.sync(() => {
-      const requestLog = evlogAsyncStorage.getStore()
-      if (!requestLog) {
-        logToEvlogGlobal(level, message, context)
-        return
-      }
-      logToRequestLog(requestLog, level, message, context)
-    }),
-}
-
-/** Layer form of {@link blendTypeEvlogLogger}. */
 export const BlendTypeLoggerEvlogLayer: Layer.Layer<BlendTypeLogger> = Layer.succeed(
   BlendTypeLogger,
-  blendTypeEvlogLogger,
+  { log: (level, message, context = {}) => Effect.sync(() => writeToEvlog(level, message, context)) },
 )
 
 function runWithEvlogLogger<T, E>(effect: EffectType.Effect<T, E, BlendTypeLogger>): Promise<T> {

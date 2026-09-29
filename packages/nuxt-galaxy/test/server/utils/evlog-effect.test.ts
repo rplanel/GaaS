@@ -256,6 +256,17 @@ describe('blendTypeLoggerEvlogLayer', () => {
     expect(requestLog.debug).not.toHaveBeenCalled()
   })
 
+  it('keeps the message the caller gave when the context carries one of its own', async () => {
+    // blendtype hands over an arbitrary record, so unlike the Effect bridge's
+    // fixed `effect*` keys it can collide with the event's own fields.
+    await blendTypeLog('info', 'the real message', { message: 'not this one' }).pipe(
+      Effect.provide(BlendTypeLoggerEvlogLayer),
+      Effect.runPromise,
+    )
+
+    expect(mockLog.info).toHaveBeenCalledWith({ message: 'the real message' })
+  })
+
   it('falls back to the global evlog logger with no request logger in scope', async () => {
     await blendTypeLog('info', 'outside a request', { a: 1 }).pipe(
       Effect.provide(BlendTypeLoggerEvlogLayer),
