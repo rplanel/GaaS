@@ -1,21 +1,25 @@
 <script setup lang="ts">
 import type { VueFlowStore } from '@vue-flow/core'
 import type { DescribedStep } from 'nuxt-galaxy'
+import type { StepMark } from '../../../utils/stepMarks'
 import type { GraphDirection, WorkflowGraphNodeData } from '../../../utils/workflowGraph'
 import { computed, nextTick, ref, useId, watch } from '#imports'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { Handle, Panel, VueFlow } from '@vue-flow/core'
 import { stepKind } from '../../../utils/stepKind'
-import { handleSides, NODE_HEIGHT, NODE_WIDTH, stepsAtPath, subworkflowTrail, workflowGraph } from '../../../utils/workflowGraph'
+import { stepMarkSummary, UNMARKED_STEP } from '../../../utils/stepMarks'
+import { stepStateAccent, stepStateLook } from '../../../utils/stepStateLook'
+import { animatedEdges, handleSides, NODE_HEIGHT, NODE_WIDTH, stepsAtPath, subworkflowTrail, workflowGraph } from '../../../utils/workflowGraph'
 
 /**
  * A workflow revision drawn as a graph (#89).
  *
  * **One canvas, and it takes no mode** (Q2'). It knows nothing about whether
  * a workflow is being followed or started: what differs between those two is
- * only which per-step marks are supplied, and the marks are #90's. What it
- * does know is the shape — one node per step, one edge per connection,
+ * only which per-step marks are supplied (#90), and a canvas handed none
+ * draws exactly what #89 drew. What it does know is the shape — one node per
+ * step, one edge per connection,
  * including an input fed by several upstream outputs, which is the failure a
  * graph cannot signal and the reason the stored definition is the source
  * (Q12).
@@ -50,7 +54,15 @@ const props = withDefaults(defineProps<{
   /** The revision's steps, keyed by `order_index`, as the description endpoint answers them. */
   steps: Record<string, DescribedStep>
   direction?: GraphDirection
-}>(), { direction: 'LR' })
+  /**
+   * What each step of the workflow has come to, keyed as `steps` is (#90).
+   *
+   * Of the **workflow itself**, never of a subworkflow: see `markedSteps`.
+   * Omitted by whichever screen is not following an invocation, and then no
+   * node carries a run state at all.
+   */
+  marks?: Record<string, StepMark>
+}>(), { direction: 'LR', marks: () => ({}) })
 
 const emit = defineEmits<{
   select: [selection: GraphSelection | undefined]
@@ -96,7 +108,51 @@ const drawnPath = computed(() => trail.value.map(crumb => crumb.stepId))
 /** The steps of the level being drawn, or the workflow itself at the root. */
 const levelSteps = computed(() => stepsAtPath(props.steps, drawnPath.value) ?? {})
 
+/**
+ * The marks that apply to the level being drawn, which is none below the
+ * root.
+ *
+ * A nested step's `order_index` collides with an outer step's — they are
+ * both 0, 1, 2 — and a job row's `step_id` is the **outer** one's, because a
+ * subworkflow's jobs belong to a separate invocation this application does
+ * not record (#119). Handed straight down, the marks would put real states
+ * on the wrong steps, which is worse than putting none on any.
+ */
+const markedSteps = computed(() => (drawnPath.value.length === 0 ? props.marks : {}))
+
+/**
+ * The shape, which depends on the steps and the direction and on nothing
+ * else — so the array handed to Vue Flow is the *same* one however the jobs
+ * move. Vue Flow re-parses a changed `nodes` array and
+ * `Object.assign(existingNode, node)` writes the laid-out position back over
+ * a dragged one (`vue-flow-core.mjs:3573`), so recomputing this when a mark
+ * changes would undo a reader's drag on every realtime refetch (Q6).
+ */
 const graph = computed(() => workflowGraph(levelSteps.value, props.direction))
+
+/** The edges, which do move with the jobs — an edge has no position to lose. */
+const edges = computed(() => animatedEdges(graph.value.edges, markedSteps.value))
+
+/**
+ * What to draw on each node beyond its shape, resolved once per render.
+ *
+ * A record rather than six lookups per node in the template: the state, its
+ * drawing, its colour and its badge were each looked up separately, most of
+ * them behind a `!`, and six lookups of one thing are six chances to look up
+ * different things.
+ */
+const nodeStates = computed(() => {
+  const marks = markedSteps.value
+  return Object.fromEntries(graph.value.nodes.map((node) => {
+    const mark = marks[node.id] ?? UNMARKED_STEP
+    return [node.id, {
+      state: mark.state,
+      look: stepStateLook(mark.state),
+      accent: stepStateAccent(mark.state) ?? 'transparent',
+      summary: stepMarkSummary(mark),
+    }]
+  }))
+})
 
 /**
  * Where the handles sit, which is what actually routes an edge: Vue Flow
@@ -245,7 +301,7 @@ watch([() => props.direction, drawnPath], () => nextTick(fit))
   <VueFlow
     :id="flowId"
     :nodes="graph.nodes"
-    :edges="graph.edges"
+    :edges="edges"
     :min-zoom="0.2"
     :max-zoom="2"
     :nodes-draggable="true"
@@ -312,11 +368,22 @@ watch([() => props.direction, drawnPath], () => nextTick(fit))
     </Panel>
 
     <template #node-step="{ id, data }">
+      <!--
+        `border-s-4` is always drawn and the colour is what changes, so a
+        marked node is not a different width from an unmarked one — a graph
+        whose nodes reflow the moment an invocation starts is a graph that
+        cannot be watched. `transparent` is the unmarked colour.
+      -->
       <div
-        class="rounded-[calc(var(--ui-radius)*2)] ring bg-default px-3 py-2 text-left"
+        class="rounded-[calc(var(--ui-radius)*2)] ring bg-default px-3 py-2 text-left border-s-4"
         :class="selectedStepId === id ? 'ring-2 ring-primary' : 'ring-default'"
-        :style="{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }"
+        :style="{
+          width: `${NODE_WIDTH}px`,
+          height: `${NODE_HEIGHT}px`,
+          borderInlineStartColor: nodeStates[id]?.accent,
+        }"
         :data-testid="`workflow-node-${id}`"
+        :data-state="nodeStates[id]?.state"
       >
         <!--
           One anchor per output, and one per input something feeds, spaced
@@ -365,6 +432,23 @@ watch([() => props.direction, drawnPath], () => nextTick(fit))
           </UBadge>
           <div class="flex items-center gap-1">
             <!--
+              What the step is doing, as an icon with the word on it rather
+              than a second badge: the header already carries the kind badge
+              and there is no room for two, and the accent down the side is
+              what carries the colour at a glance. `aria-label` and `title`
+              are the word itself, so the phase is never colour alone.
+            -->
+            <UIcon
+              v-if="nodeStates[id]?.look"
+              :name="nodeStates[id]!.look!.icon"
+              class="size-4"
+              :style="{ color: nodeStates[id]!.accent }"
+              role="img"
+              :aria-label="nodeStates[id]!.look!.word"
+              :title="nodeStates[id]!.look!.word"
+              :data-testid="`node-mark-${id}`"
+            />
+            <!--
               What makes a subworkflow node link out. On the node rather than
               only in the detail panel, because the node is what a reader
               sees: `nodrag` so that pressing it does not start a drag, and a
@@ -388,15 +472,33 @@ watch([() => props.direction, drawnPath], () => nextTick(fit))
         <div class="mt-1 font-semibold text-sm truncate" :title="data.label">
           {{ data.label }}
         </div>
-        <div class="text-xs opacity-60 truncate" :title="data.toolName ?? data.annotation ?? ''">
-          <template v-if="data.toolName">
-            {{ data.toolName }}<template v-if="data.toolVersion">
-              · {{ data.toolVersion }}
+        <div class="flex items-center justify-between gap-1">
+          <div class="text-xs opacity-60 truncate" :title="data.toolName ?? data.annotation ?? ''">
+            <template v-if="data.toolName">
+              {{ data.toolName }}<template v-if="data.toolVersion">
+                · {{ data.toolVersion }}
+              </template>
             </template>
-          </template>
-          <template v-else>
-            {{ data.annotation || '—' }}
-          </template>
+            <template v-else>
+              {{ data.annotation || '—' }}
+            </template>
+          </div>
+          <!--
+            A mapped step is one step and many jobs, so no single state is
+            true of it and the counts are what it is drawn with (Q18). Only
+            when there is more than one job: "1/1 ok" beside a node already
+            coloured Done is noise.
+          -->
+          <UBadge
+            v-if="nodeStates[id]?.summary"
+            size="xs"
+            variant="soft"
+            class="shrink-0"
+            :color="nodeStates[id]!.look?.color ?? 'neutral'"
+            :data-testid="`node-count-${id}`"
+          >
+            {{ nodeStates[id]!.summary }}
+          </UBadge>
         </div>
       </div>
     </template>

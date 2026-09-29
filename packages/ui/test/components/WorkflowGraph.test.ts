@@ -13,13 +13,16 @@
  * hand-written fixture.
  */
 
+import type { JobState } from 'blendtype'
 import type { DescribedStep } from 'nuxt-galaxy'
 import { UApp } from '#components'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { useVueFlow } from '@vue-flow/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, ref } from 'vue'
 import Graph from '../../app/components/galaxy/workflow/Graph.vue'
 import GraphView from '../../app/components/galaxy/workflow/GraphView.vue'
+import { stepMarks } from '../../app/utils/stepMarks'
 import { FIXTURES } from '../characterisation/fixtures'
 import { aStep, describedSteps } from '../describedSteps'
 
@@ -427,5 +430,168 @@ describe('galaxyWorkflowGraphView', () => {
     const dialog = document.body.querySelector('[role="dialog"]')
     expect(dialog).not.toBeNull()
     expect(dialog!.textContent).toContain('Fed by')
+  })
+})
+
+describe('galaxyWorkflowGraph, following a running invocation', () => {
+  /** An input feeding a tool feeding a tool: two steps that run jobs, and an edge out of each. */
+  const chain = {
+    0: aStep(0, { type: 'data_input', tool_id: null, tool_version: null }),
+    1: aStep(1, { input_connections: { input: { id: 0, output_name: 'output' } } }),
+    2: aStep(2, { input_connections: { input: { id: 1, output_name: 'out_file1' } } }),
+  }
+
+  /** The marks the analysis panel hands the canvas, derived as it derives them. */
+  function marks(steps: Record<string, DescribedStep>, jobs: { step_id: number, state: JobState }[]) {
+    return stepMarks(steps, jobs)
+  }
+
+  const stateOf = (wrapper: { find: (s: string) => { attributes: (a: string) => string | undefined } }, id: string) =>
+    wrapper.find(`[data-testid="workflow-node-${id}"]`).attributes('data-state')
+
+  it('colours each node by what that step is doing', async () => {
+    // AC1. The input step at 0 runs no job and is never coloured by run
+    // state; the two tool steps are.
+    const wrapper = await mountIn(Graph, {
+      steps: chain,
+      marks: marks(chain, [{ step_id: 1, state: 'running' }, { step_id: 2, state: 'queued' }]),
+    })
+    mounted = wrapper
+
+    expect(stateOf(wrapper, '0')).toBe('unmarked')
+    expect(stateOf(wrapper, '1')).toBe('running')
+    expect(stateOf(wrapper, '2')).toBe('queued')
+  })
+
+  it('draws a skipped step differently from one that has not started', async () => {
+    // AC4, and the reason it is worth its own criterion: a conditional
+    // Galaxy declined to run and a step whose turn has not come are two
+    // different answers, and collapsing them tells the reader the wrong one.
+    const wrapper = await mountIn(Graph, {
+      steps: chain,
+      marks: marks(chain, [{ step_id: 1, state: 'skipped' }]),
+    })
+    mounted = wrapper
+
+    expect(stateOf(wrapper, '1')).toBe('skipped')
+    expect(stateOf(wrapper, '2')).toBe('notStarted')
+
+    // Distinct on screen, not only in an attribute: a different word and a
+    // different icon, which is what a reader actually has to tell apart.
+    const skipped = wrapper.find('[data-testid="node-mark-1"]')
+    const notStarted = wrapper.find('[data-testid="node-mark-2"]')
+    expect(skipped.attributes('aria-label')).toBe('Skipped')
+    expect(notStarted.attributes('aria-label')).toBe('Not started')
+    expect(skipped.html()).not.toBe(notStarted.html())
+  })
+
+  it('draws a paused step as paused, and offers nothing to resume it', async () => {
+    // AC5. Galaxy pauses a job whose input dataset is paused or errored; the
+    // graph says so and stops there, because resuming runs under a service
+    // account and who may do it is unanswered (Q21).
+    const wrapper = await mountIn(Graph, {
+      steps: chain,
+      marks: marks(chain, [{ step_id: 1, state: 'ok' }, { step_id: 2, state: 'paused' }]),
+    })
+    mounted = wrapper
+
+    expect(stateOf(wrapper, '2')).toBe('paused')
+    expect(wrapper.find('[data-testid="node-mark-2"]').attributes('aria-label')).toBe('Paused')
+    expect(wrapper.html().toLowerCase()).not.toContain('resume')
+  })
+
+  it('animates the edge leaving a running step, and no other', async () => {
+    // AC2, in the DOM rather than in the derivation: Vue Flow puts its own
+    // `animated` class on the edge, and that is the whole of the drawing.
+    const wrapper = await mountIn(Graph, {
+      steps: chain,
+      marks: marks(chain, [{ step_id: 1, state: 'running' }, { step_id: 2, state: 'queued' }]),
+    })
+    mounted = wrapper
+
+    const edgeFrom = (id: string) => wrapper.find(`.vue-flow__edge[data-id^="${id}:"]`)
+    expect(edgeFrom('1').classes()).toContain('animated')
+    expect(edgeFrom('0').classes()).not.toContain('animated')
+  })
+
+  it('badges a mapped step with every one of its jobs', async () => {
+    // AC3, and what #84 had to land for: before it, a step mapping over
+    // fifteen elements recorded nothing at all and this would read zero.
+    const jobs: { step_id: number, state: JobState }[] = [
+      ...Array.from({ length: 12 }, () => ({ step_id: 1, state: 'ok' as const })),
+      ...Array.from({ length: 3 }, () => ({ step_id: 1, state: 'running' as const })),
+    ]
+    const wrapper = await mountIn(Graph, { steps: chain, marks: marks(chain, jobs) })
+    mounted = wrapper
+
+    expect(wrapper.find('[data-testid="node-count-1"]').text()).toBe('12/15 Succeeded, 3 Running')
+    // And a step with one job is not badged: its colour already says it.
+    expect(wrapper.find('[data-testid="node-count-2"]').exists()).toBe(false)
+  })
+
+  it('never carries a mark into a subworkflow, where the same index means another step', async () => {
+    // A nested step's `order_index` collides with an outer step's — they are
+    // both 0, 1, 2 — and a job row's `step_id` is the *outer* one's. Handing
+    // the level's marks straight down would mark the wrong steps with real
+    // states, which is worse than marking nothing.
+    const outer = describedSteps(FIXTURES.subworkflowNested)
+    const wrapper = await mountIn(Graph, {
+      steps: outer,
+      marks: stepMarks({ 0: aStep(0) }, [{ step_id: 0, state: 'running' }]),
+    })
+    mounted = wrapper
+
+    await wrapper.find('[data-testid="open-subworkflow-8"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="graph-trail-8"]').exists()).toBe(true)
+    expect(stateOf(wrapper, '0')).toBe('unmarked')
+    expect(wrapper.findAll('.vue-flow__edge.animated')).toHaveLength(0)
+  })
+
+  it('keeps a node where a reader dragged it when the marks change', async () => {
+    // Q6 says dragging is allowed, and #90 is what nearly took it away. Vue
+    // Flow re-parses whenever the `nodes` array changes and
+    // `Object.assign(existingNode, node)` puts the laid-out position back
+    // (`vue-flow-core.mjs:3573`), so carrying the marks *inside* the node
+    // data snapped every dragged node home on each realtime refetch — on the
+    // one screen where the marks change every few seconds.
+    const marked = ref(marks(chain, [{ step_id: 1, state: 'queued' }]))
+    const wrapper = await mountSuspended(defineComponent({
+      setup: () => () => h(UApp, () => h(
+        'div',
+        { style: 'width: 1200px; height: 800px' },
+        [h(Graph, { steps: chain, marks: marked.value })],
+      )),
+    }))
+    mounted = wrapper
+
+    // The store the canvas made for itself, reached the way the DOM names
+    // it, so the node can be moved exactly as a drag moves it.
+    const describedBy = wrapper.find('.vue-flow__node').attributes('aria-describedby')!
+    const flow = useVueFlow(describedBy.replace('vue-flow__node-desc-', ''))
+    const transform = () => wrapper.find('.vue-flow__node[data-id="1"]').attributes('style')
+
+    flow.updateNode('1', { position: { x: 999, y: 777 } })
+    await nextTick()
+    expect(transform(), 'the node moved').toContain('translate(999px,777px)')
+
+    marked.value = marks(chain, [{ step_id: 1, state: 'running' }])
+    await nextTick()
+
+    expect(transform(), 'and stayed where it was put').toContain('translate(999px,777px)')
+    // And the mark still arrived, which is what makes this a fix rather than
+    // a canvas that stopped listening.
+    expect(stateOf(wrapper, '1')).toBe('running')
+  })
+
+  it('draws no run state at all when the canvas is handed no marks', async () => {
+    // Invoke-mode, and every canvas before #90: one canvas, no mode (Q2').
+    const wrapper = await mountIn(Graph, { steps: chain })
+    mounted = wrapper
+
+    expect(stateOf(wrapper, '1')).toBe('unmarked')
+    expect(wrapper.find('[data-testid="node-mark-1"]').exists()).toBe(false)
+    expect(wrapper.findAll('.vue-flow__edge.animated')).toHaveLength(0)
   })
 })

@@ -5,7 +5,7 @@ import { SUPABASE_ANALYSES_QUERY_KEYS } from '#imports'
 import { mockNuxtImport, mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
 import { useQueryCache } from '@pinia/colada'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, nextTick } from 'vue'
 import AnalysisHistoryPanel from '../../app/components/analysis/AnalysisHistoryPanel.vue'
 
 /** The Galaxy identifier of the stored workflow every analysis here ran. */
@@ -19,6 +19,26 @@ const RAN_REVISION = 3
 let describedRevisions: number[] = []
 /** The tool the one step of the described revision runs. */
 const TOOL = { id: 'toolshed.g2.bx.psu.edu/repos/iuc/seqtk/seqtk_seq/1.3', version: '1.3' }
+
+/**
+ * One step, three jobs — what a step mapping over a collection records since
+ * #84, and what the jobs accordion could not show: every row carries the
+ * step's `order_index`, so keying the list by `step_id` collapsed the three
+ * into one.
+ *
+ * Deliberately out of `id` order, and with three different states, so both
+ * the ordering and the per-job state have something to be wrong about. The
+ * middle one's stdout is what tells the panels apart.
+ */
+const MAPPED_JOBS = [
+  { id: 33, step_id: 2, tool_id: TOOL.id, state: 'running', stdout: 'third element', stderr: '', analysis_id: 10 },
+  { id: 11, step_id: 2, tool_id: TOOL.id, state: 'ok', stdout: 'first element', stderr: '', analysis_id: 10 },
+  { id: 22, step_id: 2, tool_id: TOOL.id, state: 'error', stdout: 'second element', stderr: '', analysis_id: 10 },
+  // The step downstream of it, which ran once — the row that must *not*
+  // appear when the mapped step is the one selected.
+  { id: 44, step_id: 3, tool_id: TOOL.id, state: 'paused', stdout: 'downstream', stderr: '', analysis_id: 10 },
+]
+
 /** The tools the description reports as unusable, and why. */
 let unavailableTools: UnavailableTool[] = []
 
@@ -51,7 +71,7 @@ function analysisRow(id: number) {
     workflow_revision: id === 7 ? RAN_REVISION : (id === 9 ? 404 : null),
     workflows: { id: 1, name: 'A workflow', galaxy_id: GALAXY_WORKFLOW_ID, revision: PINNED_REVISION, name_key: 'aWorkflow', version_key: '1.0' },
     histories: { id: 1, state: 'ok', galaxy_id: 'galaxy-history-1' },
-    jobs: [{ id: 1, step_id: 2, tool_id: TOOL.id, state: 'ok', stdout: '', stderr: '', analysis_id: id }],
+    jobs: id === 10 ? MAPPED_JOBS : [{ id: 1, step_id: 2, tool_id: TOOL.id, state: 'ok', stdout: '', stderr: '', analysis_id: id }],
     analysis_outputs: [],
   }
 }
@@ -84,6 +104,20 @@ function registerDescription(revision: number) {
       const key = `${TOOL.id}@${TOOL.version}`
       return {
         steps: {
+          // An input step, which runs no job of its own — so the graph has a
+          // node that must never be marked with a run state (#90).
+          1: {
+            id: 1,
+            type: 'data_input',
+            label: 'Reads',
+            uuid: 'step-uuid-1',
+            annotation: null,
+            tool_id: null,
+            tool_version: null,
+            tool_inputs: {},
+            input_connections: {},
+            outputs: [{ name: 'output', type: 'input' }],
+          },
           2: {
             id: 2,
             type: 'tool',
@@ -93,7 +127,23 @@ function registerDescription(revision: number) {
             tool_id: TOOL.id,
             tool_version: TOOL.version,
             tool_inputs: { quality_cutoff: '10' },
-            input_connections: {},
+            input_connections: { input: { id: 1, output_name: 'output' } },
+            outputs: [{ name: 'out_file1', type: 'fasta' }],
+          },
+          // A second tool step, which ran once. Without it every job row in
+          // the fixture would belong to one step, and handing the detail
+          // panel *all* of them would look the same as handing it the
+          // selected step's.
+          3: {
+            id: 3,
+            type: 'tool',
+            label: 'Count them',
+            uuid: 'step-uuid-3',
+            annotation: null,
+            tool_id: TOOL.id,
+            tool_version: TOOL.version,
+            tool_inputs: {},
+            input_connections: { input: { id: 2, output_name: 'out_file1' } },
             outputs: [],
           },
         },
@@ -315,5 +365,152 @@ describe('a step whose tool the panel could not read', () => {
       expect(body.textContent).toContain('Quality cutoff')
     })
     expect(body.textContent).not.toContain('could not be read from Galaxy')
+  })
+})
+
+/**
+ * #84 records one job row per element of a mapped step, all of them carrying
+ * the one step's `order_index`. The jobs accordion was keyed by `step_id` in
+ * three places — the item's `value`, `jobsMap` and `jobDetailsAccordionItems`
+ * — so a step that mapped over thirty inputs rendered thirty entries sharing
+ * one value, and the map kept whichever row arrived last. A live defect in
+ * the analysis history, and the reason #90 extracts this block rather than
+ * reusing it as it stood (AC8).
+ */
+describe('a step that mapped over a collection', () => {
+  /** Every job entry of the jobs accordion, by the trigger that opens it. */
+  function jobTriggers(panel: Awaited<ReturnType<typeof mountPanel>>) {
+    return panel.findAll('[data-testid^="job-trigger-"]')
+  }
+
+  it('lists every one of its jobs, not just the last row to arrive', async () => {
+    const panel = await mountPanel(10)
+
+    // The mapped step's three, and the one job of the step after it.
+    await vi.waitFor(() => {
+      expect(jobTriggers(panel)).toHaveLength(4)
+    })
+  })
+
+  it('gives each job its own state', async () => {
+    const panel = await mountPanel(10)
+
+    await vi.waitFor(() => {
+      expect(panel.findAll('[data-testid="galaxy-status"]')).toHaveLength(4)
+    })
+    // In the order the rows are listed, which is by step and then by the job
+    // row's own id rather than by whatever order Postgres answered in —
+    // `jobs(*)` carries no `ORDER BY`.
+    expect(panel.findAll('[data-testid="galaxy-status"]').map(icon => icon.attributes('data-state')))
+      .toEqual(['ok', 'error', 'running', 'paused'])
+  })
+
+  it('names each job so a reader can tell three runs of one tool apart', async () => {
+    const panel = await mountPanel(10)
+
+    await vi.waitFor(() => {
+      expect(jobTriggers(panel)).toHaveLength(4)
+    })
+    const labels = jobTriggers(panel).map(trigger => trigger.text())
+    expect(labels[0]).toContain('1 of 3')
+    expect(labels[2]).toContain('3 of 3')
+    expect(new Set(labels).size).toBe(4)
+    // And the step that ran once is not numbered: "1 of 1" beside a single
+    // job is a count of nothing.
+    expect(labels[3]).not.toContain('of')
+  })
+
+  it('opens the job that was pressed, not another of the same step', async () => {
+    // The sharpest form of the defect: with one shared value, pressing any of
+    // the three opened all of them, and every one showed the last row's
+    // stdout.
+    const panel = await mountPanel(10)
+
+    await vi.waitFor(() => {
+      expect(jobTriggers(panel)).toHaveLength(4)
+    })
+    await jobTriggers(panel)[1]!.trigger('click')
+
+    const stdout = await vi.waitFor(() => {
+      const trigger = panel.findAll('button').find(candidate => candidate.text().includes('Stdout'))
+      expect(trigger, 'the opened job offers its stdout').toBeDefined()
+      return trigger!
+    })
+    await stdout.trigger('click')
+
+    await vi.waitFor(() => {
+      expect(panel.text()).toContain('second element')
+    })
+    expect(panel.text()).not.toContain('third element')
+  })
+})
+
+/**
+ * #90. The marks come from this application's own job rows, and the panel is
+ * where the jobs and the canvas meet: the graph's own suite proves it draws
+ * what it is handed, and this proves it is handed the analysis's.
+ */
+describe('the graph following a running invocation', () => {
+  /** The detail panel beside the canvas, which is where a selected step's jobs go. */
+  function detail(panel: Awaited<ReturnType<typeof mountPanel>>) {
+    return panel.find('[data-testid="graph-detail-panel"]')
+  }
+
+  async function selectNode(panel: Awaited<ReturnType<typeof mountPanel>>, stepId: string) {
+    const node = await vi.waitFor(() => {
+      const found = panel.find(`.vue-flow__node[data-id="${stepId}"]`)
+      expect(found.exists(), `step ${stepId} is on the canvas`).toBe(true)
+      return found
+    })
+    await node.trigger('click')
+    await nextTick()
+  }
+
+  it('colours the nodes with the states of the analysis\'s own job rows', async () => {
+    const panel = await mountPanel(7)
+
+    await vi.waitFor(() => {
+      expect(panel.find('[data-testid="workflow-node-2"]').attributes('data-state')).toBe('succeeded')
+    })
+    // AC6: the input step runs no job, so it is never coloured by run state.
+    expect(panel.find('[data-testid="workflow-node-1"]').attributes('data-state')).toBe('unmarked')
+  })
+
+  it('takes the mapped step\'s count from every one of its rows', async () => {
+    const panel = await mountPanel(10)
+
+    await vi.waitFor(() => {
+      expect(panel.find('[data-testid="node-count-2"]').text()).toBe('1/3 Succeeded, 1 Failed, 1 Running')
+    })
+    expect(panel.find('[data-testid="workflow-node-3"]').attributes('data-state')).toBe('paused')
+    // One job, so no count badge: the node's own colour already says it.
+    expect(panel.find('[data-testid="node-count-3"]').exists()).toBe(false)
+  })
+
+  it('shows a selected step\'s jobs in the same block the list below uses', async () => {
+    // AC7. Not a second per-job panel beside the canvas: the same component,
+    // handed one step's rows instead of all of them (Q7).
+    const panel = await mountPanel(10)
+    await selectNode(panel, '2')
+
+    // The mapped step's three rows, and **not** the fourth, which belongs to
+    // the step after it.
+    await vi.waitFor(() => {
+      expect(detail(panel).findAll('[data-testid^="job-trigger-"]')).toHaveLength(3)
+    })
+    expect(detail(panel).text()).not.toContain('downstream')
+  })
+
+  it('offers no jobs at all for a step that runs none', async () => {
+    // An input step has no job rows and never will, so "no jobs recorded
+    // yet" would be a promise it is still to come.
+    const panel = await mountPanel(10)
+    await selectNode(panel, '1')
+
+    await vi.waitFor(() => {
+      expect(detail(panel).text()).toContain('Reads')
+    })
+    expect(detail(panel).findAll('[data-testid^="job-trigger-"]')).toHaveLength(0)
+    expect(detail(panel).find('[data-testid="no-jobs"]').exists()).toBe(false)
   })
 })

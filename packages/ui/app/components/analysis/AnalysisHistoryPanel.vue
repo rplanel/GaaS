@@ -1,12 +1,8 @@
 <script setup lang="ts">
-import type { AccordionItem } from '@nuxt/ui'
-import type { GalaxyTool } from 'blendtype'
 import type { AnalysisDetail, Database, JobRow } from 'nuxt-galaxy'
 import type { EncodedGalaxyWorkflowParameter } from '../../composables/galaxy/types'
 import { useSupabaseClient } from '#imports'
-// import { analysisByIdWithDetailsQuery, analysisInputsViewByIdQuery, analysisOutputsViewByIdQuery } from ''
-import { useGalaxyDecodeParameters } from '../../composables/galaxy/useGalaxyDecodeParameters'
-import { useGalaxyToolsInputComponents } from '../../composables/galaxy/useGalaxyToolInputComponent'
+import { stepMarks } from '../../utils/stepMarks'
 
 const props = withDefaults(defineProps<{
   analysisId: number
@@ -80,13 +76,10 @@ useSupabaseRealtime(`galaxy:analysis_outputs:${props.analysisId}`, 'analysis_out
 
 // One request for the revision and every tool it pins (#87), shared through
 // Pinia Colada: the invoke form for the same revision reuses this answer
-// rather than fetching 1+N times of its own.
+// rather than fetching 1+N times of its own — and so does `AnalysisJobs`
+// below, which asks for the tools this panel no longer reads itself.
 const {
   workflowSteps,
-  stepToTool,
-  toolsObj,
-  toolInputParameters,
-  unavailableByStep,
   isLoading: describingWorkflow,
   retry: retryDescription,
   error: workflowError,
@@ -100,98 +93,10 @@ const {
  */
 const hasSteps = computed(() => Object.keys(toValue(workflowSteps)).length > 0)
 
-const { getToolParameters, getParametersInputComponent } = useAnalysisTools(toolsObj)
-const { jobs, jobsAccordionItems, jobsMap, jobDetailsAccordionItems } = useAnalysisJob(detailedAnalysis, toolsObj)
-
-function useAnalysisJob(analysis: Ref<AnalysisDetail | undefined>, tools: Ref<Record<string, GalaxyTool>>) {
-  const jobs = computed<JobRow[] | undefined>(() => {
-    const analysisVal = toValue(analysis)
-    if (analysisVal && analysisVal?.jobs) {
-      return analysisVal.jobs
-    }
-    return undefined
-  })
-
-  const jobsAccordionItems = computed<AccordionItem[] | undefined>(() => {
-    const jobsVal = toValue(jobs)
-    const toolsVal = toValue(tools)
-    const stepToToolVal = toValue(stepToTool)
-    if (jobsVal && toolsVal) {
-      return jobsVal.map((job): AccordionItem => {
-        // A job row carries a bare `tool_id` and no version, so it cannot
-        // name a definition on its own — two steps may run the same tool at
-        // two versions (#100). Its `step_id` is the step's order index,
-        // which is what the revision pins a version by, so the step is the
-        // way round.
-        const item = toolsVal[stepToToolVal[String(job.step_id)] ?? '']
-        return {
-          label: `${item?.name ?? 'no tool name'} - ${
-            item?.version ?? 'no tool version'
-          }`,
-          icon: 'i-mdi:tools',
-          value: String(job.step_id),
-        }
-      })
-    }
-    return undefined
-  })
-
-  const jobsMap = computed(() => {
-    const jobsVal = toValue(jobs) as JobRow[]
-    if (jobsVal) {
-      const jobM: Record<string, JobRow> = {}
-      for (const job of jobsVal) {
-        jobM[String(job.step_id)] = job
-      }
-      return jobM
-    }
-    return {}
-  })
-
-  const jobDetailsAccordionItems = computed(() => {
-    const jobsVal = toValue(jobs)
-    const perJobItems: Record<string, { details: AccordionItem[] }> = {}
-    if (jobsVal) {
-      for (const job of jobsVal) {
-        perJobItems[job.step_id] = {
-          details: [
-            { label: 'Parameters', slot: 'parameters', icon: 'i-lucide:settings-2' },
-            { label: 'Stdout', slot: 'stdout', icon: 'i-material-symbols:output' },
-            { label: 'Stderr', slot: 'stderr', icon: 'i-material-symbols:error-outline-rounded' },
-          ],
-        }
-      }
-      return perJobItems
-    }
-    return undefined
-  })
-
-  return { jobs, jobsAccordionItems, jobsMap, jobDetailsAccordionItems }
-}
-
-function useAnalysisTools(tools: Ref<Record<string, GalaxyTool>>) {
-  function getToolParameters(stepId: string) {
-    const stepToolsVal = toValue(stepToTool)
-    const toolInputParametersVal = toValue(toolInputParameters)
-    const toolName = stepToolsVal[stepId]
-    if (toolName) {
-      return toolInputParametersVal[toolName]
-    }
-  }
-
-  // Shared with `InvokeForm`, which built the identical map (#87).
-  const toolInputParameterComponent = useGalaxyToolsInputComponents(tools)
-  function getParametersInputComponent(stepId: string) {
-    const toolName = toValue(stepToTool)[stepId]
-    const computedParameterInputComponentObjectVal = toValue(toolInputParameterComponent)
-    if (toolName && computedParameterInputComponentObjectVal) {
-      return computedParameterInputComponentObjectVal[toolName]
-    }
-  }
-
-  return { tools, getToolParameters, getParametersInputComponent }
-}
-
+/**
+ * What the analysis was started with, keyed by step id then parameter name,
+ * as `AnalysisJobs` decodes it.
+ */
 const analysisParameters = computed(() => {
   const analysisVal = toValue(detailedAnalysis)
   if (analysisVal?.parameters) {
@@ -200,9 +105,34 @@ const analysisParameters = computed(() => {
   return {} as EncodedGalaxyWorkflowParameter
 })
 
-const { decodedParameters: workflowParametersModel } = useGalaxyDecodeParameters(
-  analysisParameters,
-)
+/**
+ * The recorded jobs, as `analysisByIdWithDetailsQuery` serves them.
+ *
+ * Listing them, naming their tools and showing what each was sent is
+ * `AnalysisJobs`', not this panel's: the graph's detail panel shows the same
+ * block for one step's jobs, and two copies of it would drift (#90, Q7).
+ */
+const jobs = computed<JobRow[] | undefined>(() => toValue(detailedAnalysis)?.jobs)
+
+/**
+ * What each step of the revision is doing, for the canvas to draw (#90, Q4).
+ *
+ * From the job rows this server already holds, not from Galaxy: they are
+ * cached, they are joined on the step's order index — the same key the nodes
+ * use — and the realtime subscription above already refetches them, so the
+ * graph follows a running invocation without a second source or a poll.
+ */
+const marks = computed(() => stepMarks(toValue(workflowSteps), toValue(jobs)))
+
+/**
+ * The rows recorded against one step, for the panel beside the canvas.
+ *
+ * Several for a step that mapped over a collection (#84), which is why the
+ * block that lists them is keyed by the job's own id rather than by this one.
+ */
+function jobsOfStep(stepId: string): JobRow[] {
+  return (toValue(jobs) ?? []).filter(job => String(job.step_id) === stepId)
+}
 
 const { data: outputs, refresh: _refreshOutputs } = useQuery(() =>
   analysisOutputsViewByIdQuery({ analysisId: analysisId.value, supabase }),
@@ -310,7 +240,39 @@ const sortedOutputs = computed(() => {
     <template v-if="hasSteps">
       <USeparator label="Graph" />
       <UPageCard variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-        <GalaxyWorkflowGraphView :steps="workflowSteps" />
+        <GalaxyWorkflowGraphView :steps="workflowSteps" :marks="marks">
+          <!--
+            The panel says what the definition declares about the step and
+            then what actually ran there, in the **same** block the list
+            below uses rather than a second one that would drift from it
+            (Q7).
+          -->
+          <template #detail="{ selection, openSubworkflow }">
+            <div class="flex flex-col gap-4">
+              <GalaxyWorkflowGraphStepDetails :selection="selection" @open="openSubworkflow" />
+              <!--
+                Only for a step of the workflow itself that runs jobs at all.
+                A job row's `step_id` is the *outer* step's order index, so a
+                step inside a subworkflow has no rows of its own (#119); and
+                an input step has none and never will, so "no jobs recorded
+                yet" would promise something still to come.
+              -->
+              <template
+                v-if="selection
+                  && selection.path.length === 0
+                  && marks[selection.stepId]?.state !== 'unmarked'"
+              >
+                <USeparator label="Jobs" />
+                <GalaxyAnalysisJobs
+                  :jobs="jobsOfStep(selection.stepId)"
+                  :workflow-galaxy-id="workflowGalaxyId"
+                  :workflow-revision="workflowRevision"
+                  :parameters="analysisParameters"
+                />
+              </template>
+            </div>
+          </template>
+        </GalaxyWorkflowGraphView>
       </UPageCard>
     </template>
 
@@ -321,96 +283,13 @@ const sortedOutputs = computed(() => {
 
     <USeparator label="Jobs" />
 
-    <UPageCard v-if="jobs && toolsObj" variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
-      <UAccordion :default-value="[jobsAccordionItems?.[0]?.value ?? '0']" :items="jobsAccordionItems">
-        <template #leading="{ item }">
-          <div>
-            <GalaxyStatus :state="item?.value && jobsMap ? jobsMap[item.value]?.state : undefined" size="25" />
-          </div>
-        </template>
-        <template #body="{ item }">
-          <div v-if="jobDetailsAccordionItems && item.value" class="p-4">
-            <UAccordion :items="jobDetailsAccordionItems[item.value]?.details">
-              <template #parameters>
-                <div
-                  v-if="
-                    workflowSteps
-                      && workflowParametersModel
-                      && item.value
-                  " class="p-2"
-                >
-                  <!--
-                      This panel blocks nothing — it has no submit, and the
-                      job it describes has already run. Where the tool
-                      definition could not be read there are no labels and no
-                      widgets, so what was sent is shown by its raw parameter
-                      names rather than not at all (#96): a tool that failed
-                      is never indistinguishable from a tool with no
-                      parameters.
-                    -->
-                  <div v-if="unavailableByStep[item.value]" data-testid="step-parameters-unlabelled">
-                    <p class="text-sm opacity-60 px-4 py-2">
-                      {{ describeUnavailableTool(unavailableByStep[item.value]!) }}, so these are its raw parameter names.
-                      <!--
-                          The description is cached without expiry, so a
-                          Galaxy that was briefly unreachable when this
-                          analysis was first opened would show unlabelled
-                          for the life of the tab. This is the only way back.
-                        -->
-                      <UButton
-                        data-testid="retry-workflow-description-step"
-                        size="xs"
-                        color="neutral"
-                        variant="link"
-                        :loading="describingWorkflow"
-                        @click="retryDescription()"
-                      >
-                        Retry
-                      </UButton>
-                    </p>
-                    <dl class="grid grid-cols-[auto_1fr] gap-x-4 px-4 py-2 text-sm">
-                      <template v-for="(value, name) in workflowParametersModel[item.value]" :key="name">
-                        <dt class="font-medium break-all">
-                          {{ name }}
-                        </dt>
-                        <dd class="break-all opacity-80">
-                          <!--
-                              Stringified rather than interpolated: a
-                              conditional's value is an object, and Vue
-                              renders one as `[object Object]`.
-                            -->
-                          {{ typeof value === 'object' && value !== null ? JSON.stringify(value) : value }}
-                        </dd>
-                      </template>
-                    </dl>
-                  </div>
-                  <GalaxyWorkflowStep
-                    v-else
-                    variant="display" :workflow-step="workflowSteps[item.value]"
-                    :tool-parameters="getToolParameters(item.value)"
-                    :parameters-inputs-component="getParametersInputComponent(item.value)"
-                    :workflow-parameters-model=" workflowParametersModel[item.value] "
-                  />
-                </div>
-              </template>
-              <template #stdout>
-                <div class="p-1">
-                  <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
-                    <pre v-if="jobsMap" class="text-nowrap"> {{ jobsMap[item.value]?.stdout }}</pre>
-                  </div>
-                </div>
-              </template>
-              <template #stderr>
-                <div class="p-1">
-                  <div class="ring ring-default rounded-[calc(var(--ui-radius)*2)] p-8 overflow-x-auto">
-                    <pre v-if="jobsMap"> {{ jobsMap[item.value]?.stderr }}</pre>
-                  </div>
-                </div>
-              </template>
-            </UAccordion>
-          </div>
-        </template>
-      </UAccordion>
+    <UPageCard variant="ghost" :ui="{ container: 'lg:grid-cols-1' }">
+      <GalaxyAnalysisJobs
+        :jobs="jobs"
+        :workflow-galaxy-id="workflowGalaxyId"
+        :workflow-revision="workflowRevision"
+        :parameters="analysisParameters"
+      />
     </UPageCard>
 
     <USeparator label="Outputs" />

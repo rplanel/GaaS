@@ -14,6 +14,7 @@
  */
 
 import type { DescribedStep } from 'nuxt-galaxy'
+import type { StepMark } from './stepMarks'
 import { inputStepLabel, isInputStep } from '#imports'
 import { layout as dagreLayout, Graph } from '@dagrejs/dagre'
 import { Position } from '@vue-flow/core'
@@ -103,6 +104,11 @@ export interface WorkflowGraphEdge {
   readonly targetHandle: string
   /** The name of the input this connection feeds, which is what the edge is labelled with. */
   readonly label: string
+  /**
+   * Whether the edge is drawn as flowing, which is Vue Flow's own
+   * `animated`. Always `false` here; `animatedEdges` is what sets it.
+   */
+  readonly animated: boolean
 }
 
 export interface WorkflowGraph {
@@ -201,6 +207,17 @@ export function connectionsOf(step: DescribedStep): StepConnection[] {
  * consumers look a mark up by. The two are the same integer in anything
  * Galaxy exported; keeping to one of them means a definition where they are
  * not cannot half-draw.
+ *
+ * **Takes no marks, and that is deliberate.** The layout is a function of
+ * the steps and the direction and of nothing else, so a canvas following an
+ * invocation hands Vue Flow the *same* nodes however the jobs move. Vue Flow
+ * re-parses whenever the array changes and
+ * `Object.assign(existingNode, node)` writes the laid-out position back
+ * (`vue-flow-core.mjs:3573`) — so a mark carried inside the node data would
+ * snap every dragged node home on each refetch, which is Q6's "dragging is
+ * allowed" undone on the one screen that refetches. What each step is doing
+ * reaches the node template directly, and reaches the edges through
+ * `animatedEdges`.
  */
 export function workflowGraph(
   steps: Record<string, DescribedStep>,
@@ -252,11 +269,31 @@ export function workflowGraph(
         sourceHandle: connection.outputName,
         targetHandle: connection.inputName,
         label: connection.inputName,
+        animated: false,
       }]
     }),
   )
 
   return { nodes: layOut(nodes, edges, direction), edges, dangling }
+}
+
+/**
+ * The same edges, with the ones leaving a running step drawn as flowing.
+ *
+ * Read off the **source** step's mark: an edge *into* a running step is
+ * carrying nothing yet, so animating that one would say the opposite of what
+ * is happening.
+ *
+ * Separate from `workflowGraph` because the two are recomputed on different
+ * clocks. An edge has no position for Vue Flow to overwrite, so rebuilding
+ * the edge array as the jobs move costs nothing — rebuilding the node array
+ * would cost a reader their drag (see `workflowGraph`).
+ */
+export function animatedEdges(
+  edges: readonly WorkflowGraphEdge[],
+  marks: Record<string, StepMark>,
+): WorkflowGraphEdge[] {
+  return edges.map(edge => ({ ...edge, animated: marks[edge.source]?.isRunning ?? false }))
 }
 
 /**

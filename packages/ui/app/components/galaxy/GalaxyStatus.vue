@@ -1,81 +1,56 @@
 <script setup lang="ts">
 import type { GalaxyState, InvocationState } from 'blendtype'
+import { galaxyStateLook } from '../../utils/galaxyStateLook'
+import { uiColorVar } from '../../utils/stateLook'
 
-interface Props {
+/**
+ * One state, drawn: the icon the analyses list and the jobs accordion both
+ * show.
+ *
+ * Every state is drawn as **something**. Twelve of them used to be drawn as
+ * nothing — the map answered `{ icon: '', color: '' }` for `skipped`,
+ * `stopped`, `waiting`, `deleted`, `deleting`, `stop`, `resubmitted`,
+ * `upload`, `empty`, `deferred`, `discarded` and `ready`, and since that
+ * object is truthy the branch meant to say something instead never ran, so
+ * an `<UIcon name="">` reached the page. A skipped job and a job the list
+ * knew nothing about looked identical (#90).
+ *
+ * The state is **labelled in words**, not only coloured: a reader who
+ * cannot tell the colours apart, and a reader hovering the icon, both get
+ * the same answer — and the answer is the glossary's word, never Galaxy's
+ * identifier. `setting_metadata` used to reach the screen verbatim.
+ *
+ * What the colours and icons are is `galaxyStateLook`'s, not this
+ * component's, because a job state has to be drawn here exactly as the
+ * canvas draws it on the node beside it.
+ */
+
+const props = withDefaults(defineProps<{
   state?: GalaxyState | InvocationState | undefined
   size?: number | string
-}
-const props = withDefaults(defineProps<Props>(), {
+}>(), {
   state: undefined,
   size: '18',
 })
 
-const excludeStates = ['setting_metadata', 'failed_metadata'] as const
-
-type ExcludeState = (typeof excludeStates)[number]
-type SupportedState = Exclude<GalaxyState | InvocationState, ExcludeState>
-
-const state = toRef(() => props.state)
-const size = toRef(() => props.size)
-
-const galaxyStateToIcon: Record<
-  SupportedState,
-  { icon: string, color: string }
-> = {
-  running: { icon: 'i-svg-spinners:bars-scale', color: 'text-primary' },
-  error: { icon: 'i-mdi:alert-circle', color: 'text-error' },
-  ok: { icon: 'i-mdi:check-circle', color: 'text-success' },
-  new: { icon: 'i-mdi:new-box', color: 'text-secondary' },
-  queued: { icon: 'i-mdi:tray-full', color: 'text-primary' },
-  cancelled: { icon: 'i-mdi:cancel', color: 'text-warning' },
-  cancelling: { icon: 'i-mdi:cancel', color: 'text-warning' },
-  completed: { icon: 'i-mdi:check-circle', color: 'text-success' },
-  deferred: { icon: '', color: '' },
-  deleted: { icon: '', color: '' },
-  deleting: { icon: '', color: '' },
-  discarded: { icon: '', color: '' },
-  empty: { icon: '', color: '' },
-  failed: { icon: 'i-mdi:alert-circle', color: 'text-error' },
-  paused: { icon: 'i-mdi:pause', color: 'text-primary' },
-  ready: { icon: '', color: '' },
-  requires_materialization: { icon: 'i-mdi:cube-scan', color: 'text-info' },
-  resubmitted: { icon: '', color: '' },
-  scheduled: {
-    icon: 'material-symbols:schedule-send-outline',
-    color: 'text-success',
-  },
-  skipped: { icon: '', color: '' },
-  stop: { icon: '', color: '' },
-  stopped: { icon: '', color: '' },
-  upload: { icon: '', color: '' },
-  waiting: { icon: '', color: '' },
-}
-
-const currentState = computed(() => {
-  const galaxyStateToIconVal = toValue(galaxyStateToIcon)
-  const stateVal = toValue(state)
-  if (
-    stateVal
-    && excludeStates.find(exState => exState === stateVal) === undefined
-  ) {
-    const s = stateVal as SupportedState
-    return galaxyStateToIconVal[s]
-  }
-  return undefined
-})
+const look = computed(() => (props.state === undefined ? undefined : galaxyStateLook(props.state)))
 </script>
 
 <template>
-  <div v-if="state">
-    <span
-      v-if="currentState"
-      :class="currentState.color"
-    >
-      <UIcon
-        :name="currentState.icon"
-        :size
-      />
+  <!--
+    Nothing at all when there is no state, which is a row whose job has not
+    arrived — not a state worth inventing an icon for.
+  -->
+  <div
+    v-if="look"
+    role="img"
+    :aria-label="look.word"
+    :title="look.word"
+    :data-state="state"
+    data-testid="galaxy-status"
+  >
+    <span :style="{ color: uiColorVar(look.color) }">
+      <UIcon :name="look.icon" :size />
     </span>
-    <span v-else>{{ state }}</span>
   </div>
 </template>
