@@ -113,10 +113,12 @@ const levelSteps = computed(() => stepsAtPath(props.steps, drawnPath.value) ?? {
  * root.
  *
  * A nested step's `order_index` collides with an outer step's — they are
- * both 0, 1, 2 — and a job row's `step_id` is the **outer** one's, because a
- * subworkflow's jobs belong to a separate invocation this application does
- * not record (#119). Handed straight down, the marks would put real states
- * on the wrong steps, which is worse than putting none on any.
+ * both 0, 1, 2 — and a job row's `step_id` is the **outer** one's: #119
+ * records a subworkflow's jobs against the step that embeds them, not
+ * against the nested step that ran them. Handed straight down, the marks
+ * would put real states on the wrong steps, which is worse than putting
+ * none on any. Marking the nested steps themselves would need the row to
+ * carry a step `path` rather than an index (#124).
  */
 const markedSteps = computed(() => (drawnPath.value.length === 0 ? props.marks : {}))
 
