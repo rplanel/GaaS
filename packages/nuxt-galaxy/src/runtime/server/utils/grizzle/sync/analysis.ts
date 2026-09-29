@@ -81,6 +81,76 @@ function stepGalaxyJobs(step: bt.GalaxyInvocationStep): StepGalaxyJob[] {
   return step.job_id ? [{ galaxyJobId: step.job_id }] : []
 }
 
+/**
+ * Every Galaxy job a subworkflow ran, at any depth, from the invocation it
+ * ran under.
+ *
+ * A subworkflow step runs no job of its own — `WorkflowInvocationStep.jobs`
+ * is `self.job or implicit_collection_jobs.job_list` and it has neither — so
+ * `stepGalaxyJobs` answers nothing for one and the sync used to move on,
+ * exactly as it did for a mapped step before #84. The jobs are there; they
+ * belong to a **separate invocation**, named by `subworkflow_invocation_id`.
+ *
+ * Fetched with `step_details=true` as the outer invocation is, and for the
+ * same reason: without it a mapped step *inside* the subworkflow reports
+ * `job_id: null` and says nothing about its elements' jobs.
+ *
+ * **How deep: as deep as Galaxy nests them.** A subworkflow may embed a
+ * subworkflow — the `subworkflow-nested` fixture is two levels — and any
+ * depth cap would silently restore this very gap one level below it. What
+ * bounds the walk instead is `fetched`: an invocation already walked is not
+ * walked again, so a cycle cannot spin and no job is collected twice. The
+ * caller seeds it with the analysis's own invocation.
+ */
+function subworkflowGalaxyJobsEffect(
+  subInvocationId: string,
+  galaxyLayer: Layer.Layer<bt.GalaxyFetch>,
+  fetched: Set<string>,
+): Effect.Effect<StepGalaxyJob[], SyncAnalysisError, never> {
+  return Effect.gen(function* () {
+    if (fetched.has(subInvocationId)) {
+      yield* Effect.logDebug('subworkflow invocation already walked', {
+        galaxyInvocationId: subInvocationId,
+      })
+      return []
+    }
+    fetched.add(subInvocationId)
+
+    const subInvocation = yield* bt
+      .getInvocationEffect(subInvocationId, { stepDetails: true })
+      .pipe(
+        bt.toGalaxyServiceUnavailable,
+        Effect.provide(galaxyLayer),
+        Effect.mapError(
+          error =>
+            new SyncAnalysisError({
+              message: `Failed to fetch subworkflow invocation: ${error instanceof Error ? error.message : String(error)}`,
+              cause: error,
+            }),
+        ),
+      )
+
+    const jobs: StepGalaxyJob[] = []
+    for (const step of subInvocation.steps || []) {
+      jobs.push(...stepGalaxyJobs(step))
+      if (step.subworkflow_invocation_id) {
+        jobs.push(...yield* subworkflowGalaxyJobsEffect(
+          step.subworkflow_invocation_id,
+          galaxyLayer,
+          fetched,
+        ))
+      }
+    }
+
+    yield* Effect.logDebug('subworkflow invocation walked', {
+      galaxyInvocationId: subInvocationId,
+      steps: subInvocation.steps?.length ?? 0,
+      synced: jobs.length,
+    })
+    return jobs
+  })
+}
+
 export function getAnalysisStderrEffect(
   supabase: SupabaseClient<Database>,
   analysisId: number,
@@ -298,35 +368,65 @@ export function syncAnalysisEffect(
     const recordedJobs = yield* selectRecordedJobsEffect(supabase, analysisId)
     let skipped = 0
 
-    for (const step of invocation.steps || []) {
-      const stepJobs = stepGalaxyJobs(step)
-      if (stepJobs.length === 0) {
-        continue
-      }
+    // Seeded with the analysis's own invocation, so a sub-invocation naming
+    // it back could not send the walk round in a circle (#119).
+    const fetchedInvocations = new Set<string>([analysis.galaxy_id])
 
-      const jobDbIds: number[] = []
-      for (const { galaxyJobId, reported } of stepJobs) {
-        // The invocation has already told us this job's state and update
-        // time, so a job that matches what we recorded has nothing to write
-        // and costs no `GET /api/jobs/{id}` (#106). Its row id still feeds
-        // the output sync below.
+    /**
+     * Record one job of a step under `stepId` and answer its row id.
+     *
+     * The invocation has already told us this job's state and update time,
+     * so a job that matches what we recorded has nothing to write and costs
+     * no `GET /api/jobs/{id}` (#106). Its row id still stands in for what
+     * the fetch would have returned.
+     */
+    const recordStepJob = (stepId: number, { galaxyJobId, reported }: StepGalaxyJob) =>
+      Effect.gen(function* () {
         const unchanged = unchangedRecordedJob(recordedJobs.get(galaxyJobId), reported)
         if (unchanged) {
-          jobDbIds.push(unchanged.id)
           skipped++
-          continue
+          return unchanged.id
         }
-
-        jobDbIds.push(yield* syncJobEffect(
+        return yield* syncJobEffect(
           galaxyJobId,
-          // every job of a mapped step belongs to the one step, so they all
-          // carry its `order_index`; `jobs.step_id` bears no constraint
-          step.order_index,
+          stepId,
           analysisId,
           ownerId,
           supabase,
           galaxyLayer,
-        ))
+        )
+      })
+
+    for (const step of invocation.steps || []) {
+      const jobDbIds: number[] = []
+      for (const stepJob of stepGalaxyJobs(step)) {
+        // every job of a mapped step belongs to the one step, so they all
+        // carry its `order_index`; `jobs.step_id` bears no constraint
+        jobDbIds.push(yield* recordStepJob(step.order_index, stepJob))
+      }
+
+      // A subworkflow's jobs are recorded against the **outer** step's
+      // `order_index`, never their own. A nested step's index is 0, 1, 2…
+      // like any other, so a nested job written under it would be
+      // indistinguishable from the outer step at that index. Under the
+      // outer index they cannot be confused with an outer step's own job
+      // either: a subworkflow step runs none, so every row at a subworkflow
+      // step's index came from inside it (#119).
+      //
+      // Deliberately kept out of `jobDbIds`: the output sync below takes the
+      // step's own single job, and a subworkflow step has none. Attaching an
+      // outer labelled output to whichever nested job happened to be alone
+      // would be an arbitrary choice that a second nested job silently
+      // reverses.
+      if (step.subworkflow_invocation_id) {
+        const nestedJobs = yield* subworkflowGalaxyJobsEffect(
+          step.subworkflow_invocation_id,
+          galaxyLayer,
+          fetchedInvocations,
+        )
+        for (const nestedJob of nestedJobs) {
+          yield* recordStepJob(step.order_index, nestedJob)
+        }
       }
 
       // `analysis_outputs.job_id` names a single job, and the invocation's

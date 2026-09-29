@@ -19,6 +19,32 @@ export type InvocationState = typeof InvocationStates[number]
 export type InvocationTerminalState = typeof InvocationTerminalStates[number]
 
 /**
+ * Where the scheduler has got to with one step — never what the step's jobs
+ * came to.
+ *
+ * The same three on 22.05 and on 26.1
+ * (`lib/galaxy/model/__init__.py:7942` at 22.05,
+ * `lib/galaxy/schema/invocation.py:344` at 26.1), and they are read straight
+ * off the step's own `state` column: `to_dict` once overwrote it with the
+ * job's state, and on both releases that line is commented out above
+ * "Following no longer makes sense". `scheduled` means the scheduler handled
+ * the step, not that anything it started finished, and `ready` and `new` are
+ * not job states at all.
+ *
+ * 26.1's response model widens the field to
+ * `Optional[Union[InvocationStepState, JobState]]`, but nothing writes a job
+ * state to the column: `lib/galaxy/workflow/run.py` assigns only `new`,
+ * `ready` and `scheduled`.
+ */
+export const InvocationStepStates = [
+  'new',
+  'ready',
+  'scheduled',
+] as const
+
+export type InvocationStepState = typeof InvocationStepStates[number]
+
+/**
  * One job of an invocation step, as `?step_details=true` returns it.
  *
  * The element view of a step serialises `Job.dict_collection_visible_keys`
@@ -53,12 +79,28 @@ export interface GalaxyInvocationStep {
   /**
    * The step's single job, or `null` when it has none — which a step that
    * maps over a collection also is: its jobs belong to an implicit
-   * collection, and only `jobs` reports them. Never read this as "the step
-   * ran nothing".
+   * collection, and only `jobs` reports them. A subworkflow step is `null`
+   * here too, and `subworkflow_invocation_id` is the only way to its jobs.
+   * Never read this as "the step ran nothing".
    */
   job_id: null | string
   workflow_step_id: string
-  state: JobState
+  /**
+   * The separate invocation a subworkflow step's own steps ran under, or
+   * `null` for a step that embeds no workflow.
+   *
+   * `WorkflowInvocationStep.jobs` is `self.job or
+   * implicit_collection_jobs.job_list` and a subworkflow step has neither,
+   * so both `job_id` and `jobs` are empty for one and this id is the only
+   * route to the jobs it ran (#119). Always serialised: it is in
+   * `dict_collection_visible_keys` on 22.05 and on 26.1 alike.
+   */
+  subworkflow_invocation_id: null | string
+  /**
+   * How far the scheduler has got with the step. Not a job state — see
+   * `InvocationStepState`. Nullable because the column is.
+   */
+  state: InvocationStepState | null
   order_index: number
   workflow_step_label: string
   workflow_step_uuid: string

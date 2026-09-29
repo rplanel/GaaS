@@ -27,10 +27,10 @@ import { uiColorVar } from './stateLook'
  * The glossary's eight, plus the absence of any.
  *
  * `unmarked` is not a step state: it is a step that **runs no job of its
- * own** — an input step, or a subworkflow step whose jobs belong to a
- * separate invocation this application does not record (#119). The glossary
- * says such a step is drawn without a state rather than as Not started, and
- * that is what this member is for.
+ * own** — an input step, or a subworkflow step, whose jobs are the jobs of
+ * the steps inside it and are recorded against its index (#119). The
+ * glossary says such a step is drawn without a state rather than as Not
+ * started, and that is what this member is for.
  */
 export type StepState
   = | 'unmarked'
