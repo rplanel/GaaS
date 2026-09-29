@@ -48,13 +48,17 @@ vi.mock('../../../src/runtime/server/utils/drizzle.js', () => ({
   Drizzle: MockDrizzle,
 }))
 
-vi.mock('../../../src/runtime/server/utils/grizzle/supabase.js', () => ({
+// Spread the real module rather than listing what the guard imports today:
+// a narrow factory breaks the moment the guard reaches for one more export,
+// and it breaks as "undefined is not a function" rather than as the missing
+// mock it is. The overrides below are the only parts a test needs to steer,
+// and the error classes are the real ones, so `toHttpError` matches on the
+// same `_tag` values production raises.
+vi.mock('../../../src/runtime/server/utils/grizzle/supabase.js', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../../src/runtime/server/utils/grizzle/supabase.js')>()),
   ServerSupabaseClient: MockServerSupabaseClient,
   getSupabaseUser: mockGetSupabaseUser,
   requireRole: mockRequireRole,
-  GetSupabaseUserError,
-  ForbiddenError,
-  AdminRoleCheckError,
 }))
 
 // `galaxyAccess` is deliberately NOT mocked: the levels it holds are what this

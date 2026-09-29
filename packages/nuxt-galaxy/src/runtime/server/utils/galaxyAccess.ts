@@ -51,12 +51,18 @@ export type GalaxyRouteAccess = 'open' | 'session' | 'admin'
  *   it cannot describe a revision nobody published, and that table's SELECT
  *   policy is already `TO authenticated USING (true)`.
  * - The other three are **admin**, because each reaches the service account's
- *   Galaxy rather than what GaaS published, and each is read only from an
- *   admin surface: `workflows` lists the whole stored-workflow list with
- *   `includeHidden: true` for `pages/admin/workflows.vue`, and `…/versions`
- *   and `…/revisions/:revision/tools` serve `PublishVersionModal.vue`, the
- *   latter by exporting any workflow from Galaxy, published or not. So they
- *   are withheld from a signed-in user too, not only from an anonymous one.
+ *   Galaxy rather than what GaaS published: `workflows` lists the whole
+ *   stored-workflow list with `includeHidden: true`, and `…/versions` and
+ *   `…/revisions/:revision/tools` serve `PublishVersionModal.vue`, the latter
+ *   by exporting any workflow from Galaxy, published or not. So they are
+ *   withheld from a signed-in user too, not only from an anonymous one.
+ *
+ *   What reads them is *not* only the admin pages, and assuming so is what
+ *   made this level look free: `packages/ui`'s `/galaxy/workflows` read the
+ *   listing through a plain `useFetch` with nothing gating the page, so
+ *   raising the level turned it into a silent empty list until an `admin`
+ *   route middleware was put in front of it. The level is justified by what
+ *   the endpoint exposes, not by who happens to call it today.
  */
 export const GALAXY_ROUTE_ACCESS: Readonly<Record<string, GalaxyRouteAccess>> = {
   '/api/galaxy/health': 'open',
@@ -102,15 +108,15 @@ export function isGalaxyApiPath(path: string): boolean {
 /**
  * Whether `pattern` matches `segments`, and how specifically.
  *
- * `null` for no match; otherwise the number of parameters the match spent, so
- * the caller can prefer the pattern that spent fewest. A `:param` matches any
+ * `null` for no match; otherwise how many parameters the match spent —
+ * **fewer is more specific**, and the caller keeps the lowest. A `:param` matches any
  * one segment, the empty one included: an empty middle segment satisfies a
  * parameter in h3's router — `/api/galaxy/workflows//versions` reaches the
  * versions handler with an empty `workflowId` — and a guard that rejected it
  * would send the request to a different level than the router sends it to a
  * handler.
  */
-function matchCost(pattern: string, segments: readonly string[]): number | null {
+function parametersSpent(pattern: string, segments: readonly string[]): number | null {
   const patternSegments = pattern.split('/')
   if (patternSegments.length !== segments.length) {
     return null
@@ -131,13 +137,11 @@ function matchCost(pattern: string, segments: readonly string[]): number | null 
 /**
  * The level a request at `path` must clear.
  *
- * **Unlisted paths are `admin`.** That default is the point of the whole
- * file: #99 happened because a proxy added beside eight others inherited
- * whatever the others did, and here what it inherits is the strictest answer
- * rather than the most permissive. A tenth proxy is therefore guarded on the
- * day it is registered, and the `routes.test.ts` cross-check tells whoever
- * added it to give it a level of its own — a failing test rather than an open
- * endpoint.
+ * **Unlisted paths are `admin`.** What a new proxy inherits is therefore the
+ * strictest answer rather than the most permissive (see the file header for
+ * why that matters): it is guarded on the day it is registered, and the
+ * `routes.test.ts` cross-check tells whoever added it to give it a level of
+ * its own — a failing test rather than an open endpoint.
  *
  * The same default absorbs any disagreement with Nitro's router. This matches
  * the raw path and does not percent-decode, so an encoded literal segment —
@@ -160,12 +164,12 @@ export function accessForPath(
   table: Readonly<Record<string, GalaxyRouteAccess>> = GALAXY_ROUTE_ACCESS,
 ): GalaxyRouteAccess {
   const segments = pathnameOf(path).split('/')
-  let best: { access: GalaxyRouteAccess, cost: number } | undefined
+  let best: { access: GalaxyRouteAccess, spent: number } | undefined
 
   for (const [pattern, access] of Object.entries(table)) {
-    const cost = matchCost(pattern, segments)
-    if (cost !== null && (best === undefined || cost < best.cost)) {
-      best = { access, cost }
+    const spent = parametersSpent(pattern, segments)
+    if (spent !== null && (best === undefined || spent < best.spent)) {
+      best = { access, spent }
     }
   }
 

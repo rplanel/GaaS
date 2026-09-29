@@ -376,10 +376,8 @@ export default defineNuxtModule<ModuleOptions>({
     })
 
     // Galaxy
-    // Who may call the proxies below (#99). A middleware rather than a check
-    // in each handler, so that one added later is guarded without being
-    // changed; `galaxyAccess.ts` holds the level of each route and answers
-    // `admin` for one it has never heard of.
+    // Who may call the proxies below (#99): `galaxyAccess.ts` holds each
+    // route's level and answers `admin` for one it has never heard of.
     addServerHandler({
       handler: resolver.resolve('./runtime/server/middleware/galaxyGuard'),
       middleware: true,

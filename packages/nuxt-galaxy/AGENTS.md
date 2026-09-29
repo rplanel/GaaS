@@ -88,6 +88,11 @@ src/
 │   ├── server/
 │   │   ├── api/            # API handlers
 │   │   ├── lib/migrate.js  # Migration utilities
+│   │   ├── middleware/     # Nitro server middleware, registered with
+│   │   │                   # `addServerHandler({ middleware: true })` and so
+│   │   │                   # run for every request before any route. Today:
+│   │   │                   # `galaxyGuard`, which settles who may call each
+│   │   │                   # `/api/galaxy/*` endpoint (#99)
 │   │   ├── plugins/        # Nitro plugins
 │   │   └── utils/          # Server utilities
 │   ├── shared/             # The few pure helpers BOTH halves must agree on

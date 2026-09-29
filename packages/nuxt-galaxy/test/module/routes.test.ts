@@ -100,11 +100,10 @@ describe('module server routes', () => {
 /**
  * The guard's coverage, checked against Nitro's own handler list (#99).
  *
- * Read from the registered routes rather than from a list written here, and
- * that is the whole point: nine proxies answered without a session because
- * each new one inherited the posture of its neighbours, and a hand-written
- * list of what to cover would be the same omission in test form. Whatever
- * `addServerHandler` registers under `/api/galaxy` is what gets checked.
+ * Read from the registered routes rather than from a list written here: a
+ * hand-written list of what to cover would repeat, in test form, the very
+ * omission #99 records. Whatever `addServerHandler` registers under
+ * `/api/galaxy` is what gets checked.
  *
  * Both directions, because each catches a different mistake: a route with no
  * level is an endpoint falling back on the closed default without anyone

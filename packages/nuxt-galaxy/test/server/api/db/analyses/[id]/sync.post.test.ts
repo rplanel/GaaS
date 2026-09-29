@@ -59,10 +59,6 @@ class MockServerSupabaseClient extends Context.Tag('@nuxt-galaxy/ServerSupabaseC
   static readonly Live = Layer.succeed(MockServerSupabaseClient, () => Effect.succeed(mockSupabaseClient))
 }
 
-class MockServerSupabaseClaims extends Context.Tag('@nuxt-galaxy/ServerSupabaseClaims')<MockServerSupabaseClaims, any>() {
-  static readonly Live = Layer.succeed(MockServerSupabaseClaims, () => Effect.succeed(null))
-}
-
 // Mock blendtype
 vi.mock('blendtype', async () => ({
   // The real tag, not a stand-in: `evlog-effect` builds a Layer keyed on it.
@@ -84,7 +80,6 @@ vi.mock('../../../../../../src/runtime/server/utils/drizzle', () => ({
 // Mock supabase
 vi.mock('../../../../../../src/runtime/server/utils/grizzle/supabase', () => ({
   ServerSupabaseClient: MockServerSupabaseClient,
-  ServerSupabaseClaims: MockServerSupabaseClaims,
   getSupabaseUser: vi.fn(() => Effect.succeed(mockSupabaseUser)),
   GetSupabaseUserError,
   ForbiddenError,
