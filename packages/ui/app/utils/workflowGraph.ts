@@ -14,9 +14,11 @@
  */
 
 import type { DescribedStep } from 'nuxt-galaxy'
+import type { StepMark } from './stepMarks'
 import { inputStepLabel, isInputStep } from '#imports'
 import { layout as dagreLayout, Graph } from '@dagrejs/dagre'
 import { Position } from '@vue-flow/core'
+import { UNMARKED_STEP } from './stepMarks'
 
 /** Left to right by default, top to bottom on request (Q6). */
 export type GraphDirection = 'LR' | 'TB'
@@ -73,6 +75,15 @@ export interface WorkflowGraphNodeData {
    */
   readonly sourceHandles: string[]
   readonly targetHandles: string[]
+  /**
+   * What this step's jobs are doing, or `UNMARKED_STEP` when the canvas was
+   * handed no marks — which is invoke-mode, and every canvas before #90.
+   *
+   * Always present rather than optional: the node template reads one field
+   * whichever screen mounted the canvas, and "no marks were supplied" and
+   * "this step runs no job" draw the same nothing.
+   */
+  readonly mark: StepMark
 }
 
 export interface WorkflowGraphNode {
@@ -103,6 +114,14 @@ export interface WorkflowGraphEdge {
   readonly targetHandle: string
   /** The name of the input this connection feeds, which is what the edge is labelled with. */
   readonly label: string
+  /**
+   * Whether the edge is drawn as flowing, which is Vue Flow's own `animated`.
+   *
+   * Read off the **source** step's mark. An edge into a running step is
+   * carrying nothing yet, so animating that one would say the opposite of
+   * what is happening.
+   */
+  readonly animated: boolean
 }
 
 export interface WorkflowGraph {
@@ -201,10 +220,16 @@ export function connectionsOf(step: DescribedStep): StepConnection[] {
  * consumers look a mark up by. The two are the same integer in anything
  * Galaxy exported; keeping to one of them means a definition where they are
  * not cannot half-draw.
+ *
+ * `marks` is keyed the same way, and supplying them is the whole of what
+ * makes this the canvas following an invocation rather than a second
+ * component for it (Q2'). Supplying none draws exactly what #89 drew, which
+ * is what invoke-mode wants.
  */
 export function workflowGraph(
   steps: Record<string, DescribedStep>,
   direction: GraphDirection = 'LR',
+  marks: Record<string, StepMark> = {},
 ): WorkflowGraph {
   const entries = Object.entries(steps)
   const known = new Set(entries.map(([stepId]) => stepId))
@@ -232,6 +257,7 @@ export function workflowGraph(
       acceptsInput: !isInputStep(step),
       sourceHandles: anchors[stepId]?.source ?? [],
       targetHandles: anchors[stepId]?.target ?? [],
+      mark: marks[stepId] ?? UNMARKED_STEP,
     },
   }))
 
@@ -252,6 +278,7 @@ export function workflowGraph(
         sourceHandle: connection.outputName,
         targetHandle: connection.inputName,
         label: connection.inputName,
+        animated: marks[connection.from]?.isRunning ?? false,
       }]
     }),
   )

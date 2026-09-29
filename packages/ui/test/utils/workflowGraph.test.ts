@@ -9,7 +9,9 @@
  * is what the endpoint serves.
  */
 
+import type { JobState } from 'blendtype'
 import { describe, expect, it } from 'vitest'
+import { stepMarks } from '../../app/utils/stepMarks'
 import { toolDisplayName } from '../../app/utils/toolName'
 import {
   handleSides,
@@ -285,5 +287,48 @@ describe('subworkflowTrail', () => {
 
   it('stops where the path stops resolving, at the deepest level still drawable', () => {
     expect(subworkflowTrail(steps, ['8', 'nonesuch', '8']).map(crumb => crumb.stepId)).toEqual(['8'])
+  })
+})
+
+describe('workflowGraph, marked with what a running invocation is doing', () => {
+  /** The marks a canvas is handed, derived as the panel derives them (#90). */
+  function marksFor(steps: Record<string, ReturnType<typeof aStep>>, jobs: { step_id: number, state: JobState }[]) {
+    return stepMarks(steps, jobs)
+  }
+
+  it('carries each step\'s mark onto its node', () => {
+    const steps = { 0: aStep(0), 1: aStep(1) }
+    const { nodes } = workflowGraph(steps, 'LR', marksFor(steps, [{ step_id: 0, state: 'running' }]))
+
+    expect(nodes.find(node => node.id === '0')?.data.mark.phase).toBe('running')
+    expect(nodes.find(node => node.id === '1')?.data.mark.phase).toBe('pending')
+  })
+
+  it('leaves every node unmarked when no marks are supplied', () => {
+    // Invoke-mode, and the canvas before #90: one canvas, no mode (Q2'), so
+    // supplying nothing has to draw exactly what #89 drew.
+    const { nodes, edges } = workflowGraph(describedSteps(FIXTURES.ccqtlToday))
+
+    expect(nodes.every(node => node.data.mark.phase === 'unmarked')).toBe(true)
+    expect(edges.every(edge => edge.animated === false)).toBe(true)
+  })
+
+  it('animates an edge while its source step is running, and no other', () => {
+    // AC2. The edge animates on its *source*: an edge into a running step is
+    // carrying nothing yet, and drawing it as flowing would say the opposite.
+    const steps = {
+      0: aStep(0, { type: 'data_input', tool_id: null, tool_version: null }),
+      1: aStep(1, { input_connections: { input: { id: 0, output_name: 'output' } } }),
+      2: aStep(2, { input_connections: { input: { id: 1, output_name: 'out_file1' } } }),
+    }
+    const { edges } = workflowGraph(steps, 'LR', marksFor(steps, [
+      { step_id: 1, state: 'running' },
+      { step_id: 2, state: 'queued' },
+    ]))
+
+    expect(edges.find(edge => edge.source === '1')?.animated).toBe(true)
+    // Step 0 is an input step: it runs no job, so nothing leaving it ever
+    // animates, whatever is happening downstream.
+    expect(edges.find(edge => edge.source === '0')?.animated).toBe(false)
   })
 })

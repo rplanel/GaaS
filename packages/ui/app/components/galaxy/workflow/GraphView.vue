@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DescribedStep } from 'nuxt-galaxy'
+import type { StepMark } from '../../../utils/stepMarks'
 import type { GraphDirection } from '../../../utils/workflowGraph'
 import type { GraphSelection } from './Graph.vue'
 import { computed, ref, useTemplateRef, watch } from '#imports'
@@ -18,10 +19,16 @@ import { useDefinedBreakpoints } from '../../../composables/useDefinedBreakpoint
  * which per-step marks they hand the canvas.
  */
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   /** The revision's steps, keyed by `order_index`, as the description endpoint answers them. */
   steps: Record<string, DescribedStep>
-}>()
+  /**
+   * What each step's jobs are doing, keyed as `steps` is (#90). Passed
+   * straight to the canvas; omitted by a screen that is not following an
+   * invocation.
+   */
+  marks?: Record<string, StepMark>
+}>(), { marks: () => ({}) })
 
 const { isSmallDesktopOrMobile } = useDefinedBreakpoints()
 
@@ -113,6 +120,7 @@ watch(isSmallDesktopOrMobile, () => graph.value?.fit())
           <GalaxyWorkflowGraph
             ref="graph"
             :steps="steps"
+            :marks="marks"
             :direction="direction"
             @select="next => selection = next"
           />
