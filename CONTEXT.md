@@ -57,7 +57,7 @@ One numbered operation of a workflow: an input it declares, a parameter it takes
 _Avoid_: Node, task, stage
 
 **Subworkflow**:
-A step that runs a whole workflow of its own rather than one tool. It is one step of the workflow that contains it, with one step index and one job-free place in the graph; the steps inside it have their own indices, which belong to it and not to the workflow around it. The graph draws it as a single step that opens onto that workflow's own graph, never expanded into the steps around it.
+A step that runs a whole workflow of its own rather than one tool. It is one step of the workflow that contains it, with one step index and one job-free place in the graph; the steps inside it have their own indices, which belong to it and not to the workflow around it. The graph draws it as a single step that opens onto that workflow's own graph, never expanded into the steps around it. Galaxy runs it as a separate invocation, so the jobs that ran under it are the jobs of the steps inside it and never the step's own: an analysis records every one of them against the subworkflow step's index, at whatever depth it ran, because a nested index names a step of the subworkflow and not of the workflow around it.
 _Avoid_: Nested workflow, sub-pipeline, group of steps
 
 **Mapped step**:

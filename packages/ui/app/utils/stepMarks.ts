@@ -16,11 +16,13 @@
  * because the obvious derivation says something false:
  *
  * - **A step that runs no job of its own is unmarked, never Not started.**
- *   An input step is *provided*, not waiting, and a subworkflow step's jobs
- *   belong to a separate invocation this application does not record
- *   (#119). Derived from job rows alone, both would read Not started for the
- *   whole invocation — which is what `CONTEXT.md`'s Step state entry now
- *   says they must not.
+ *   An input step is *provided*, not waiting, and a subworkflow step runs a
+ *   whole workflow rather than a tool. Derived from job rows alone, both
+ *   would read Not started for the whole invocation — which is what
+ *   `CONTEXT.md`'s Step state entry says they must not. #119 now records a
+ *   subworkflow's nested jobs *at the subworkflow step's index*, so rows do
+ *   reach one; they are the jobs of the steps inside it and not the step's
+ *   own, and the glossary still draws it without a state.
  * - **Skipped is a job row, not a missing one.** A conditional whose `when`
  *   evaluates false still gets a real job, set to `skipped` at
  *   `lib/galaxy/tools/actions/__init__.py:755`. So it needs no `when` on the

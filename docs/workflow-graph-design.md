@@ -709,6 +709,20 @@ drop-and-republish, not a migration.
    step's output is a collection under `output_collections`, and
    `analysis_outputs.job_id` names a single job — so the output-dataset sync
    stays bound to a step that ran exactly one job, as it already was.
+
+   **#119 closed the same omission one level down.** A subworkflow step has
+   neither a `job_id` nor a `jobs` array either, because its jobs belong to a
+   **separate invocation** named by `subworkflow_invocation_id`, which is now
+   fetched with `step_details=true` as the outer one is and walked to
+   whatever depth Galaxy nests it. Two things it settled: a nested job is
+   recorded at the **outer** subworkflow step's `order_index` — a nested
+   index is 0, 1, 2… like any other and would collide with an outer step's,
+   while at the outer index it cannot be confused with that step's own job,
+   since a subworkflow step runs none — and the walk is bounded by the set of
+   invocations already fetched rather than by a depth cap, which would
+   silently restore this very gap one level below itself. Q19's "the nested
+   steps are still job-free" stands: the rows exist, but they name the outer
+   step, so only an empty `GraphSelection.path` still names a step #90 marks.
 4. **Q13(a) + Q13(b)** — the normalising endpoint and the composable, reading
    the live proxy exactly as today. Zero behaviour change; buys the
    deduplication, the caching, and one copy of the widget derivation. Q22's
