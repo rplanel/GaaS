@@ -1,7 +1,9 @@
+import type { CapturedBlendTypeLog } from './fixtures'
 import { Effect } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { BlendTypeConfig, makeConfigLayer } from '../src/config'
 import { GalaxyServiceUnavailable, toGalaxyServiceUnavailable } from '../src/galaxy'
+import { createBlendTypeLoggerCaptureLayer } from './fixtures'
 
 describe('makeConfigLayer', () => {
   it('should create a layer that provides BlendTypeConfig', () =>
@@ -13,6 +15,20 @@ describe('makeConfigLayer', () => {
       Effect.provide(makeConfigLayer({ apiKey: 'my-key', url: 'https://galaxy.example.com' })),
       Effect.runPromise,
     ))
+
+  it('announces itself through a provided BlendTypeLogger', async () => {
+    const entries: CapturedBlendTypeLog[] = []
+
+    await Effect.gen(function* () {
+      yield* BlendTypeConfig
+    }).pipe(
+      Effect.provide(makeConfigLayer({ apiKey: 'my-key', url: 'https://galaxy.example.com' })),
+      Effect.provide(createBlendTypeLoggerCaptureLayer(entries)),
+      Effect.runPromise,
+    )
+
+    expect(entries).toEqual([{ level: 'info', message: 'initialized', context: {} }])
+  })
 })
 
 describe('toGalaxyServiceUnavailable', () => {

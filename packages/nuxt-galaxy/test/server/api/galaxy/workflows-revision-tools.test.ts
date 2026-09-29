@@ -42,7 +42,9 @@ const mocks = vi.hoisted(() => ({
 }))
 
 // Mock blendtype
-vi.mock('blendtype', () => ({
+vi.mock('blendtype', async () => ({
+  // The real tag, not a stand-in: `evlog-effect` builds a Layer keyed on it.
+  BlendTypeLogger: (await vi.importActual<typeof import('blendtype')>('blendtype')).BlendTypeLogger,
   exportWorkflowEffect: mocks.exportWorkflowEffect,
   toGalaxyServiceUnavailable: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
   GalaxyServiceUnavailable: MockGalaxyServiceUnavailable,

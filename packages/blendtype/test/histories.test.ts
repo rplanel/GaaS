@@ -1,6 +1,7 @@
 import type { Context } from 'effect'
 import type * as TusTypes from 'tus-js-client'
 import type { TusUploadError } from '../src/histories'
+import type { CapturedBlendTypeLog } from './fixtures'
 import { Effect, Layer, pipe } from 'effect'
 import * as tus from 'tus-js-client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -22,6 +23,7 @@ import {
   uploadWithTus,
 } from '../src/histories'
 import {
+  createBlendTypeLoggerCaptureLayer,
   createFailureLayer,
   createHttpErrorLayer,
   createLogCaptureLayer,
@@ -435,6 +437,33 @@ describe('downloadDatasetStreamEffect', () => {
     expect(logs.some(l => l.includes('state="ok"'))).toBe(true)
     expect(logs.some(l => l.includes('returning null because file_size === 0'))).toBe(true)
     expect(logs.every(l => l.includes('historyId="hid"') && l.includes('datasetId="did"') && l.includes('function="downloadDatasetStreamEffect"'))).toBe(true)
+  })
+
+  it('routes its lines through a provided BlendTypeLogger instead of the Effect logger', async () => {
+    const logs: string[] = []
+    const entries: CapturedBlendTypeLog[] = []
+    const layer = createMockGalaxyLayer({
+      'api/histories/hid/contents/did': { file_size: 0, id: 'did', state: 'ok' },
+    })
+
+    const result = await downloadDatasetStreamEffect('hid', 'did').pipe(
+      Effect.provide(layer),
+      Effect.provide(createBlendTypeLoggerCaptureLayer(entries)),
+      Effect.provide(createLogCaptureLayer(logs)),
+      Effect.runPromise,
+    )
+
+    expect(result).toBeNull()
+    expect(logs).toEqual([])
+    expect(entries).toHaveLength(3)
+    expect(entries.every(e => e.level === 'info')).toBe(true)
+    expect(entries[0]).toEqual({
+      level: 'info',
+      message: '[downloadDatasetStreamEffect] start',
+      context: { historyId: 'hid', datasetId: 'did', function: 'downloadDatasetStreamEffect' },
+    })
+    expect(entries[1]?.context).toMatchObject({ file_size: 0, state: 'ok' })
+    expect(entries[2]?.message).toContain('returning null because file_size === 0')
   })
 
   it('returns a stream for non-empty dataset', async () => {

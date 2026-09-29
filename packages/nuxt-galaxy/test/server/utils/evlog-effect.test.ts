@@ -1,7 +1,8 @@
+import { blendTypeLog, makeConfigLayer } from 'blendtype'
 import { Cause, Effect, HashMap, List, LogSpan } from 'effect'
 import { useLogger } from 'evlog'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { evlogEffectLogger, runGalaxyEffect, runTaskEffect } from '../../../src/runtime/server/utils/evlog-effect'
+import { BlendTypeLoggerEvlogLayer, evlogEffectLogger, runGalaxyEffect, runTaskEffect } from '../../../src/runtime/server/utils/evlog-effect'
 import { createMockRequestLogger } from '../setup'
 
 const mockLog = vi.hoisted(() => ({
@@ -203,5 +204,86 @@ describe('the cause of an Effect log', () => {
 
     expect(context.effectCause).toMatch(/TypeError: a real bug/)
     expect(context.effectCause).toMatch(/\n\s+at /)
+  })
+})
+
+// blendtype asks the context for a `BlendTypeLogger` rather than importing
+// evlog, so the bridge that answers it is what puts library logs on the same
+// wide event as everything else the request wrote (#13).
+describe('blendTypeLoggerEvlogLayer', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('writes to the request logger, context and all, when one is in scope', async () => {
+    const requestLog = createMockRequestLogger()
+    vi.mocked(useLogger).mockReturnValue(requestLog)
+
+    await runGalaxyEffect(
+      { path: '/api/test', method: 'GET' } as any,
+      blendTypeLog('info', 'blendtype says hello', { historyId: 'hid' }),
+    )
+
+    expect(requestLog.info).toHaveBeenCalledWith('blendtype says hello', { historyId: 'hid' })
+  })
+
+  it('maps warn and error onto the request logger', async () => {
+    const requestLog = createMockRequestLogger()
+    vi.mocked(useLogger).mockReturnValue(requestLog)
+
+    await runGalaxyEffect(
+      { path: '/api/test', method: 'GET' } as any,
+      Effect.gen(function* () {
+        yield* blendTypeLog('warn', 'a warning')
+        yield* blendTypeLog('error', 'a failure')
+      }),
+    )
+
+    expect(requestLog.warn).toHaveBeenCalledWith('a warning', {})
+    expect(requestLog.error).toHaveBeenCalledWith('a failure', {})
+  })
+
+  it('sends debug to the global evlog logger, which the request logger has no method for', async () => {
+    const requestLog = createMockRequestLogger()
+    vi.mocked(useLogger).mockReturnValue(requestLog)
+
+    await runGalaxyEffect(
+      { path: '/api/test', method: 'GET' } as any,
+      blendTypeLog('debug', 'a detail', { datasetId: 'did' }),
+    )
+
+    expect(mockLog.debug).toHaveBeenCalledWith({ message: 'a detail', datasetId: 'did' })
+    expect(requestLog.debug).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the global evlog logger with no request logger in scope', async () => {
+    await blendTypeLog('info', 'outside a request', { a: 1 }).pipe(
+      Effect.provide(BlendTypeLoggerEvlogLayer),
+      Effect.runPromise,
+    )
+
+    expect(mockLog.info).toHaveBeenCalledWith({ message: 'outside a request', a: 1 })
+  })
+
+  it('carries a log a real blendtype Effect emits onto the request event', async () => {
+    const requestLog = createMockRequestLogger()
+    vi.mocked(useLogger).mockReturnValue(requestLog)
+
+    await runGalaxyEffect(
+      { path: '/api/test', method: 'GET' } as any,
+      Effect.gen(function* () {
+        yield* Effect.void
+      }).pipe(Effect.provide(makeConfigLayer({ apiKey: 'k', url: 'https://galaxy.test' }))),
+    )
+
+    expect(requestLog.info).toHaveBeenCalledWith('initialized', {})
+  })
+
+  it('reaches a task run outside any request too', async () => {
+    const taskLog = createMockRequestLogger()
+
+    await runTaskEffect(taskLog, blendTypeLog('info', 'from a task', { analysisId: 7 }))
+
+    expect(taskLog.info).toHaveBeenCalledWith('from a task', { analysisId: 7 })
   })
 })

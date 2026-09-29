@@ -7,6 +7,7 @@ import { BlendTypeConfig } from './config'
 import { getDatasetEffect } from './datasets'
 import { extractStatusCode, formatErrorMessage, HistoryError } from './errors'
 import { GalaxyFetch, toGalaxyServiceUnavailable, withRetry } from './galaxy'
+import { blendTypeLog } from './logger'
 
 export class TusUploadError extends Data.TaggedError('TusUploadError')<{
   readonly message: string
@@ -401,9 +402,12 @@ export function downloadDatasetStream(historyId: string, datasetId: string, laye
 export function downloadDatasetStreamEffect(historyId: string, datasetId: string): Effect.Effect<ReadableStream<Uint8Array> | NodeJS.ReadableStream | null, HistoryError, GalaxyFetch> {
   return Effect.gen(function* () {
     const log = (message: string, extra: Record<string, unknown> = {}) =>
-      Effect.log(`[downloadDatasetStreamEffect] ${message}`).pipe(
-        Effect.annotateLogs({ historyId, datasetId, function: 'downloadDatasetStreamEffect', ...extra }),
-      )
+      blendTypeLog('info', `[downloadDatasetStreamEffect] ${message}`, {
+        historyId,
+        datasetId,
+        function: 'downloadDatasetStreamEffect',
+        ...extra,
+      })
 
     const fetchApi = yield* GalaxyFetch
     yield* log('start')

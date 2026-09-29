@@ -215,6 +215,7 @@ describe('workflows', () => {
 - **DO**: Use Context.Tag for dependency injection
 - **DO**: Export types from types/ directory
 - **DON'T**: Import Nuxt or Node-specific modules
+- **DO**: Log through `blendTypeLog` from `src/logger.ts`, never a logging library
 - **DON'T**: Use console.log (use Effect.Console)
 - **DON'T**: Mix sync and async without Effect
 - **DON'T**: Export untyped JavaScript

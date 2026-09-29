@@ -1,4 +1,5 @@
 import { Context, Data, Effect, Layer } from 'effect'
+import { blendTypeLog } from './logger'
 
 export interface BlendTypeConfigImpl {
   apiKey: string
@@ -15,7 +16,7 @@ export function makeConfigLayer(config: BlendTypeConfigImpl) {
   return Layer.effect(
     BlendTypeConfig,
     Effect.succeed(config).pipe(
-      Effect.tap(() => Effect.log('initialized')),
+      Effect.tap(() => blendTypeLog('info', 'initialized')),
     ),
   )
 }

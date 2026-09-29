@@ -9,7 +9,9 @@ let resolveVersion: () => Effect.Effect<unknown, unknown> = () => Effect.succeed
 // Mock blendtype. `getVersionEffect` is a value rather than a function, so it
 // is a suspended effect here to stay variable per test, and
 // `toGalaxyServiceUnavailable` is the identity so the real `.pipe` chain runs.
-vi.mock('blendtype', () => ({
+vi.mock('blendtype', async () => ({
+  // The real tag, not a stand-in: `evlog-effect` builds a Layer keyed on it.
+  BlendTypeLogger: (await vi.importActual<typeof import('blendtype')>('blendtype')).BlendTypeLogger,
   getVersionEffect: Effect.suspend(() => resolveVersion()),
   toGalaxyServiceUnavailable: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
   makeGalaxyLayer: vi.fn(() => Layer.empty),

@@ -1,7 +1,9 @@
+import type { BlendTypeLoggerImpl } from 'blendtype'
 import type { Effect as EffectType, LogSpan } from 'effect'
 import type { H3Event } from 'h3'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { Cause, Effect, HashMap, List, Logger, LogLevel } from 'effect'
+import { BlendTypeLogger } from 'blendtype'
+import { Cause, Effect, HashMap, Layer, List, Logger, LogLevel } from 'effect'
 import { log as evlogGlobal, useLogger } from 'evlog'
 
 const evlogAsyncStorage = new AsyncLocalStorage<ReturnType<typeof useLogger>>()
@@ -157,22 +159,51 @@ export const evlogEffectLogger = Logger.make((options) => {
   logToRequestLog(requestLog, level, text, context)
 })
 
-function runWithEvlogLogger<T, E>(effect: EffectType.Effect<T, E, never>): Promise<T> {
+/**
+ * Answers `blendtype`'s request for a logger with this request's evlog logger.
+ *
+ * `blendtype` never imports evlog: it yields a `BlendTypeLogger` from the
+ * Effect context and leaves the destination to whoever runs it. Providing this
+ * Layer is what puts a log a Galaxy call emits on the same wide event as the
+ * handler that made it, with the library's own context flat on the event
+ * rather than buried under `effectAnnotations` the way a plain `Effect.log`
+ * routed through {@link evlogEffectLogger} would be.
+ */
+export const blendTypeEvlogLogger: BlendTypeLoggerImpl = {
+  log: (level, message, context = {}) =>
+    Effect.sync(() => {
+      const requestLog = evlogAsyncStorage.getStore()
+      if (!requestLog) {
+        logToEvlogGlobal(level, message, context)
+        return
+      }
+      logToRequestLog(requestLog, level, message, context)
+    }),
+}
+
+/** Layer form of {@link blendTypeEvlogLogger}. */
+export const BlendTypeLoggerEvlogLayer: Layer.Layer<BlendTypeLogger> = Layer.succeed(
+  BlendTypeLogger,
+  blendTypeEvlogLogger,
+)
+
+function runWithEvlogLogger<T, E>(effect: EffectType.Effect<T, E, BlendTypeLogger>): Promise<T> {
   return Effect.runPromise(
     effect.pipe(
+      Effect.provide(BlendTypeLoggerEvlogLayer),
       Effect.provide(Logger.replace(Logger.defaultLogger, evlogEffectLogger)),
       Effect.provide(Logger.minimumLogLevel(LogLevel.Debug)),
     ),
   )
 }
 
-export function runGalaxyEffect<T, E>(event: H3Event, effect: EffectType.Effect<T, E, never>): Promise<T> {
+export function runGalaxyEffect<T, E>(event: H3Event, effect: EffectType.Effect<T, E, BlendTypeLogger>): Promise<T> {
   const requestLog = useLogger(event)
   requestLog.set({ handler: event.path, method: event.method })
 
   return evlogAsyncStorage.run(requestLog, () => runWithEvlogLogger(effect))
 }
 
-export function runTaskEffect<T, E>(taskLog: ReturnType<typeof useLogger>, effect: EffectType.Effect<T, E, never>): Promise<T> {
+export function runTaskEffect<T, E>(taskLog: ReturnType<typeof useLogger>, effect: EffectType.Effect<T, E, BlendTypeLogger>): Promise<T> {
   return evlogAsyncStorage.run(taskLog, () => runWithEvlogLogger(effect))
 }
