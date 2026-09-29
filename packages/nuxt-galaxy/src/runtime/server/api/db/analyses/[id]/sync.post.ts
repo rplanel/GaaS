@@ -6,7 +6,7 @@ import { runTask } from 'nitropack/runtime/task'
 import { Drizzle } from '../../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../../../utils/galaxy'
-import { ForbiddenError, getSupabaseUser, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from '../../../../utils/grizzle/supabase'
+import { ForbiddenError, getSupabaseUser, GetSupabaseUserError, ServerSupabaseClient } from '../../../../utils/grizzle/supabase'
 import { toHttpError } from '../../../../utils/httpError'
 
 export class NotFoundError extends Data.TaggedError('NotFoundError')<{
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     event,
     program.pipe(
       toGalaxyServiceUnavailable,
-      Effect.provide(Layer.mergeAll(Drizzle.Live, ServerSupabaseClient.Live, ServerSupabaseClaims.Live, useGalaxyLayer())),
+      Effect.provide(Layer.mergeAll(Drizzle.Live, ServerSupabaseClient.Live, useGalaxyLayer())),
       Effect.exit,
     ),
   )

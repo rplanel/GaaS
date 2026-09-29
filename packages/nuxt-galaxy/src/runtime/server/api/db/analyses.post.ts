@@ -11,7 +11,7 @@ import { useGalaxyLayer } from '../../utils/galaxy.js'
 import { runAnalysis } from '../../utils/grizzle/analyses.js'
 import { uploadDatasetsEffect } from '../../utils/grizzle/datasets'
 import { addHistoryEffect, discardPreparedHistoryEffect } from '../../utils/grizzle/histories'
-import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClaims, ServerSupabaseClient } from '../../utils/grizzle/supabase.js'
+import { getSupabaseUser, GetSupabaseUserError, ServerSupabaseClient } from '../../utils/grizzle/supabase.js'
 import { requireDatamapDeclaresInputs } from '../../utils/grizzle/workflowInputs'
 import { getWorkflowEffect, WorkflowRetiredError } from '../../utils/grizzle/workflows'
 import { checkGalaxyHealthEffect, CheckGalaxyHealthError } from '../../utils/health.js'
@@ -132,7 +132,6 @@ export default defineEventHandler<{ body: AnalysisBody }>(
     const finalLayer = Layer.mergeAll(
       Drizzle.Live,
       ServerSupabaseClient.Live,
-      ServerSupabaseClaims.Live,
       UrlFetch.Live,
     )
     const result = await runGalaxyEffect(

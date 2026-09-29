@@ -2,10 +2,8 @@ import { useRuntimeConfig } from '#imports'
 import * as bt from 'blendtype'
 import { Cause, Effect, Option } from 'effect'
 import { defineEventHandler, getRouterParam } from 'h3'
-import { Drizzle } from '../../../../utils/drizzle'
 import { runGalaxyEffect } from '../../../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../../../utils/galaxy'
-import { ServerSupabaseClaims, ServerSupabaseClient } from '../../../../utils/grizzle/supabase'
 
 /**
  * The revisions of a stored workflow, as Galaxy indexes them (ADR 0004, #73).
@@ -16,6 +14,12 @@ import { ServerSupabaseClaims, ServerSupabaseClient } from '../../../../utils/gr
  * `revision`, when it was saved and how many steps it has. Nothing is read
  * from the database here: which of them are already published is the page's
  * to know, from the versions it already lists.
+ *
+ * Administrators only, and not because of anything in this file: the level is
+ * `admin` in `galaxyAccess.ts`, and the `galaxyGuard` middleware settles it
+ * before the request arrives (#99). Until then this handler provided
+ * `ServerSupabaseClaims.Live` and read it nowhere, which made an absent check
+ * look like a considered one.
  */
 export default defineEventHandler(async (event) => {
   const { public: { galaxy: { url } } } = useRuntimeConfig()
@@ -29,9 +33,6 @@ export default defineEventHandler(async (event) => {
     return runGalaxyEffect(event, program.pipe(
       bt.toGalaxyServiceUnavailable,
       Effect.provide(useGalaxyLayer()),
-      Effect.provide(Drizzle.Live),
-      Effect.provide(ServerSupabaseClaims.Live),
-      Effect.provide(ServerSupabaseClient.Live),
       Effect.matchCause({
         onFailure: (cause) => {
           const optionFailure = Cause.failureOption(cause)
