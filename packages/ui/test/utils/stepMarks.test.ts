@@ -45,9 +45,12 @@ describe('stepMarks', () => {
   describe('a step that runs no job of its own', () => {
     // The whole of AC6. An input is *provided*, not pending: derived from job
     // rows alone it would read "not started" for the entire invocation,
-    // because Galaxy never runs a job for one. A subworkflow step is the same
-    // by a different route — its jobs belong to a separate invocation this
-    // application does not record at all (#119).
+    // because Galaxy never runs a job for one. A subworkflow step reaches
+    // the same place by a different route: it runs a whole workflow rather
+    // than a tool, and the rows #119 records under its index are the jobs of
+    // the steps inside it, not its own. Whether it should stay unmarked now
+    // that those rows exist is #124's question, and the glossary's to
+    // answer; until it does, this is what `CONTEXT.md` says.
     it.each([
       ['data_input'],
       ['parameter_input'],
