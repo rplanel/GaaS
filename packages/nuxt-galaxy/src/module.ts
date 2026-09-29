@@ -376,6 +376,14 @@ export default defineNuxtModule<ModuleOptions>({
     })
 
     // Galaxy
+    // Who may call the proxies below (#99). A middleware rather than a check
+    // in each handler, so that one added later is guarded without being
+    // changed; `galaxyAccess.ts` holds the level of each route and answers
+    // `admin` for one it has never heard of.
+    addServerHandler({
+      handler: resolver.resolve('./runtime/server/middleware/galaxyGuard'),
+      middleware: true,
+    })
     addServerHandler({
       route: '/api/galaxy/instance',
       handler: resolver.resolve('./runtime/server/api/galaxy/instance.get'),
@@ -403,12 +411,6 @@ export default defineNuxtModule<ModuleOptions>({
       method: 'get',
     })
     // workflows
-
-    addServerHandler({
-      route: '/api/galaxy/workflows/:workflowId',
-      handler: resolver.resolve('./runtime/server/api/galaxy/workflows/[workflowId].get'),
-      method: 'get',
-    })
     addServerHandler({
       route: '/api/galaxy/workflows/:workflowId/versions',
       handler: resolver.resolve('./runtime/server/api/galaxy/workflows/[workflowId]/versions.get'),
@@ -426,13 +428,6 @@ export default defineNuxtModule<ModuleOptions>({
     addServerHandler({
       route: '/api/galaxy/workflows/:workflowId/revisions/:revision/description',
       handler: resolver.resolve('./runtime/server/api/galaxy/workflows/[workflowId]/revisions/[revision]/description.get'),
-      method: 'get',
-    })
-
-    // tools
-    addServerHandler({
-      route: '/api/galaxy/tools/:toolId/:toolVersion',
-      handler: resolver.resolve('./runtime/server/api/galaxy/tools/[toolId]/[toolVersion].get'),
       method: 'get',
     })
 
