@@ -10,7 +10,7 @@ import {
   releaseSyncLock,
 } from '../../../../../src/runtime/server/utils/grizzle/sync/lock'
 import { syncOutputDatasetEffect } from '../../../../../src/runtime/server/utils/grizzle/sync/output'
-import { createFailingGalaxyLayer, createMockGalaxyLayer, createRoutedGalaxyLayer } from '../../../fixtures'
+import { createFailingGalaxyLayer, createMockGalaxyLayer, createRecordingRoutedGalaxyLayer, createRoutedGalaxyLayer } from '../../../fixtures'
 
 // Sibling helpers are imported from the implementation under test.
 const { syncAnalysisEffect, isTransientError } = await import(
@@ -422,23 +422,16 @@ describe('syncAnalysisEffect', () => {
     }
 
     it('asks Galaxy for step details, without which a mapped step reports no jobs', async () => {
-      const queries: unknown[] = []
-      const layer = Layer.effect(
-        bt.GalaxyFetch,
-        Effect.sync(() =>
-          (async (_url: string, options?: { query?: unknown }) => {
-            queries.push(options?.query)
-            return invocationWith([])
-          }) as unknown as Context.Tag.Service<typeof bt.GalaxyFetch>,
-        ),
-      )
+      const { layer, requests } = createRecordingRoutedGalaxyLayer({
+        'api/invocations/': invocationWith([]),
+      })
       const supabase = createMockSupabase({
         analysisSelectResult: { data: baseAnalysisRow, error: null },
       })
 
       await Effect.runPromise(syncAnalysisEffect(analysisId, ownerId, supabase, layer, defaultSyncConfig))
 
-      expect(queries[0]).toEqual({ step_details: true })
+      expect(requests[0]?.query).toEqual({ step_details: true })
     })
 
     it('records one job row per element, all at the step order_index', async () => {
@@ -696,8 +689,8 @@ describe('syncAnalysisEffect', () => {
       vi.mocked(syncOutputDatasetEffect).mockClear()
     })
 
-    const subInvocationId = 'galaxy-sub-invocation-1'
-    const deeperInvocationId = 'galaxy-sub-invocation-2'
+    const subworkflowInvocationId = 'galaxy-subworkflow-invocation-1'
+    const deeperInvocationId = 'galaxy-subworkflow-invocation-2'
 
     /**
      * What Galaxy returns for a subworkflow step: `job_id: null`, no `jobs`
@@ -710,13 +703,13 @@ describe('syncAnalysisEffect', () => {
         workflow_step_id: 'ws-sub',
         order_index: 2,
         workflow_step_label: 'run the subworkflow',
-        subworkflow_invocation_id: subInvocationId,
+        subworkflow_invocation_id: subworkflowInvocationId,
         ...overrides,
       })
     }
 
-    /** A sub-invocation, which is an ordinary invocation under its own id. */
-    function subInvocation(id: string, steps: bt.GalaxyInvocationStep[]): bt.GalaxyInvocation {
+    /** A subworkflow's own invocation, which is an ordinary invocation under its own id. */
+    function subworkflowInvocation(id: string, steps: bt.GalaxyInvocationStep[]): bt.GalaxyInvocation {
       return { ...invocationWith(steps), id }
     }
 
@@ -731,32 +724,12 @@ describe('syncAnalysisEffect', () => {
       })
     }
 
-    /** A Galaxy double that answers by URL and records what it was asked. */
-    function createRecordingGalaxyLayer(routes: Record<string, unknown>) {
-      const requests: { url: string, query: unknown }[] = []
-      const layer = Layer.effect(
-        bt.GalaxyFetch,
-        Effect.sync(() =>
-          (async (url: string, options?: { query?: unknown }) => {
-            requests.push({ url, query: options?.query })
-            for (const [pattern, response] of Object.entries(routes)) {
-              if (url.includes(pattern)) {
-                return response
-              }
-            }
-            throw new Error(`No mock route for URL: ${url}`)
-          }) as unknown as Context.Tag.Service<typeof bt.GalaxyFetch>,
-        ),
-      )
-      return { layer, requests }
-    }
-
-    it('records the jobs of the sub-invocation, which the step itself reports none of', async () => {
+    it('records the jobs of the separate invocation a subworkflow ran under, which the step itself reports none of', async () => {
       const supabase = createMockSupabase({
         analysisSelectResult: { data: baseAnalysisRow, error: null },
       })
       const layer = createRoutedGalaxyLayer({
-        [`api/invocations/${subInvocationId}`]: subInvocation(subInvocationId, [
+        [`api/invocations/${subworkflowInvocationId}`]: subworkflowInvocation(subworkflowInvocationId, [
           nestedToolStep(0, 'nested-job-a'),
           nestedToolStep(1, 'nested-job-b'),
         ]),
@@ -778,7 +751,7 @@ describe('syncAnalysisEffect', () => {
         analysisSelectResult: { data: baseAnalysisRow, error: null },
       })
       const layer = createRoutedGalaxyLayer({
-        [`api/invocations/${subInvocationId}`]: subInvocation(subInvocationId, [
+        [`api/invocations/${subworkflowInvocationId}`]: subworkflowInvocation(subworkflowInvocationId, [
           nestedToolStep(0, 'nested-job-a'),
         ]),
         [`api/invocations/${galaxyInvocationId}`]: invocationWith([
@@ -804,10 +777,10 @@ describe('syncAnalysisEffect', () => {
         analysisSelectResult: { data: baseAnalysisRow, error: null },
       })
       const layer = createRoutedGalaxyLayer({
-        [`api/invocations/${deeperInvocationId}`]: subInvocation(deeperInvocationId, [
+        [`api/invocations/${deeperInvocationId}`]: subworkflowInvocation(deeperInvocationId, [
           nestedToolStep(0, 'deeper-job'),
         ]),
-        [`api/invocations/${subInvocationId}`]: subInvocation(subInvocationId, [
+        [`api/invocations/${subworkflowInvocationId}`]: subworkflowInvocation(subworkflowInvocationId, [
           nestedToolStep(0, 'nested-job-a'),
           subworkflowStep({
             id: 'step-sub-sub',
@@ -828,12 +801,12 @@ describe('syncAnalysisEffect', () => {
       ])
     })
 
-    it('asks for the sub-invocation with step details, as it asks for the outer one', async () => {
+    it('asks for the subworkflow invocation with step details, as it asks for the outer one', async () => {
       const supabase = createMockSupabase({
         analysisSelectResult: { data: baseAnalysisRow, error: null },
       })
-      const { layer, requests } = createRecordingGalaxyLayer({
-        [`api/invocations/${subInvocationId}`]: subInvocation(subInvocationId, [
+      const { layer, requests } = createRecordingRoutedGalaxyLayer({
+        [`api/invocations/${subworkflowInvocationId}`]: subworkflowInvocation(subworkflowInvocationId, [
           nestedToolStep(0, 'nested-job-a'),
         ]),
         [`api/invocations/${galaxyInvocationId}`]: invocationWith([subworkflowStep()]),
@@ -843,7 +816,7 @@ describe('syncAnalysisEffect', () => {
 
       // Without it a mapped step *inside* the subworkflow reports `job_id:
       // null` and says nothing about its elements' jobs — #84 one level down.
-      const subRequest = requests.find(request => request.url.includes(subInvocationId))
+      const subRequest = requests.find(request => request.url.includes(subworkflowInvocationId))
       expect(subRequest?.query).toEqual({ step_details: true })
     })
 
@@ -851,7 +824,7 @@ describe('syncAnalysisEffect', () => {
       const supabase = createMockSupabase({
         analysisSelectResult: { data: baseAnalysisRow, error: null },
       })
-      const { layer, requests } = createRecordingGalaxyLayer({
+      const { layer, requests } = createRecordingRoutedGalaxyLayer({
         [`api/invocations/${galaxyInvocationId}`]: invocationWith([
           step({ order_index: 0, job_id: 'outer-job-0', jobs: [job('outer-job-0')] }),
         ]),
@@ -862,12 +835,12 @@ describe('syncAnalysisEffect', () => {
       expect(requests).toHaveLength(1)
     })
 
-    it('walks an invocation once, so a sub-invocation naming one already walked cannot loop', async () => {
+    it('walks an invocation once, so a subworkflow naming one already walked cannot loop', async () => {
       const supabase = createMockSupabase({
         analysisSelectResult: { data: baseAnalysisRow, error: null },
       })
-      const { layer, requests } = createRecordingGalaxyLayer({
-        [`api/invocations/${subInvocationId}`]: subInvocation(subInvocationId, [
+      const { layer, requests } = createRecordingRoutedGalaxyLayer({
+        [`api/invocations/${subworkflowInvocationId}`]: subworkflowInvocation(subworkflowInvocationId, [
           nestedToolStep(0, 'nested-job-a'),
           // Galaxy cannot produce this, and a walk with no guard would never
           // return from it.
@@ -875,7 +848,7 @@ describe('syncAnalysisEffect', () => {
             id: 'step-sub-loop',
             workflow_step_id: 'ws-sub-loop',
             order_index: 1,
-            subworkflow_invocation_id: subInvocationId,
+            subworkflow_invocation_id: subworkflowInvocationId,
           }),
           subworkflowStep({
             id: 'step-sub-root',
@@ -892,17 +865,17 @@ describe('syncAnalysisEffect', () => {
       expect(syncedJobs()).toEqual([['nested-job-a', 2]])
       expect(requests.map(request => request.url)).toEqual([
         `api/invocations/${galaxyInvocationId}`,
-        `api/invocations/${subInvocationId}`,
+        `api/invocations/${subworkflowInvocationId}`,
       ])
     })
 
-    it('writes no nested row again for a job the sub-invocation reports unchanged', async () => {
+    it('writes no nested row again for a job the subworkflow invocation reports unchanged', async () => {
       const supabase = createMockSupabase({
         analysisSelectResult: { data: baseAnalysisRow, error: null },
         recordedJobsResult: { data: [recordedRow(301, 'nested-job-a')], error: null },
       })
       const layer = createRoutedGalaxyLayer({
-        [`api/invocations/${subInvocationId}`]: subInvocation(subInvocationId, [
+        [`api/invocations/${subworkflowInvocationId}`]: subworkflowInvocation(subworkflowInvocationId, [
           step({
             id: 'step-nested-a',
             workflow_step_id: 'ws-nested-a',
@@ -935,7 +908,7 @@ describe('syncAnalysisEffect', () => {
         analysisSelectResult: { data: baseAnalysisRow, error: null },
       })
       const layer = createRoutedGalaxyLayer({
-        [`api/invocations/${subInvocationId}`]: subInvocation(subInvocationId, [
+        [`api/invocations/${subworkflowInvocationId}`]: subworkflowInvocation(subworkflowInvocationId, [
           nestedToolStep(0, 'nested-job-a'),
         ]),
         [`api/invocations/${galaxyInvocationId}`]: {
@@ -956,12 +929,12 @@ describe('syncAnalysisEffect', () => {
       expect(syncOutputDatasetEffect).not.toHaveBeenCalled()
     })
 
-    it('fails the sync when the sub-invocation cannot be fetched, rather than dropping its jobs', async () => {
+    it('fails the sync when the subworkflow invocation cannot be fetched, rather than dropping its jobs', async () => {
       const supabase = createMockSupabase({
         analysisSelectResult: { data: baseAnalysisRow, error: null },
       })
       const layer = createRoutedGalaxyLayer({
-        [`api/invocations/${subInvocationId}`]: new Error('Invocation not found'),
+        [`api/invocations/${subworkflowInvocationId}`]: new Error('Invocation not found'),
         [`api/invocations/${galaxyInvocationId}`]: invocationWith([subworkflowStep()]),
       })
 

@@ -291,14 +291,31 @@ export function createMockGalaxyLayer<T>(response: T): Layer.Layer<GalaxyFetch> 
   )
 }
 
-export function createRoutedGalaxyLayer(
+/** One call the routed Galaxy double answered, as it was asked. */
+export interface RecordedGalaxyRequest {
+  url: string
+  query: unknown
+}
+
+/**
+ * A routed Galaxy double that also keeps every request it answered, for a
+ * test that asserts on *how* Galaxy was asked rather than on the answer —
+ * which URLs, in which order, and with which query.
+ *
+ * The recorder lives beside the router rather than in a test file because a
+ * second copy drifts: one written inline dropped the `Error` entry's throw
+ * and handed a refusal back as a payload.
+ */
+export function createRecordingRoutedGalaxyLayer(
   routes: Record<string, unknown | Array<unknown | Error>>,
-): Layer.Layer<GalaxyFetch> {
+): { layer: Layer.Layer<GalaxyFetch>, requests: RecordedGalaxyRequest[] } {
   const counters: Record<string, number> = {}
-  return Layer.effect(
+  const requests: RecordedGalaxyRequest[] = []
+  const layer = Layer.effect(
     GalaxyFetch,
     Effect.sync(() =>
-      (async (url: string) => {
+      (async (url: string, options?: { query?: unknown }) => {
+        requests.push({ url, query: options?.query })
         for (const [pattern, response] of Object.entries(routes)) {
           if (url.includes(pattern)) {
             const index = counters[pattern] ?? 0
@@ -316,6 +333,13 @@ export function createRoutedGalaxyLayer(
       }) as unknown as GalaxyFetchService,
     ),
   )
+  return { layer, requests }
+}
+
+export function createRoutedGalaxyLayer(
+  routes: Record<string, unknown | Array<unknown | Error>>,
+): Layer.Layer<GalaxyFetch> {
+  return createRecordingRoutedGalaxyLayer(routes).layer
 }
 
 /** One Galaxy request, as the effect under test made it. */

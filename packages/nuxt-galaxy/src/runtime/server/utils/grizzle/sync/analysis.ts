@@ -82,6 +82,34 @@ function stepGalaxyJobs(step: bt.GalaxyInvocationStep): StepGalaxyJob[] {
 }
 
 /**
+ * One invocation, with every step's jobs on it.
+ *
+ * `step_details` is what makes a mapped step's jobs reachable: without it
+ * Galaxy reports `job_id: null` for the step and says nothing about the jobs
+ * the implicit collection holds (#84). An analysis's own invocation and a
+ * subworkflow's are read exactly alike, and differ only in what a failure is
+ * called — `what` names the one that failed, since a sync that reads several
+ * would otherwise report the same sentence for any of them.
+ */
+function fetchInvocationEffect(
+  invocationId: string,
+  galaxyLayer: Layer.Layer<bt.GalaxyFetch>,
+  what: 'invocation' | 'subworkflow invocation',
+) {
+  return bt.getInvocationEffect(invocationId, { stepDetails: true }).pipe(
+    bt.toGalaxyServiceUnavailable,
+    Effect.provide(galaxyLayer),
+    Effect.mapError(
+      error =>
+        new SyncAnalysisError({
+          message: `Failed to fetch ${what}: ${getErrorMessage(error)}`,
+          cause: error,
+        }),
+    ),
+  )
+}
+
+/**
  * Every Galaxy job a subworkflow ran, at any depth, from the invocation it
  * ran under.
  *
@@ -89,63 +117,52 @@ function stepGalaxyJobs(step: bt.GalaxyInvocationStep): StepGalaxyJob[] {
  * is `self.job or implicit_collection_jobs.job_list` and it has neither — so
  * `stepGalaxyJobs` answers nothing for one and the sync used to move on,
  * exactly as it did for a mapped step before #84. The jobs are there; they
- * belong to a **separate invocation**, named by `subworkflow_invocation_id`.
- *
- * Fetched with `step_details=true` as the outer invocation is, and for the
- * same reason: without it a mapped step *inside* the subworkflow reports
- * `job_id: null` and says nothing about its elements' jobs.
+ * belong to a **separate invocation**, named by `subworkflow_invocation_id`,
+ * and it is read with step details as the outer one is — without them a
+ * mapped step *inside* the subworkflow reports no jobs either.
  *
  * **How deep: as deep as Galaxy nests them.** A subworkflow may embed a
  * subworkflow — the `subworkflow-nested` fixture is two levels — and any
  * depth cap would silently restore this very gap one level below it. What
- * bounds the walk instead is `fetched`: an invocation already walked is not
+ * bounds the walk instead is `walkedInvocations`: one already walked is not
  * walked again, so a cycle cannot spin and no job is collected twice. The
  * caller seeds it with the analysis's own invocation.
  */
 function subworkflowGalaxyJobsEffect(
-  subInvocationId: string,
+  subworkflowInvocationId: string,
   galaxyLayer: Layer.Layer<bt.GalaxyFetch>,
-  fetched: Set<string>,
+  walkedInvocations: Set<string>,
 ): Effect.Effect<StepGalaxyJob[], SyncAnalysisError, never> {
   return Effect.gen(function* () {
-    if (fetched.has(subInvocationId)) {
-      yield* Effect.logDebug('subworkflow invocation already walked', {
-        galaxyInvocationId: subInvocationId,
+    if (walkedInvocations.has(subworkflowInvocationId)) {
+      yield* Effect.logDebug('invocation already walked', {
+        galaxyInvocationId: subworkflowInvocationId,
       })
       return []
     }
-    fetched.add(subInvocationId)
+    walkedInvocations.add(subworkflowInvocationId)
 
-    const subInvocation = yield* bt
-      .getInvocationEffect(subInvocationId, { stepDetails: true })
-      .pipe(
-        bt.toGalaxyServiceUnavailable,
-        Effect.provide(galaxyLayer),
-        Effect.mapError(
-          error =>
-            new SyncAnalysisError({
-              message: `Failed to fetch subworkflow invocation: ${error instanceof Error ? error.message : String(error)}`,
-              cause: error,
-            }),
-        ),
-      )
+    const subworkflowInvocation = yield* fetchInvocationEffect(
+      subworkflowInvocationId,
+      galaxyLayer,
+      'subworkflow invocation',
+    )
 
     const jobs: StepGalaxyJob[] = []
-    for (const step of subInvocation.steps || []) {
+    for (const step of subworkflowInvocation.steps || []) {
       jobs.push(...stepGalaxyJobs(step))
       if (step.subworkflow_invocation_id) {
         jobs.push(...yield* subworkflowGalaxyJobsEffect(
           step.subworkflow_invocation_id,
           galaxyLayer,
-          fetched,
+          walkedInvocations,
         ))
       }
     }
 
     yield* Effect.logDebug('subworkflow invocation walked', {
-      galaxyInvocationId: subInvocationId,
-      steps: subInvocation.steps?.length ?? 0,
-      synced: jobs.length,
+      galaxyInvocationId: subworkflowInvocationId,
+      steps: subworkflowInvocation.steps?.length ?? 0,
     })
     return jobs
   })
@@ -278,22 +295,7 @@ export function syncAnalysisEffect(
     }
 
     yield* Effect.logDebug('fetching invocation', { galaxyInvocationId: analysis.galaxy_id })
-    const invocation = yield* bt
-      // `step_details` is what makes a mapped step's jobs reachable: without
-      // it Galaxy reports `job_id: null` for the step and says nothing about
-      // the jobs the implicit collection holds (#84).
-      .getInvocationEffect(analysis.galaxy_id, { stepDetails: true })
-      .pipe(
-        bt.toGalaxyServiceUnavailable,
-        Effect.provide(galaxyLayer),
-        Effect.mapError(
-          error =>
-            new SyncAnalysisError({
-              message: `Failed to fetch invocation: ${error instanceof Error ? error.message : String(error)}`,
-              cause: error,
-            }),
-        ),
-      )
+    const invocation = yield* fetchInvocationEffect(analysis.galaxy_id, galaxyLayer, 'invocation')
 
     yield* Effect.logDebug('invocation state', { state: invocation.state, steps: invocation.steps?.length ?? 0 })
     let effectiveState = invocation.state
@@ -368,9 +370,9 @@ export function syncAnalysisEffect(
     const recordedJobs = yield* selectRecordedJobsEffect(supabase, analysisId)
     let skipped = 0
 
-    // Seeded with the analysis's own invocation, so a sub-invocation naming
+    // Seeded with the analysis's own invocation, so a subworkflow's naming
     // it back could not send the walk round in a circle (#119).
-    const fetchedInvocations = new Set<string>([analysis.galaxy_id])
+    const walkedInvocations = new Set<string>([analysis.galaxy_id])
 
     /**
      * Record one job of a step under `stepId` and answer its row id.
@@ -422,7 +424,7 @@ export function syncAnalysisEffect(
         const nestedJobs = yield* subworkflowGalaxyJobsEffect(
           step.subworkflow_invocation_id,
           galaxyLayer,
-          fetchedInvocations,
+          walkedInvocations,
         )
         for (const nestedJob of nestedJobs) {
           yield* recordStepJob(step.order_index, nestedJob)
