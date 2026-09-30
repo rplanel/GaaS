@@ -2,6 +2,7 @@ import type { GalaxyFetch, ToolError, WorkflowError } from 'blendtype'
 import type { PinnedTool } from './workflowTools'
 import * as bt from 'blendtype'
 import { Effect } from 'effect'
+import { galaxyHasNoSuchThing } from './galaxyHasNoSuchThing'
 import { missingToolsEffect } from './workflowTools'
 
 /**
@@ -32,17 +33,6 @@ export interface PinnedRevision {
   readonly galaxyId: string
   readonly revision: number
   readonly revisionUuid: string
-}
-
-/**
- * A 4xx from Galaxy on a read is Galaxy saying "no such thing": 404 for an
- * id it does not know, 400 for one it cannot decode or a revision index past
- * the end of the history ("Version does not exist" is a `MessageException`,
- * which Galaxy answers 400). Anything else it fails with (a 503, a network
- * error, a 500) says nothing about the version and is not read as a state.
- */
-function galaxyHasNoSuchThing(error: WorkflowError): boolean {
-  return error.statusCode === 400 || error.statusCode === 404
 }
 
 /**

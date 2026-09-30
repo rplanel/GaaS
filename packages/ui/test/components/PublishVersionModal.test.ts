@@ -28,17 +28,17 @@ function galaxyWorkflow(id: string): GalaxyWorkflowsItem {
   return { id, name: 'Satellite Finder', tags: ['name:satelliteFinder', 'version:0.12'] } as unknown as GalaxyWorkflowsItem
 }
 
-// the proxy answers the by-id proxy's envelope: the list under `data`, or an
-// error under `error` with a 200, as `runGalaxyEffect` sends it
-registerEndpoint(`/api/galaxy/workflows/${LISTED}/versions`, () => ({ data: REVISIONS, error: undefined }))
-registerEndpoint(`/api/galaxy/workflows/${UNLISTED}/versions`, () => ({
-  data: undefined,
-  error: { message: 'GalaxyServiceUnavailable', statusMessage: 'Galaxy Service @ https://galaxy.example.com is unavailable', statusCode: 503 },
-}))
+// the proxy answers the list itself, and a refusal with a status, as
+// `toHttpError` throws it (#125): Galaxy down is a 503 with the words
+// `GalaxyServiceUnavailable` carries
+registerEndpoint(`/api/galaxy/workflows/${LISTED}/versions`, () => REVISIONS)
+registerEndpoint(`/api/galaxy/workflows/${UNLISTED}/versions`, () => {
+  throw createError({ statusCode: 503, statusMessage: 'Galaxy service is unavailable' })
+})
 
 /** A stored workflow whose revisions Galaxy lists but whose tool check fails, Galaxy answering 500 on a lookup. */
 const UNCHECKED = 'wf-unchecked'
-registerEndpoint(`/api/galaxy/workflows/${UNCHECKED}/versions`, () => ({ data: REVISIONS, error: undefined }))
+registerEndpoint(`/api/galaxy/workflows/${UNCHECKED}/versions`, () => REVISIONS)
 
 const FOO = 'toolshed.g2.bx.psu.edu/repos/iuc/foo/foo/1.2.3+galaxy0'
 const BAR = 'toolshed.g2.bx.psu.edu/repos/iuc/bar/bar/2.0'
@@ -46,16 +46,17 @@ const BAR = 'toolshed.g2.bx.psu.edu/repos/iuc/bar/bar/2.0'
 // #75: the tool check of each revision, as the proxy answers it. Revision 1
 // pins two tools Galaxy does not hold at their pinned version; the other two
 // are whole. A registered path is matched literally, so one per revision.
-registerEndpoint(`/api/galaxy/workflows/${LISTED}/revisions/0/tools`, () => ({ data: { missing: [], checked: 3 }, error: undefined }))
+registerEndpoint(`/api/galaxy/workflows/${LISTED}/revisions/0/tools`, () => ({ missing: [], checked: 3 }))
 registerEndpoint(`/api/galaxy/workflows/${LISTED}/revisions/1/tools`, () => ({
-  data: { missing: [{ toolId: FOO, toolVersion: '1.2.3+galaxy0' }, { toolId: BAR, toolVersion: '2.0' }], checked: 4 },
-  error: undefined,
+  missing: [{ toolId: FOO, toolVersion: '1.2.3+galaxy0' }, { toolId: BAR, toolVersion: '2.0' }],
+  checked: 4,
 }))
-registerEndpoint(`/api/galaxy/workflows/${LISTED}/revisions/2/tools`, () => ({ data: { missing: [], checked: 4 }, error: undefined }))
-registerEndpoint(`/api/galaxy/workflows/${UNCHECKED}/revisions/2/tools`, () => ({
-  data: undefined,
-  error: { message: 'ToolError: Galaxy answered 500 for Cut1' },
-}))
+registerEndpoint(`/api/galaxy/workflows/${LISTED}/revisions/2/tools`, () => ({ missing: [], checked: 4 }))
+// what `toHttpError` answers for a failure it has no status for: the cause
+// goes to the log, the caller reads the reason phrase and nothing else
+registerEndpoint(`/api/galaxy/workflows/${UNCHECKED}/revisions/2/tools`, () => {
+  throw createError({ statusCode: 500, statusMessage: 'Internal Server Error' })
+})
 
 /** The body of the last publish request that reached the endpoint. */
 let lastBody: Record<string, unknown> | null = null
@@ -257,7 +258,11 @@ describe('the publish dialog\'s revision picker', () => {
     await mountDialog({ workflowId: UNLISTED })
 
     await vi.waitFor(() => expect(dialog()?.querySelector('[data-testid="publish-revisions-error"]')).not.toBeNull())
-    expect(dialog()!.querySelector('[data-testid="publish-revisions-error"]')!.textContent).toContain('could not be listed')
+    const alert = dialog()!.querySelector('[data-testid="publish-revisions-error"]')!.textContent!
+    expect(alert).toContain('could not be listed')
+    // not ofetch's `[GET] "/api/…": 503 …`
+    expect(alert).toContain('Galaxy is unavailable right now. Try again in a few minutes.')
+    expect(alert).not.toContain('/api/')
     expect(listedRevisions()).toHaveLength(0)
     expect(submitButton().disabled).toBe(true)
 
@@ -320,7 +325,12 @@ describe('the tool check of the selected revision', () => {
     await revisionsListed()
 
     await vi.waitFor(() => expect(dialog()?.querySelector('[data-testid="publish-tools-error"]')).not.toBeNull())
-    expect(dialog()!.querySelector('[data-testid="publish-tools-error"]')!.textContent).toContain('could not be checked')
+    const alert = dialog()!.querySelector('[data-testid="publish-tools-error"]')!.textContent!
+    expect(alert).toContain('could not be checked')
+    // the 500's reason phrase says nothing; the cause is in the server's log
+    expect(alert).toContain('Nothing is published until they have been. Something went wrong on our side. Please try again.')
+    expect(alert).not.toContain('Internal Server Error')
+    expect(alert).not.toContain('/api/')
     expect(missingToolsAlert()).toBeNull()
     expect(submitButton().disabled).toBe(true)
 

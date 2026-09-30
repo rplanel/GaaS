@@ -6,6 +6,7 @@ import type { PublishFailure } from '../../utils/publishFailure'
 import { galaxyRevisionNumber, getWorkflowTagName, getWorkflowTagVersion } from 'blendtype'
 import { log } from 'evlog/client'
 import * as z from 'zod'
+import { describeGalaxyReadFailure } from '../../utils/galaxyReadFailure'
 import { describePublishFailure } from '../../utils/publishFailure'
 
 /**
@@ -64,7 +65,7 @@ const state = reactive<Partial<Schema>>({
 const { data: revisions, error: revisionsError } = useQuery(() =>
   galaxyWorkflowRevisionsQuery({ workflowId: props.workflow.id }),
 )
-const { errorMessage: revisionsErrorMessage } = useErrorMessage(revisionsError)
+const revisionsErrorMessage = computed(() => describeGalaxyReadFailure(revisionsError.value))
 
 watch(revisionsError, (error) => {
   if (error) {
@@ -118,7 +119,7 @@ const { data: toolCheck, error: toolCheckError } = useQuery(() => ({
   ...galaxyRevisionToolsQuery({ workflowId: props.workflow.id, revision: chosenRevision.value ?? -1 }),
   enabled: chosenRevision.value !== undefined,
 }))
-const { errorMessage: toolCheckErrorMessage } = useErrorMessage(toolCheckError)
+const toolCheckErrorMessage = computed(() => describeGalaxyReadFailure(toolCheckError.value))
 
 watch(toolCheckError, (error) => {
   if (error) {
@@ -311,7 +312,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             variant="subtle"
             icon="i-lucide-circle-x"
             title="The tools could not be checked"
-            :description="`Nothing is published until they have been. ${toolCheckErrorMessage ?? ''}`"
+            :description="`Nothing is published until they have been. ${toolCheckErrorMessage}`"
           />
           <UAlert
             v-else-if="missingTools.length > 0"

@@ -37,6 +37,7 @@ const mocks = vi.hoisted(() => ({
   exportWorkflowEffect: vi.fn(),
   missingToolsEffect: vi.fn(),
   pinnedTools: vi.fn(),
+  logError: vi.fn(),
   /** The route parameters of the request under test. */
   params: { workflowId: 'galaxy-workflow-1', revision: '3' } as Record<string, string | undefined>,
 }))
@@ -46,12 +47,13 @@ vi.mock('blendtype', async () => ({
   // The real tag, not a stand-in: `evlog-effect` builds a Layer keyed on it.
   BlendTypeLogger: (await vi.importActual<typeof import('blendtype')>('blendtype')).BlendTypeLogger,
   exportWorkflowEffect: mocks.exportWorkflowEffect,
+  galaxyRevisionNumber: (await vi.importActual<typeof import('blendtype')>('blendtype')).galaxyRevisionNumber,
   toGalaxyServiceUnavailable: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
   GalaxyServiceUnavailable: MockGalaxyServiceUnavailable,
   makeGalaxyLayer: vi.fn(() => Layer.empty),
 }))
 
-// The check itself has its own tests; here it is what the envelope carries
+// The check itself has its own tests; here it is what the endpoint answers
 vi.mock('../../../../src/runtime/server/utils/grizzle/workflowTools', () => ({
   missingToolsEffect: mocks.missingToolsEffect,
   pinnedTools: mocks.pinnedTools,
@@ -71,6 +73,18 @@ vi.mock('../../../../src/runtime/server/utils/drizzle', () => ({
 vi.mock('../../../../src/runtime/server/utils/grizzle/supabase', () => ({
   ServerSupabaseClient: MockServerSupabaseClient,
   ServerSupabaseClaims: MockServerSupabaseClaims,
+}))
+
+// `toHttpError` reaches for the request logger; the handler under test has no
+// real h3 event behind it.
+vi.mock('evlog', () => ({
+  useLogger: vi.fn(() => ({
+    set: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: mocks.logError,
+  })),
+  log: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }))
 
 // Mock h3
@@ -103,17 +117,14 @@ describe('get /api/galaxy/workflows/:workflowId/revisions/:revision/tools', () =
 
     expect(mocks.exportWorkflowEffect).toHaveBeenLastCalledWith('galaxy-workflow-1', 'export', 3)
     expect(mocks.missingToolsEffect).toHaveBeenLastCalledWith(mockExport)
-    expect(result).toEqual({
-      error: undefined,
-      data: { missing: [{ toolId: FOO, toolVersion: '1.2.3+galaxy0' }], checked: 2 },
-    })
+    expect(result).toEqual({ missing: [{ toolId: FOO, toolVersion: '1.2.3+galaxy0' }], checked: 2 })
   })
 
   it('answers no tool missing, with the count checked, when Galaxy holds them all', async () => {
     const handler = await loadHandler()
     const result = await handler({} as any)
 
-    expect(result).toEqual({ error: undefined, data: { missing: [], checked: 2 } })
+    expect(result).toEqual({ missing: [], checked: 2 })
   })
 
   // Galaxy's `get_internal_version` indexes a list, so only a non-negative
@@ -133,34 +144,84 @@ describe('get /api/galaxy/workflows/:workflowId/revisions/:revision/tools', () =
     expect(mocks.exportWorkflowEffect).not.toHaveBeenCalled()
   })
 
-  it('answers an error when the request names no stored workflow', async () => {
-    mocks.params = { workflowId: undefined, revision: '3' }
+  // A middle segment, so an empty one matches the route (#125): it used to
+  // answer 200 with `{ error: {} }`, an `Error` serialised to nothing
+  it('answers 404 when the workflow segment is empty, before asking Galaxy', async () => {
+    mocks.params = { workflowId: '', revision: '3' }
 
     const handler = await loadHandler()
-    const result = await handler({} as any)
 
-    expect(result.error).toBeDefined()
-    expect(result.data).toBeUndefined()
+    await expect(handler({} as any)).rejects.toMatchObject({ statusCode: 404 })
     expect(mocks.exportWorkflowEffect).not.toHaveBeenCalled()
   })
 
-  it('answers 503 when Galaxy is unavailable, as the other Galaxy proxies do', async () => {
+  it('answers HTTP 503 when Galaxy is unavailable, as the other Galaxy proxies do', async () => {
     mocks.exportWorkflowEffect.mockReturnValue(Effect.fail(new MockGalaxyServiceUnavailable({ message: 'down' })))
 
     const handler = await loadHandler()
-    const result = await handler({} as any)
 
-    expect(result.data).toBeUndefined()
-    expect(result.error).toMatchObject({ statusCode: 503 })
+    await expect(handler({} as any)).rejects.toMatchObject({ statusCode: 503 })
   })
 
-  it('answers an error with a message for any other failure, a tool lookup Galaxy could not answer included', async () => {
-    mocks.missingToolsEffect.mockReturnValue(Effect.fail(new Error('Galaxy answered 500 for Cut1')))
+  // Galaxy answers 404 for an id it does not know, and 400 for one it cannot
+  // decode or a revision index past the end of the history: each says the
+  // revision names nothing, which is the caller's to act on rather than this
+  // server's fault to log. The sentence shows the editor's number, index + 1.
+  it.each([404, 400])('answers 404 with a sentence, and logs nothing, when Galaxy answers %i for the export', async (galaxyStatus) => {
+    mocks.exportWorkflowEffect.mockReturnValue(Effect.fail(Object.assign(new Error(`Galaxy answered ${galaxyStatus}`), { _tag: 'WorkflowError', statusCode: galaxyStatus })))
 
     const handler = await loadHandler()
-    const result = await handler({} as any)
 
-    expect(result.data).toBeUndefined()
-    expect(result.error?.message).toContain('Galaxy answered 500 for Cut1')
+    await expect(handler({} as any)).rejects.toMatchObject({
+      statusCode: 404,
+      statusMessage: 'Galaxy holds no revision 4 of stored workflow galaxy-workflow-1',
+    })
+    expect(mocks.logError).not.toHaveBeenCalled()
+  })
+
+  // a tool lookup is not the revision: a 404 there is a missing tool, which
+  // the check answers as such, and anything else from it is a fault
+  it('still answers a logged 500 when a tool lookup fails with a 4xx the check did not settle', async () => {
+    mocks.missingToolsEffect.mockReturnValue(Effect.fail(Object.assign(new Error('Galaxy answered 400 for Cut1'), { _tag: 'ToolError', statusCode: 400 })))
+
+    const handler = await loadHandler()
+
+    await expect(handler({} as any)).rejects.toMatchObject({ statusCode: 500 })
+    expect(mocks.logError).toHaveBeenCalledOnce()
+  })
+
+  it('answers a logged 500 for any other failure, a tool lookup Galaxy could not answer included, with the cause in the log and not in the answer', async () => {
+    mocks.missingToolsEffect.mockReturnValue(Effect.fail(Object.assign(new Error('Galaxy answered 500 for Cut1'), { _tag: 'WorkflowError' })))
+
+    const handler = await loadHandler()
+    const refusal = await handler({} as any).catch((error: unknown) => error)
+
+    expect(refusal).toMatchObject({ statusCode: 500, statusMessage: 'Internal Server Error' })
+    expect(JSON.stringify(refusal)).not.toContain('Cut1')
+    expect(mocks.logError).toHaveBeenCalledOnce()
+    expect(mocks.logError).toHaveBeenCalledWith(
+      'galaxy revision tools handler failed',
+      expect.objectContaining({ cause: expect.stringContaining('Galaxy answered 500 for Cut1') }),
+    )
+  })
+
+  // #125: this answered 200 with `Cause.pretty` in the body — absolute paths
+  // and the resolved effect version included — and wrote no log line at all
+  it('answers a logged 500 carrying no stack trace when the handler throws a bug', async () => {
+    mocks.pinnedTools.mockImplementation(() => {
+      throw new TypeError('cannot read x of undefined')
+    })
+
+    const handler = await loadHandler()
+    const refusal = await handler({} as any).catch((error: unknown) => error)
+
+    expect(refusal).toMatchObject({ statusCode: 500, statusMessage: 'Internal Server Error' })
+    expect(JSON.stringify(refusal)).not.toContain('cannot read x')
+    expect(JSON.stringify(refusal)).not.toMatch(/\bat \S+:\d+/)
+    expect(mocks.logError).toHaveBeenCalledOnce()
+    expect(mocks.logError).toHaveBeenCalledWith(
+      'galaxy revision tools handler failed',
+      expect.objectContaining({ cause: expect.stringContaining('cannot read x of undefined') }),
+    )
   })
 })
