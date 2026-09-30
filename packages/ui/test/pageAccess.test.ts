@@ -18,10 +18,11 @@ import { describe, expect, it } from 'vitest'
  * So the pairing is asserted rather than remembered, against the table the
  * server actually enforces rather than a copy kept here.
  *
- * A page can reach an endpoint three ways, and the scan follows all three:
- * a path it spells itself, a Colada query it names, and a component it
- * renders — to any depth. Each has a positive control below, because a scan
- * over source text that silently loses a path passes every other assertion.
+ * A page can reach an endpoint four ways, and the scan follows all four:
+ * a path it spells itself, a Colada query it names, a composable it calls,
+ * and a component it renders — the last two to any depth. Each has a
+ * positive control below, because a scan over source text that silently
+ * loses a path passes every other assertion.
  * Losing the query path is how #99 was missed in the first place: the page
  * that broke called `useFetch` directly and so appeared in no query's
  * consumer list.
@@ -29,9 +30,10 @@ import { describe, expect, it } from 'vitest'
  * What it does **not** see. Each of these passes it green, so a page that
  * reaches an endpoint this way has its gate checked by hand:
  *
- * - an endpoint reached through a composable (#127);
  * - a path assembled at runtime from pieces rather than written as one
  *   string or template;
+ * - a composable defined anywhere but `nuxt-galaxy`'s
+ *   `src/runtime/app/composables` and this layer's `app/composables`;
  * - anything outside `/api/galaxy`. Levels come from `GALAXY_ROUTE_ACCESS`
  *   alone, and an `/api/db` handler holds its own level.
  *
@@ -50,6 +52,10 @@ import { describe, expect, it } from 'vitest'
 const pagesDir = join(dirname(fileURLToPath(import.meta.url)), '../app/pages')
 const queriesDir = join(dirname(fileURLToPath(import.meta.url)), '../../nuxt-galaxy/src/runtime/app/queries')
 const componentsDir = join(dirname(fileURLToPath(import.meta.url)), '../app/components')
+const composablesDirs = [
+  join(dirname(fileURLToPath(import.meta.url)), '../../nuxt-galaxy/src/runtime/app/composables'),
+  join(dirname(fileURLToPath(import.meta.url)), '../app/composables'),
+]
 
 /**
  * Every file under `dir` with one of `extensions`, **sorted**: `readdirSync`
@@ -122,12 +128,79 @@ function queryRoutes(): Map<string, string[]> {
   return byName
 }
 
-/** The routes a source reaches by itself: the paths it spells, and the queries it names. */
-function ownRoutes(source: string, queries: Map<string, string[]>): string[] {
-  const viaQueries = [...queries.entries()]
-    .filter(([name]) => new RegExp(`\\b${name}\\b`).test(source))
+/**
+ * Whether `source` mentions `name` as a whole word — a call, an import, or a
+ * comment alike. Queries and composables are both matched this way.
+ */
+function mentions(source: string, name: string): boolean {
+  return new RegExp(`\\b${name}\\b`).test(source)
+}
+
+/**
+ * The routes a source reaches by itself: the paths it spells, and the queries
+ * and composables it names — `routesByName` maps each such name to its routes.
+ */
+function ownRoutes(source: string, routesByName: Map<string, string[]>): string[] {
+  const viaNames = [...routesByName.entries()]
+    .filter(([name]) => mentions(source, name))
     .flatMap(([, routes]) => routes)
-  return [...new Set([...galaxyRoutesIn(source), ...viaQueries])]
+  return [...new Set([...galaxyRoutesIn(source), ...viaNames])]
+}
+
+/**
+ * Fold into each item the routes of every item it `reaches`, and of every
+ * item those reach, until a pass adds nothing — so the answer is the same
+ * whatever order the items come in, and whatever the depth of the chain.
+ */
+function foldToFixpoint<T extends { readonly routes: Set<string> }>(items: readonly T[], reaches: (from: T, to: T) => boolean): void {
+  let grew = true
+  while (grew) {
+    grew = false
+    for (const from of items) {
+      for (const to of items) {
+        if (to === from || !reaches(from, to)) {
+          continue
+        }
+        for (const route of to.routes) {
+          if (!from.routes.has(route)) {
+            from.routes.add(route)
+            grew = true
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Composable name → the routes it reaches, through the queries it runs, the
+ * paths it spells, and the composables it calls, followed to a fixpoint.
+ *
+ * Composables are auto-imported, so a caller has no import line naming them
+ * and the bare name is all there is to match — the way a query is matched.
+ * Every name a file exports is credited with every route the file reaches,
+ * rather than splitting the file by function: `describeUnavailableTool`
+ * shares a file with `useGalaxyWorkflowDescription` and so is credited with
+ * the description route it never fetches. Loose again, and in the safe
+ * direction, as with `renders`.
+ */
+function composableRoutes(sources: readonly string[], queries: Map<string, string[]>): Map<string, string[]> {
+  const files = sources.map(source => ({
+    source,
+    names: [...source.matchAll(/export (?:async )?(?:function|const) (\w+)/g)].map(match => match[1]!),
+    routes: new Set(ownRoutes(source, queries)),
+  }))
+  // One composable can call another.
+  foldToFixpoint(files, (caller, callee) => callee.names.some(name => mentions(caller.source, name)))
+  const byName = new Map<string, string[]>()
+  for (const { names, routes } of files) {
+    if (routes.size > 0) {
+      for (const name of names) {
+        byName.set(name, [...routes])
+      }
+    }
+  }
+  return byName
 }
 
 /**
@@ -136,7 +209,9 @@ function ownRoutes(source: string, queries: Map<string, string[]>): string[] {
  * Nuxt names an auto-imported component after its path, so
  * `components/admin/PublishVersionModal.vue` is `<AdminPublishVersionModal>`:
  * the tag *ends with* the file's basename, whatever prefix the directories
- * give it. Matching on that ending rather than reproducing Nuxt's naming rules
+ * give it — none at all when the basename already starts with it, as
+ * `components/analysis/AnalysisHistoryPanel.vue` is `<AnalysisHistoryPanel>`
+ * (#127). Matching on that ending rather than reproducing Nuxt's naming rules
  * is deliberately loose, and loose is the safe direction here — a false match
  * can only credit a page with *more* routes, which fails the check below, never
  * with fewer, which would pass it.
@@ -144,7 +219,7 @@ function ownRoutes(source: string, queries: Map<string, string[]>): string[] {
 function renders(source: string, basename: string): boolean {
   const name = componentName(basename)
   const kebab = name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
-  return new RegExp(`<[A-Z][A-Za-z0-9]*${name}\\b`).test(source)
+  return new RegExp(`<(?:[A-Z][A-Za-z0-9]*)?${name}\\b`).test(source)
     || new RegExp(`<(?:[a-z0-9]+-)*${kebab}\\b`).test(source)
 }
 
@@ -182,34 +257,17 @@ interface ComponentReading {
  * `…/revisions/:revision/tools`, and `/admin/workflows` reaches both only by
  * rendering it.
  */
-function componentReadings(queries: Map<string, string[]>): ComponentReading[] {
+function componentReadings(routesByName: Map<string, string[]>): ComponentReading[] {
   const components = filesUnder(componentsDir, ['.vue']).map((file) => {
     const source = readFileSync(file, 'utf8')
     return {
       basename: file.slice(file.lastIndexOf('/') + 1, -'.vue'.length),
       source,
-      routes: new Set(ownRoutes(source, queries)),
+      routes: new Set(ownRoutes(source, routesByName)),
     }
   })
-  // A component can render one that renders another; keep folding children's
-  // routes into their parents until a pass adds nothing.
-  let grew = true
-  while (grew) {
-    grew = false
-    for (const parent of components) {
-      for (const child of components) {
-        if (child === parent || !renders(parent.source, child.basename)) {
-          continue
-        }
-        for (const route of child.routes) {
-          if (!parent.routes.has(route)) {
-            parent.routes.add(route)
-            grew = true
-          }
-        }
-      }
-    }
-  }
+  // A component can render one that renders another.
+  foldToFixpoint(components, (parent, child) => renders(parent.source, child.basename))
   return components
 }
 
@@ -221,13 +279,17 @@ interface PageReading {
 
 function pagesReadingGalaxy(): PageReading[] {
   const queries = queryRoutes()
-  const components = componentReadings(queries)
+  const composables = composablesDirs
+    .flatMap(dir => filesUnder(dir, ['.ts']))
+    .map(file => readFileSync(file, 'utf8'))
+  const routesByName = new Map([...queries, ...composableRoutes(composables, queries)])
+  const components = componentReadings(routesByName)
   return filesUnder(pagesDir, ['.vue']).flatMap((file) => {
     const source = readFileSync(file, 'utf8')
     const viaComponents = components
       .filter(({ basename }) => renders(source, basename))
       .flatMap(({ routes }) => [...routes])
-    const routes = [...new Set([...ownRoutes(source, queries), ...viaComponents])]
+    const routes = [...new Set([...ownRoutes(source, routesByName), ...viaComponents])]
     if (routes.length === 0) {
       return []
     }
@@ -281,6 +343,38 @@ describe('a page that reads an admin endpoint declares the admin guard (#99)', (
     // this route would vanish from the page and nothing else would notice.
     const viaComponent = readings.find(({ page }) => page.endsWith(join('admin', 'workflows.vue')))
     expect(viaComponent?.routes).toContain('/api/galaxy/workflows/:param/versions')
+  })
+
+  it('sees a component rendered under its bare name, with no directory prefix', () => {
+    // `components/analysis/AnalysisHistoryPanel.vue` is `<AnalysisHistoryPanel>`
+    // — Nuxt drops a directory prefix the basename already starts with — and
+    // `/analyses/:analysisId` reaches the description only by rendering it.
+    // Matching demanded a prefix once, so the page was credited with nothing.
+    const bare = readings.find(({ page }) => page === join('analyses', '[analysisId].vue'))
+    expect(bare?.routes).toContain('/api/galaxy/workflows/:param/revisions/:param/description')
+  })
+
+  it('sees what a page reaches only through a composable', () => {
+    // The fourth path (#127). `/workflows/:workflowId/run` reaches the
+    // description in exactly one way: `<GalaxyWorkflowInvokeForm>` calls
+    // `useGalaxyWorkflowDescription`, which runs
+    // `galaxyWorkflowDescriptionQuery`. Neither the page nor the component
+    // names the query or spells the path, so without composables this route
+    // is invisible — and so is every page reading it, if it turns `admin`.
+    const viaComposable = readings.find(({ page }) => page.endsWith(join('workflows', '[workflowId]', 'run.vue')))
+    expect(viaComposable?.routes).toContain('/api/galaxy/workflows/:param/revisions/:param/description')
+  })
+
+  it('follows a composable that calls another, to any depth', () => {
+    // No composable calls another on the way to Galaxy today, so this control
+    // runs on made-up sources. Listed caller first, so a single pass of the
+    // fold cannot reach the route and only the fixpoint does.
+    const reached = composableRoutes([
+      'export function useOuter() { return useMiddle() }',
+      'export function useMiddle() { return useInner() }',
+      'export function useInner() { return useQuery(someQuery) }',
+    ], new Map([['someQuery', ['/api/galaxy/somewhere']]]))
+    expect(reached.get('useOuter')).toEqual(['/api/galaxy/somewhere'])
   })
 
   it('leaves no page reading an admin endpoint without the guard', () => {
