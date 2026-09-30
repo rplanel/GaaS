@@ -413,18 +413,21 @@ function layOut(
 /**
  * The graph laid out, or `undefined` where dagre could not place every step.
  *
- * Not hypothetical, and not ours: dagre 3.1 pairs the dummy nodes of
- * parallel edges up while it orders a rank (`sortSubgraph`), in a record
- * keyed by one of the two. A third parallel edge overwrites the second's
- * entry, so that dummy is ordered nowhere and positioned at `NaN`; where it
- * is an edge's end dagre throws "Not possible to find intersection inside of
- * the rectangle". `conditional-repeat-runtime` is enough to set it off —
- * step 1 feeds step 2 three times and step 3 twice, and both feed step 4.
+ * Not hypothetical, and not ours. While dagre 3.1 orders a rank
+ * (`sortSubgraph`), it pairs the dummy nodes of parallel edges up in a
+ * record keyed by one of the two, so a third parallel edge overwrites the
+ * second's entry and that dummy drops out of the sort. It keeps the order it
+ * had before, which another node of its rank may now hold as well, and the
+ * layering dagre positions from keeps one node per order: whichever loses
+ * the slot is never placed, and where it is an edge's end dagre throws "Not
+ * possible to find intersection inside of the rectangle".
+ * `conditional-repeat-runtime` is enough to set it off — step 1 feeds step 2
+ * three times and step 3 twice, and both feed step 4.
  *
- * Where the lost dummy is not an edge's end, dagre returns normally with the
- * `NaN` inside that edge's route, and that layout is kept: every step is
- * placed, and Vue Flow routes its own edges, so no route of dagre's is ever
- * drawn. The steps are checked all the same, because a step at `NaN` is one
+ * Where the node left unplaced is not an edge's end, dagre returns normally
+ * with a `NaN` inside that edge's route, and that layout is kept: every step
+ * is placed, and Vue Flow routes its own edges, so no route of dagre's is
+ * ever drawn. The steps are checked all the same, because a step at `NaN` is one
  * Vue Flow would silently leave out — though dagre has not been seen to put
  * one there without throwing.
  *
