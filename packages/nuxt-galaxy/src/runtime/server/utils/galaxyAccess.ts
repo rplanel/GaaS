@@ -8,6 +8,10 @@
  * one. This table is that place, and `galaxyGuard` is the single reader of
  * it.
  *
+ * Raising a level here can blank a page that reads the endpoint, since pages
+ * are not route-gated. `.agents/skills/endpoint-blast-radius` is the
+ * procedure for finding every such page before the change lands.
+ *
  * Three levels, named for the words the rest of the server already uses —
  * `httpError.ts` says "a caller with no session", `state.get.ts` says "a
  * session is required, as for every version endpoint":
