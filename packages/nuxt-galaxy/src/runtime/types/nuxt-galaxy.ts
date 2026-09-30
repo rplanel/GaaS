@@ -137,6 +137,21 @@ export interface UpdatedAnalysisLog extends Sync {
  */
 export type { AnalysisBody } from '../server/utils/analysisBody'
 /**
+ * Who may call each `/api/galaxy/*` endpoint (#99), published so that a layer
+ * consuming this module can check its own pages against it.
+ *
+ * A page that reads an `admin` endpoint needs an admin route guard of its own,
+ * and nothing tells it so: the server answers 403 and a page that does not
+ * look at the status renders an empty list instead. That is what happened to
+ * `@gaas/ui`'s `/galaxy/workflows` when the level was raised. Exporting the
+ * table lets a consumer assert the pairing rather than remember it.
+ *
+ * Safe on this entry despite living under `server/`: the module imports
+ * nothing and holds no state — it is a table and two pure functions.
+ */
+export { accessForPath, GALAXY_ROUTE_ACCESS, isGalaxyApiPath } from '../server/utils/galaxyAccess'
+export type { GalaxyRouteAccess } from '../server/utils/galaxyAccess'
+/**
  * One step and one declared input of a revision, in the single shape this
  * application describes a workflow in since #88 — normalised from the stored
  * definition, rather than either the live Galaxy payload's spelling or the

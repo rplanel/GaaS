@@ -42,6 +42,14 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   breadcrumbsItems: undefined,
 })
+
+// Everything this page lists comes from `GET /api/galaxy/workflows`, and its
+// publish dialog reads `…/versions` and `…/revisions/:revision/tools`: all three
+// are admin-only (#99). The server refusing is what protects the data; this is
+// what keeps a non-administrator from being shown a page of refusals.
+definePageMeta({
+  middleware: 'admin',
+})
 const breadcrumbsItems = toRef(() => props.breadcrumbsItems)
 
 const toast = useToast()
