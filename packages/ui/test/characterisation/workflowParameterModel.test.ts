@@ -485,8 +485,8 @@ describe('what a step actually puts on screen', () => {
     expect(declaredParameterNames(buildListInputs)).toEqual([
       'datasets_*|id_cond|id_select',
       // `case2` is the `manual` branch, whose one input is a `text`
-      // parameter — declared, offered, and still rendered as nothing,
-      // because no component is mapped for `text` (#113).
+      // parameter — declared, offered, and since #113 mapped to a widget,
+      // though no block of this revision is on that case to show one.
       'datasets_*|id_cond|case2|identifier',
     ])
 

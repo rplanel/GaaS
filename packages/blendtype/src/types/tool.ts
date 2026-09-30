@@ -4,6 +4,7 @@ export type GalaxyToolParameters = GalaxySelectToolParameter
   | GalaxyConditionalParameter
   | GalaxyIntegerToolParameter
   | GalaxyFloatToolParameter
+  | GalaxyTextToolParameter
   | GalaxySectionToolParameter
   | GalaxyRepeatToolParameter
 
@@ -17,13 +18,13 @@ export type GalaxyToolParameterValue = string | string[] | GalaxyDataToolValue
 /**
  * The `type` a tool's `to_dict` writes for a parameter or a group.
  *
- * Not the whole of Galaxy's list, and never was: `text` and `data_collection`
- * are both declared by recorded tools and neither is here (#113, #114). What
- * is here is what a component is mapped for — `useGalaxyToolInputComponent`
- * reads this union as its key set, so a member without a component renders a
- * parameter as nothing at all, which is the defect #101 was.
+ * Not the whole of Galaxy's list, and never was: `data_collection` is
+ * declared by recorded tools and is not here (#114). What is here is what a
+ * component is mapped for — `useGalaxyToolInputComponent` reads this union as
+ * its key set, so a member without a component renders a parameter as
+ * nothing at all, which is the defect #101 was and #113 was again for `text`.
  */
-export type GalaxyToolParameterType = 'select' | 'boolean' | 'data' | 'float' | 'conditional' | 'integer' | 'section' | 'repeat'
+export type GalaxyToolParameterType = 'select' | 'boolean' | 'data' | 'float' | 'conditional' | 'integer' | 'text' | 'section' | 'repeat'
 interface BaseToolParameter {
   name: string
   label: string
@@ -194,6 +195,72 @@ export interface GalaxyIntegerToolParameter extends BaseToolParameter {
   max: number
   value: string
   area: boolean
+}
+
+/**
+ * A parameter that takes any text (#113) — and the class Galaxy's integer and
+ * float parameters subclass, which is where their `area` comes from.
+ *
+ * `to_dict` writes `ToolParameter.dict_collection_visible_keys` and then
+ * `model_class`, `optional`, `hidden`, `is_dynamic` and `value`, and
+ * `TextToolParameter.to_dict` adds `area` and `datalist` — the same at 22.05
+ * (`tools/parameters/basic.py:156`, `:377-383`) and 26.1 (`:221`, `:465-471`).
+ * 26.1's visible keys have also gained `help_format`, which every parameter
+ * kind carries rather than this one, so it is not declared here.
+ *
+ * Seven are recorded: `add_covar`, `strat_covar` and `xp_desc` at the top
+ * level of `ccqtl-today` at 22.05, and at 26.1 `identifier` and
+ * `suffix_pattern` inside the cases of two conditionals of
+ * `conditional-repeat-runtime`, the second declared in three cases.
+ */
+export interface GalaxyTextToolParameter extends BaseToolParameter {
+  model_class: 'TextToolParameter'
+  type: Extract<GalaxyToolParameterType, 'text'>
+  /**
+   * The tool's default, as the serializer that writes a step's saved value
+   * writes it — so `string | null` here is also what a saved text parameter
+   * holds, on both releases, by two different routes.
+   *
+   * - 22.05: `TextToolParameter` inherits `SimpleTextToolParameter.to_json`
+   *   (`basic.py:335-341`), which writes `None` as `""` unless the parameter
+   *   is `optional`, and anything else as `unicodify(value)`.
+   * - 26.1: that override is gone, so it inherits `ToolParameter.to_json`
+   *   (`:278-280`), a bare `unicodify(value)` — and `unicodify(None)` is
+   *   `None` (`util/__init__.py:1230`). A required parameter declaring no
+   *   default therefore answers `""` at 22.05 and `null` at 26.1.
+   *
+   * #113 said the whole of this was `ToolParameter.to_json`, which is only
+   * the 26.1 half. Recorded: `""` on the three 22.05 parameters, `null` on
+   * `identifier` and `"_#"` on `suffix_pattern` at 26.1.
+   */
+  value: string | null
+  /**
+   * Weaker than the word suggests, and weaker at 22.05 than at 26.1.
+   *
+   * On the server, all it decides about a value that arrives is whether an
+   * **empty** one skips the tool's validators: `ToolParameter.validate`
+   * returns early `if value in ["", None] and self.optional` and otherwise
+   * runs them (`basic.py:288` at 22.05, `:356` at 26.1), so a parameter with
+   * no validators accepts `""` whatever this says. (At 22.05 it also picks
+   * what a missing value is written as — see `value`.) There it is the
+   * `optional` attribute, defaulting to `false` (`:329`); 26.1 infers it for
+   * a text parameter declaring none, as optional exactly when its validators
+   * accept `""` (`text_input_is_optional`, `tool_util/parser/util.py:90`).
+   *
+   * So `false` does not mean the parameter must be filled in: all three of
+   * `ccqtl-today`'s are `false`, save `""` and run that way in production —
+   * `xp_desc` is even labelled "(optional)".
+   */
+  optional: boolean
+  /** Whether the tool asks for a multi-line box rather than a single line. */
+  area: boolean
+  /**
+   * Suggestions built from the parameter's `<option>` children — never a
+   * restriction on what may be typed. `{"label": title, "value": value}` per
+   * option on both releases, the label falling back to the value; `[]` on
+   * every recorded text parameter, so this shape is read off the source.
+   */
+  datalist: { label: string, value: string }[]
 }
 
 export interface GalaxyConditionalCase {

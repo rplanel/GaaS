@@ -64,9 +64,10 @@ const parametersInputsComponent = toRef(() => props.parametersInputsComponent)
  * the type it really receives, so the declaration is honest even where
  * nothing reads it.
  *
- * Only `BooleanToolParameter` has been through that second half. The other
- * five are untouched and none of their declarations has been measured
- * against a recording: `modelValue` is `string` on `FloatToolParameter`,
+ * `BooleanToolParameter` has been through that second half (#111), and
+ * `TextToolParameter` was written through it (#113). The other five are
+ * untouched and none of their declarations has been measured against a
+ * recording: `modelValue` is `string` on `FloatToolParameter`,
  * `number` on `IntegerToolParameter`, `any` on `DataToolParameter`,
  * `{ __current_case__: number } & Record<string, string>` on
  * `GalaxyConditional`, and `string` / `string[]` on `SelectToolParameter`
