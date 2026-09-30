@@ -17,6 +17,7 @@ import {
   GalaxyRepeatToolParameter,
   GalaxySectionToolParameter,
   GalaxySelectToolParameter,
+  GalaxyTextToolParameter,
 } from '#components'
 import { computed, shallowRef, toValue } from 'vue'
 
@@ -36,10 +37,11 @@ export function useGalaxyToolInputComponent(toolParameters: MaybeRef<GalaxyToolP
    *
    * `section` and `repeat` joined it with #101. Neither is a widget: both are
    * containers that render their own children through this same map, which is
-   * how a parameter at any depth reaches a component. `text` and
-   * `data_collection` are still missing, for different reasons — `text` has
-   * no component yet (#113) and a `data_collection` is fed by an edge, so the
-   * filter drops it before this map is consulted (#114).
+   * how a parameter at any depth reaches a component. `text` joined it with
+   * #113, having been missing from both sides — three of `ccqtl-today`'s
+   * top-level parameters rendered as nothing. `data_collection` is the one
+   * still missing, and on purpose: it is fed by an edge, so the filter drops
+   * it before this map is consulted (#114).
    */
   const classToComponent = shallowRef({
     select: GalaxySelectToolParameter,
@@ -48,6 +50,7 @@ export function useGalaxyToolInputComponent(toolParameters: MaybeRef<GalaxyToolP
     data: GalaxyDataToolParameter,
     conditional: GalaxyConditional,
     integer: GalaxyIntegerToolParameter,
+    text: GalaxyTextToolParameter,
     section: GalaxySectionToolParameter,
     repeat: GalaxyRepeatToolParameter,
   })

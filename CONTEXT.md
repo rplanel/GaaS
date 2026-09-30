@@ -81,7 +81,7 @@ The part of a request to start an analysis that says which dataset goes to which
 _Avoid_: Inputs object, input mapping, dataset map
 
 **Parameter**:
-A value a step takes, as against an input, which is a dataset it takes. A workflow's author fixes a parameter when they save the workflow, and an analysis may submit its own value for any of them; for a parameter nobody supplies, Galaxy uses the tool's own default.
+A value a step takes, as against an input, which is a dataset it takes. A workflow's author fixes a parameter when they save the workflow, and an analysis may submit its own value for any of them; for a parameter nobody supplies, Galaxy uses the tool's own default. A tool may declare a parameter *optional*, and the form says so beside its label. Being optional only excuses an empty string from the tool's own checks, so a parameter not declared optional is not marked required: whether an empty one is refused is up to those checks.
 _Avoid_: Setting, option, argument, field
 
 **Conditional**:

@@ -46,11 +46,14 @@
  * widened the tool-side walk from `data` parameters to _every_ parameter,
  * which is what would have caught them and why #102's narrower walk did not.
  *
- * **Still out of scope.** `text`, `repeat`, `section` and `data_collection`
- * are absent from `GalaxyToolParameterType` altogether. Those are parameter
- * _kinds_ rather than values, three of them #101's, and it is why the walk
- * below goes *through* a section or a repeat to reach what is nested inside
- * without typing the section or the repeat itself. `UNMODELLED_KINDS` is where
+ * **Still out of scope.** Four parameter _kinds_ are walked past rather than
+ * checked. `repeat` and `section` are groups, typed by #101 but carrying no
+ * `value` of their own, which is why the walk below goes *through* them to
+ * reach what is nested inside without typing the group itself.
+ * `data_collection` is absent from `GalaxyToolParameterType` altogether
+ * (#114). And `text` has been typed since #113, whose tests drive the widget
+ * from its recorded values (`TextToolParameter.test.ts`) and left this walk as
+ * it was, so its `value` is not admitted here yet. `UNCHECKED_KINDS` is where
  * that set is pinned, so a recording bringing a fifth announces itself.
  */
 
@@ -436,33 +439,33 @@ function declaredParameters(tool: unknown, prefix = ''): DeclaredParameter[] {
 }
 
 /**
- * The `model_class`es this project declares no type for, and so cannot check a
- * `value` against.
+ * The `model_class`es whose `value` this walk does not check.
  *
  * Named rather than skipped: asserted as an exact set below, so a recording
- * that brings a *new* unmodelled kind fails a test instead of being walked
- * past in silence. Every one of these is #101's — three nesting kinds and
- * `data_collection` — except `TextToolParameter`, which is simply absent from
- * `GalaxyToolParameterType` and has no ticket of its own yet.
+ * that brings a *new* unchecked kind fails a test instead of being walked
+ * past in silence. `Repeat` and `Section` are groups with no `value` to check,
+ * `DataCollectionToolParameter` has no type at all (#114), and
+ * `TextToolParameter` has had one since #113 that this walk has not been
+ * taught — the header says why.
  */
-const UNMODELLED_KINDS = ['DataCollectionToolParameter', 'Repeat', 'Section', 'TextToolParameter']
+const UNCHECKED_KINDS = ['DataCollectionToolParameter', 'Repeat', 'Section', 'TextToolParameter']
 
-/** A `model_class` whose `value` nothing here could check, or `undefined` when it was checked. */
+/** A `model_class` whose `value` this walk did not check, or `undefined` when it was checked. */
 type UncheckedKind = string | undefined
 
 /**
  * One declared parameter's `value`, admitted against the type its
  * `model_class` names.
  *
- * Answers the `model_class` when there is no declared type to check the value
- * against, so the caller can pin that set rather than lose it — see
- * `UNMODELLED_KINDS`. A kind with a type, and a kind that carries no `value`
- * of its own, both answer `undefined`.
+ * Answers the `model_class` of a kind in `UNCHECKED_KINDS`, or of one nobody
+ * has decided about, so the caller can pin that set rather than lose it. A
+ * kind this walk checks answers `undefined`, and so does a conditional, which
+ * carries no `value` of its own.
  */
 function admitDeclaredValue(where: string, node: Record<string, unknown>, tally: Tally): UncheckedKind {
   const kind = String(node.model_class)
   const value = node.value
-  if (kind === 'Conditional' || UNMODELLED_KINDS.includes(kind)) {
+  if (kind === 'Conditional' || UNCHECKED_KINDS.includes(kind)) {
     // A conditional carries no `value` of its own — `test_param` does, and the
     // walk hands that over separately — so it is checked, not unchecked.
     return kind === 'Conditional' ? undefined : kind
@@ -494,7 +497,7 @@ function admitDeclaredValue(where: string, node: Record<string, unknown>, tally:
       admitNumericParameterValue(where, value)
       return undefined
     default:
-      // A kind absent from `UNMODELLED_KINDS` and from the arms above is one
+      // A kind absent from `UNCHECKED_KINDS` and from the arms above is one
       // nobody has decided about. Counted a moment ago, so undo that: it was
       // not checked against anything.
       tally.placed -= 1
@@ -564,21 +567,22 @@ describe('the value of every recorded parameter is one its declared type admits'
       expect(refused).toEqual([])
       expect(placed).toBeGreaterThan(0)
       // Every kind walked past is one this project declares no type for.
-      expect(unchecked.filter(kind => !UNMODELLED_KINDS.includes(kind))).toEqual([])
+      expect(unchecked.filter(kind => !UNCHECKED_KINDS.includes(kind))).toEqual([])
     })
   }
 })
 
-describe('the kinds the recordings carry that nothing here types', () => {
-  it('are the four #101 and the text parameter owe, and no others', () => {
+describe('the kinds the recordings carry that this walk does not check', () => {
+  it('are the two groups, the data collection and the text parameter, and no others', () => {
     // Across every recording at once, where the suite above asks per fixture:
     // no single one carries all four, so only the union is the whole set. Read
     // off the recordings rather than listed by hand, so a re-recording
     // bringing a fifth kind fails here rather than being walked past.
-    // `Section`, `Repeat` and `DataCollectionToolParameter` are #101's;
-    // `TextToolParameter` has no ticket yet and is the one worth noticing.
+    // `Section` and `Repeat` carry no `value`, `DataCollectionToolParameter`
+    // is #114's, and `TextToolParameter` is typed since #113 but not admitted
+    // here — see `UNCHECKED_KINDS`.
     const { unchecked } = walkDeclaredValues(Object.values(FIXTURES).map(loadFixture))
 
-    expect(unchecked).toEqual(UNMODELLED_KINDS)
+    expect(unchecked).toEqual(UNCHECKED_KINDS)
   })
 })

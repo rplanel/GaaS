@@ -19,49 +19,14 @@
  * holds that case, and it says so.
  */
 
-import type { GalaxyBooleanToolParameter, GalaxyTool, WorkflowParameterValue } from 'blendtype'
-import type { WorkflowFixture } from '../characterisation/fixtures'
+import type { GalaxyBooleanToolParameter, WorkflowParameterValue } from 'blendtype'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
 import BooleanToolParameter from '../../app/components/galaxy/BooleanToolParameter.vue'
-import { FIXTURES, loadFixture } from '../characterisation/fixtures'
+import { declaredParameter, FIXTURES, loadFixture, savedValue } from '../characterisation/fixtures'
 
 const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
 const ccqtl = loadFixture(FIXTURES.ccqtlToday)
-
-/**
- * The recorded declaration of one boolean parameter of the tool one step
- * runs, by name, top level only.
- *
- * Keyed off the step rather than off a literal tool id, the way
- * `workflowParameterModel.test.ts` does it: a re-recording that moves to a
- * new tool version leaves a literal resolving to `undefined` behind a `!`,
- * and this fails with the step's own id instead.
- */
-function booleanParameter(fixture: WorkflowFixture, step: string, name: string): GalaxyBooleanToolParameter {
-  const definition = fixture.live.steps[step]
-  const tool: GalaxyTool | undefined = fixture.tools[`${definition?.tool_id}@${definition?.tool_version}`]
-  if (!tool) {
-    throw new Error(`step ${step} of ${fixture.slug} recorded no tool`)
-  }
-  const found = tool.inputs.find(input => input.name === name)
-  if (!found) {
-    throw new Error(`${tool.id} declares no ${name}`)
-  }
-  if (found.type !== 'boolean') {
-    throw new TypeError(`${name} of ${tool.id} is a ${found.type}, not a boolean`)
-  }
-  return found
-}
-
-/** What the revision saved for one top-level parameter of one step. */
-function savedValue(fixture: WorkflowFixture, step: string, name: string): WorkflowParameterValue {
-  const inputs = fixture.live.steps[step]?.tool_inputs
-  if (!inputs || !(name in inputs)) {
-    throw new Error(`step ${step} of ${fixture.slug} saved no ${name}`)
-  }
-  return inputs[name]!
-}
 
 async function mountWith(parameter: GalaxyBooleanToolParameter, modelValue: WorkflowParameterValue, variant: 'form' | 'display' = 'form') {
   return mountSuspended(BooleanToolParameter, {
@@ -79,7 +44,7 @@ function isOn(html: string): boolean {
 }
 
 /** `integron_finder`'s `--gbk` flag, the parameter #111 was found on. */
-const gbk = booleanParameter(nested, '1', 'gbk')
+const gbk = declaredParameter(nested, '1', 'gbk', 'boolean')
 
 describe('booleanToolParameter — the value the workflow saved', () => {
   describe('26.1, where the saved value is a real boolean', () => {
@@ -103,7 +68,7 @@ describe('booleanToolParameter — the value the workflow saved', () => {
       // the one boolean of this tool whose `truevalue` *is* `"true"` — the
       // shape the old comparison got right by accident — so this is the
       // assertion that says the rewrite did not break the case that worked.
-      const noLogfile = booleanParameter(nested, '1', 'no_logfile')
+      const noLogfile = declaredParameter(nested, '1', 'no_logfile', 'boolean')
       expect(noLogfile.truevalue).toBe('true')
       expect(savedValue(nested, '1', 'no_logfile')).toBe(false)
       const component = await mountWith(noLogfile, savedValue(nested, '1', 'no_logfile'))
@@ -120,7 +85,7 @@ describe('booleanToolParameter — the value the workflow saved', () => {
   })
 
   describe('22.05, where the saved value is a string', () => {
-    const adjust = booleanParameter(ccqtl, '5', 'adjust')
+    const adjust = declaredParameter(ccqtl, '5', 'adjust', 'boolean')
 
     it('shows off for a saved "false"', async () => {
       expect(savedValue(ccqtl, '5', 'adjust')).toBe('false')

@@ -11,6 +11,10 @@
  * So this drives the map as well as the containers, through the real props
  * `InvokeForm` builds.
  *
+ * #113 was the same defect for `text`, and is read here for the same reason:
+ * `TextToolParameter.test.ts` says what the widget does, and only this says
+ * the map chooses it for the three text parameters of `ccqtl-today`.
+ *
  * Recorded payloads throughout, for the reason `BooleanToolParameter.test.ts`
  * gives: what `Step.vue` hands a widget is not typechecked, so a hand-written
  * fixture can only carry shapes somebody already thought of.
@@ -18,6 +22,7 @@
 
 import type { WorkflowToolParameters } from 'blendtype'
 import type { DescribedStep } from 'nuxt-galaxy'
+import type { WorkflowFixture } from '../characterisation/fixtures'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
 import { toValue } from 'vue'
@@ -25,9 +30,10 @@ import BooleanToolParameter from '../../app/components/galaxy/BooleanToolParamet
 import IntegerToolParameter from '../../app/components/galaxy/IntegerToolParameter.vue'
 import Step from '../../app/components/galaxy/workflow/Step.vue'
 import { useGalaxyToolInputComponent } from '../../app/composables/galaxy/useGalaxyToolInputComponent'
-import { FIXTURES, loadFixture, toolOfStep } from '../characterisation/fixtures'
+import { declaredParameter, FIXTURES, loadFixture, toolOfStep } from '../characterisation/fixtures'
 
 const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
+const ccqtl = loadFixture(FIXTURES.ccqtlToday)
 
 /**
  * One step's panel, built the way `InvokeForm` builds it: the offered
@@ -36,9 +42,9 @@ const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
  * a copy because the panel writes into it, and the fixture is shared with
  * every other test in the file.
  */
-async function mountStep(step: string, variant: 'form' | 'display' = 'form') {
-  const definition = nested.live.steps[step]!
-  const toolParameters = offeredToolInputs(toolOfStep(nested, step).inputs)
+async function mountStep(step: string, variant: 'form' | 'display' = 'form', fixture: WorkflowFixture = nested) {
+  const definition = fixture.live.steps[step]!
+  const toolParameters = offeredToolInputs(toolOfStep(fixture, step).inputs)
   const { inputComponentsObject } = useGalaxyToolInputComponent(toolParameters)
   const workflowParametersModel = structuredClone(definition.tool_inputs) as WorkflowToolParameters
 
@@ -115,5 +121,39 @@ describe('a step whose tool declares a repeat', () => {
     expect(wrapper.find('[data-testid="section-settings"]').exists()).toBe(true)
     const { wrapper: repeated } = await mountStep('2', 'display')
     expect(repeated.findAll('[data-testid^="repeat-datasets-"]')).toHaveLength(5)
+  })
+})
+
+describe('a step whose tool declares a text parameter', () => {
+  // #113, and live today rather than waiting on a recording: the three sit at
+  // the top level of `ccqtl-today`, Pasteur's own production workflow at
+  // 22.05, one per step. `text` was in neither `GalaxyToolParameterType` nor
+  // the component map, so each resolved to `undefined` and rendered as
+  // nothing at all — the failure #101 fixed for a section and a repeat.
+  it.each([
+    { step: '2', name: 'xp_desc' },
+    { step: '3', name: 'add_covar' },
+    { step: '4', name: 'strat_covar' },
+  ])('offers step $step its $name, labelled, with a box to type in', async ({ step, name }) => {
+    // Throws unless the recording declares it a `text` parameter.
+    const { label } = declaredParameter(ccqtl, step, name, 'text')
+    expect(label).not.toBe('')
+
+    const { wrapper } = await mountStep(step, 'form', ccqtl)
+
+    expect(wrapper.find(`input[name="${name}"]`).exists()).toBe(true)
+    expect(wrapper.text()).toContain(label)
+  })
+
+  it('writes what the reader types back into the step model', async () => {
+    // Starting from what the recording saved — the `""` every analysis of
+    // this workflow has sent in production — so the change is measured
+    // against Galaxy's own value rather than one written here.
+    const { wrapper, workflowParametersModel } = await mountStep('3', 'form', ccqtl)
+    expect(workflowParametersModel.add_covar).toBe('')
+
+    await wrapper.get('input[name="add_covar"]').setValue('covar1,Sex')
+
+    expect(workflowParametersModel.add_covar).toBe('covar1,Sex')
   })
 })

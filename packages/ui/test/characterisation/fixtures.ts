@@ -7,7 +7,7 @@
  * See `../fixtures/galaxy-workflow/README.md` for how to record another.
  */
 
-import type { GalaxyTool, GalaxyWorkflow } from 'blendtype'
+import type { GalaxyTool, GalaxyToolParameters, GalaxyWorkflow, WorkflowParameterValue } from 'blendtype'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -135,4 +135,68 @@ export function toolOfStep(fixture: WorkflowFixture, step: string): GalaxyTool {
     throw new Error(`step ${step} of ${fixture.slug} recorded no tool`)
   }
   return tool
+}
+
+/** The first declaration of that name: at this level, then inside each group in turn. */
+function declaredIn(inputs: readonly GalaxyToolParameters[], name: string): GalaxyToolParameters | undefined {
+  const here = inputs.find(input => input.name === name)
+  if (here) {
+    return here
+  }
+  for (const input of inputs) {
+    const groups = input.type === 'section' || input.type === 'repeat'
+      ? [input.inputs]
+      : input.type === 'conditional' ? input.cases.map(one => one.inputs) : []
+    for (const children of groups) {
+      const found = declaredIn(children, name)
+      if (found) {
+        return found
+      }
+    }
+  }
+  return undefined
+}
+
+function isOfType<T extends GalaxyToolParameters['type']>(
+  input: GalaxyToolParameters,
+  type: T,
+): input is Extract<GalaxyToolParameters, { type: T }> {
+  return input.type === type
+}
+
+/**
+ * The recorded declaration of one parameter of the tool one step runs, of the
+ * kind the test expects.
+ *
+ * The top level first, so a top-level name is never answered by a namesake
+ * nested earlier, and then inside sections, repeats and every case of a
+ * conditional — which is where the recordings keep their 26.1 text
+ * parameters. Throwing rather than answering `undefined` when the tool
+ * declares no such parameter, or declares it as another kind, so a
+ * re-recording that moves one fails here by name instead of behind a `!`.
+ */
+export function declaredParameter<T extends GalaxyToolParameters['type']>(
+  fixture: WorkflowFixture,
+  step: string,
+  name: string,
+  type: T,
+): Extract<GalaxyToolParameters, { type: T }> {
+  const tool = toolOfStep(fixture, step)
+  const found = declaredIn(tool.inputs, name)
+  if (!found) {
+    throw new Error(`${tool.id} declares no ${name}`)
+  }
+  if (!isOfType(found, type)) {
+    throw new TypeError(`${name} of ${tool.id} is a ${found.type}, not a ${type}`)
+  }
+  return found
+}
+
+/** What the revision saved for one top-level parameter of one step. */
+export function savedValue(fixture: WorkflowFixture, step: string, name: string): WorkflowParameterValue {
+  const inputs = fixture.live.steps[step]?.tool_inputs
+  if (!inputs || !(name in inputs)) {
+    throw new Error(`step ${step} of ${fixture.slug} saved no ${name}`)
+  }
+  return inputs[name]!
 }
