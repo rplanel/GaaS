@@ -52,6 +52,9 @@ app/
 ├── components/             # Reusable UI components
 ├── composables/            # Shared composables
 ├── layouts/                # Page layouts
+├── middleware/             # Route middleware. `admin` refuses a non-administrator;
+│                           # a page reading an `admin`-level endpoint must declare it,
+│                           # and `test/pageAccess.test.ts` fails the suite if one doesn't (#99)
 ├── plugins/                # Nuxt plugins
 ├── types/                  # Shared types; `public/` is the `#gaas/ui` alias target (ResultsViewProps)
 ├── utils/                  # Utility functions
