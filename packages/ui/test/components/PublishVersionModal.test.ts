@@ -260,8 +260,8 @@ describe('the publish dialog\'s revision picker', () => {
     await vi.waitFor(() => expect(dialog()?.querySelector('[data-testid="publish-revisions-error"]')).not.toBeNull())
     const alert = dialog()!.querySelector('[data-testid="publish-revisions-error"]')!.textContent!
     expect(alert).toContain('could not be listed')
-    // the server's sentence, not ofetch's `[GET] "/api/…": 503 …`
-    expect(alert).toContain('Galaxy service is unavailable')
+    // not ofetch's `[GET] "/api/…": 503 …`
+    expect(alert).toContain('Galaxy is unavailable right now. Try again in a few minutes.')
     expect(alert).not.toContain('/api/')
     expect(listedRevisions()).toHaveLength(0)
     expect(submitButton().disabled).toBe(true)
@@ -327,7 +327,9 @@ describe('the tool check of the selected revision', () => {
     await vi.waitFor(() => expect(dialog()?.querySelector('[data-testid="publish-tools-error"]')).not.toBeNull())
     const alert = dialog()!.querySelector('[data-testid="publish-tools-error"]')!.textContent!
     expect(alert).toContain('could not be checked')
-    expect(alert).toContain('Nothing is published until they have been.')
+    // the 500's reason phrase says nothing; the cause is in the server's log
+    expect(alert).toContain('Nothing is published until they have been. Something went wrong on our side. Please try again.')
+    expect(alert).not.toContain('Internal Server Error')
     expect(alert).not.toContain('/api/')
     expect(missingToolsAlert()).toBeNull()
     expect(submitButton().disabled).toBe(true)

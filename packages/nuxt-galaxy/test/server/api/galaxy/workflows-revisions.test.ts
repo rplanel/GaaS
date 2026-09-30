@@ -137,6 +137,22 @@ describe('get /api/galaxy/workflows/:workflowId/versions', () => {
     await expect(handler({} as any)).rejects.toMatchObject({ statusCode: 503 })
   })
 
+  // Galaxy answers 404 for an id it does not know and 400 for one it cannot
+  // decode: both say the stored workflow names nothing, which is the
+  // caller's to act on rather than this server's fault to log
+  it.each([404, 400])('answers 404 with a sentence, and logs nothing, when Galaxy answers %i for the stored workflow', async (galaxyStatus) => {
+    const spy = await revisionsSpy()
+    spy.mockReturnValue(Effect.fail(Object.assign(new Error(`Galaxy answered ${galaxyStatus}`), { _tag: 'WorkflowError', statusCode: galaxyStatus })))
+
+    const handler = await loadHandler()
+
+    await expect(handler({} as any)).rejects.toMatchObject({
+      statusCode: 404,
+      statusMessage: 'Galaxy holds no stored workflow galaxy-workflow-1',
+    })
+    expect(mocks.logError).not.toHaveBeenCalled()
+  })
+
   it('answers a logged 500 for any other failure, with the cause in the log and not in the answer', async () => {
     const spy = await revisionsSpy()
     spy.mockReturnValue(Effect.fail(Object.assign(new Error('Galaxy answered 500'), { _tag: 'WorkflowError' })))

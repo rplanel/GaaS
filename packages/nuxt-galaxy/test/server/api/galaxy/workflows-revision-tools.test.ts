@@ -47,6 +47,7 @@ vi.mock('blendtype', async () => ({
   // The real tag, not a stand-in: `evlog-effect` builds a Layer keyed on it.
   BlendTypeLogger: (await vi.importActual<typeof import('blendtype')>('blendtype')).BlendTypeLogger,
   exportWorkflowEffect: mocks.exportWorkflowEffect,
+  galaxyRevisionNumber: (await vi.importActual<typeof import('blendtype')>('blendtype')).galaxyRevisionNumber,
   toGalaxyServiceUnavailable: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
   GalaxyServiceUnavailable: MockGalaxyServiceUnavailable,
   makeGalaxyLayer: vi.fn(() => Layer.empty),
@@ -160,6 +161,33 @@ describe('get /api/galaxy/workflows/:workflowId/revisions/:revision/tools', () =
     const handler = await loadHandler()
 
     await expect(handler({} as any)).rejects.toMatchObject({ statusCode: 503 })
+  })
+
+  // Galaxy answers 404 for an id it does not know, and 400 for one it cannot
+  // decode or a revision index past the end of the history: each says the
+  // revision names nothing, which is the caller's to act on rather than this
+  // server's fault to log. The sentence shows the editor's number, index + 1.
+  it.each([404, 400])('answers 404 with a sentence, and logs nothing, when Galaxy answers %i for the export', async (galaxyStatus) => {
+    mocks.exportWorkflowEffect.mockReturnValue(Effect.fail(Object.assign(new Error(`Galaxy answered ${galaxyStatus}`), { _tag: 'WorkflowError', statusCode: galaxyStatus })))
+
+    const handler = await loadHandler()
+
+    await expect(handler({} as any)).rejects.toMatchObject({
+      statusCode: 404,
+      statusMessage: 'Galaxy holds no revision 4 of stored workflow galaxy-workflow-1',
+    })
+    expect(mocks.logError).not.toHaveBeenCalled()
+  })
+
+  // a tool lookup is not the revision: a 404 there is a missing tool, which
+  // the check answers as such, and anything else from it is a fault
+  it('still answers a logged 500 when a tool lookup fails with a 4xx the check did not settle', async () => {
+    mocks.missingToolsEffect.mockReturnValue(Effect.fail(Object.assign(new Error('Galaxy answered 400 for Cut1'), { _tag: 'ToolError', statusCode: 400 })))
+
+    const handler = await loadHandler()
+
+    await expect(handler({} as any)).rejects.toMatchObject({ statusCode: 500 })
+    expect(mocks.logError).toHaveBeenCalledOnce()
   })
 
   it('answers a logged 500 for any other failure, a tool lookup Galaxy could not answer included, with the cause in the log and not in the answer', async () => {

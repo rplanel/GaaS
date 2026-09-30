@@ -4,6 +4,7 @@ import { Effect, Exit } from 'effect'
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { runGalaxyEffect } from '../../../../../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../../../../../utils/galaxy'
+import { GalaxyHasNoSuchThing, galaxyHasNoSuchThing } from '../../../../../../utils/grizzle/galaxyHasNoSuchThing'
 import { missingToolsEffect, pinnedTools } from '../../../../../../utils/grizzle/workflowTools'
 import { toHttpError } from '../../../../../../utils/httpError'
 import { requestedRevisionParam } from '../../../../../../utils/revisionParam'
@@ -36,7 +37,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const program = Effect.gen(function* () {
-    const definition = yield* bt.exportWorkflowEffect(workflowId, 'export', revision)
+    const definition = yield* bt.exportWorkflowEffect(workflowId, 'export', revision).pipe(
+      Effect.catchIf(galaxyHasNoSuchThing, () => Effect.fail(new GalaxyHasNoSuchThing({
+        message: `Galaxy holds no revision ${bt.galaxyRevisionNumber(revision)} of stored workflow ${workflowId}`,
+      }))),
+    )
     const missing = yield* missingToolsEffect(definition)
     const check: RevisionToolCheck = { missing, checked: pinnedTools(definition).length }
     return check
@@ -49,7 +54,12 @@ export default defineEventHandler(async (event) => {
   ))
 
   return Exit.match(result, {
-    onFailure: cause => toHttpError(event, cause, 'galaxy revision tools'),
+    // Only the export is read this way. A tool lookup that answered 404 is
+    // a missing tool, which the check reports, and anything else from one is
+    // a fault to log, not a revision to report as absent.
+    onFailure: cause => toHttpError(event, cause, 'galaxy revision tools', {
+      statuses: { GalaxyHasNoSuchThing: 404 },
+    }),
     onSuccess: value => value,
   })
 })

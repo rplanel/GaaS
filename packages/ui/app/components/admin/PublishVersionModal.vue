@@ -6,8 +6,8 @@ import type { PublishFailure } from '../../utils/publishFailure'
 import { galaxyRevisionNumber, getWorkflowTagName, getWorkflowTagVersion } from 'blendtype'
 import { log } from 'evlog/client'
 import * as z from 'zod'
+import { describeGalaxyReadFailure } from '../../utils/galaxyReadFailure'
 import { describePublishFailure } from '../../utils/publishFailure'
-import { serverWordsOf } from '../../utils/serverRefusal'
 
 /**
  * The dialog an administrator publishes a version from (ADR 0004): one
@@ -65,9 +65,7 @@ const state = reactive<Partial<Schema>>({
 const { data: revisions, error: revisionsError } = useQuery(() =>
   galaxyWorkflowRevisionsQuery({ workflowId: props.workflow.id }),
 )
-// the server's own sentence, off the body: the rejection's `message` is
-// ofetch's, and names the method, the path and the status (#125)
-const revisionsErrorMessage = computed(() => serverWordsOf(revisionsError.value) ?? '')
+const revisionsErrorMessage = computed(() => describeGalaxyReadFailure(revisionsError.value))
 
 watch(revisionsError, (error) => {
   if (error) {
@@ -121,7 +119,7 @@ const { data: toolCheck, error: toolCheckError } = useQuery(() => ({
   ...galaxyRevisionToolsQuery({ workflowId: props.workflow.id, revision: chosenRevision.value ?? -1 }),
   enabled: chosenRevision.value !== undefined,
 }))
-const toolCheckErrorMessage = computed(() => serverWordsOf(toolCheckError.value) ?? '')
+const toolCheckErrorMessage = computed(() => describeGalaxyReadFailure(toolCheckError.value))
 
 watch(toolCheckError, (error) => {
   if (error) {

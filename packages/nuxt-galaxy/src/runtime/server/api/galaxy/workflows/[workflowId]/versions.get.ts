@@ -3,6 +3,7 @@ import { Effect, Exit } from 'effect'
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { runGalaxyEffect } from '../../../../utils/evlog-effect'
 import { useGalaxyLayer } from '../../../../utils/galaxy'
+import { GalaxyHasNoSuchThing, galaxyHasNoSuchThing } from '../../../../utils/grizzle/galaxyHasNoSuchThing'
 import { toHttpError } from '../../../../utils/httpError'
 
 /**
@@ -29,13 +30,18 @@ export default defineEventHandler(async (event) => {
   }
 
   const result = await runGalaxyEffect(event, bt.getWorkflowRevisionsEffect(workflowId).pipe(
+    Effect.catchIf(galaxyHasNoSuchThing, () => Effect.fail(new GalaxyHasNoSuchThing({
+      message: `Galaxy holds no stored workflow ${workflowId}`,
+    }))),
     bt.toGalaxyServiceUnavailable,
     Effect.provide(useGalaxyLayer()),
     Effect.exit,
   ))
 
   return Exit.match(result, {
-    onFailure: cause => toHttpError(event, cause, 'galaxy workflow revisions'),
+    onFailure: cause => toHttpError(event, cause, 'galaxy workflow revisions', {
+      statuses: { GalaxyHasNoSuchThing: 404 },
+    }),
     onSuccess: value => value,
   })
 })
