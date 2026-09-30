@@ -7,6 +7,7 @@ import { galaxyRevisionNumber, getWorkflowTagName, getWorkflowTagVersion } from 
 import { log } from 'evlog/client'
 import * as z from 'zod'
 import { describePublishFailure } from '../../utils/publishFailure'
+import { serverWordsOf } from '../../utils/serverRefusal'
 
 /**
  * The dialog an administrator publishes a version from (ADR 0004): one
@@ -64,7 +65,9 @@ const state = reactive<Partial<Schema>>({
 const { data: revisions, error: revisionsError } = useQuery(() =>
   galaxyWorkflowRevisionsQuery({ workflowId: props.workflow.id }),
 )
-const { errorMessage: revisionsErrorMessage } = useErrorMessage(revisionsError)
+// the server's own sentence, off the body: the rejection's `message` is
+// ofetch's, and names the method, the path and the status (#125)
+const revisionsErrorMessage = computed(() => serverWordsOf(revisionsError.value) ?? '')
 
 watch(revisionsError, (error) => {
   if (error) {
@@ -118,7 +121,7 @@ const { data: toolCheck, error: toolCheckError } = useQuery(() => ({
   ...galaxyRevisionToolsQuery({ workflowId: props.workflow.id, revision: chosenRevision.value ?? -1 }),
   enabled: chosenRevision.value !== undefined,
 }))
-const { errorMessage: toolCheckErrorMessage } = useErrorMessage(toolCheckError)
+const toolCheckErrorMessage = computed(() => serverWordsOf(toolCheckError.value) ?? '')
 
 watch(toolCheckError, (error) => {
   if (error) {
@@ -311,7 +314,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             variant="subtle"
             icon="i-lucide-circle-x"
             title="The tools could not be checked"
-            :description="`Nothing is published until they have been. ${toolCheckErrorMessage ?? ''}`"
+            :description="`Nothing is published until they have been. ${toolCheckErrorMessage}`"
           />
           <UAlert
             v-else-if="missingTools.length > 0"
