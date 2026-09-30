@@ -14,6 +14,10 @@ import { withFixtureNuxt } from './loadFixture'
  * `addServerHandler({ middleware: true })` registers a handler that runs for
  * every request — and a guard that is not registered guards nothing, which is
  * the same class of omission as the unregistered PATCH.
+ *
+ * The cross-check of routes against `GALAXY_ROUTE_ACCESS` covers
+ * `/api/galaxy` only. An `/api/db` handler holds its own level, so nothing
+ * here says whether that level is right.
  */
 async function loadRegisteredHandlers() {
   return withFixtureNuxt((options) => {

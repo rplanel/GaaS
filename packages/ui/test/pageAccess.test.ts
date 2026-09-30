@@ -26,10 +26,25 @@ import { describe, expect, it } from 'vitest'
  * that broke called `useFetch` directly and so appeared in no query's
  * consumer list.
  *
- * What it does **not** see, as of writing: an endpoint reached through a
- * composable (none wraps an `admin` query today — check before adding one),
- * and a path assembled at runtime from pieces rather than written as one
- * string or template.
+ * What it does **not** see. Each of these passes it green, so a page that
+ * reaches an endpoint this way has its gate checked by hand:
+ *
+ * - an endpoint reached through a composable (#127);
+ * - a path assembled at runtime from pieces rather than written as one
+ *   string or template;
+ * - anything outside `/api/galaxy`. Levels come from `GALAXY_ROUTE_ACCESS`
+ *   alone, and an `/api/db` handler holds its own level.
+ *
+ * What it does not accept: a gate inside the page (`enabled: isAdmin`, a
+ * `v-if`). Only `middleware: 'admin'` counts, so a page non-admins also use,
+ * gated correctly in its body, fails here until this test learns that form.
+ *
+ * `GALAXY_ROUTE_ACCESS` is imported from the **built** `nuxt-galaxy`. After
+ * changing a level, run `pnpm --filter nuxt-galaxy run prepack` first, or
+ * this checks every page against the old table and stays green.
+ *
+ * `.agents/skills/endpoint-blast-radius` sends agents to this list instead of
+ * keeping a copy, so a change to what the scan sees belongs here.
  */
 
 const pagesDir = join(dirname(fileURLToPath(import.meta.url)), '../app/pages')
