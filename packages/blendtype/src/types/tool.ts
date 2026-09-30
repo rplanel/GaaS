@@ -30,6 +30,13 @@ interface BaseToolParameter {
   label: string
   argument: string | null
   help: string
+  /**
+   * How `help` is written, and a 26.1 key only: `ToolParameter`'s visible keys
+   * gained it (`tools/parameters/basic.py:221`, from `:235`, which falls back
+   * to `"html"`), while 22.05 has no such attribute. Absent from every 22.05
+   * recording, `"html"` on every 26.1 one (#113). Nothing reads it yet.
+   */
+  help_format?: string
   refresh_on_change: boolean
   optional: boolean
   hidden: boolean
@@ -206,7 +213,7 @@ export interface GalaxyIntegerToolParameter extends BaseToolParameter {
  * `TextToolParameter.to_dict` adds `area` and `datalist` — the same at 22.05
  * (`tools/parameters/basic.py:156`, `:377-383`) and 26.1 (`:221`, `:465-471`).
  * 26.1's visible keys have also gained `help_format`, which every parameter
- * kind carries rather than this one, so it is not declared here.
+ * kind carries, so it is declared on `BaseToolParameter`.
  *
  * Seven are recorded: `add_covar`, `strat_covar` and `xp_desc` at the top
  * level of `ccqtl-today` at 22.05, and at 26.1 `identifier` and
@@ -218,8 +225,8 @@ export interface GalaxyTextToolParameter extends BaseToolParameter {
   type: Extract<GalaxyToolParameterType, 'text'>
   /**
    * The tool's default, as the serializer that writes a step's saved value
-   * writes it — so `string | null` here is also what a saved text parameter
-   * holds, on both releases, by two different routes.
+   * writes it — so a string or `null` here is also what a saved text
+   * parameter holds, on both releases, by two different routes.
    *
    * - 22.05: `TextToolParameter` inherits `SimpleTextToolParameter.to_json`
    *   (`basic.py:335-341`), which writes `None` as `""` unless the parameter
@@ -233,23 +240,28 @@ export interface GalaxyTextToolParameter extends BaseToolParameter {
    * the 26.1 half. Recorded: `""` on the three 22.05 parameters, `null` on
    * `identifier` and `"_#"` on `suffix_pattern` at 26.1.
    */
-  value: string | null
+  value: Extract<GalaxyToolParameterValue, string> | null
   /**
-   * Weaker than the word suggests, and weaker at 22.05 than at 26.1.
+   * Weaker than the word suggests at 22.05, and not the same flag at 26.1.
    *
    * On the server, all it decides about a value that arrives is whether an
-   * **empty** one skips the tool's validators: `ToolParameter.validate`
-   * returns early `if value in ["", None] and self.optional` and otherwise
-   * runs them (`basic.py:288` at 22.05, `:356` at 26.1), so a parameter with
-   * no validators accepts `""` whatever this says. (At 22.05 it also picks
-   * what a missing value is written as — see `value`.) There it is the
-   * `optional` attribute, defaulting to `false` (`:329`); 26.1 infers it for
-   * a text parameter declaring none, as optional exactly when its validators
-   * accept `""` (`text_input_is_optional`, `tool_util/parser/util.py:90`).
+   * empty string or `None` skips the tool's validators:
+   * `ToolParameter.validate` returns early `if value in ["", None] and
+   * self.optional` and otherwise runs them (`basic.py:288` at 22.05, `:356` at
+   * 26.1). (At 22.05 it also picks what `None` is written as — see `value`.)
    *
-   * So `false` does not mean the parameter must be filled in: all three of
-   * `ccqtl-today`'s are `false`, save `""` and run that way in production —
-   * `xp_desc` is even labelled "(optional)".
+   * - 22.05 reads the `optional` attribute, defaulting to `false` (`:329`), so
+   *   `false` does not mean the parameter must be filled in: one with no
+   *   validators accepts `""` whatever this says. All three of
+   *   `ccqtl-today`'s are `false`, save `""` and run that way in production —
+   *   `xp_desc` is even labelled "(optional)".
+   * - 26.1 infers it for a text parameter declaring none, as optional exactly
+   *   when its validators accept `""` (`text_input_is_optional`,
+   *   `tool_util/parser/util.py:90`). So an inferred `false` there does mean
+   *   an empty string is refused, and Galaxy 26.1's own form marks such a
+   *   parameter required (`client/src/components/Form/FormElement.vue:333-341`).
+   *   Only an explicit `optional="false"` with no validators is as weak as
+   *   22.05's.
    */
   optional: boolean
   /** Whether the tool asks for a multi-line box rather than a single line. */
@@ -257,8 +269,10 @@ export interface GalaxyTextToolParameter extends BaseToolParameter {
   /**
    * Suggestions built from the parameter's `<option>` children — never a
    * restriction on what may be typed. `{"label": title, "value": value}` per
-   * option on both releases, the label falling back to the value; `[]` on
-   * every recorded text parameter, so this shape is read off the source.
+   * option on both releases (`basic.py:362-364` at 22.05, `:434-436` at 26.1),
+   * the label falling back to the value (`tool_util/parser/xml.py:1139` /
+   * `:1524`); `[]` on every recorded text parameter, so this shape is read off
+   * the source.
    */
   datalist: { label: string, value: string }[]
 }

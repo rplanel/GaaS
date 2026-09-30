@@ -15,62 +15,14 @@
  * it usable as a saved value here, and why the tests below say which is which.
  */
 
-import type { GalaxyTextToolParameter, GalaxyToolParameters, WorkflowParameterValue } from 'blendtype'
-import type { WorkflowFixture } from '../characterisation/fixtures'
+import type { GalaxyTextToolParameter, WorkflowParameterValue } from 'blendtype'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
 import TextToolParameter from '../../app/components/galaxy/TextToolParameter.vue'
-import { FIXTURES, loadFixture, toolOfStep } from '../characterisation/fixtures'
+import { declaredParameter, FIXTURES, loadFixture, savedValue } from '../characterisation/fixtures'
 
 const ccqtl = loadFixture(FIXTURES.ccqtlToday)
 const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
-
-/** The first parameter of that name at any depth, through sections, repeats and every case of a conditional. */
-function declaredAnywhere(inputs: readonly GalaxyToolParameters[], name: string): GalaxyToolParameters | undefined {
-  for (const input of inputs) {
-    if (input.name === name) {
-      return input
-    }
-    const nested = input.type === 'section' || input.type === 'repeat'
-      ? [input.inputs]
-      : input.type === 'conditional' ? input.cases.map(one => one.inputs) : []
-    for (const children of nested) {
-      const found = declaredAnywhere(children, name)
-      if (found) {
-        return found
-      }
-    }
-  }
-  return undefined
-}
-
-/**
- * The recorded declaration of one text parameter of the tool one step runs.
- *
- * Keyed off the step rather than off a literal tool id, the way the rest of
- * the suites are: a re-recording that moves to a new tool version then fails
- * with the step's own id instead of resolving to `undefined` behind a `!`.
- */
-function textParameter(fixture: WorkflowFixture, step: string, name: string): GalaxyTextToolParameter {
-  const tool = toolOfStep(fixture, step)
-  const found = declaredAnywhere(tool.inputs, name)
-  if (!found) {
-    throw new Error(`${tool.id} declares no ${name}`)
-  }
-  if (found.type !== 'text') {
-    throw new TypeError(`${name} of ${tool.id} is a ${found.type}, not a text parameter`)
-  }
-  return found
-}
-
-/** What the revision saved for one top-level parameter of one step. */
-function savedValue(fixture: WorkflowFixture, step: string, name: string): WorkflowParameterValue {
-  const inputs = fixture.live.steps[step]?.tool_inputs
-  if (!inputs || !(name in inputs)) {
-    throw new Error(`step ${step} of ${fixture.slug} saved no ${name}`)
-  }
-  return inputs[name]!
-}
 
 async function mountWith(parameter: GalaxyTextToolParameter, modelValue: WorkflowParameterValue, variant: 'form' | 'display' = 'form') {
   return mountSuspended(TextToolParameter, {
@@ -83,12 +35,12 @@ function boxValue(wrapper: Awaited<ReturnType<typeof mountWith>>): string {
   return (wrapper.get('input, textarea').element as HTMLInputElement | HTMLTextAreaElement).value
 }
 
-/** `ccqtl_make_inputs`'s `xp_desc`: required as declared, labelled "(optional)", saved `""`. */
-const xpDesc = textParameter(ccqtl, '2', 'xp_desc')
+/** `ccqtl_make_inputs`'s `xp_desc`: declared `optional: false`, labelled "(optional)", saved `""`. */
+const xpDesc = declaredParameter(ccqtl, '2', 'xp_desc', 'text')
 
 describe('textToolParameter — the value the workflow saved', () => {
   it.each([
-    // What every production run of Pasteur's workflow has sent, at 22.05.
+    // What every analysis of Pasteur's workflow has sent in production, at 22.05.
     { fixture: ccqtl, step: '2', name: 'xp_desc', recorded: 'saved', shown: '' },
     // The one non-empty text value in the recordings, at 26.1.
     { fixture: nested, step: '3', name: 'suffix_pattern', recorded: 'declared', shown: '_#' },
@@ -96,7 +48,7 @@ describe('textToolParameter — the value the workflow saved', () => {
     // shown as an empty box rather than as the word "null".
     { fixture: nested, step: '2', name: 'identifier', recorded: 'declared', shown: '' },
   ] as const)('shows $name\'s $recorded value as "$shown"', async ({ fixture, step, name, recorded, shown }) => {
-    const parameter = textParameter(fixture, step, name)
+    const parameter = declaredParameter(fixture, step, name, 'text')
     const value = recorded === 'saved' ? savedValue(fixture, step, name) : parameter.value
 
     const component = await mountWith(parameter, value)
@@ -134,7 +86,8 @@ describe('textToolParameter — the box it offers', () => {
 
   it('hands back what the reader types into the multi-line box', async () => {
     // A binding of its own, so a test of its own: the single-line box's is
-    // driven through `Step.vue` in `Step.test.ts`.
+    // driven through `Step.vue` in `Step.test.ts`. `area: true` is
+    // hand-written onto the recorded declaration, as above.
     const component = await mountWith({ ...xpDesc, area: true }, savedValue(ccqtl, '2', 'xp_desc'))
 
     await component.get('textarea').setValue('first line\nsecond line')
@@ -146,9 +99,10 @@ describe('textToolParameter — the box it offers', () => {
 describe('textToolParameter — what it says about optional', () => {
   it('says so beside the label of a parameter the tool calls optional', async () => {
     // `identifier` at 26.1, which infers the flag for a text parameter whose
-    // validators accept `""` — and whose own form appends " (optional)" to
-    // the title, as this does in Nuxt UI's spelling.
-    const identifier = textParameter(nested, '2', 'identifier')
+    // validators accept `""` — and whose own form puts "- optional" after
+    // such a parameter's title (`client/src/components/Form/FormElement.vue:342-344`),
+    // which is what this hint says in Nuxt UI's spelling.
+    const identifier = declaredParameter(nested, '2', 'identifier', 'text')
     expect(identifier.optional).toBe(true)
 
     const component = await mountWith(identifier, identifier.value)
@@ -156,12 +110,15 @@ describe('textToolParameter — what it says about optional', () => {
     expect(component.get('[data-slot="hint"]').text()).toBe('Optional')
   })
 
-  it('marks nothing on one declared required, because an empty value is not refused for it', async () => {
-    // No required mark either: at 22.05 `optional: false` is only the
-    // attribute's default, and Galaxy runs a text parameter's validators on
-    // an empty value rather than refusing it. `xp_desc` has none, saves `""`
-    // and runs that way in production, and its label says "(optional)" — a
-    // mark here would tell the reader something Galaxy does not enforce.
+  it('marks nothing on one declared `optional: false` at 22.05, where an empty string is not refused', async () => {
+    // No required mark either, which is right for 22.05, where production
+    // runs: there `optional: false` is only the attribute's default, and
+    // Galaxy runs a text parameter's validators on an empty string rather
+    // than refusing it. `xp_desc` has none, saves `""` and runs that way, and
+    // its label says "(optional)" — a mark here would tell the reader
+    // something 22.05 does not enforce. At 26.1 an inferred `false` does mean
+    // `""` is refused; the widget's template says why that waits for the
+    // upgrade.
     expect(xpDesc.optional).toBe(false)
 
     const component = await mountWith(xpDesc, savedValue(ccqtl, '2', 'xp_desc'))
@@ -175,7 +132,7 @@ describe('textToolParameter — the read-only variant', () => {
     // What an analysis's jobs panel renders for a parameter it was started
     // with. `"_#"` for the reason given above: it is the one non-empty text
     // value the recordings hold.
-    const suffixPattern = textParameter(nested, '3', 'suffix_pattern')
+    const suffixPattern = declaredParameter(nested, '3', 'suffix_pattern', 'text')
 
     const component = await mountWith(suffixPattern, suffixPattern.value, 'display')
 

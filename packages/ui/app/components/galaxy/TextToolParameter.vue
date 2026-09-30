@@ -12,8 +12,9 @@ export interface GalaxyTextToolParameterProps
    * both releases (`GalaxyTextToolParameter.value` says how). A runtime
    * marker is the rest of what really arrives: the workflow editor offers
    * every parameter that is not a dataset a "set at runtime" value of
-   * `{__class__: "RuntimeValue"}` (`Workflow/Editor/Forms/FormTool.vue:140`
-   * at 22.05, `:157` at 26.1), and `<component :is>` hands it over unchecked.
+   * `{__class__: "RuntimeValue"}`
+   * (`client/src/components/Workflow/Editor/Forms/FormTool.vue:140` at 22.05,
+   * `:157` at 26.1), and `<component :is>` hands it over unchecked.
    */
   modelValue: WorkflowParameterValue
   variant?: 'form' | 'display'
@@ -27,11 +28,14 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
 const text = computed({
   /**
-   * Only a string is text. `null` — an optional parameter nobody filled in —
-   * shows as an empty box, as Galaxy's own `FormText` shows it; anything else
-   * is state Galaxy's `to_json` did not write for a text parameter, and reads
-   * as empty rather than as `[object Object]`. Either way the saved value
-   * stays in the model untouched until the reader types.
+   * Only a string is text — Galaxy's own rule at 22.05, where `Ui.Input`
+   * keeps a string and makes anything else `""`
+   * (`client/src/mvc/ui/ui-misc.js:89`). `null`, an optional parameter
+   * nobody filled in, shows as an empty box at 26.1 as well (`FormText`'s
+   * `valueToString`, `client/src/components/Form/Elements/FormText.vue:146`).
+   * Anything else is state Galaxy's `to_json` did not write for a text
+   * parameter, and reads as empty rather than as `[object Object]`. Either way
+   * the saved value stays in the model untouched until the reader types.
    */
   get: () => typeof props.modelValue === 'string' ? props.modelValue : '',
   set: (value: string) => emit('update:modelValue', value),
@@ -57,10 +61,15 @@ const { hint } = useGalaxyHint(props.help, props.argument)
     >
       <!--
         `Optional` beside the label when the tool says so, and nothing when it
-        does not — not a required mark. `optional: false` only means an empty
-        value still goes through the tool's validators, and at 22.05 it is
-        merely the attribute's default: all three of `ccqtl-today`'s text
-        parameters are `false`, save `""` and run that way in production.
+        does not — not a required mark, which is right for 22.05 and not yet
+        for 26.1. At 22.05, which production runs, `optional: false` is merely
+        the attribute's default and an empty string still goes through the
+        tool's validators rather than being refused: all three of
+        `ccqtl-today`'s text parameters are `false`, save `""` and run that
+        way, so a mark would be wrong on every one of them. At 26.1 an
+        inferred `false` does mean the validators refuse `""`, and Galaxy's own
+        form marks it required — the declaration reads the same at both
+        releases, so this is for the 26.x upgrade to revisit.
       -->
       <UFormField
         :label

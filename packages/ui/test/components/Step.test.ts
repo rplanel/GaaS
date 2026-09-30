@@ -30,7 +30,7 @@ import BooleanToolParameter from '../../app/components/galaxy/BooleanToolParamet
 import IntegerToolParameter from '../../app/components/galaxy/IntegerToolParameter.vue'
 import Step from '../../app/components/galaxy/workflow/Step.vue'
 import { useGalaxyToolInputComponent } from '../../app/composables/galaxy/useGalaxyToolInputComponent'
-import { FIXTURES, loadFixture, toolOfStep } from '../characterisation/fixtures'
+import { declaredParameter, FIXTURES, loadFixture, toolOfStep } from '../characterisation/fixtures'
 
 const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
 const ccqtl = loadFixture(FIXTURES.ccqtlToday)
@@ -135,9 +135,8 @@ describe('a step whose tool declares a text parameter', () => {
     { step: '3', name: 'add_covar' },
     { step: '4', name: 'strat_covar' },
   ])('offers step $step its $name, labelled, with a box to type in', async ({ step, name }) => {
-    const declared = toolOfStep(ccqtl, step).inputs.find(input => input.name === name)
-    expect(declared?.type).toBe('text')
-    const label = (declared as { label: string }).label
+    // Throws unless the recording declares it a `text` parameter.
+    const { label } = declaredParameter(ccqtl, step, name, 'text')
     expect(label).not.toBe('')
 
     const { wrapper } = await mountStep(step, 'form', ccqtl)
@@ -147,9 +146,9 @@ describe('a step whose tool declares a text parameter', () => {
   })
 
   it('writes what the reader types back into the step model', async () => {
-    // Starting from what the recording saved — the `""` every production run
-    // of this workflow has been sending — so the change is measured against
-    // Galaxy's own value rather than one written here.
+    // Starting from what the recording saved — the `""` every analysis of
+    // this workflow has sent in production — so the change is measured
+    // against Galaxy's own value rather than one written here.
     const { wrapper, workflowParametersModel } = await mountStep('3', 'form', ccqtl)
     expect(workflowParametersModel.add_covar).toBe('')
 
