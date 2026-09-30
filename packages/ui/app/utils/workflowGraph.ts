@@ -18,7 +18,6 @@ import type { StepMark } from './stepMarks'
 import { inputStepLabel, isInputStep } from '#imports'
 import { layout as dagreLayout, Graph } from '@dagrejs/dagre'
 import { Position } from '@vue-flow/core'
-import { log } from 'evlog/client'
 
 /** Left to right by default, top to bottom on request (Q6). */
 export type GraphDirection = 'LR' | 'TB'
@@ -392,25 +391,17 @@ export function dagreGraph(
  * readable here, and the ticket asks for left-to-right by default.
  *
  * From one edge per connection wherever dagre can place that, and from one
- * per pair of steps, with a warning, on a level where it cannot (see
- * `laidOut`): a layout that gives parallel connections no room of their own
- * still draws every one of them, and a layout that throws draws nothing.
+ * per pair of steps on a level where it cannot (see `tryLayOut`): a layout
+ * that gives the connections between two steps no room of their own still
+ * draws every one of them, and a layout that throws draws nothing.
  */
 function layOut(
   nodes: Omit<WorkflowGraphNode, 'position'>[],
   edges: WorkflowGraphEdge[],
   direction: GraphDirection,
 ): WorkflowGraphNode[] {
-  const perConnection = laidOut(dagreGraph(nodes, edges, direction))
-  if (perConnection === undefined) {
-    log.warn({
-      action: 'workflow_graph:layout_per_pair',
-      tag: 'workflowGraph',
-      steps: nodes.length,
-      connections: edges.length,
-    })
-  }
-  const graph = perConnection ?? dagreLayout(dagreGraph(nodes, edges, direction, 'pair'))
+  const graph = tryLayOut(dagreGraph(nodes, edges, direction))
+    ?? dagreLayout(dagreGraph(nodes, edges, direction, 'pair'))
 
   return nodes.map((node) => {
     const { x, y } = graph.node(node.id)
@@ -430,12 +421,19 @@ function layOut(
  * the rectangle". `conditional-repeat-runtime` is enough to set it off —
  * step 1 feeds step 2 three times and step 3 twice, and both feed step 4.
  *
- * Only the steps are checked, since they are all the canvas reads: where the
- * lost dummy is not an edge's end, its `NaN` stays inside the route dagre
- * drew for that edge, and Vue Flow routes its own. A dagre that stops
- * losing it needs nothing changed here — the fallback just stops running.
+ * Where the lost dummy is not an edge's end, dagre returns normally with the
+ * `NaN` inside that edge's route, and that layout is kept: every step is
+ * placed, and Vue Flow routes its own edges, so no route of dagre's is ever
+ * drawn. The steps are checked all the same, because a step at `NaN` is one
+ * Vue Flow would silently leave out — though dagre has not been seen to put
+ * one there without throwing.
+ *
+ * Any throw falls back, not only this one: the fallback puts the same steps
+ * through the same dagre, so a failure it shares still throws. A dagre that
+ * stops losing the dummy needs nothing changed here; the fallback just stops
+ * running.
  */
-function laidOut(graph: Graph): Graph | undefined {
+function tryLayOut(graph: Graph): Graph | undefined {
   try {
     dagreLayout(graph)
   }

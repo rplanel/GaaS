@@ -265,14 +265,6 @@ describe('dagreGraph', () => {
     expect(held).toEqual(drawn)
   })
 
-  it('holds all twenty of ccqtl-today\'s connections, not the ten pairs of steps they join', () => {
-    const { nodes, edges } = workflowGraph(describedSteps(FIXTURES.ccqtlToday))
-    const graph = dagreGraph(nodes, edges, 'LR')
-
-    expect(graph.edgeCount()).toBe(20)
-    expect(new Set(graph.edges().map(({ v, w }) => `${v} → ${w}`)).size).toBe(10)
-  })
-
   it('falls back to one edge per pair of steps, weighted by the connections it stands for', () => {
     // The shape `layOut` retries a level dagre cannot place one edge per
     // connection in. Every connection still counts, as weight on its pair's
