@@ -169,7 +169,8 @@ const nodeStates = computed(() => {
  * handle on the wrong side is an edge drawn round the outside of its node.
  *
  * Through `handleSides` rather than a ternary of its own, so the sides the
- * nodes declare and the sides the handles are drawn on are one decision.
+ * nodes declare, the sides the handles are drawn on and the dimension they
+ * are spread along are one decision.
  */
 const sides = computed(() => handleSides(props.direction))
 
@@ -180,8 +181,8 @@ const sides = computed(() => handleSides(props.direction))
  * otherwise, and stacked anchors are what made two edges look like one.
  */
 function anchorOffset(index: number, count: number): Record<string, string> {
-  const along = `${anchorAlong(index, count) * 100}%`
-  return props.direction === 'LR' ? { top: along } : { left: along }
+  const offset = `${anchorAlong(index, count) * 100}%`
+  return sides.value.along === 'height' ? { top: offset } : { left: offset }
 }
 
 /**

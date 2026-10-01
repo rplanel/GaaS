@@ -23,15 +23,19 @@ import { Position } from '@vue-flow/core'
 export type GraphDirection = 'LR' | 'TB'
 
 /**
- * Which side of a node an edge leaves and arrives on, for one direction.
+ * Which side of a node an edge leaves and arrives on, for one direction —
+ * and so which of the node's dimensions its anchors are spread `along`: the
+ * height when they sit on the left and right, the width when they sit on the
+ * top and bottom.
  *
- * One function so the node's properties and the handle placed inside it are
- * the same decision rather than two ternaries that can drift.
+ * One function so the node's properties, the handles placed inside it, where
+ * along its side each one sits and how tall a step is sized (#122) are the
+ * same decision rather than ternaries that can drift.
  */
-export function handleSides(direction: GraphDirection): { source: Position, target: Position } {
+export function handleSides(direction: GraphDirection): { source: Position, target: Position, along: 'height' | 'width' } {
   return direction === 'LR'
-    ? { source: Position.Right, target: Position.Left }
-    : { source: Position.Bottom, target: Position.Top }
+    ? { source: Position.Right, target: Position.Left, along: 'height' }
+    : { source: Position.Bottom, target: Position.Top, along: 'width' }
 }
 
 /**
@@ -259,7 +263,7 @@ export function workflowGraph(
     sourcePosition: sides.source,
     targetPosition: sides.target,
     width: NODE_WIDTH,
-    height: stepHeight(anchors[stepId], direction),
+    height: stepHeight(anchors[stepId], sides.along),
     data: {
       stepId,
       step,
@@ -379,12 +383,12 @@ function anchorsOf(entries: [string, DescribedStep][]): Record<string, { source:
  * for the same reason. The fuller side decides, with one gap more than it
  * has anchors.
  *
- * Left to right only. Top to bottom the anchors run along the width, which
- * stays fixed so that a rank of steps lines up, and a taller step would
- * spread nothing.
+ * Only where the anchors run along the height, which is left to right. Top
+ * to bottom they run along the width, which stays fixed so that a rank of
+ * steps lines up, and a taller step would spread nothing.
  */
-function stepHeight(anchors: { source: string[], target: string[] } | undefined, direction: GraphDirection): number {
-  if (direction === 'TB') {
+function stepHeight(anchors: { source: string[], target: string[] } | undefined, along: 'height' | 'width'): number {
+  if (along === 'width') {
     return NODE_MIN_HEIGHT
   }
   const anchorsOnFullerSide = Math.max(anchors?.source.length ?? 0, anchors?.target.length ?? 0)

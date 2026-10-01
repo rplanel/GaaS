@@ -182,9 +182,12 @@ describe('workflowGraph', () => {
 
     expect([lr!.sourcePosition, lr!.targetPosition]).toEqual(['right', 'left'])
     expect([tb!.sourcePosition, tb!.targetPosition]).toEqual(['bottom', 'top'])
-    // The handles are placed from the same function, not a second ternary.
-    expect(handleSides('LR')).toEqual({ source: lr!.sourcePosition, target: lr!.targetPosition })
-    expect(handleSides('TB')).toEqual({ source: tb!.sourcePosition, target: tb!.targetPosition })
+    // The handles are placed from the same function, not a second ternary —
+    // and so is which of a step's dimensions they are spread along, which is
+    // what a step's height is sized for (#122): down the side left to right,
+    // across it top to bottom.
+    expect(handleSides('LR')).toEqual({ source: lr!.sourcePosition, target: lr!.targetPosition, along: 'height' })
+    expect(handleSides('TB')).toEqual({ source: tb!.sourcePosition, target: tb!.targetPosition, along: 'width' })
   })
 
   it('sizes a step by its anchors left to right, never below the 96 px a step always had', () => {
@@ -220,7 +223,7 @@ describe('workflowGraph', () => {
     for (const direction of ['LR', 'TB'] as const) {
       for (const node of workflowGraph(steps, direction).nodes) {
         // Down the side left to right, across it top to bottom.
-        const side = direction === 'LR' ? node.height : node.width
+        const side = node[handleSides(direction).along]
         for (const anchors of [node.data.sourceHandles, node.data.targetHandles]) {
           const offsets = anchors.map((_, index) => anchorAlong(index, anchors.length) * side)
           // To a hundredth of a pixel, which floating point does not hold.
