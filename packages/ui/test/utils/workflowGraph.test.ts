@@ -10,11 +10,13 @@
  */
 
 import type { JobState } from 'blendtype'
+import type { DescribedStep } from 'nuxt-galaxy'
 import { describe, expect, it } from 'vitest'
 import { stepMarks } from '../../app/utils/stepMarks'
 import { toolDisplayName } from '../../app/utils/toolName'
 import {
   animatedEdges,
+  dagreGraph,
   handleSides,
   NODE_HEIGHT,
   NODE_WIDTH,
@@ -25,6 +27,28 @@ import {
 } from '../../app/utils/workflowGraph'
 import { FIXTURES } from '../characterisation/fixtures'
 import { aStep, describedSteps } from '../describedSteps'
+
+/**
+ * Every level a reader can open in one recording — the workflow, then each
+ * subworkflow inside it at any depth — since each is laid out as a graph of
+ * its own.
+ */
+function levelsOf(steps: Record<string, DescribedStep>, path: readonly string[] = []): { path: string, steps: Record<string, DescribedStep> }[] {
+  return [
+    { path: path.join('/'), steps },
+    ...Object.entries(steps).flatMap(([stepId, step]) =>
+      step.subworkflow === null ? [] : levelsOf(step.subworkflow.steps, [...path, stepId]),
+    ),
+  ]
+}
+
+/** Every level of every recording, named `<slug>` or `<slug>/<step>/…`. */
+const RECORDED_LEVELS = Object.values(FIXTURES).flatMap(slug =>
+  levelsOf(describedSteps(slug)).map(level => ({
+    name: level.path === '' ? slug : `${slug}/${level.path}`,
+    steps: level.steps,
+  })),
+)
 
 describe('workflowGraph', () => {
   it('draws one node per step and one edge per connection', () => {
@@ -173,6 +197,37 @@ describe('workflowGraph', () => {
     expect({ NODE_WIDTH, NODE_HEIGHT }).toEqual({ NODE_WIDTH: 260, NODE_HEIGHT: 96 })
   })
 
+  it('lays ccqtl-today out from all twenty of its connections', () => {
+    // #121. Laid out from the ten pairs of steps those twenty connections
+    // join, every one of these seven steps sat somewhere else, in a graph
+    // 276 px tall instead of 396: the layout of a different graph.
+    const { nodes } = workflowGraph(describedSteps(FIXTURES.ccqtlToday))
+
+    expect(Object.fromEntries(nodes.map(node => [node.id, node.position]))).toEqual({
+      0: { x: 16, y: 79 },
+      1: { x: 16, y: 207 },
+      2: { x: 366, y: 143 },
+      3: { x: 716, y: 284 },
+      4: { x: 1066, y: 190 },
+      5: { x: 1416, y: 106 },
+      6: { x: 1766, y: 16 },
+    })
+  })
+
+  it.each(RECORDED_LEVELS)('places every step of $name, in either direction', ({ steps }) => {
+    // Handed one edge per connection, dagre 3.1 can lose the second of three
+    // parallel edges out of its own ordering and throw, on a shape as plain
+    // as conditional-repeat-runtime's: step 1 feeds step 2 three times and
+    // step 3 twice, and both feed step 4.
+    for (const direction of ['LR', 'TB'] as const) {
+      const { nodes } = workflowGraph(steps, direction)
+
+      expect(nodes.map(node => node.id)).toEqual(Object.keys(steps))
+      const unplaced = nodes.filter(({ position }) => !Number.isFinite(position.x) || !Number.isFinite(position.y))
+      expect(unplaced.map(node => node.id), direction).toEqual([])
+    }
+  })
+
   it('draws a subworkflow as one node, not as the steps it contains', () => {
     // Q19: one node that a reader opens, never expanded inline. The recording
     // has 14 outer steps and 21 nested ones.
@@ -193,6 +248,32 @@ describe('workflowGraph', () => {
     })
 
     expect(nodes.map(node => node.data.acceptsInput)).toEqual([false, false, false, true, true])
+  })
+})
+
+describe('dagreGraph', () => {
+  it.each(RECORDED_LEVELS)('hands dagre every connection of $name, keyed as the canvas keys it', ({ steps }) => {
+    // #121. Keyed by its two steps alone, a second connection between one
+    // pair of steps overwrote the first, so the canvas drew every edge at
+    // positions worked out from a graph missing some of them — half, on
+    // ccqtl-today.
+    const { nodes, edges } = workflowGraph(steps)
+    const graph = dagreGraph(nodes, edges, 'LR')
+
+    const held = graph.edges().map(({ v, w, name }) => `${name} (${v} → ${w})`).sort()
+    const drawn = edges.map(({ source, target, id }) => `${id} (${source} → ${target})`).sort()
+    expect(held).toEqual(drawn)
+  })
+
+  it('falls back to one edge per pair of steps, weighted by the connections it stands for', () => {
+    // The shape `layOut` retries a level dagre cannot place one edge per
+    // connection in. Every connection still counts, as weight on its pair's
+    // one edge: the same sum dagre's ranker reduces parallel edges to.
+    const { nodes, edges } = workflowGraph(describedSteps(FIXTURES.conditionalRepeatRuntime))
+    const graph = dagreGraph(nodes, edges, 'LR', 'pair')
+
+    const weights = Object.fromEntries(graph.edges().map(({ v, w }) => [`${v} → ${w}`, graph.edge(v, w).weight]))
+    expect(weights).toEqual({ '0 → 1': 1, '1 → 2': 3, '1 → 3': 2, '2 → 4': 1, '3 → 4': 1 })
   })
 })
 

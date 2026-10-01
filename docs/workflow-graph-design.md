@@ -333,6 +333,38 @@ exposed for #91 and called by nothing; and nothing asserted that the canvas
 reached the analysis page at all, which is the one failure a component suite
 structurally cannot see.
 
+#### Laid out from every connection (#121)
+
+Every connection was drawn, but the layout saw one per *pair* of steps.
+graphlib keys a plain graph's edge by its two ends, so each further connection
+between the same two steps overwrote the one before: `ccqtl-today` joins ten
+pairs with twenty connections and was laid out from ten. From all twenty,
+every one of its seven steps moves and the graph grows from 276 px tall to
+396. Dagre is now handed a multigraph whose edges carry the identity Vue Flow
+keys them by.
+
+That graph cannot always be laid out. Dagre 3.1 pairs up the dummy nodes of
+parallel edges while it orders a rank, in a record keyed by one of each pair,
+so a third parallel edge overwrites the second and that dummy drops out of the
+sort. It keeps its old order, which another node of its rank can now hold as
+well, and the layering dagre positions from keeps one node per order, so one
+of the two is never placed and dagre throws. That is read off dagre's own
+source — `lib/order/sort-subgraph.ts` L80-84, `lib/order/index.ts` L112 and
+`lib/util.ts` L162, the same on `master` as in 3.1.1 — and traced on a
+four-node repro. `conditional-repeat-runtime` is enough, with one step feeding
+another three times, and 3.1.1 is the latest release. A level dagre cannot place is therefore laid out from one edge per
+pair, weighted by the connections it stands for. The weights keep every
+connection in the ranking but not the room each would be given, and on every
+recording that is exactly the pre-#121 layout.
+
+The fallback is not rare. A throwaway sweep laid out 20 000 random graphs of 3
+to 12 steps, in both directions, with a third of their connections in bundles
+of up to four between the same two steps. Stock 3.1.1 threw on 63% of those
+40 000 layouts. With that one branch of dagre corrected, or on 3.0.0, it threw
+on none; 3.0.0 predates the pairing but orders `fan-in` and
+`subworkflow-nested` differently. A dagre release without the bug stops the
+fallback running with no change here.
+
 ### Verdict on the refactor
 
 Refactor the **Galaxy-side fetching**. Leave the **Supabase side alone** — jobs,

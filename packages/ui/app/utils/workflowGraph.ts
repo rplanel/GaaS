@@ -171,7 +171,8 @@ export interface StepConnection {
  * The output's name is in it, not only the two steps and the input: one
  * upstream step can feed one input from two of its outputs — `fan-in` step 19
  * does — and without it the two collide and Vue Flow draws one of them. One
- * function because the panel keys its list of the same edges by it.
+ * function because the panel keys its list of the same edges by it, and
+ * dagre the graph it lays them out from (#121).
  */
 export function edgeId(connection: StepConnection, intoStepId: string): string {
   return `${connection.from}:${connection.outputName}->${intoStepId}:${connection.inputName}`
@@ -342,34 +343,111 @@ function anchorsOf(entries: [string, DescribedStep][]): Record<string, { source:
 }
 
 /**
+ * The graph dagre lays one level out from: every step, at the size the
+ * template draws it, and every connection as an edge of its own.
+ *
+ * A multigraph, with each edge named by `edgeId`. graphlib keys an edge of a
+ * plain graph by its two steps alone, so a second connection between the
+ * same pair overwrites the first — `ccqtl-today` joins ten pairs of steps
+ * with twenty connections and was laid out from ten (#121). The name is the
+ * one Vue Flow keys the same edge by, and for the same reason.
+ *
+ * Keyed by `'pair'`, one edge per pair of steps instead, weighted by the
+ * connections it stands for: what `layOut` falls back to on a level dagre
+ * cannot lay out the first way. The weights keep every connection in the
+ * ranking — dagre's ranker sums parallel edges into exactly this — but not
+ * the room each would have been given, so on every recording it lays out
+ * exactly as the unweighted graph before #121 did.
+ */
+export function dagreGraph(
+  nodes: readonly Pick<WorkflowGraphNode, 'id'>[],
+  edges: readonly WorkflowGraphEdge[],
+  direction: GraphDirection,
+  keying: 'connection' | 'pair' = 'connection',
+): Graph {
+  const graph = new Graph({ multigraph: keying === 'connection' })
+  graph.setGraph({ rankdir: direction, nodesep: 32, ranksep: 90, marginx: 16, marginy: 16 })
+  for (const node of nodes) {
+    graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT })
+  }
+  for (const edge of edges) {
+    if (keying === 'connection') {
+      graph.setEdge(edge.source, edge.target, {}, edge.id)
+    }
+    else {
+      const weight = (graph.edge(edge.source, edge.target)?.weight ?? 0) + 1
+      graph.setEdge(edge.source, edge.target, { weight })
+    }
+  }
+  return graph
+}
+
+/**
  * Where each node sits, computed rather than stored (Q6).
  *
  * The export does carry the coordinates Galaxy's editor last used, in
  * `position`, and they are deliberately not read: a graph laid out by
  * whatever the author dragged things to in another application is not
  * readable here, and the ticket asks for left-to-right by default.
+ *
+ * From one edge per connection wherever dagre can place that, and from one
+ * per pair of steps on a level where it cannot (see `tryLayOut`): a layout
+ * that gives the connections between two steps no room of their own still
+ * draws every one of them, and a layout that throws draws nothing.
  */
 function layOut(
   nodes: Omit<WorkflowGraphNode, 'position'>[],
   edges: WorkflowGraphEdge[],
   direction: GraphDirection,
 ): WorkflowGraphNode[] {
-  const graph = new Graph()
-  graph.setDefaultEdgeLabel(() => ({}))
-  graph.setGraph({ rankdir: direction, nodesep: 32, ranksep: 90, marginx: 16, marginy: 16 })
-  for (const node of nodes) {
-    graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT })
-  }
-  for (const edge of edges) {
-    graph.setEdge(edge.source, edge.target)
-  }
-  dagreLayout(graph)
+  const graph = tryLayOut(dagreGraph(nodes, edges, direction))
+    ?? dagreLayout(dagreGraph(nodes, edges, direction, 'pair'))
 
   return nodes.map((node) => {
     const { x, y } = graph.node(node.id)
     // Dagre positions a node by its centre, Vue Flow by its top-left corner.
     return { ...node, position: { x: x - NODE_WIDTH / 2, y: y - NODE_HEIGHT / 2 } }
   })
+}
+
+/**
+ * The graph laid out, or `undefined` where dagre could not place every step.
+ *
+ * Not hypothetical, and not ours. While dagre 3.1 orders a rank
+ * (`sortSubgraph`), it pairs the dummy nodes of parallel edges up in a
+ * record keyed by one of the two, so a third parallel edge overwrites the
+ * second's entry and that dummy drops out of the sort. It keeps the order it
+ * had before, which another node of its rank may now hold as well, and the
+ * layering dagre positions from keeps one node per order: whichever loses
+ * the slot is never placed, and where it is an edge's end dagre throws "Not
+ * possible to find intersection inside of the rectangle".
+ * `conditional-repeat-runtime` is enough to set it off — step 1 feeds step 2
+ * three times and step 3 twice, and both feed step 4.
+ *
+ * Where the node left unplaced is not an edge's end, dagre returns normally
+ * with a `NaN` inside that edge's route, and that layout is kept: every step
+ * is placed, and Vue Flow routes its own edges, so no route of dagre's is
+ * ever drawn. The steps are checked all the same, because a step at `NaN` is one
+ * Vue Flow would silently leave out — though dagre has not been seen to put
+ * one there without throwing.
+ *
+ * Any throw falls back, not only this one: the fallback puts the same steps
+ * through the same dagre, so a failure it shares still throws. A dagre that
+ * stops losing the dummy needs nothing changed here; the fallback just stops
+ * running.
+ */
+function tryLayOut(graph: Graph): Graph | undefined {
+  try {
+    dagreLayout(graph)
+  }
+  catch {
+    return undefined
+  }
+  const placed = graph.nodes().every((id) => {
+    const { x, y } = graph.node(id)
+    return Number.isFinite(x) && Number.isFinite(y)
+  })
+  return placed ? graph : undefined
 }
 
 /**
