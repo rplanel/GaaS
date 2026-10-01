@@ -6,11 +6,11 @@ import type { GraphDirection, WorkflowGraphNodeData } from '../../../utils/workf
 import { computed, nextTick, ref, useId, watch } from '#imports'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
-import { Handle, Panel, VueFlow } from '@vue-flow/core'
+import { Handle, Panel, useVueFlow, VueFlow } from '@vue-flow/core'
 import { stepKind } from '../../../utils/stepKind'
 import { stepMarkSummary, UNMARKED_STEP } from '../../../utils/stepMarks'
 import { stepStateAccent, stepStateLook } from '../../../utils/stepStateLook'
-import { animatedEdges, handleSides, NODE_HEIGHT, NODE_WIDTH, stepsAtPath, subworkflowTrail, workflowGraph } from '../../../utils/workflowGraph'
+import { anchorAlong, animatedEdges, handleSides, stepsAtPath, subworkflowTrail, workflowGraph } from '../../../utils/workflowGraph'
 
 /**
  * A workflow revision drawn as a graph (#89).
@@ -89,6 +89,13 @@ const selectedStepId = ref<string | undefined>(undefined)
  * viewport.
  */
 const flowId = `workflow-graph-${useId()}`
+
+/**
+ * Straight from the store rather than through `flow`, which waits on
+ * `pane-ready`: fitting needs a viewport with a size, measuring a node does
+ * not. `<VueFlow :id>` finds this same store by its id.
+ */
+const { updateNodeInternals } = useVueFlow(flowId)
 
 /** The subworkflows drilled into, so a reader can get back out again. */
 const trail = computed(() => subworkflowTrail(props.steps, path.value))
@@ -170,12 +177,10 @@ const sides = computed(() => handleSides(props.direction))
  * Where one of several anchors sits along the side of a node.
  *
  * Vue Flow stacks every handle of a side at the same point unless it is told
- * otherwise, and stacked anchors are what made two edges look like one. They
- * are spread evenly, so the *n*th of *m* sits at `(n + 1) / (m + 1)` of the
- * way along — which keeps a single anchor centred, as it was.
+ * otherwise, and stacked anchors are what made two edges look like one.
  */
 function anchorOffset(index: number, count: number): Record<string, string> {
-  const along = `${((index + 1) / (count + 1)) * 100}%`
+  const along = `${anchorAlong(index, count) * 100}%`
   return props.direction === 'LR' ? { top: along } : { left: along }
 }
 
@@ -290,6 +295,22 @@ watch(
 // Re-laying out moves every node at once, so the view is fitted again rather
 // than left pointing at where the graph used to be.
 watch([() => props.direction, drawnPath], () => nextTick(fit))
+
+/**
+ * A new graph has Vue Flow measure every anchor again (#122).
+ *
+ * A level's nodes are keyed by order index, so drilling in, backing out or a
+ * different revision redraws a node as another step: its anchors at other
+ * offsets, and often at another height. Vue Flow keeps the offsets it
+ * measured and routes each edge to them. Its ResizeObserver re-measures a
+ * node that changed size, but never anchors that moved inside one that did
+ * not.
+ *
+ * `flush: 'post'`, so it runs once the new level is rendered and before the
+ * fit above, which waits for the tick after: a level framed before it is
+ * measured is framed by the sizes of the one before it.
+ */
+watch(graph, () => updateNodeInternals(), { flush: 'post' })
 </script>
 
 <template>
@@ -377,13 +398,9 @@ watch([() => props.direction, drawnPath], () => nextTick(fit))
         cannot be watched. `transparent` is the unmarked colour.
       -->
       <div
-        class="rounded-[calc(var(--ui-radius)*2)] ring bg-default px-3 py-2 text-left border-s-4"
+        class="size-full rounded-[calc(var(--ui-radius)*2)] ring bg-default px-3 py-2 text-left border-s-4"
         :class="selectedStepId === id ? 'ring-2 ring-primary' : 'ring-default'"
-        :style="{
-          width: `${NODE_WIDTH}px`,
-          height: `${NODE_HEIGHT}px`,
-          borderInlineStartColor: nodeStates[id]?.accent,
-        }"
+        :style="{ borderInlineStartColor: nodeStates[id]?.accent }"
         :data-testid="`workflow-node-${id}`"
         :data-state="nodeStates[id]?.state"
       >

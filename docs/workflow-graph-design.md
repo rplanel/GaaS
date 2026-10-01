@@ -365,6 +365,33 @@ on none; 3.0.0 predates the pairing but orders `fan-in` and
 `subworkflow-nested` differently. A dagre release without the bug stops the
 fallback running with no change here.
 
+#### Sized by its anchors (#122)
+
+Every step was 96 px tall, and its anchors are spread evenly down its side, so
+the more a step had the closer they sat: `ccqtl-today`'s step 2 put ten
+outputs 8.7 px apart and `fan-in`'s step 6 eight 10.7 px apart, on handles
+6 px across. Every edge was in the DOM and distinguishable to a test, and on
+screen they left the step as one smear — the failure one anchor per output
+exists to prevent. A step is now as tall as its fuller side needs to keep its
+anchors 20 px apart, one gap more than it has anchors, and never shorter than
+96 px: ten outputs make 220 px. Galaxy's editor sizes a step by its inputs and
+outputs too. The height is carried on the node, which Vue Flow applies as its
+style, so dagre lays out and Vue Flow draws one number. Left to right only:
+top to bottom the anchors run along the width, which stays 260 px so that a
+rank lines up, and which keeps them 20 px apart up to twelve a side.
+
+A level's nodes are keyed by order index, so a drill-down or another revision
+redraws a node as another step, with its anchors elsewhere, and Vue Flow routes
+each edge to the offsets it last measured. Its ResizeObserver catches a step
+that changed size; nothing catches anchors that moved inside one that did not.
+So the canvas has Vue Flow measure every node again once each new graph is
+rendered, and before it is fitted. Under happy-dom Vue Flow measures nothing
+and never reports its pane ready, so the suite asserts the heights and offsets
+it is handed and when the measure is asked for; how it draws needs a browser.
+
+The heights moved `ccqtl-today`'s layout as well: laid out from all twenty
+connections it is now 427 px tall, against 283 from one edge per pair.
+
 ### Verdict on the refactor
 
 Refactor the **Galaxy-side fetching**. Leave the **Supabase side alone** — jobs,
