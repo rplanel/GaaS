@@ -11,15 +11,15 @@
 
 import type { JobState } from 'blendtype'
 import type { DescribedStep } from 'nuxt-galaxy'
+import type { GraphDirection } from '../../app/utils/workflowGraph'
 import { describe, expect, it } from 'vitest'
 import { stepMarks } from '../../app/utils/stepMarks'
 import { toolDisplayName } from '../../app/utils/toolName'
 import {
+  anchorAlong,
   animatedEdges,
   dagreGraph,
   handleSides,
-  NODE_HEIGHT,
-  NODE_WIDTH,
   stepNodeLabel,
   stepsAtPath,
   subworkflowTrail,
@@ -182,34 +182,109 @@ describe('workflowGraph', () => {
 
     expect([lr!.sourcePosition, lr!.targetPosition]).toEqual(['right', 'left'])
     expect([tb!.sourcePosition, tb!.targetPosition]).toEqual(['bottom', 'top'])
-    // The handles are placed from the same function, not a second ternary.
-    expect(handleSides('LR')).toEqual({ source: lr!.sourcePosition, target: lr!.targetPosition })
-    expect(handleSides('TB')).toEqual({ source: tb!.sourcePosition, target: tb!.targetPosition })
+    // The handles are placed from the same function, not a second ternary —
+    // and so is which of a step's dimensions they are spread along, which is
+    // what a step's height is sized for (#122): down the side left to right,
+    // across it top to bottom.
+    expect(handleSides('LR')).toEqual({ source: lr!.sourcePosition, target: lr!.targetPosition, along: 'height' })
+    expect(handleSides('TB')).toEqual({ source: tb!.sourcePosition, target: tb!.targetPosition, along: 'width' })
+  })
+
+  it('sizes a step by its anchors left to right, never below the 96 px a step always had', () => {
+    // #122. On ccqtl-today step 2 has ten outputs, step 5 seven inputs and
+    // steps 4 and 6 four of each: 20 px between two anchors, and one gap more
+    // than there are anchors. The other steps fit in 96 px, as every step
+    // used to.
+    const steps = describedSteps(FIXTURES.ccqtlToday)
+    const sizes = (direction: GraphDirection) =>
+      Object.fromEntries(workflowGraph(steps, direction).nodes.map(node => [node.id, [node.width, node.height]]))
+
+    expect(sizes('LR')).toEqual({
+      0: [260, 96],
+      1: [260, 96],
+      2: [260, 220],
+      3: [260, 96],
+      4: [260, 100],
+      5: [260, 160],
+      6: [260, 100],
+    })
+    // Top to bottom the anchors run along the width instead, and the width
+    // is fixed — a rank of equal-width steps is what makes it readable — so
+    // there is nothing for a taller step to spread.
+    expect(Object.values(sizes('TB'))).toEqual(Array.from({ length: 7 }, () => [260, 96]))
+  })
+
+  it.each(RECORDED_LEVELS)('keeps the anchors on every step of $name at least 20 px apart, in either direction', ({ steps }) => {
+    // #122, over every recording rather than the one step that showed it.
+    // fan-in's step 6 put eight outputs 10.7 px apart and ccqtl-today's
+    // step 2 ten 8.7 px apart, on handles 6 px across: no gap a reader can
+    // tell one edge from the next by.
+    const crowded: string[] = []
+    for (const direction of ['LR', 'TB'] as const) {
+      for (const node of workflowGraph(steps, direction).nodes) {
+        // Down the side left to right, across it top to bottom.
+        const side = node[handleSides(direction).along]
+        for (const anchors of [node.data.sourceHandles, node.data.targetHandles]) {
+          const offsets = anchors.map((_, index) => anchorAlong(index, anchors.length) * side)
+          // To a hundredth of a pixel, which floating point does not hold.
+          const gaps = offsets.slice(1).map((offset, index) => Math.round((offset - offsets[index]!) * 100) / 100)
+          crowded.push(...gaps.filter(gap => gap < 20).map(gap => `${direction} step ${node.id}: ${gap} px`))
+        }
+      }
+    }
+    expect(crowded).toEqual([])
+  })
+
+  it.each(RECORDED_LEVELS)('lays no step of $name over another, at the size each is drawn', ({ steps }) => {
+    // #122. Vue Flow draws each step at its node's own size, so dagre has to
+    // lay it out at that size too: a step taller than dagre was told
+    // overlaps its neighbour in the rank rather than pushing it away.
+    const overlapping: string[] = []
+    for (const direction of ['LR', 'TB'] as const) {
+      const { nodes } = workflowGraph(steps, direction)
+      nodes.forEach((a, index) => {
+        for (const b of nodes.slice(index + 1)) {
+          const apart = a.position.x + a.width <= b.position.x || b.position.x + b.width <= a.position.x
+            || a.position.y + a.height <= b.position.y || b.position.y + b.height <= a.position.y
+          if (!apart) {
+            overlapping.push(`${direction} steps ${a.id} and ${b.id}`)
+          }
+        }
+      })
+    }
+    expect(overlapping).toEqual([])
   })
 
   it('positions a node by its top-left corner, as Vue Flow reads it', () => {
     // Dagre answers with centres. Handed over unconverted every node sits
     // half its own size up and to the left of where its edges arrive.
-    const { nodes } = workflowGraph({ 0: aStep(0) })
-    const node = nodes[0]!
-    // One node, so dagre puts its centre at the margin plus half the box.
-    expect(node.position).toEqual({ x: 16, y: 16 })
-    expect({ NODE_WIDTH, NODE_HEIGHT }).toEqual({ NODE_WIDTH: 260, NODE_HEIGHT: 96 })
+    // One node, so dagre puts its centre at the margin plus half the box —
+    // half of *its own* box, which a step with ten outputs makes 220 px tall
+    // rather than the 96 px of one with none (#122).
+    const outputs = Array.from({ length: 10 }, (_, index) => ({ name: `out${index}`, type: 'txt' }))
+    const [short] = workflowGraph({ 0: aStep(0) }).nodes
+    const [tall] = workflowGraph({ 0: aStep(0, { outputs }) }).nodes
+
+    expect([short!.height, tall!.height]).toEqual([96, 220])
+    expect(short!.position).toEqual({ x: 16, y: 16 })
+    expect(tall!.position).toEqual({ x: 16, y: 16 })
   })
 
   it('lays ccqtl-today out from all twenty of its connections', () => {
     // #121. Laid out from the ten pairs of steps those twenty connections
     // join, every one of these seven steps sat somewhere else, in a graph
-    // 276 px tall instead of 396: the layout of a different graph.
+    // 283 px tall instead of 427: the layout of a different graph. (Both at
+    // #122's heights, which moved six of the seven from where #121 pinned
+    // them.)
     const { nodes } = workflowGraph(describedSteps(FIXTURES.ccqtlToday))
 
     expect(Object.fromEntries(nodes.map(node => [node.id, node.position]))).toEqual({
-      0: { x: 16, y: 79 },
-      1: { x: 16, y: 207 },
-      2: { x: 366, y: 143 },
-      3: { x: 716, y: 284 },
-      4: { x: 1066, y: 190 },
-      5: { x: 1416, y: 106 },
+      0: { x: 16, y: 93 },
+      1: { x: 16, y: 221 },
+      2: { x: 366, y: 112 },
+      3: { x: 716, y: 315 },
+      4: { x: 1066, y: 218 },
+      5: { x: 1416, y: 121 },
       6: { x: 1766, y: 16 },
     })
   })

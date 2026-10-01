@@ -84,6 +84,15 @@ async function mountReactive(steps: Record<string, DescribedStep>) {
 }
 
 /**
+ * The store a mounted canvas made for itself, reached the way the DOM names
+ * it, so a test can move a node exactly as a drag moves it or hear what the
+ * canvas asks Vue Flow to do.
+ */
+function flowOf(wrapper: { find: (selector: string) => { attributes: (name: string) => string | undefined } }) {
+  return useVueFlow(wrapper.find('.vue-flow__node').attributes('aria-describedby')!.replace('vue-flow__node-desc-', ''))
+}
+
+/**
  * A dialog and a toast outlive the component that opened them: both are
  * portalled to the body, which no unmount empties. Left behind, the next test
  * reads the previous one's slideover.
@@ -148,6 +157,27 @@ describe('galaxyWorkflowGraph', () => {
       .filter(handle => ['proviruses', 'viruses'].includes(handle.attributes('data-handleid') ?? ''))
       .map(handle => handle.attributes('style'))
     expect(new Set(offsets).size).toBe(2)
+  })
+
+  it('draws a step with ten outputs tall enough to keep its anchors 20 px apart', async () => {
+    // #122. Every step was 96 px whatever it held, and the anchors are spread
+    // evenly down its side, so ccqtl-today's step 2 put its ten 8.7 px apart:
+    // 6 px handles with 2.7 px between them, ten edges leaving one smear.
+    // Vue Flow never measures here, so what is read is what it is told — the
+    // height on the step and the offset on each anchor — never the drawing.
+    const wrapper = await mountIn(Graph, { steps: describedSteps(FIXTURES.ccqtlToday) })
+    mounted = wrapper
+
+    const step = wrapper.find<HTMLElement>('.vue-flow__node[data-id="2"]')
+    const height = Number.parseFloat(step.element.style.height)
+    const offsets = step.findAll<HTMLElement>('.vue-flow__handle.source')
+      .map(handle => (Number.parseFloat(handle.element.style.top) / 100) * height)
+
+    expect(offsets).toHaveLength(10)
+    // To a hundredth of a pixel: the offsets are percentages, and an eleventh
+    // of a hundred is not exact in floating point.
+    const gaps = offsets.slice(1).map((offset, index) => Math.round((offset - offsets[index]!) * 100) / 100)
+    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(20)
   })
 
   it('still anchors a step that neither declares an output nor is read from', async () => {
@@ -316,6 +346,35 @@ describe('galaxyWorkflowGraph, on a subworkflow step', () => {
     await nextTick()
     expect(wrapper.findAll('.vue-flow__node')).toHaveLength(14)
     expect(wrapper.find('[data-testid="graph-trail-root"]').exists()).toBe(false)
+  })
+
+  it('has Vue Flow measure the anchors again once a level of other heights is drawn', async () => {
+    // #122. A level's nodes are keyed by order index, so opening step 8
+    // redraws node 5 as another step: 96 px outside, the seven outputs of
+    // rna_starsolo and 160 px inside. Vue Flow keeps the anchor offsets it
+    // measured, and routes every edge to them, until something has it
+    // measure again. Its ResizeObserver does for a step that changes size,
+    // as this one does; nothing does for anchors that move inside a step
+    // that keeps its size, so the canvas asks on every new level.
+    const wrapper = await mountIn(Graph, { steps })
+    mounted = wrapper
+    const flow = flowOf(wrapper)
+    const heightOf = (id: string) => wrapper.find<HTMLElement>(`.vue-flow__node[data-id="${id}"]`).element.style.height
+    expect(heightOf('5')).toBe('96px')
+
+    // What step 5 was drawn at when Vue Flow was asked, since asked before
+    // the new level reaches the DOM it measures the old one. No ids is Vue
+    // Flow's own way of saying every node.
+    const heightsWhenAsked: string[] = []
+    flow.onUpdateNodeInternals((ids) => {
+      if (ids.length === 0 || ids.includes('5')) {
+        heightsWhenAsked.push(heightOf('5'))
+      }
+    })
+    await wrapper.find('[data-testid="open-subworkflow-8"]').trigger('click')
+    await nextTick()
+
+    expect(heightsWhenAsked).toContain('160px')
   })
 
   it('emits the nested step it is inside, so nothing joins it to a job row', async () => {
@@ -566,10 +625,7 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     }))
     mounted = wrapper
 
-    // The store the canvas made for itself, reached the way the DOM names
-    // it, so the node can be moved exactly as a drag moves it.
-    const describedBy = wrapper.find('.vue-flow__node').attributes('aria-describedby')!
-    const flow = useVueFlow(describedBy.replace('vue-flow__node-desc-', ''))
+    const flow = flowOf(wrapper)
     const transform = () => wrapper.find('.vue-flow__node[data-id="1"]').attributes('style')
 
     flow.updateNode('1', { position: { x: 999, y: 777 } })

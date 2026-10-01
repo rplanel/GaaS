@@ -23,27 +23,48 @@ import { Position } from '@vue-flow/core'
 export type GraphDirection = 'LR' | 'TB'
 
 /**
- * Which side of a node an edge leaves and arrives on, for one direction.
+ * Which side of a node an edge leaves and arrives on, for one direction —
+ * and so which of the node's dimensions its anchors are spread `along`: the
+ * height when they sit on the left and right, the width when they sit on the
+ * top and bottom.
  *
- * One function so the node's properties and the handle placed inside it are
- * the same decision rather than two ternaries that can drift.
+ * One function so the node's properties, the handles placed inside it, where
+ * along its side each one sits and how tall a step is sized (#122) are the
+ * same decision rather than ternaries that can drift.
  */
-export function handleSides(direction: GraphDirection): { source: Position, target: Position } {
+export function handleSides(direction: GraphDirection): { source: Position, target: Position, along: 'height' | 'width' } {
   return direction === 'LR'
-    ? { source: Position.Right, target: Position.Left }
-    : { source: Position.Bottom, target: Position.Top }
+    ? { source: Position.Right, target: Position.Left, along: 'height' }
+    : { source: Position.Bottom, target: Position.Top, along: 'width' }
 }
 
 /**
- * The size dagre lays a node out as, and the size the node template is
- * clamped to.
+ * The width every step is drawn at, and the least height.
  *
  * Dagre positions boxes, so it has to be told how big they are before they
- * exist. A node that grew past these would overlap its neighbour rather than
- * push it away, so the template fixes the same numbers.
+ * exist. A node that grew past what dagre was told would overlap its
+ * neighbour rather than push it away, so each node carries its own size and
+ * Vue Flow draws it at exactly that (see `stepHeight`). Not exported for the
+ * same reason: a step's size is read off its node, never off these.
  */
-export const NODE_WIDTH = 260
-export const NODE_HEIGHT = 96
+const NODE_WIDTH = 260
+const NODE_MIN_HEIGHT = 96
+
+/** How far apart two anchors on one side of a step are kept, at the least. */
+const ANCHOR_MIN_SPACING = 20
+
+/**
+ * How far along its side the *n*th of *m* anchors sits, from 0 to 1.
+ *
+ * Spread evenly, at `(n + 1) / (m + 1)` of the way along, which keeps a
+ * single anchor centred. Here rather than in the template because
+ * `stepHeight` sizes a step for exactly this spread — one gap more than
+ * there are anchors — and a spread changed in one place only would crowd
+ * the anchors again.
+ */
+export function anchorAlong(index: number, count: number): number {
+  return (index + 1) / (count + 1)
+}
 
 /** What the node template renders, derived once here rather than in the template. */
 export interface WorkflowGraphNodeData {
@@ -92,6 +113,13 @@ export interface WorkflowGraphNode {
    */
   readonly sourcePosition: Position
   readonly targetPosition: Position
+  /**
+   * The size the step is drawn at, and the size dagre lays it out as — one
+   * number for both, because Vue Flow applies a node's own `width` and
+   * `height` as its style (#122).
+   */
+  readonly width: number
+  readonly height: number
   readonly data: WorkflowGraphNodeData
 }
 
@@ -234,6 +262,8 @@ export function workflowGraph(
     type: 'step' as const,
     sourcePosition: sides.source,
     targetPosition: sides.target,
+    width: NODE_WIDTH,
+    height: stepHeight(anchors[stepId], sides.along),
     data: {
       stepId,
       step,
@@ -343,6 +373,29 @@ function anchorsOf(entries: [string, DescribedStep][]): Record<string, { source:
 }
 
 /**
+ * How tall a step is drawn: as tall as its anchors need, and never shorter
+ * than a step always was (#122).
+ *
+ * The anchors are spread evenly down a side, so at one fixed height the
+ * more a step had the closer they sat — ccqtl-today's step 2 put ten 8.7 px
+ * apart, 6 px handles with 2.7 px between them, and ten edges left it as one
+ * smear. Galaxy's editor sizes a step by how many inputs and outputs it has
+ * for the same reason. The fuller side decides, with one gap more than it
+ * has anchors.
+ *
+ * Only where the anchors run along the height, which is left to right. Top
+ * to bottom they run along the width, which stays fixed so that a rank of
+ * steps lines up, and a taller step would spread nothing.
+ */
+function stepHeight(anchors: { source: string[], target: string[] } | undefined, along: 'height' | 'width'): number {
+  if (along === 'width') {
+    return NODE_MIN_HEIGHT
+  }
+  const anchorsOnFullerSide = Math.max(anchors?.source.length ?? 0, anchors?.target.length ?? 0)
+  return Math.max(NODE_MIN_HEIGHT, ANCHOR_MIN_SPACING * (anchorsOnFullerSide + 1))
+}
+
+/**
  * The graph dagre lays one level out from: every step, at the size the
  * template draws it, and every connection as an edge of its own.
  *
@@ -360,7 +413,7 @@ function anchorsOf(entries: [string, DescribedStep][]): Record<string, { source:
  * exactly as the unweighted graph before #121 did.
  */
 export function dagreGraph(
-  nodes: readonly Pick<WorkflowGraphNode, 'id'>[],
+  nodes: readonly Pick<WorkflowGraphNode, 'id' | 'width' | 'height'>[],
   edges: readonly WorkflowGraphEdge[],
   direction: GraphDirection,
   keying: 'connection' | 'pair' = 'connection',
@@ -368,7 +421,7 @@ export function dagreGraph(
   const graph = new Graph({ multigraph: keying === 'connection' })
   graph.setGraph({ rankdir: direction, nodesep: 32, ranksep: 90, marginx: 16, marginy: 16 })
   for (const node of nodes) {
-    graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT })
+    graph.setNode(node.id, { width: node.width, height: node.height })
   }
   for (const edge of edges) {
     if (keying === 'connection') {
@@ -406,7 +459,7 @@ function layOut(
   return nodes.map((node) => {
     const { x, y } = graph.node(node.id)
     // Dagre positions a node by its centre, Vue Flow by its top-left corner.
-    return { ...node, position: { x: x - NODE_WIDTH / 2, y: y - NODE_HEIGHT / 2 } }
+    return { ...node, position: { x: x - node.width / 2, y: y - node.height / 2 } }
   })
 }
 
