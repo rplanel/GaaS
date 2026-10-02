@@ -71,6 +71,7 @@ catalog:
   eslint-config-unjs: ^0.5.0
   eslint-plugin-format: ^1.0.2
   evlog: ^2.22.3
+  h3: ^1.15.11
   htl: ^0.3.1
   isomorphic-dompurify: ^3.4.0
   jiti: ^2.6.1

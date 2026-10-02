@@ -17,6 +17,18 @@
 - `@nuxt/content`: ^3.11.2 (content management)
 - `blendtype`: workspace:* (Galaxy API client)
 
+### Peer Dependencies
+- `h3`: ^1.15.11 (catalog:), the range `@nuxt/nitro-server` and `nitropack`
+  declare. The server runtime imports it by name, and the event a handler is
+  handed is Nitro's, so the copy that counts is the app's: hence a peer. It is
+  a devDependency as well, so that inside the workspace the package resolves
+  its own declared copy. Undeclared, it resolved to whatever
+  `shamefully-hoist` put at the root, and an incremental install once hoisted
+  2.0.1-rc.22 (pulled by `devframe`), turning the gates red for no reason
+  (#81). Since then a reused `node_modules` can no longer change which h3 the
+  module sees. Run `pnpm build` and `pnpm dev:prepare` before trusting a gate
+  all the same: stale dists and generated `.nuxt` tsconfigs still mislead.
+
 ## Section 2: Executable Commands With Full Flags
 
 ### Development
