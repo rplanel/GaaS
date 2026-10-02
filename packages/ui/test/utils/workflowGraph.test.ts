@@ -27,6 +27,7 @@ import {
 } from '../../app/utils/workflowGraph'
 import { FIXTURES } from '../characterisation/fixtures'
 import { aStep, describedSteps } from '../describedSteps'
+import { crossings, drawnLine, entersStep } from '../drawnLines'
 
 /**
  * Every level a reader can open in one recording — the workflow, then each
@@ -323,6 +324,77 @@ describe('workflowGraph', () => {
     })
 
     expect(nodes.map(node => node.data.acceptsInput)).toEqual([false, false, false, true, true])
+  })
+})
+
+/**
+ * What the canvas draws of one level in one direction (#134): how many times
+ * two of its connections cross, and which connections run through a step
+ * that is neither end of them, with the steps each one runs through.
+ */
+function drawing(steps: Record<string, DescribedStep>, direction: GraphDirection): { crossings: number, runThrough: Map<string, string[]> } {
+  const { nodes, edges } = workflowGraph(steps, direction)
+  const lines = edges.map(edge => ({ edge, line: drawnLine(edge, nodes, direction) }))
+  const crossed = lines.reduce((sum, { line }, index) =>
+    sum + lines.slice(index + 1).reduce((pairs, other) => pairs + crossings(line, other.line), 0), 0)
+  const runThrough = new Map(lines.flatMap(({ edge, line }) => {
+    const entered = nodes
+      .filter(node => node.id !== edge.source && node.id !== edge.target && entersStep(line, node))
+      .map(node => node.id)
+    return entered.length === 0 ? [] : [[edge.id, entered] as const]
+  }))
+  return { crossings: crossed, runThrough }
+}
+
+/**
+ * The most each recorded level may draw, per direction (#134): ceilings for
+ * #123's layout and for every dagre bump after it (#133), which may lower
+ * them and never raise them.
+ *
+ * Measured on today's canvas at dagre 3.1.1: 156 crossings, and 13
+ * connections through a step, 19 connection–step pairs in all. #123's
+ * design spike counted 154 crossings, with the same 13 connections, by
+ * anchoring each line on the step's side; Vue Flow anchors it 3 px further
+ * out, at the handle's outer edge. That moves one pair on ccqtl-today top to
+ * bottom: `4:nrep_rds` and `3:out`, both into step 5, came within 0.02 px of
+ * each other without crossing, and drawn where the canvas draws them they
+ * cross twice, about 24 px apart, never more than about 2 px from each other
+ * in between, which on screen is one line.
+ */
+const DRAWN_AT_MOST: Record<string, Record<GraphDirection, { crossings: number, throughAStep: number }>> = {
+  'ccqtl-today': { LR: { crossings: 25, throughAStep: 2 }, TB: { crossings: 27, throughAStep: 3 } },
+  'conditional-repeat-runtime': { LR: { crossings: 3, throughAStep: 0 }, TB: { crossings: 3, throughAStep: 0 } },
+  'fan-in': { LR: { crossings: 1, throughAStep: 1 }, TB: { crossings: 1, throughAStep: 1 } },
+  'subworkflow-nested': { LR: { crossings: 21, throughAStep: 1 }, TB: { crossings: 21, throughAStep: 1 } },
+  'subworkflow-nested/8': { LR: { crossings: 13, throughAStep: 0 }, TB: { crossings: 13, throughAStep: 0 } },
+  'subworkflow-nested/8/8': { LR: { crossings: 7, throughAStep: 1 }, TB: { crossings: 7, throughAStep: 1 } },
+  'subworkflow-nested/12': { LR: { crossings: 7, throughAStep: 1 }, TB: { crossings: 7, throughAStep: 1 } },
+}
+
+describe('workflowGraph, as the canvas draws it', () => {
+  it.each(RECORDED_LEVELS)('crosses no more connections of $name, and runs no more through a step, than pinned', ({ name, steps }) => {
+    const drawn = { LR: drawing(steps, 'LR'), TB: drawing(steps, 'TB') }
+    const pinned = DRAWN_AT_MOST[name]
+    // A new recording is measured the moment it is committed, and stays red
+    // here until what it draws is pinned.
+    expect(pinned, `${name} is not pinned: it draws ${(['LR', 'TB'] as const).map(direction =>
+      `${direction} ${drawn[direction].crossings} crossings and ${drawn[direction].runThrough.size} connections through a step`).join(', ')}`).toBeDefined()
+
+    const over = (['LR', 'TB'] as const).flatMap((direction) => {
+      const now = drawn[direction]
+      const most = pinned![direction]
+      const through = [...now.runThrough].map(([edge, entered]) => `${edge} through step ${entered.join(', ')}`)
+      return [
+        ...(now.crossings > most.crossings ? [`${direction}: ${now.crossings} crossings, pinned at ${most.crossings}`] : []),
+        ...(now.runThrough.size > most.throughAStep ? [`${direction}: ${through.join('; ')}, pinned at ${most.throughAStep}`] : []),
+      ]
+    })
+    expect(over).toEqual([])
+  })
+
+  it('pins no ceiling on a level that is no longer recorded', () => {
+    // A ceiling for a level that has gone holds nothing to anything.
+    expect(Object.keys(DRAWN_AT_MOST).filter(name => !RECORDED_LEVELS.some(level => level.name === name))).toEqual([])
   })
 })
 
