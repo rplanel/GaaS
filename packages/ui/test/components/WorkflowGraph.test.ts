@@ -25,6 +25,7 @@ import Graph from '../../app/components/galaxy/workflow/Graph.vue'
 import GraphConnection from '../../app/components/galaxy/workflow/GraphConnection.vue'
 import GraphView from '../../app/components/galaxy/workflow/GraphView.vue'
 import { stepMarks } from '../../app/utils/stepMarks'
+import { workflowGraph } from '../../app/utils/workflowGraph'
 import { FIXTURES } from '../characterisation/fixtures'
 import { aStep, describedSteps } from '../describedSteps'
 
@@ -653,6 +654,38 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     expect(stateOf(wrapper, '1')).toBe('unmarked')
     expect(wrapper.find('[data-testid="node-mark-1"]').exists()).toBe(false)
     expect(wrapper.findAll('.vue-flow__edge.animated')).toHaveLength(0)
+  })
+})
+
+describe('galaxyWorkflowGraph, routing a connection', () => {
+  // #136. Vue Flow never measures here, so where a line runs is not read:
+  // what is read is whether it is drawn through its route, one cubic per
+  // piece, or as the one bezier between its anchors.
+
+  it('draws a connection round the steps between until a reader drags one of its steps, and keeps it so across a refetch', async () => {
+    const steps = describedSteps(FIXTURES.ccqtlToday)
+    const routed = workflowGraph(steps).edges.filter(edge => edge.data.route !== null)
+    const { wrapper, setMarks } = await mountReactive(steps, stepMarks(steps, [{ step_id: 2, state: 'queued' }]))
+    mounted = wrapper
+
+    const cubics = (id: string) => wrapper.find(`.vue-flow__edge[data-id="${id}"] path.vue-flow__edge-path`).attributes('d')!.split(' C').length - 1
+    const [moving, ...others] = routed
+    const elsewhere = others.find(edge => edge.source !== moving!.source && edge.target !== moving!.source)!
+    expect(elsewhere, 'a routed connection that does not touch the step dragged').toBeDefined()
+    expect(cubics(moving!.id)).toBe(moving!.data.route!.through.length + 1)
+
+    flowOf(wrapper).updateNode(moving!.source, { position: { x: 999, y: 777 } })
+    await nextTick()
+    expect(cubics(moving!.id), 'dragged off its route').toBe(1)
+    expect(cubics(elsewhere.id), 'and nothing else is').toBe(elsewhere.data.route!.through.length + 1)
+
+    // The analysis panel hands the canvas new marks on every realtime event.
+    // The step stays where it was put, so its connection stays off its route.
+    setMarks(stepMarks(steps, [{ step_id: 2, state: 'running' }]))
+    await nextTick()
+    expect(wrapper.find(`.vue-flow__node[data-id="${moving!.source}"]`).attributes('style')).toContain('translate(999px,777px)')
+    expect(wrapper.find('[data-testid="workflow-node-2"]').attributes('data-state')).toBe('running')
+    expect(cubics(moving!.id)).toBe(1)
   })
 })
 

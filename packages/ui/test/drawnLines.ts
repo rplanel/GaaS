@@ -13,8 +13,8 @@
  */
 
 import type { GraphDirection, WorkflowGraphEdge, WorkflowGraphNode } from '../app/utils/workflowGraph'
-import { getBezierPath, Position } from '@vue-flow/core'
-import { anchorAlong, handleSides } from '../app/utils/workflowGraph'
+import { Position } from '@vue-flow/core'
+import { anchorAlong, connectionPath, handleSides } from '../app/utils/workflowGraph'
 
 export interface Point {
   readonly x: number
@@ -28,9 +28,11 @@ export type Line = readonly Point[]
 export type StepBox = Pick<WorkflowGraphNode, 'position' | 'width' | 'height'>
 
 /**
- * How many straight pieces a connection's curve is measured as.
+ * How many straight pieces each curve of a connection is measured as: the
+ * one bezier of a connection drawn between its anchors, or each bezier of a
+ * routed one (#136).
  *
- * Even, so that the curve's own midpoint — where Vue Flow puts the label —
+ * Even, so that a curve's own midpoint — where Vue Flow puts the label —
  * is one of the sampled points.
  */
 const SEGMENTS = 64
@@ -66,14 +68,15 @@ function anchorPoint(node: WorkflowGraphNode, end: 'source' | 'target', name: st
 }
 
 /**
- * The line the canvas draws for one connection today: Vue Flow's default
- * edge, a bezier between its two anchors at curvature 0.25.
+ * The line the canvas draws for one connection: the path `connectionPath`
+ * gives the canvas's own edge (#136), between the two anchors as Vue Flow
+ * measures them, with each step where `nodes` puts it — where it was laid
+ * out, unless a test has moved it as a reader drags one.
  *
- * The curve is read off Vue Flow's own `getBezierPath` rather than copied
- * from it, so a Vue Flow that changes its curvature is measured as it
- * draws. Where the anchors sit, how big a handle is and that the canvas
- * draws the default edge at all are this file's reading of the canvas, not
- * Vue Flow's, and `drawnLines.test.ts` pins them.
+ * So a connection with no route of its own is Vue Flow's bezier between its
+ * anchors, and a routed one a chain of them through its route. Where the
+ * anchors sit and how big a handle is are this file's reading of the
+ * canvas, not Vue Flow's, and `drawnLines.test.ts` pins them.
  */
 export function drawnLine(edge: WorkflowGraphEdge, nodes: readonly WorkflowGraphNode[], direction: GraphDirection): Line {
   const sides = handleSides(direction)
@@ -89,27 +92,58 @@ export function drawnLine(edge: WorkflowGraphEdge, nodes: readonly WorkflowGraph
   const from = anchorPoint(source, 'source', edge.sourceHandle, direction)
   const to = anchorPoint(target, 'target', edge.targetHandle, direction)
 
-  const [path] = getBezierPath({
+  const [path] = connectionPath({
     sourceX: from.x,
     sourceY: from.y,
     sourcePosition: sides.source,
     targetX: to.x,
     targetY: to.y,
     targetPosition: sides.target,
+    route: edge.data.route,
+    sourceStepAt: source.position,
+    targetStepAt: target.position,
   })
-  const numbers = /^M([^,\s]+),([^,\s]+) C([^,\s]+),([^,\s]+) ([^,\s]+),([^,\s]+) ([^,\s]+),([^,\s]+)$/.exec(path)?.slice(1).map(Number)
-  if (numbers?.length !== 8 || numbers.some(number => !Number.isFinite(number))) {
-    throw new Error(`Vue Flow drew ${edge.id} as ${path}, which is not one cubic`)
-  }
-  const [x0, y0, x1, y1, x2, y2, x3, y3] = numbers as [number, number, number, number, number, number, number, number]
 
-  return Array.from({ length: SEGMENTS + 1 }, (_, index) => {
-    const t = index / SEGMENTS
-    const u = 1 - t
-    return {
-      x: u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3,
-      y: u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3,
+  return cubicsOf(path, edge.id).flatMap(([p0, p1, p2, p3], piece) =>
+    // Each curve after the first starts where the one before it ended.
+    Array.from({ length: SEGMENTS + 1 }, (_, index) => {
+      const t = index / SEGMENTS
+      const u = 1 - t
+      return {
+        x: u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x,
+        y: u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y,
+      }
+    }).slice(piece === 0 ? 0 : 1))
+}
+
+/**
+ * The cubics of a path the canvas draws, each as its four points: one `M`
+ * and at least one `C` after it, which is all a bezier, or a chain of them,
+ * is drawn as.
+ */
+function cubicsOf(path: string, id: string): [Point, Point, Point, Point][] {
+  const notCubics = new Error(`${id} is drawn as ${path}, which is not a chain of cubics`)
+  const point = (pair: string): Point => {
+    const [x, y, ...more] = pair.split(',').map(Number)
+    if (x === undefined || y === undefined || more.length > 0 || !Number.isFinite(x) || !Number.isFinite(y)) {
+      throw notCubics
     }
+    return { x, y }
+  }
+  const [start, ...cubics] = path.split(' C')
+  if (!start?.startsWith('M') || cubics.length === 0) {
+    throw notCubics
+  }
+  let from = point(start.slice(1))
+  return cubics.map((cubic) => {
+    const pairs = cubic.split(' ')
+    if (pairs.length !== 3) {
+      throw notCubics
+    }
+    const [c1, c2, to] = pairs.map(point) as [Point, Point, Point]
+    const piece: [Point, Point, Point, Point] = [from, c1, c2, to]
+    from = to
+    return piece
   })
 }
 
