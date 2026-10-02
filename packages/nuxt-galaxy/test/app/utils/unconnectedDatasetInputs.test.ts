@@ -60,8 +60,9 @@ function runtime(kind: 'RuntimeValue' | 'ConnectedValue' = 'RuntimeValue'): Work
 function step(
   tool_inputs: WorkflowToolParameters,
   input_connections: WorkflowStepConnections = {},
-): { tool_inputs: WorkflowToolParameters, input_connections: WorkflowStepConnections } {
-  return { tool_inputs, input_connections }
+): Parameters<typeof unconnectedDatasetInputs>[1] {
+  // No step here gives an input a default of its own (#105).
+  return { tool_inputs, input_connections, input_defaults: {} }
 }
 
 describe('a top-level data parameter', () => {

@@ -44,6 +44,19 @@ export interface DescribedStep {
   /** Every incoming edge, by the name of the input it feeds; one or several per input. */
   readonly input_connections: WorkflowStepConnections
   /**
+   * Every default the **workflow** gives a step input, by the prefixed name
+   * of the input it fills: the export's `in`, unwrapped from its
+   * `{ "default": … }` (#105). Empty for a step that sets none, which is
+   * nearly every step.
+   *
+   * From 23.2 Galaxy fills an input nothing connects from this before leaving
+   * it empty (`replacement_for_input`, `workflow/run.py:491` at 26.1), so an
+   * input named here is not one nothing will supply.
+   * A default the **tool** declares on a data parameter is a different thing
+   * and is not here: no payload this application reads carries it.
+   */
+  readonly input_defaults: Readonly<Record<string, unknown>>
+  /**
    * The outputs the step declares, which is what an output handle can be
    * drawn for. The live payload has no such list at all.
    *
@@ -204,6 +217,29 @@ function toolInputsOf(step: WorkflowStepExport): WorkflowToolParameters {
 }
 
 /**
+ * The defaults the workflow gives this step's inputs, from the export's `in`.
+ *
+ * `_workflow_to_dict_export` writes `in[name] = {"default": value}` for each
+ * step input whose default is set, and leaves the key out otherwise
+ * (`managers/workflows.py:1815-1821` at 26.1). Read structurally, since the
+ * step schema keeps `in` without modelling it: an entry not of that shape is
+ * one this function did not model, and is left out rather than guessed at.
+ */
+function inputDefaultsOf(step: WorkflowStepExport): Record<string, unknown> {
+  const defaults: Record<string, unknown> = {}
+  const stepIn = 'in' in step ? step.in : undefined
+  if (stepIn === null || typeof stepIn !== 'object' || Array.isArray(stepIn)) {
+    return defaults
+  }
+  for (const [name, entry] of Object.entries(stepIn)) {
+    if (entry !== null && typeof entry === 'object' && 'default' in entry) {
+      defaults[name] = entry.default
+    }
+  }
+  return defaults
+}
+
+/**
  * The workflow a `subworkflow` step embeds, normalised, or `null` for a step
  * that embeds none.
  *
@@ -255,6 +291,7 @@ export function describedStepsOf(definition: Pick<GalaxyWorkflowExport, 'steps'>
       tool_version: step.tool_version ?? null,
       tool_inputs: toolInputsOf(step),
       input_connections: step.input_connections ?? {},
+      input_defaults: inputDefaultsOf(step),
       outputs: step.outputs ?? [],
       subworkflow: describedSubworkflowOf(step.subworkflow),
     }

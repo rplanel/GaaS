@@ -39,26 +39,18 @@ const BLOCKS_SUBMIT: ReadonlySet<UnavailableTool['reason']> = new Set(['not_inst
  * Why a step is marked for a dataset input nothing feeds (#97).
  *
  * The two branches differ because Galaxy's own behaviour does, and **only the
- * optional one is the same on both releases this project meets**:
+ * optional one is the same on every release**:
  *
  * - **Optional.** The step runs with the input empty, on 22.05 and 26.1
  *   alike. So the sentence may promise that the analysis starts, and does.
- * - **Required.** The two releases diverge, and the sentence must not promise
- *   either. `ToolModule.execute` calls `visit_input_values` with
- *   `replace_optional_connections=True`. At 22.05 that branch is guarded by
- *   `hasattr(input, "value")` (`tools/parameters/__init__.py:160`), and a
- *   `DataToolParameter` has no `value` attribute — nothing on the chain from
- *   `ToolParameter` down sets one — so the runtime marker survives,
- *   `from_json` returns `None` for it *before* the required check
- *   (`basic.py:2039`), and the invocation is accepted. By 26.1 that guard is
- *   gone: the marker is replaced with `None`
- *   (`tools/parameters/__init__.py:202-212`), `is_runtime_value(None)` is
- *   false, so `if not value and not self.optional and not self.default_object`
- *   raises `ParameterValueError` (`basic.py:2361`) and **Galaxy refuses the
- *   invocation**.
+ * - **Required.** The releases diverge, and the sentence must not promise
+ *   either: through 24.1 Galaxy accepts the invocation and the step runs
+ *   without the input, from 24.2 Galaxy refuses the invocation outright.
+ *   The release rule beside `unconnectedInputsRefuseInvocation` cites the
+ *   source for both.
  *
  * So "the analysis will start, and this step will fail" — what this said
- * first — is true at 22.05 and false at 26.1. "This step cannot run without
+ * first — is true at 22.05 and false from 24.2. "This step cannot run without
  * it" is true on both, and is what a reader can act on either way.
  *
  * The required ones are named rather than folded into the count. "This step
@@ -67,13 +59,9 @@ const BLOCKS_SUBMIT: ReadonlySet<UnavailableTool['reason']> = new Set(['not_inst
  * actually arises, since a tool with several dataset inputs rarely has them
  * all optional.
  *
- * Neither branch blocks submit, which is still Q10: at 22.05 Galaxy accepts
- * the invocation, so refusing it here would refuse something it would run.
- * When Pasteur moves to 26.x, a *required* unconnected input becomes
- * something Galaxy itself refuses, and blocking it before the datasets are
- * uploaded is then the same argument `blockingTools` already makes. No
- * recorded workflow has one, so that is a decision for the upgrade rather
- * than a guess now.
+ * Whether the required branch also blocks submit is the release's call, not
+ * this sentence's (#105), and the sentence is the same either way because it
+ * is true either way.
  */
 export function describeUnconnectedDatasetInputs(inputs: UnconnectedDatasetInput[]): string {
   const labelsOf = (subset: UnconnectedDatasetInput[]) => subset.map(input => input.label).join(', ')
@@ -249,12 +237,13 @@ export function useGalaxyWorkflowDescription(
    * The step ids with a data parameter nothing will supply, and which ones
    * (#97) — steps with none are absent rather than present and empty.
    *
-   * Galaxy accepts such an invocation and runs the step with the input empty:
-   * `DataToolParameter.from_json` returns `None` for a runtime value before it
-   * checks whether the parameter is required, so nothing refuses and nothing
-   * is said. So this marks the step and does **not** block submit, which is
-   * Q10's rule — mark only what would refuse the submission, and this would
-   * not refuse it.
+   * Through 24.1 Galaxy accepts such an invocation and runs the step with the
+   * input empty: `DataToolParameter.from_json` returns `None` for a runtime
+   * value before it checks whether the parameter is required, so nothing
+   * refuses and nothing is said. From 24.2 a *required* one is refused
+   * (#105). So this is the mark only; whether it also blocks submit needs the
+   * release, which is not a fact about the revision, and the invoke form
+   * decides it with `unconnectedInputsRefuseInvocation`.
    *
    * A step whose tool is unavailable is skipped, not reported clean. Deciding
    * that a parameter is data-typed needs the definition, and there is none;

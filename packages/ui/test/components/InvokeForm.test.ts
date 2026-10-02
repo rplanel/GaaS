@@ -3,6 +3,7 @@ import type { IncomingMessage } from 'node:http'
 import type { DescribedStep, DescribedWorkflowInput, UnavailableTool } from 'nuxt-galaxy'
 import type { UploadedDatasetDb } from '../../app/components/galaxy/workflow/InvokeForm.vue'
 import { UApp } from '#components'
+import { GALAXY_INSTANCE_QUERY_KEYS } from '#imports'
 import { mockNuxtImport, mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
 
 import { useQueryCache } from '@pinia/colada'
@@ -38,6 +39,13 @@ let descriptionsServed = 0
 let unavailableTools: UnavailableTool[] = []
 /** The status the description endpoint refuses with, or `null` to answer it. */
 let describeWith: number | null = null
+/**
+ * The `version_major` the Galaxy instance answers with, or `null` for an
+ * instance endpoint that refuses. Pasteur's release unless a test says
+ * otherwise, so every test written before #105 reads the release it was
+ * written against.
+ */
+let galaxyRelease: string | null = '22.05'
 
 /** The inputs the workflow declares, as the description endpoint serves them. */
 let workflowInputs: Record<string, DescribedWorkflowInput> = {}
@@ -210,7 +218,7 @@ function parametersOf(tool: AToolStep): GalaxyToolParameters[] {
  * name as well as the tool definition declaring it: `Step.vue` renders a
  * parameter only where the step's own model holds a value under that name.
  */
-function aToolStep(id: number, tool: AToolStep, options: { feedData?: boolean } = {}): DescribedStep {
+function aToolStep(id: number, tool: AToolStep, options: { feedData?: boolean, defaultData?: boolean } = {}): DescribedStep {
   const dataParameter = tool.dataParameter
   return {
     id,
@@ -232,6 +240,11 @@ function aToolStep(id: number, tool: AToolStep, options: { feedData?: boolean } 
     } as DescribedStep['tool_inputs'],
     input_connections: dataParameter && options.feedData
       ? { [dataParameter.name]: { id: id - 1, output_name: 'output' } }
+      : {},
+    // What an export's `in` writes for a step input given a default in the
+    // workflow itself, which Galaxy fills an unconnected input from (#105).
+    input_defaults: dataParameter && options.defaultData
+      ? { [dataParameter.name]: { class: 'File', location: 'https://example.org/replicon.fasta' } }
       : {},
     outputs: [],
     // A tool step runs no workflow of its own; only a `subworkflow` step does
@@ -317,6 +330,18 @@ registerEndpoint(
     return { steps: workflowSteps, inputs: workflowInputs, tools, unavailable: unavailableTools }
   },
 )
+
+/**
+ * The Galaxy instance the form submits to, which says which release it runs
+ * (#105). Refused the way the real endpoint refuses an unreachable Galaxy.
+ */
+registerEndpoint('/api/galaxy/instance', (event) => {
+  if (galaxyRelease === null) {
+    event.node.res.statusCode = 503
+    return { statusCode: 503, statusMessage: 'Galaxy service is unavailable' }
+  }
+  return { url: 'https://galaxy.example.org', version_major: galaxyRelease, version_minor: '1' }
+})
 
 /**
  * The submitted JSON. `readBody` would mean importing `h3`, which is not a
@@ -552,6 +577,7 @@ beforeEach(async () => {
   descriptionsServed = 0
   unavailableTools = []
   describeWith = null
+  galaxyRelease = '22.05'
   serveEmptyBody = false
   requestsMade = 0
   lastBody = null
@@ -1277,7 +1303,8 @@ describe('a workflow the server could not describe', () => {
  * `DataToolParameter.from_json` returns `None` for a runtime value
  * (`tools/parameters/basic.py:2039` at 22.05, `:2359` at 26.1) before it
  * checks whether the parameter is required — so the reader is never told and never asked. These pin that
- * they are told.
+ * they are told. That is 22.05, the release this harness's Galaxy answers
+ * with; the block after this one covers the others (#105).
  */
 describe('a data parameter nothing feeds', () => {
   const NEEDS_DATA: AToolStep = {
@@ -1416,5 +1443,183 @@ describe('a data parameter nothing feeds', () => {
       expect(form.find('[data-testid="blocking-tools"]').exists()).toBe(true)
     })
     expect(form.find('[data-testid="unconnected-inputs"]').exists()).toBe(false)
+  })
+})
+
+/**
+ * #105. A **required** dataset input nothing feeds is something Galaxy itself
+ * refuses from 24.2 on, so from there the form refuses it too, before the
+ * datasets are uploaded — the argument `blockingTools` makes. Before 24.2,
+ * for an optional input, and on a release the form cannot learn, it is only
+ * marked. `unconnectedInputsRefuseInvocation` cites the Galaxy source.
+ */
+describe('a dataset input nothing feeds, by Galaxy release', () => {
+  const REQUIRES_DATA: AToolStep = {
+    ...TOOL_A,
+    dataParameter: { name: 'sequence', label: 'Replicon file', optional: false },
+  }
+  const MAY_TAKE_DATA: AToolStep = {
+    ...TOOL_B,
+    dataParameter: { name: 'topology_file', label: 'Topology file', optional: true },
+  }
+
+  /**
+   * Wait until the form has heard which release Galaxy runs, or that it
+   * cannot. A test asserting that nothing was refused has to: before then the
+   * form refuses nothing whatever its rule says, so it would pass on a rule
+   * that refuses everything. The entry has to exist, too — a key this does
+   * not match would otherwise read as settled at once.
+   */
+  async function releaseSettled() {
+    await vi.waitFor(() => {
+      const [entry] = queryCache!.getEntries({ key: [...GALAXY_INSTANCE_QUERY_KEYS.root] })
+      expect(entry, 'the form asked for the release').toBeDefined()
+      expect(entry!.state.value.status, 'the release query has settled').not.toBe('pending')
+    })
+    await nextTick()
+  }
+
+  it.each(['24.2', '26.1'])('is refused on %s, and named as the reason', async (release) => {
+    galaxyRelease = release
+    workflowSteps = { 2: aToolStep(2, REQUIRES_DATA) }
+    servedTools = [REQUIRES_DATA, TOOL_B]
+    const form = await mountForm()
+
+    const alert = await vi.waitFor(() => {
+      const found = form.find('[data-testid="blocking-unconnected-inputs"]')
+      expect(found.exists(), 'the form marked the step as refusing the submission').toBe(true)
+      return found
+    })
+    expect(alert.text()).toContain(REQUIRES_DATA.name)
+    expect(alert.text()).toContain('This step cannot run without Replicon file')
+    // Named once, as the refusal it is, not also as a warning beside it.
+    expect(form.find('[data-testid="unconnected-inputs"]').exists()).toBe(false)
+    expect(form.find('button[type="submit"]').attributes('disabled')).toBeDefined()
+
+    // Through the form, so what is read is the refusal and not the button.
+    await submit(form)
+    await nextTick()
+    expect(requestsMade).toBe(0)
+  })
+
+  it.each(['22.05', '24.1'])('is marked but not refused on %s, which runs it', async (release) => {
+    galaxyRelease = release
+    workflowSteps = { 2: aToolStep(2, REQUIRES_DATA) }
+    servedTools = [REQUIRES_DATA, TOOL_B]
+    const form = await mountForm()
+    await releaseSettled()
+
+    await vi.waitFor(() => {
+      expect(form.find('[data-testid="unconnected-inputs"]').exists(), 'the step is still marked').toBe(true)
+    })
+    expect(form.find('[data-testid="blocking-unconnected-inputs"]').exists()).toBe(false)
+    expect(form.find('button[type="submit"]').attributes('disabled')).toBeUndefined()
+
+    await submit(form)
+    await vi.waitFor(() => {
+      expect(requestsMade).toBe(1)
+    })
+  })
+
+  it.each([
+    ['refuses to say', null],
+    ['names a release it cannot read', 'dev'],
+  ])('is not refused when the instance %s', async (_, release) => {
+    galaxyRelease = release
+    workflowSteps = { 2: aToolStep(2, REQUIRES_DATA) }
+    servedTools = [REQUIRES_DATA, TOOL_B]
+    const form = await mountForm()
+    await releaseSettled()
+
+    await vi.waitFor(() => {
+      expect(form.find('[data-testid="unconnected-inputs"]').exists()).toBe(true)
+    })
+    expect(form.find('[data-testid="blocking-unconnected-inputs"]').exists()).toBe(false)
+
+    await submit(form)
+    await vi.waitFor(() => {
+      expect(requestsMade).toBe(1)
+    })
+  })
+
+  it('is never refused when it is optional, whatever the release', async () => {
+    galaxyRelease = '26.1'
+    workflowSteps = { 3: aToolStep(3, MAY_TAKE_DATA) }
+    servedTools = [TOOL_A, MAY_TAKE_DATA]
+    const form = await mountForm()
+    await releaseSettled()
+
+    const alert = await vi.waitFor(() => {
+      const found = form.find('[data-testid="unconnected-inputs"]')
+      expect(found.exists()).toBe(true)
+      return found
+    })
+    expect(alert.text()).toContain('will run without it')
+    expect(form.find('[data-testid="blocking-unconnected-inputs"]').exists()).toBe(false)
+
+    await submit(form)
+    await vi.waitFor(() => {
+      expect(requestsMade).toBe(1)
+    })
+  })
+
+  it('is refused for a step whose optional input sits beside a required one', async () => {
+    // One required input is enough for Galaxy to refuse, whatever else the
+    // step leaves unconnected.
+    const MIXED: AToolStep = {
+      ...REQUIRES_DATA,
+      secondDataParameter: { name: 'topology_file', label: 'Topology file', optional: true },
+    }
+    galaxyRelease = '26.1'
+    workflowSteps = { 2: aToolStep(2, MIXED) }
+    servedTools = [MIXED, TOOL_B]
+    const form = await mountForm()
+
+    const refusal = await vi.waitFor(() => {
+      const found = form.find('[data-testid="blocking-unconnected-inputs"]')
+      expect(found.exists()).toBe(true)
+      return found
+    })
+    expect(refusal.text()).toContain('cannot run without Replicon file')
+    expect(form.find('[data-testid="unconnected-inputs"]').exists()).toBe(false)
+    expect(form.find('button[type="submit"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('names each step once, in the alert that matches what Galaxy will do with it', async () => {
+    galaxyRelease = '26.1'
+    workflowSteps = { 2: aToolStep(2, REQUIRES_DATA), 3: aToolStep(3, MAY_TAKE_DATA) }
+    servedTools = [REQUIRES_DATA, MAY_TAKE_DATA]
+    const form = await mountForm()
+
+    const refusal = await vi.waitFor(() => {
+      const found = form.find('[data-testid="blocking-unconnected-inputs"]')
+      expect(found.exists()).toBe(true)
+      return found
+    })
+    const warning = form.find('[data-testid="unconnected-inputs"]')
+    expect(refusal.text()).toContain('Replicon file')
+    expect(refusal.text()).not.toContain('Topology file')
+    expect(warning.text()).toContain('Topology file')
+    expect(warning.text()).not.toContain('Replicon file')
+  })
+
+  it('neither marks nor refuses an input the workflow gives a default of its own', async () => {
+    // From 23.2 `replacement_for_input` fills an unconnected input from the
+    // step input's default (`workflow/run.py:491` at 26.1), so nothing is
+    // missing.
+    galaxyRelease = '26.1'
+    workflowSteps = { 2: aToolStep(2, REQUIRES_DATA, { defaultData: true }) }
+    servedTools = [REQUIRES_DATA, TOOL_B]
+    const form = await mountForm()
+    await releaseSettled()
+    await toolStepsReady(form, [REQUIRES_DATA])
+
+    expect(form.find('[data-testid="blocking-unconnected-inputs"]').exists()).toBe(false)
+    expect(form.find('[data-testid="unconnected-inputs"]').exists()).toBe(false)
+
+    await submit(form)
+    await vi.waitFor(() => {
+      expect(requestsMade).toBe(1)
+    })
   })
 })

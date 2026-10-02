@@ -257,8 +257,9 @@ async function runAnalysis(event: FormSubmitEvent<Schema>) {
   // answer lands — Enter submits a form whatever the button's disabled state
   // — and the worst it risks is the submission Galaxy would have refused
   // anyway, which is where this stood before #87. Refusing without being
-  // able to say why is worse than refusing late.
-  if (toValue(blockingTools).length > 0 || toValue(describeError)) {
+  // able to say why is worse than refusing late. The release is the same
+  // (#105): until it is known, nothing is refused on its account.
+  if (toValue(submissionRefused)) {
     return
   }
   const analysesNameVal = event.data.analysisName
@@ -360,6 +361,23 @@ const {
   error: describeError,
 } = useGalaxyWorkflowDescription(workflowGalaxyId, workflowRevision)
 
+// The Galaxy this form submits to, for the release it runs (#105). Until it
+// answers, and if it never does, nothing is refused on the release's account.
+const { data: galaxyInstance, error: galaxyInstanceError } = useQuery(galaxyInstanceQuery)
+
+// Not reaching it opens the gate for good, which on 24.2 and later lets
+// through a submission Galaxy will refuse after the upload, so it leaves a
+// trace (LOGGING-SPEC §3), as a description that never arrives does.
+watch(galaxyInstanceError, (failure) => {
+  if (failure) {
+    log.warn({
+      action: 'galaxy:instance_failed',
+      tag: 'InvokeForm',
+      error: String(failure),
+    })
+  }
+})
+
 /**
  * The steps to name above Run, each with the tool that runs it (#97).
  *
@@ -369,25 +387,43 @@ const {
  * being asked for — the same two places Q22 marks an unavailable tool, and for
  * the same reason.
  *
- * Unlike `blockingTools` it does **not** disable Run. Galaxy accepts the
- * invocation and runs the step with the input empty, so refusing here would
- * refuse something Galaxy is willing to do.
+ * `refuses` is whether Galaxy would refuse the invocation on this step's
+ * account (#105). Such a step disables Run as `blockingTools` does, and is
+ * named in a refusal of its own above Run rather than among the steps whose
+ * unconnected inputs do not stop the analysis.
  */
 const stepsWithUnconnectedInputs = computed(() => {
   const toolInfo = toValue(workflowStepsToolInfo)
+  const release = toValue(galaxyInstance)?.version_major
   return Object.entries(toValue(unconnectedInputsByStep)).map(([stepId, inputs]) => ({
     stepId,
     toolName: toolInfo[stepId]?.name ?? stepId,
     description: describeUnconnectedDatasetInputs(inputs),
+    refuses: unconnectedInputsRefuseInvocation(inputs, release),
   }))
 })
 
+const stepsRefusingUnconnectedInputs = computed(() => toValue(stepsWithUnconnectedInputs).filter(step => step.refuses))
+const stepsWarnedForUnconnectedInputs = computed(() => toValue(stepsWithUnconnectedInputs).filter(step => !step.refuses))
+
+/**
+ * Everything that refuses the submission before it is sent, in one place, so
+ * that Run's disabled state and the refusal in `runAnalysis` — the one that
+ * holds when Enter submits past a disabled button — cannot disagree.
+ */
+const submissionRefused = computed(() =>
+  toValue(blockingTools).length > 0
+  || toValue(stepsRefusingUnconnectedInputs).length > 0
+  || Boolean(toValue(describeError)),
+)
+
 /**
  * The same sentence, by step, so the panel and the summary cannot word one
- * step's mark two ways.
+ * step's mark two ways — and the same verdict, so the panel colours it as the
+ * summary does.
  */
-const unconnectedInputsSentence = computed(() => Object.fromEntries(
-  toValue(stepsWithUnconnectedInputs).map(step => [step.stepId, step.description]),
+const unconnectedInputsMark = computed(() => Object.fromEntries(
+  toValue(stepsWithUnconnectedInputs).map(step => [step.stepId, step]),
 ))
 
 /**
@@ -548,23 +584,24 @@ watch(parameterModelSource, () => {
                 </UAlert>
                 <template v-else-if="stepId !== undefined && galaxyWorkflowStepProps?.[stepId]">
                   <!--
-                    A data parameter with no edge feeding it (#97). Not an
-                    error and not a blocker: Galaxy starts the analysis and
-                    runs the step with the input empty, so this says what will
-                    happen rather than refusing it. There is no field to offer
-                    either — a data parameter is fed by a connection or by one
-                    of the workflow's own input steps, never by a widget on
-                    this panel — which is why it is a mark and not a picker.
+                    A data parameter nothing feeds (#97). A warning where
+                    Galaxy starts the analysis anyway, and coloured as the
+                    refusal it is where Galaxy would refuse it (#105) — the
+                    summary above Run says which. There is no field to offer
+                    either way: a data parameter is fed by a connection, by
+                    one of the workflow's own input steps or by a default the
+                    workflow gives it, never by a widget on this panel, which
+                    is why it is a mark and not a picker.
                   -->
                   <UAlert
-                    v-if="unconnectedInputsSentence[stepId]"
+                    v-if="unconnectedInputsMark[stepId]"
                     :data-testid="`step-unconnected-${stepId}`"
                     role="status"
                     variant="subtle"
-                    color="warning"
+                    :color="unconnectedInputsMark[stepId]?.refuses ? 'error' : 'warning'"
                     icon="i-lucide:unlink"
                     title="An input of this step is not connected"
-                    :description="unconnectedInputsSentence[stepId]"
+                    :description="unconnectedInputsMark[stepId]?.description"
                   />
                   <GalaxyWorkflowStep
                     v-bind="galaxyWorkflowStepProps[stepId]" variant="form"
@@ -658,15 +695,41 @@ watch(parameterModelSource, () => {
         </template>
       </UAlert>
       <!--
-        Marked before submit and deliberately not blocking (#97): Galaxy
-        accepts an invocation whose data parameter nothing feeds and runs the
-        step with it empty, so Run stays enabled and this says what the
-        analysis will do. Named here as well as in the step panel because the
+        A required dataset input nothing feeds, on a Galaxy that refuses the
+        invocation for it: 24.2 and later (#105). Refused here for the reason
+        the tools above are, before the datasets have been uploaded rather
+        than by Galaxy after. Each step is named here or in the warning
+        below, never both.
+      -->
+      <UAlert
+        v-if="stepsRefusingUnconnectedInputs.length > 0"
+        data-testid="blocking-unconnected-inputs"
+        role="alert"
+        variant="subtle"
+        color="error"
+        icon="i-lucide:unlink"
+        title="Some steps cannot run without an input that is not connected"
+        class="mb-3"
+      >
+        <template #description>
+          <ul class="list-disc ps-5">
+            <li v-for="step in stepsRefusingUnconnectedInputs" :key="step.stepId">
+              <span class="font-medium">{{ step.toolName }}</span>: {{ step.description }}
+            </li>
+          </ul>
+        </template>
+      </UAlert>
+      <!--
+        Marked before submit and not blocking (#97): Galaxy accepts an
+        invocation whose data parameter nothing feeds when the parameter is
+        optional, or on a release before 24.2, so Run stays enabled and this
+        says what the analysis will do. A release the form has not learnt
+        lands here too. Named here as well as in the step panel because the
         accordion is collapsed until a reader opens it, and a warning only
         visible behind a click is not a warning given before submit.
       -->
       <UAlert
-        v-if="stepsWithUnconnectedInputs.length > 0"
+        v-if="stepsWarnedForUnconnectedInputs.length > 0"
         data-testid="unconnected-inputs"
         role="status"
         variant="subtle"
@@ -677,7 +740,7 @@ watch(parameterModelSource, () => {
       >
         <template #description>
           <ul class="list-disc ps-5">
-            <li v-for="step in stepsWithUnconnectedInputs" :key="step.stepId">
+            <li v-for="step in stepsWarnedForUnconnectedInputs" :key="step.stepId">
               <span class="font-medium">{{ step.toolName }}</span>: {{ step.description }}
             </li>
           </ul>
@@ -686,7 +749,7 @@ watch(parameterModelSource, () => {
       <UButton
         type="submit"
         :loading="startingAnalysis"
-        :disabled="blockingTools.length > 0 || Boolean(describeError)"
+        :disabled="submissionRefused"
       >
         Run
       </UButton>
