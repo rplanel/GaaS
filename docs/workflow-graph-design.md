@@ -354,8 +354,9 @@ source — `lib/order/sort-subgraph.ts` L80-84, `lib/order/index.ts` L112 and
 four-node repro. `conditional-repeat-runtime` is enough, with one step feeding
 another three times, and 3.1.1 is the latest release. A level dagre cannot place is therefore laid out from one edge per
 pair, weighted by the connections it stands for. The weights keep every
-connection in the ranking but not the room each would be given, and on every
-recording that is exactly the pre-#121 layout.
+connection in the ranking but not the room each would be given, and in
+dagre's own order every recording laid out exactly as before #121. Since #136
+the fallback is ordered by anchor as well, and no recording reaches it.
 
 The fallback is not rare. A throwaway sweep laid out 20 000 random graphs of 3
 to 12 steps, in both directions, with a third of their connections in bundles
@@ -391,6 +392,58 @@ it is handed and when the measure is asked for; how it draws needs a browser.
 
 The heights moved `ccqtl-today`'s layout as well: laid out from all twenty
 connections it is now 427 px tall, against 283 from one edge per pair.
+
+#### Routed round the steps between, and named only on demand (#123)
+
+Two things made a level hard to read once its steps were placed. Every
+connection was a bezier straight between its two anchors, so one spanning
+more than one rank crossed whatever stood in between, and every connection
+had its name written on it at all times, often wider than a step.
+#123's design session settled both on 2026-10-01, with numbers from a spike,
+and three tickets carried them out.
+
+**#134 counts what is drawn.** `workflowGraph.test.ts` pins, per recorded
+level and direction, how often two connections cross and how many run
+through a step that is neither of their ends, as ceilings that a layout
+change or a dagre bump may lower and never raise. The count is taken on the
+line the canvas draws, anchored where Vue Flow anchors it, 3 px outside the
+step at the handle's outer edge. A crossing is a proper one: two connections
+sharing an anchor, or one ending on another, do not count. Before #136 the
+canvas drew 156 crossings and ran 13 connections through a step.
+
+**#135 names a connection only while a reader is on it.** The canvas draws
+its connections with its own edge, `GraphConnection`, which shows a
+connection's name while it is hovered, focused or selected, in Vue Flow's HTML
+label layer above the steps. The step details panel lists every connection
+feeding the selected step. Reaching a connection by keyboard needed working
+round Vue Flow 1.48.2, whose edge sets a camel-cased `tabIndex` that SVG does
+not recognise (#138). Naming a connection by the label its tool gives it,
+rather than by its Galaxy name, is #137.
+
+**#136 routes a connection round the steps between.** Each rank is ordered by
+where the connections meeting it really leave and arrive — at their anchors,
+not at their steps' middles — through dagre's `customOrder`. A connection
+spanning more than one rank is drawn through dagre's route, and every other
+connection keeps the bezier between its anchors. That takes the recorded
+levels from 156 crossings to 62 and from 13 connections through a step to
+none. ADR 0005 records the decision and the options it was weighed against:
+dagre's other ordering controls, rejected; ELK, deferred; and the author's
+own positions, rejected.
+
+- **One function draws every connection.** `connectionPath` is what
+  `GraphConnection` draws with and what #134's count measures.
+- **A connection with no usable route draws the live bezier.** That is a
+  connection between adjacent ranks, one whose step a reader has dragged, and
+  every connection on a level laid out per pair of steps, whose routes are
+  shared. A route holding a point that is not finite draws live too, and the
+  rest of the layout is kept.
+- **The order is also what stops dagre 3.1.1 throwing.** Numbering each rank
+  afresh is enough. Every recorded level is now laid out per connection,
+  `conditional-repeat-runtime` included, and #121's pair fallback stays only
+  as a safety net for #133 to judge.
+- **The order reads dagre's private layout labels**: `rank`, `order`,
+  `dummy` and `edgeObj`. A dagre bump can break it, and the ceilings are what
+  would show it.
 
 ### Verdict on the refactor
 
