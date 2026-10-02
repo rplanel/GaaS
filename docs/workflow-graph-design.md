@@ -37,6 +37,8 @@ Every "first available" below was checked release by release against
 | `implicit_collection_jobs_id` on the invocation step dict | **absent** | **24.1** |
 | `GET /api/invocations/{id}/request` | **absent** | **24.2** |
 | `/api/tools/{id}/inputs`, `/parameter_request_schema` | **absent** | **26.0** |
+| A step input's own default fills an input nothing connects | **ignored** | **23.2** |
+| A required dataset input nothing feeds refuses the invocation | **accepted** | **24.2** |
 | `/api/events/stream` | **absent** | **26.1** |
 
 Available on both, so buildable before the upgrade: `step_details=true` and its
@@ -444,6 +446,43 @@ own positions, rejected.
 - **The order reads dagre's private layout labels**: `rank`, `order`,
   `dummy` and `edgeObj`. A dagre bump can break it, and the ceilings are what
   would show it.
+
+### Q10 and a required dataset input nothing feeds (#105)
+
+#97 marks a tool step's dataset input when nothing will supply it, and did not
+block submit, because 22.05 accepts the invocation. #105 settled what happens
+on later releases, and what the form does about it.
+
+- **Decided: gate on the release.** From **24.2** a required one refuses the
+  submission, the way `blockingTools` does: Run is disabled and `runAnalysis`
+  refuses. Before 24.2 it is only marked. An optional one is only marked on
+  every release. Neither blocking everywhere (wrong on Pasteur's 22.05) nor
+  marking only (a refusal after the upload) was chosen.
+- **Why 24.2.** Through 24.1, `visit_input_values` replaces a runtime marker
+  only under `hasattr(input, "value")`, which a data parameter fails, so
+  `from_json` returns `None` before its required check. 24.2 dropped the
+  guard: the marker becomes `None` and `from_json` raises. #97's notes put the
+  split at 26.1; it is earlier.
+- **Where the release comes from:** `GET /api/galaxy/instance`, read by
+  `galaxyInstanceQuery`. A release the form cannot learn (in flight, refused,
+  unparseable) refuses nothing.
+- **From 23.2 a connection is not the only source.** #97 said
+  `replacement_for_input` reads only the connection, which holds only through
+  23.1. From 23.2 it also fills an unconnected input from the step input's own
+  default (`run.py:491` at 26.1), which the export writes as
+  `in[name] = {"default": …}`. `DescribedStep.input_defaults` now carries
+  them, and such an input is neither marked nor refused, on any release.
+- **Known false refusal:** a tool's own `<default>` on a data parameter.
+  Galaxy only allows one on a required parameter, and no payload the form
+  reads exposes it, so from 24.2 the form refuses a submission Galaxy would
+  run. From 26.0 `/api/tools/{id}/inputs` carries it as `url_default`, which
+  is the way to close it (#142).
+- **Known late refusal:** a step whose tool is merely *unreachable* is not
+  judged at all, since deciding that a parameter takes a dataset needs the
+  definition. A required unconnected input there is neither marked nor
+  refused, and from 24.2 Galaxy refuses it after the upload. That follows Q10
+  — refuse only what is known — and the step is already marked as
+  un-editable.
 
 ### Verdict on the refactor
 

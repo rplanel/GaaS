@@ -63,6 +63,7 @@ export function aStep(id: number, over: Partial<DescribedStep> = {}): DescribedS
     tool_version: '1.2.3',
     tool_inputs: {},
     input_connections: {},
+    input_defaults: {},
     outputs: [],
     subworkflow: null,
     ...over,

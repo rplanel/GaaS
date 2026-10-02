@@ -86,6 +86,26 @@ describe('describedStepsOf', () => {
     expect(steps['1']!.outputs).toEqual([{ name: 'out_file1', type: 'tabular' }])
   })
 
+  it('carries the defaults the workflow gives a step\'s inputs, unwrapped from the export\'s `in`', () => {
+    // #105. From 24.1 Galaxy fills an input nothing connects from one of
+    // these, so a mark that cannot see them names a gap that is not there —
+    // and from 24.2 refuses a submission Galaxy would run. `in` is kept by
+    // the loose step schema without being modelled, hence the assign.
+    const defaulted = Object.assign(toolStep(1, FOO, '1.2.3+galaxy0'), {
+      in: { 'settings|reference': { default: { class: 'File', location: 'https://example.org/ref.fasta' } } },
+    })
+    const steps = describedStepsOf(workflowDefinition({
+      0: dataInputStep(0, 'Reads'),
+      1: defaulted,
+      2: toolStep(2, BAR, '2.0.0'),
+    }))
+
+    expect(steps['1']!.input_defaults).toEqual({
+      'settings|reference': { class: 'File', location: 'https://example.org/ref.fasta' },
+    })
+    expect(steps['2']!.input_defaults, 'a step that sets none').toEqual({})
+  })
+
   it('names the step the way the screens already read it', () => {
     const steps = describedStepsOf(workflowDefinition({
       0: dataInputStep(0, 'Reads'),

@@ -81,23 +81,39 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * there was to write.
  */
 
+/** What a step says, beside its saved state, about where its inputs come from. */
+interface StepSources {
+  readonly connections: WorkflowStepConnections
+  readonly defaults: Readonly<Record<string, unknown>>
+}
+
 /**
- * Whether an edge feeds this input.
+ * Whether something will supply this input: an edge, or a default the
+ * workflow gives it.
  *
- * This is the whole test, because it is the whole of what Galaxy does:
- * `replacement_for_input` looks the prefixed name up in
- * `step.input_connections_by_name` and fills the parameter from the upstream
- * output if it is there, leaving the saved value untouched if it is not
- * (`workflow/run.py:290` at 22.05, `:460` at 26.1 — the lookup is the same
- * line on both). A `data_input` step of the workflow is not a separate
- * case — it reaches a tool step through a connection like anything else.
+ * Those are what `replacement_for_input` reads. It looks the prefixed name up
+ * in `step.input_connections_by_name` first and fills the parameter from the
+ * upstream output if it is there (`workflow/run.py:290` at 22.05, `:460` at
+ * 26.1). A `data_input` step of the workflow is not a separate case — it
+ * reaches a tool step through a connection like anything else.
+ *
+ * Through 23.1 that lookup is the whole of it, which is what #97 found at
+ * 22.05. #105 found two more branches after it: from 23.2 the step input's
+ * own default (`run.py:491` at 26.1), which `defaults` carries, and from 24.1
+ * a step value that is not a runtime marker, which `walk` never reports in
+ * the first place. A default is counted on every release, 22.05 included,
+ * where Galaxy ignores it: missing a gap there is the safe reading, for the
+ * reason `walk` gives.
  *
  * An empty array counts as nothing joined. The export models a fan-in as an
  * array under the input's name, so the key existing is not the same as the
  * input being fed.
  */
-function isFed(connections: WorkflowStepConnections, prefixedName: string): boolean {
-  const connection = connections[prefixedName]
+function isSupplied(sources: StepSources, prefixedName: string): boolean {
+  if (Object.hasOwn(sources.defaults, prefixedName)) {
+    return true
+  }
+  const connection = sources.connections[prefixedName]
   if (connection === undefined || connection === null) {
     return false
   }
@@ -133,7 +149,7 @@ function walk(
   nodes: unknown[],
   state: unknown,
   prefix: string,
-  connections: WorkflowStepConnections,
+  sources: StepSources,
   found: UnconnectedDatasetInput[],
 ): void {
   if (!isPlainObject(state)) {
@@ -155,14 +171,14 @@ function walk(
       // A value that is not a runtime marker is one this function did not
       // model, and saying nothing is the safe reading of that: the warning
       // exists to name a gap, so inventing one costs more than missing one.
-      if (isWorkflowRuntimeValue(value) && !isFed(connections, prefixedName)) {
+      if (isWorkflowRuntimeValue(value) && !isSupplied(sources, prefixedName)) {
         found.push({ name: prefixedName, label: labelOf(node, name), optional: Boolean(node.optional) })
       }
       continue
     }
 
     if (type === 'section') {
-      walk(inputsOf(node), value, `${prefix}${name}|`, connections, found)
+      walk(inputsOf(node), value, `${prefix}${name}|`, sources, found)
       continue
     }
 
@@ -174,7 +190,7 @@ function walk(
       const currentCase = isPlainObject(value) ? value.__current_case__ : undefined
       const chosen = typeof currentCase === 'number' ? cases[currentCase] : undefined
       if (isPlainObject(chosen)) {
-        walk(inputsOf(chosen), value, `${prefix}${name}|`, connections, found)
+        walk(inputsOf(chosen), value, `${prefix}${name}|`, sources, found)
       }
       continue
     }
@@ -210,7 +226,7 @@ function walk(
         if (!isWorkflowRepeatInstanceValue(instance)) {
           return
         }
-        walk(inputsOf(node), instance, `${prefix}${name}_${position}|`, connections, found)
+        walk(inputsOf(node), instance, `${prefix}${name}_${position}|`, sources, found)
       })
     }
   }
@@ -220,44 +236,114 @@ function walk(
  * The data parameters of one tool step that nothing will supply (#97).
  *
  * A data parameter of a tool step is filled by an edge — from an upstream
- * tool, or from one of the workflow's own `data_input` steps — and never by
- * anything the invoke form could offer. So a data parameter with no edge is
+ * tool, or from one of the workflow's own `data_input` steps — or, since
+ * 23.2, by a default the workflow gives that step input (#105), and never by
+ * anything the invoke form could offer. So a data parameter with neither is
  * one nothing will supply, and Galaxy says nothing about it before the fact.
  *
  * What happens then is release-dependent, and
- * `describeUnconnectedDatasetInputs` carries the detail: at 22.05 the marker
- * survives into `from_json`, which returns `None` for it before the required
- * check, so the invocation is accepted whether or not the parameter is
- * required; by 26.1 the marker is replaced with `None` first, so a *required*
- * one raises and the invocation is refused. An **optional** one runs with the
- * input empty on both, which is every instance the recordings hold.
+ * `describeUnconnectedDatasetInputs` carries the detail: through 24.1 the
+ * marker survives into `from_json`, which returns `None` for it before the
+ * required check, so the invocation is accepted whether or not the parameter
+ * is required; from 24.2 the marker is replaced with `None` first, so a
+ * required one raises and the invocation is refused. An **optional** one
+ * runs with the input empty on every release, which is every instance the
+ * recordings hold. `unconnectedInputsRefuseInvocation` draws that line.
  *
- * **Known limitation.** 26.1 added `default_object` to
- * `DataToolParameter` — a `<param type="data">` may declare a default, and an
- * unconnected one is then filled from it rather than left empty
- * (`basic.py:2364`). Such an input is reported here even though Galaxy would
- * supply it. It cannot be told apart from this side: the tool API's `to_dict`
- * exposes no `default` key, and the `value` it does return comes from
+ * **Known limitation.** Releases after 22.05 give `DataToolParameter` a
+ * `default_object` — a `<param type="data">` may declare a default, only on
+ * a parameter that is not optional, and an unconnected one is then filled
+ * from it rather than left empty (`basic.py:2364` at 26.1). Such an input is
+ * reported here even though Galaxy would supply it, and because it is always
+ * required, from 24.2 the form **refuses** a submission Galaxy would run. It
+ * cannot be told apart from this side: the tool API's `to_dict` exposes no
+ * `default` key, and the `value` it does return comes from
  * `get_initial_value`, which is a scan of the requesting account's history
  * rather than a declaration — which is exactly what the description endpoint
- * strips as `withoutDatasetOptions`. 22.05 has no `default_object` at all.
- *
- * That silence is what this is for. It is not a submission blocker: the
- * invocation is valid and Galaxy will run it, which is why the form marks the
- * step rather than refusing (Q10 — mark only what would refuse it, and this
- * would not).
+ * strips as `withoutDatasetOptions`. From 26.0, `/api/tools/{id}/inputs`
+ * does carry it, as a data parameter model's `url_default`: #142.
  *
  * Every one of the recordings' own cases is settled by the edge and not by
  * the marker: `ccqtl-wf` step 4 carries four `RuntimeValue` data inputs and
  * four connections, so it reports nothing, while `integron_finder` step 1
  * carries `topology_file` with no edge, and `__BUILD_LIST__` step 2 keeps
- * five repeat entries against three connections.
+ * five repeat entries against three connections. None of them gives an
+ * input a default.
+ *
+ * `input_defaults` is required, not defaulted: a caller that dropped it would
+ * have every defaulted input reported, and from 24.2 refused.
  */
 export function unconnectedDatasetInputs(
   tool: GalaxyTool,
-  step: { readonly tool_inputs: WorkflowToolParameters, readonly input_connections: WorkflowStepConnections },
+  step: {
+    readonly tool_inputs: WorkflowToolParameters
+    readonly input_connections: WorkflowStepConnections
+    readonly input_defaults: Readonly<Record<string, unknown>>
+  },
 ): UnconnectedDatasetInput[] {
   const found: UnconnectedDatasetInput[] = []
-  walk(tool.inputs ?? [], step.tool_inputs, '', step.input_connections ?? {}, found)
+  const sources = { connections: step.input_connections ?? {}, defaults: step.input_defaults }
+  walk(tool.inputs ?? [], step.tool_inputs, '', sources, found)
   return found
+}
+
+/**
+ * The first release that refuses an invocation leaving a required dataset
+ * input with nothing to supply it. Galaxy's `version_major` is
+ * `<year>.<number>` — `22.05`, `24.2`, `26.1` — and is compared as the two.
+ */
+const FIRST_REFUSING_RELEASE = { year: 24, number: 2 } as const
+
+/**
+ * Whether the Galaxy that answers `/api/version` with this `version_major`
+ * refuses an invocation in which a **required** dataset input is left with
+ * nothing to supply it.
+ *
+ * From 24.2. `ToolModule.execute` visits the step's state with
+ * `replace_optional_connections=True`, and what that visit does to a runtime
+ * marker nothing replaced is what changed:
+ *
+ * - Through 24.1 it is replaced only under `hasattr(input, "value")`
+ *   (`tools/parameters/__init__.py:160` at 22.05, `:169` at 24.1), which a
+ *   `DataToolParameter` fails — nothing on its chain sets `value` — so the
+ *   marker survives, and `from_json` returns `None` for it *before* the
+ *   required check. Accepted.
+ * - From 24.2 the guard is gone and a parameter with no `value` is set to
+ *   `None` (`:196-208` at 24.2, `:202-212` at 26.1), so `from_json` reaches
+ *   `if not value and not self.optional and not self.default_object` and
+ *   raises `ParameterValueError`. Refused.
+ *
+ * `from_json` reads the same on 24.1 and 24.2, so the visit is the whole
+ * difference.
+ *
+ * A release this cannot read — not answered yet, refused, or a string it does
+ * not parse — refuses nothing. That is Q10: the form refuses only what Galaxy
+ * is known to refuse, and Pasteur answers 22.05.
+ */
+function releaseRefusesUnconnectedRequired(versionMajor: string | undefined): boolean {
+  const match = /^(\d+)\.(\d+)/.exec(versionMajor ?? '')
+  if (!match) {
+    return false
+  }
+  const year = Number(match[1])
+  const number = Number(match[2])
+  return year > FIRST_REFUSING_RELEASE.year
+    || (year === FIRST_REFUSING_RELEASE.year && number >= FIRST_REFUSING_RELEASE.number)
+}
+
+/**
+ * Whether one step's unconnected dataset inputs make the Galaxy answering
+ * `/api/version` with this `version_major` refuse the invocation (#105) — and
+ * so whether the form must refuse it first, before the datasets are
+ * uploaded, as it does for `blockingTools`.
+ *
+ * Both halves in one place: a **required** input among them, on a release
+ * that refuses one. An optional one runs with the input empty on every
+ * release, so it never refuses; a release this cannot read refuses nothing.
+ */
+export function unconnectedInputsRefuseInvocation(
+  inputs: readonly UnconnectedDatasetInput[],
+  versionMajor: string | undefined,
+): boolean {
+  return releaseRefusesUnconnectedRequired(versionMajor) && inputs.some(input => !input.optional)
 }

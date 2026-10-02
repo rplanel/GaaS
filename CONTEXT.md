@@ -36,6 +36,10 @@ _Avoid_: Unpublished, deactivated, deleted, archived, inactive
 The live reading the admin page takes from Galaxy of whether a version can still run: runnable; tools missing, naming the tools Galaxy does not hold at their pinned version; missing in Galaxy, when the stored workflow no longer exists there; revision mismatch, when the revision Galaxy holds at that index is not the one the version pinned. A reading, never stored, and nothing is retired from it: the administrator reads it and decides.
 _Avoid_: Health, status, broken, outdated
 
+**Galaxy release**:
+The release the Galaxy instance runs, as `GET /api/version` names it in `version_major`: `22.05`, `24.2`, `26.1`. What Galaxy accepts at invoke depends on it — from 24.2 it refuses an analysis in which a step leaves a required dataset input with nothing to supply it — so the invoke form reads it and refuses what that release would. A release the form cannot read refuses nothing.
+_Avoid_: Galaxy version (a version is the label an administrator gives a revision)
+
 **Results view**:
 The component a developer writes to display the results of an analysis, matched to the analysis's workflow by name and version. When no view matches the version, the view for the workflow name alone applies; when there is none either, the view for every workflow of the app applies.
 _Avoid_: Result page, workflow component, custom result display
