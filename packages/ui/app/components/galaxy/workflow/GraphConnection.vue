@@ -2,17 +2,21 @@
 import type { EdgeProps } from '@vue-flow/core'
 import type { WorkflowGraphEdgeData } from '../../../utils/workflowGraph'
 import { computed, watchEffect } from '#imports'
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, useEdge, useVueFlow } from '@vue-flow/core'
+import { BaseEdge, EdgeLabelRenderer, useEdge, useVueFlow } from '@vue-flow/core'
 import { useElementHover, useEventListener, useFocus } from '@vueuse/core'
+import { connectionPath } from '../../../utils/workflowGraph'
 
 /**
  * One connection on the workflow graph, drawn by the canvas rather than by
  * Vue Flow (#135).
  *
- * The line is what Vue Flow's default edge drew: its bezier between the two
- * anchors it measured, through its own `BaseEdge`. So the line is unchanged,
- * and a running step's connections still flow, since Vue Flow's `animated`
- * style is on the edge it wraps this in.
+ * The line is `connectionPath`'s, through Vue Flow's own `BaseEdge`, so a
+ * running step's connections still flow: Vue Flow's `animated` style is on
+ * the edge it wraps this in. A connection with no usable route is Vue Flow's
+ * bezier between the two anchors it measured, as its default edge drew it;
+ * one spanning several ranks follows the route dagre laid out round the
+ * steps between, for as long as both its steps stand where they were laid
+ * out (#136).
  *
  * What differs is when the input name is drawn, and in which layer. Vue
  * Flow's edge drew it all the time, as SVG text at the same midpoint, on top
@@ -21,14 +25,14 @@ import { useElementHover, useEventListener, useFocus } from '@vueuse/core'
  * selected, through Vue Flow's HTML label layer. The step details panel
  * names every connection feeding the selected step.
  *
- * The name comes off the edge `workflowGraph` built rather than being worked
- * out here, and so will the route of #136, which is the seam it extends.
+ * The name and the route come off the edge `workflowGraph` built rather than
+ * being worked out here.
  */
 
 const props = defineProps<EdgeProps<WorkflowGraphEdgeData>>()
 
 const line = computed(() => {
-  const [path, labelX, labelY] = getBezierPath({
+  const [path, labelX, labelY] = connectionPath({
     sourceX: props.sourceX,
     sourceY: props.sourceY,
     sourcePosition: props.sourcePosition,
@@ -36,6 +40,11 @@ const line = computed(() => {
     targetY: props.targetY,
     targetPosition: props.targetPosition,
     curvature: props.curvature,
+    route: props.data.route,
+    // Where the two steps stand now: a step a reader dragged has left the
+    // route behind.
+    sourceStepAt: props.sourceNode.position,
+    targetStepAt: props.targetNode.position,
   })
   return { path, labelX, labelY }
 })

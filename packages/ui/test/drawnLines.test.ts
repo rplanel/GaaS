@@ -12,7 +12,8 @@ import type { Line, Point, StepBox } from './drawnLines'
 import { getBezierPath } from '@vue-flow/core'
 import { describe, expect, it } from 'vitest'
 import { workflowGraph } from '../app/utils/workflowGraph'
-import { aStep } from './describedSteps'
+import { FIXTURES } from './characterisation/fixtures'
+import { aStep, describedSteps } from './describedSteps'
 import { crossings, drawnLine, entersStep } from './drawnLines'
 
 function line(...points: [number, number][]): Line {
@@ -145,6 +146,33 @@ describe('drawnLine', () => {
       expect(across(drawn[0]!, drawn.at(-1)!), direction).toBeGreaterThan(0.2)
       expect(across(drawn[0]!, drawn[1]!), direction).toBeLessThan(0.05)
       expect(across(drawn.at(-2)!, drawn.at(-1)!), direction).toBeLessThan(0.05)
+    }
+  })
+
+  it('follows a routed connection through every point of its route, as the canvas draws it (#136)', () => {
+    // The count measures the line `connectionPath` draws, so a routed
+    // connection is measured round the steps it is routed round.
+    for (const direction of ['LR', 'TB'] as const) {
+      const graph = workflowGraph(describedSteps(FIXTURES.ccqtlToday), direction)
+      const routed = graph.edges.find(edge => edge.data.route !== null)!
+      const drawn = drawnLine(routed, graph.nodes, direction)
+      const straight = drawnLine({ ...routed, data: { ...routed.data, route: null } }, graph.nodes, direction)
+
+      expect([drawn[0], drawn.at(-1)], direction).toEqual([straight[0], straight.at(-1)])
+      for (const point of routed.data.route!.through) {
+        expect(drawn, direction).toContainEqual(point)
+      }
+      // Each point once: where two pieces meet, the second starts where the
+      // first ended, and a point read twice is a piece of no length, which
+      // has no side for a crossing to be read off.
+      expect(new Set(drawn.map(({ x, y }) => `${x},${y}`)).size, direction).toBe(drawn.length)
+
+      // And with its source dragged off where it was routed, the bezier
+      // between its anchors, wherever the step was put.
+      const moved = graph.nodes.map(node => (node.id === routed.source ? { ...node, position: { x: node.position.x, y: node.position.y + 40 } } : node))
+      const live = drawnLine(routed, moved, direction)
+      expect(live, direction).toHaveLength(straight.length)
+      expect(live[0], direction).toEqual({ x: straight[0]!.x, y: straight[0]!.y + 40 })
     }
   })
 })

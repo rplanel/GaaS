@@ -13,11 +13,13 @@
  * and marks are #90's.
  */
 
+import type { Edge, LayoutOptions } from '@dagrejs/dagre'
+import type { XYPosition } from '@vue-flow/core'
 import type { DescribedStep } from 'nuxt-galaxy'
 import type { StepMark } from './stepMarks'
 import { inputStepLabel, isInputStep } from '#imports'
 import { layout as dagreLayout, Graph } from '@dagrejs/dagre'
-import { Position } from '@vue-flow/core'
+import { getBezierPath, Position } from '@vue-flow/core'
 
 /** Left to right by default, top to bottom on request (Q6). */
 export type GraphDirection = 'LR' | 'TB'
@@ -134,6 +136,35 @@ export interface WorkflowGraphEdgeData {
    * means to show the input's label instead.
    */
   readonly inputName: string
+  /**
+   * The way dagre laid this connection round the steps between its two
+   * ends, or `null` where it has no usable route of its own and is drawn as
+   * the bezier between its anchors (#136).
+   */
+  readonly route: ConnectionRoute | null
+}
+
+/**
+ * Where dagre routed one connection that spans more than one rank (#136).
+ *
+ * Dagre routes every connection, through one point on each rank it crosses
+ * and one between each two, and the canvas used to throw all of it away and
+ * draw the bezier straight across whatever stood in between. A route is only
+ * true of the layout it came from, so it carries where its two steps stood:
+ * a reader who drags either of them away has left the route behind.
+ */
+export interface ConnectionRoute {
+  /**
+   * Dagre's points between the connection's two ends.
+   *
+   * Without its first and last, which dagre puts where the line meets the
+   * step's border on its way to the centre: the anchors the connection
+   * really leaves and arrives at stand in for them.
+   */
+  readonly through: readonly XYPosition[]
+  /** Where the source step and the target step stood, by their top-left corners, when it was routed. */
+  readonly sourceAt: XYPosition
+  readonly targetAt: XYPosition
 }
 
 export interface WorkflowGraphEdge {
@@ -303,7 +334,7 @@ export function workflowGraph(
   }))
 
   const dangling: string[] = []
-  const edges = entries.flatMap(([stepId, step]) =>
+  const unrouted = entries.flatMap(([stepId, step]) =>
     connectionsOf(step).flatMap((connection) => {
       if (!known.has(connection.from)) {
         dangling.push(`${connection.from} → ${stepId}.${connection.inputName}`)
@@ -319,13 +350,18 @@ export function workflowGraph(
         // rather than from one point on top of each other.
         sourceHandle: connection.outputName,
         targetHandle: connection.inputName,
-        data: { inputName: connection.inputName },
+        data: { inputName: connection.inputName, route: null },
         animated: false,
       }]
     }),
   )
 
-  return { nodes: layOut(nodes, edges, direction), edges, dangling }
+  const layout = layOut(nodes, unrouted, direction)
+  const edges = unrouted.map((edge) => {
+    const route = layout.routes.get(edge.id)
+    return route === undefined ? edge : { ...edge, data: { ...edge.data, route } }
+  })
+  return { nodes: layout.nodes, edges, dangling }
 }
 
 /**
@@ -345,6 +381,78 @@ export function animatedEdges(
   marks: Record<string, StepMark>,
 ): WorkflowGraphEdge[] {
   return edges.map(edge => ({ ...edge, animated: marks[edge.source]?.isRunning ?? false }))
+}
+
+/** What `connectionPath` draws one connection from: its two anchors as Vue Flow measured them, and its route. */
+export interface ConnectionPathParams {
+  readonly sourceX: number
+  readonly sourceY: number
+  readonly sourcePosition: Position
+  readonly targetX: number
+  readonly targetY: number
+  readonly targetPosition: Position
+  /** Vue Flow's own, for every bezier drawn: 0.25 where it is not given. */
+  readonly curvature?: number
+  readonly route: ConnectionRoute | null
+  /** Where the source step and the target step stand now, which is where a reader dragged them to. */
+  readonly sourceStepAt: XYPosition
+  readonly targetStepAt: XYPosition
+}
+
+/**
+ * The line the canvas draws for one connection, as an SVG path, and the
+ * point its name is shown at (#136).
+ *
+ * One function, and the only one: the canvas's own edge draws every
+ * connection with it, and the count of crossings and of connections run
+ * through a step (#134) measures what it draws, so the count is of the line
+ * a reader sees.
+ *
+ * **A connection with no usable route draws the live bezier between its
+ * anchors**, as Vue Flow's default edge always did: a connection between
+ * adjacent ranks, where nothing can stand in between; a connection on a
+ * level laid out from one edge per pair of steps, whose routes are shared by
+ * every connection of a pair; and a connection whose source or target step
+ * a reader has dragged off where the route was laid out.
+ *
+ * **A routed one is a chain of Vue Flow's beziers**, from its source anchor
+ * through each point of its route to its target anchor. Each piece leaves
+ * and arrives along the way the ranks run, as the bezier between two anchors
+ * does, so the chain bends between ranks and runs straight through them.
+ */
+export function connectionPath(params: ConnectionPathParams): [path: string, labelX: number, labelY: number] {
+  const { route, sourceStepAt, targetStepAt, ...ends } = params
+  const followed = route !== null && samePosition(route.sourceAt, sourceStepAt) && samePosition(route.targetAt, targetStepAt)
+  if (!followed) {
+    const [path, labelX, labelY] = getBezierPath(ends)
+    return [path, labelX, labelY]
+  }
+
+  const points = [{ x: ends.sourceX, y: ends.sourceY }, ...route.through, { x: ends.targetX, y: ends.targetY }]
+  const pieces = points.slice(1).map((to, index) => getBezierPath({
+    ...ends,
+    sourceX: points[index]!.x,
+    sourceY: points[index]!.y,
+    targetX: to.x,
+    targetY: to.y,
+  }))
+  // One `M` and the cubics after it, so the chain is one line: a path
+  // restarted at each point would restart a flowing connection's dashes.
+  const path = pieces.map(([piece], index) => (index === 0 ? piece : piece.replace(/^M\S+ /, ''))).join(' ')
+
+  // Halfway along: at the point between the two middle pieces, or inside
+  // the middle one, where Vue Flow names a piece.
+  const middle = pieces.length / 2
+  if (Number.isInteger(middle)) {
+    const { x, y } = points[middle]!
+    return [path, x, y]
+  }
+  const [, labelX, labelY] = pieces[Math.floor(middle)]!
+  return [path, labelX, labelY]
+}
+
+function samePosition(a: XYPosition, b: XYPosition): boolean {
+  return a.x === b.x && a.y === b.y
 }
 
 /**
@@ -434,8 +542,11 @@ function stepHeight(anchors: { source: string[], target: string[] } | undefined,
  * connections it stands for: what `layOut` falls back to on a level dagre
  * cannot lay out the first way. The weights keep every connection in the
  * ranking — dagre's ranker sums parallel edges into exactly this — but not
- * the room each would have been given, so on every recording it lays out
- * exactly as the unweighted graph before #121 did.
+ * the room each would have been given: in dagre's own order, every
+ * recording laid out exactly as the unweighted graph before #121 did. The
+ * weights also count in `anchorOrder`, which orders this graph's ranks as
+ * it does the other's, and this is the only graph whose weights are not
+ * all 1.
  */
 export function dagreGraph(
   nodes: readonly Pick<WorkflowGraphNode, 'id' | 'width' | 'height'>[],
@@ -472,20 +583,60 @@ export function dagreGraph(
  * per pair of steps on a level where it cannot (see `tryLayOut`): a layout
  * that gives the connections between two steps no room of their own still
  * draws every one of them, and a layout that throws draws nothing.
+ *
+ * With the route of each connection that has one of its own (#136), by its
+ * id. None from the layout per pair, where every connection between two
+ * steps shares one route, and through one point would pinch them all.
  */
 function layOut(
   nodes: Omit<WorkflowGraphNode, 'position'>[],
   edges: WorkflowGraphEdge[],
   direction: GraphDirection,
-): WorkflowGraphNode[] {
-  const graph = tryLayOut(dagreGraph(nodes, edges, direction))
-    ?? dagreLayout(dagreGraph(nodes, edges, direction, 'pair'))
+): { nodes: WorkflowGraphNode[], routes: Map<string, ConnectionRoute> } {
+  const options = { customOrder: anchorOrder(nodes, edges) }
+  const perConnection = tryLayOut(dagreGraph(nodes, edges, direction), options)
+  const graph = perConnection ?? dagreLayout(dagreGraph(nodes, edges, direction, 'pair'), options)
 
-  return nodes.map((node) => {
+  const laidOut = nodes.map((node) => {
     const { x, y } = graph.node(node.id)
     // Dagre positions a node by its centre, Vue Flow by its top-left corner.
     return { ...node, position: { x: x - node.width / 2, y: y - node.height / 2 } }
   })
+  if (perConnection === undefined) {
+    return { nodes: laidOut, routes: new Map() }
+  }
+
+  const at = new Map(laidOut.map(node => [node.id, node.position]))
+  const routes = new Map(edges.flatMap((edge) => {
+    const through = routeThrough(perConnection.edge(edge.source, edge.target, edge.id)?.points)
+    return through === undefined
+      ? []
+      : [[edge.id, { through, sourceAt: { ...at.get(edge.source)! }, targetAt: { ...at.get(edge.target)! } }] as const]
+  }))
+  return { nodes: laidOut, routes }
+}
+
+/**
+ * The points of a route between its two ends, or `undefined` where the
+ * connection has no usable route of its own.
+ *
+ * None between adjacent ranks. To make way for edge labels, dagre puts a
+ * rank of its own halfway between every two (it halves `ranksep` and doubles
+ * every edge's `minlen`), so between its ends a route has one point on every
+ * rank it crosses and one halfway between each two: between adjacent ranks
+ * that is the single point halfway, round nothing.
+ *
+ * None either where any point is not finite. Dagre has been seen to return
+ * a `NaN` inside a route while placing every step (see `tryLayOut`), and the
+ * layout is kept, so only that connection is drawn as the bezier between
+ * its anchors rather than as a path that draws nothing.
+ */
+function routeThrough(points: readonly XYPosition[] | undefined): XYPosition[] | undefined {
+  const through = (points ?? []).slice(1, -1)
+  if (through.length < 2 || !through.every(({ x, y }) => Number.isFinite(x) && Number.isFinite(y))) {
+    return undefined
+  }
+  return through.map(({ x, y }) => ({ x, y }))
 }
 
 /**
@@ -502,21 +653,27 @@ function layOut(
  * `conditional-repeat-runtime` is enough to set it off — step 1 feeds step 2
  * three times and step 3 twice, and both feed step 4.
  *
+ * `anchorOrder` numbers each rank afresh before dagre places anything, and
+ * that alone stops the throw: over 40 000 random layouts in #123's design
+ * spike it threw on none, against 71% for dagre's own order. So this is a
+ * safety net now, reached by no recorded level, and whether to remove it is
+ * #133's to decide.
+ *
  * Where the node left unplaced is not an edge's end, dagre returns normally
  * with a `NaN` inside that edge's route, and that layout is kept: every step
- * is placed, and Vue Flow routes its own edges, so no route of dagre's is
- * ever drawn. The steps are checked all the same, because a step at `NaN` is one
- * Vue Flow would silently leave out — though dagre has not been seen to put
- * one there without throwing.
+ * is placed, and only that connection is drawn without its route (see
+ * `routeThrough`). The steps are checked all the same, because a step at
+ * `NaN` is one Vue Flow would silently leave out — though dagre has not been
+ * seen to put one there without throwing.
  *
  * Any throw falls back, not only this one: the fallback puts the same steps
  * through the same dagre, so a failure it shares still throws. A dagre that
  * stops losing the dummy needs nothing changed here; the fallback just stops
  * running.
  */
-function tryLayOut(graph: Graph): Graph | undefined {
+function tryLayOut(graph: Graph, options: LayoutOptions): Graph | undefined {
   try {
-    dagreLayout(graph)
+    dagreLayout(graph, options)
   }
   catch {
     return undefined
@@ -526,6 +683,155 @@ function tryLayOut(graph: Graph): Graph | undefined {
     return Number.isFinite(x) && Number.isFinite(y)
   })
   return placed ? graph : undefined
+}
+
+/** How many times `anchorOrder` sweeps the ranks, alternately down and up: #123's design spike's eight. */
+const ORDER_SWEEPS = 8
+
+type CustomOrder = NonNullable<LayoutOptions['customOrder']>
+
+/**
+ * The order dagre lays each rank out in, counting each connection at its
+ * anchor rather than at its step's centre (#136).
+ *
+ * Dagre orders a rank by where the steps it joins stand, as if every
+ * connection left and arrived at a step's middle. A step's anchors are
+ * spread down its side in the order of their names, so two connections
+ * whose steps are in the right order can still leave in the wrong one and
+ * cross just outside the step. Drawn through dagre's routes, those legs
+ * fanned across each other: #123's design spike counted 245 crossings over
+ * the recorded levels, against 154 drawn straight, and 66 ordered by
+ * anchor.
+ *
+ * Dagre's own order comes first, and then every rank is numbered 0 to n − 1
+ * in that order, which dagre 3.1.1 does not guarantee and which is what
+ * stops it throwing (see `tryLayOut`). Then the ranks are swept, down and
+ * up in turn: each step or dummy is placed at the mean of where the
+ * connections meeting it come from, each counted at its anchor, as an
+ * offset of up to half a place either side of its step. Whichever ordering
+ * crosses fewest connections counted that way is kept, dagre's included.
+ *
+ * **This reads labels private to dagre's layout graph**: each node's `rank`
+ * and `order`, and a dummy's `dummy` and `edgeObj`, which is how a dummy is
+ * traced back to its connection — under one edge per connection the edge's
+ * name is the connection's id. A dagre bump can break any of it, which is
+ * one of the reasons ADR 0005 gives for reopening ELK. On the layout per
+ * pair, whose edges name no connection, a pair's connections are counted at
+ * the middle of their anchors.
+ */
+function anchorOrder(nodes: readonly Pick<WorkflowGraphNode, 'id' | 'data'>[], edges: readonly WorkflowGraphEdge[]): CustomOrder {
+  const data = new Map(nodes.map(node => [node.id, node.data]))
+  /** How far from the middle of its step's side each end of a connection is, from −0.5 to 0.5. */
+  const offsets = new Map(edges.map((edge) => {
+    const source = data.get(edge.source)!
+    const target = data.get(edge.target)!
+    return [edge.id, {
+      source: anchorAlong(source.sourceHandles.indexOf(edge.sourceHandle), source.sourceHandles.length) - 0.5,
+      target: anchorAlong(target.targetHandles.indexOf(edge.targetHandle), target.targetHandles.length) - 0.5,
+    }]
+  }))
+  const pairOf = (source: string, target: string): string => `${source}\0${target}`
+  const pairs = new Map<string, { source: number, target: number, count: number }>()
+  for (const edge of edges) {
+    const pair = pairs.get(pairOf(edge.source, edge.target)) ?? { source: 0, target: 0, count: 0 }
+    const offset = offsets.get(edge.id)!
+    pairs.set(pairOf(edge.source, edge.target), { source: pair.source + offset.source, target: pair.target + offset.target, count: pair.count + 1 })
+  }
+  const offsetsOf = ({ v, w, name }: Edge): { source: number, target: number } => {
+    const own = name === undefined ? undefined : offsets.get(name)
+    if (own !== undefined) {
+      return own
+    }
+    const pair = pairs.get(pairOf(v, w))
+    return pair === undefined ? { source: 0, target: 0 } : { source: pair.source / pair.count, target: pair.target / pair.count }
+  }
+
+  return (graph, order) => {
+    order(graph)
+
+    // Each piece of a connection between two neighbouring ranks, with where
+    // it meets each of the two as an offset off that one's place. A dummy is
+    // a point on the connection's way and has no anchor to be off.
+    const pieces = graph.edges().map((piece) => {
+      const from = graph.node(piece.v)
+      const to = graph.node(piece.w)
+      const connection = to.edgeObj ?? from.edgeObj
+      const offset = connection === undefined ? { source: 0, target: 0 } : offsetsOf(connection)
+      return {
+        v: piece.v,
+        w: piece.w,
+        offV: from.dummy ? 0 : offset.source,
+        offW: to.dummy ? 0 : offset.target,
+        weight: graph.edge(piece).weight ?? 1,
+      }
+    })
+    const into = grouped(pieces, piece => piece.w)
+    const outOf = grouped(pieces, piece => piece.v)
+
+    const byRank = grouped(graph.nodes(), v => graph.node(v).rank!)
+    const ranks = [...byRank.keys()].sort((a, b) => a - b).map(rank =>
+      byRank.get(rank)!.sort((a, b) => graph.node(a).order! - graph.node(b).order!))
+    const place = new Map(ranks.flatMap(rank => rank.map((v, index) => [v, index] as const)))
+
+    const crossed = (): number => {
+      let count = 0
+      for (const between of grouped(pieces, piece => graph.node(piece.v).rank!).values()) {
+        const spans = between.map(piece => ({ from: place.get(piece.v)! + piece.offV, to: place.get(piece.w)! + piece.offW, weight: piece.weight }))
+        spans.forEach((one, index) => {
+          for (const other of spans.slice(index + 1)) {
+            if ((one.from - other.from) * (one.to - other.to) < 0) {
+              count += one.weight * other.weight
+            }
+          }
+        })
+      }
+      return count
+    }
+
+    let best = new Map(place)
+    let fewest = crossed()
+    for (let sweep = 0; sweep < ORDER_SWEEPS; sweep++) {
+      const down = sweep % 2 === 0
+      for (const rank of down ? ranks.slice(1) : [...ranks].reverse().slice(1)) {
+        const centres = rank.map((v) => {
+          const meeting = (down ? into.get(v) : outOf.get(v)) ?? []
+          if (meeting.length === 0) {
+            return { v, centre: place.get(v)! }
+          }
+          const sum = meeting.reduce((total, piece) => total + piece.weight * (down
+            ? place.get(piece.v)! + piece.offV - piece.offW
+            : place.get(piece.w)! + piece.offW - piece.offV), 0)
+          return { v, centre: sum / meeting.reduce((total, piece) => total + piece.weight, 0) }
+        })
+        centres.sort((a, b) => a.centre - b.centre || place.get(a.v)! - place.get(b.v)!)
+        centres.forEach(({ v }, index) => place.set(v, index))
+        rank.splice(0, rank.length, ...centres.map(({ v }) => v))
+      }
+      const count = crossed()
+      if (count < fewest) {
+        fewest = count
+        best = new Map(place)
+      }
+    }
+    for (const [v, index] of best) {
+      graph.node(v).order = index
+    }
+  }
+}
+
+/** `items` by `key`, each group in the order its items came. */
+function grouped<T, K>(items: readonly T[], key: (item: T) => K): Map<K, T[]> {
+  const groups = new Map<K, T[]>()
+  for (const item of items) {
+    const group = groups.get(key(item))
+    if (group === undefined) {
+      groups.set(key(item), [item])
+    }
+    else {
+      group.push(item)
+    }
+  }
+  return groups
 }
 
 /**

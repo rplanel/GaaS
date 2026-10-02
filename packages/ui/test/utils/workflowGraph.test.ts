@@ -9,15 +9,19 @@
  * is what the endpoint serves.
  */
 
+import type { EdgeLabel } from '@dagrejs/dagre'
 import type { JobState } from 'blendtype'
 import type { DescribedStep } from 'nuxt-galaxy'
-import type { GraphDirection } from '../../app/utils/workflowGraph'
-import { describe, expect, it } from 'vitest'
+import type { ConnectionRoute, GraphDirection } from '../../app/utils/workflowGraph'
+import { Graph, layout } from '@dagrejs/dagre'
+import { getBezierPath, Position } from '@vue-flow/core'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { stepMarks } from '../../app/utils/stepMarks'
 import { toolDisplayName } from '../../app/utils/toolName'
 import {
   anchorAlong,
   animatedEdges,
+  connectionPath,
   dagreGraph,
   handleSides,
   stepNodeLabel,
@@ -28,6 +32,18 @@ import {
 import { FIXTURES } from '../characterisation/fixtures'
 import { aStep, describedSteps } from '../describedSteps'
 import { crossings, drawnLine, entersStep } from '../drawnLines'
+
+/**
+ * Dagre's own layout, watched (#136): which graph a level was laid out from,
+ * and a way to make it fail as dagre 3.1 does.
+ *
+ * Every call goes through to dagre unless a test says otherwise, so every
+ * other test here is laid out exactly as the canvas is.
+ */
+vi.mock('@dagrejs/dagre', async (importOriginal) => {
+  const dagre = await importOriginal<typeof import('@dagrejs/dagre')>()
+  return { ...dagre, layout: vi.fn(dagre.layout) }
+})
 
 /**
  * Every level a reader can open in one recording — the workflow, then each
@@ -290,25 +306,59 @@ describe('workflowGraph', () => {
     // join, every one of these seven steps sat somewhere else, in a graph
     // 283 px tall instead of 427: the layout of a different graph. (Both at
     // #122's heights, which moved six of the seven from where #121 pinned
-    // them.)
+    // them. #136's order by anchor then put step 1 above step 0, and moved
+    // every step up or down its rank.)
     const { nodes } = workflowGraph(describedSteps(FIXTURES.ccqtlToday))
 
     expect(Object.fromEntries(nodes.map(node => [node.id, node.position]))).toEqual({
-      0: { x: 16, y: 93 },
-      1: { x: 16, y: 221 },
-      2: { x: 366, y: 112 },
-      3: { x: 716, y: 315 },
-      4: { x: 1066, y: 218 },
-      5: { x: 1416, y: 121 },
-      6: { x: 1766, y: 16 },
+      0: { x: 16, y: 144 },
+      1: { x: 16, y: 16 },
+      2: { x: 366, y: 18 },
+      3: { x: 716, y: 209 },
+      4: { x: 1066, y: 132 },
+      5: { x: 1416, y: 92 },
+      6: { x: 1766, y: 69 },
     })
   })
 
+  it.each(['LR', 'TB'] as const)('routes a connection spanning more than one rank round the steps between, and no other, %s', (direction) => {
+    // #136. Between adjacent ranks nothing can stand in the way, so the
+    // bezier between the anchors is drawn; a longer connection follows the
+    // route dagre laid out for it.
+    const { nodes, edges } = workflowGraph(describedSteps(FIXTURES.ccqtlToday), direction)
+    const along = direction === 'LR' ? 'x' : 'y'
+    const size = direction === 'LR' ? 'width' : 'height'
+    const at = (id: string) => nodes.find(node => node.id === id)!
+    // A rank is a column left to right and a row top to bottom, and every
+    // step of one starts at the same place along the way the ranks run.
+    const starts = [...new Set(nodes.map(node => node.position[along]))].sort((a, b) => a - b)
+    const span = (source: string, target: string) => starts.indexOf(at(target).position[along]) - starts.indexOf(at(source).position[along])
+
+    const routed = edges.filter(edge => edge.data.route !== null)
+    expect(routed.length, 'some connection of ccqtl-today spans several ranks').toBeGreaterThan(0)
+    expect(routed.map(edge => edge.id)).toEqual(edges.filter(edge => span(edge.source, edge.target) > 1).map(edge => edge.id))
+
+    for (const { id, source, target, data: { route } } of routed) {
+      // Laid out where the two steps stand, so a step still there follows it.
+      expect(route!.sourceAt, id).toEqual(at(source).position)
+      expect(route!.targetAt, id).toEqual(at(target).position)
+      // One point on each rank it crosses and one between each two, all
+      // between the two steps it joins.
+      expect(route!.through, id).toHaveLength(2 * span(source, target) - 1)
+      const from = at(source).position[along] + at(source)[size]
+      const to = at(target).position[along]
+      for (const point of route!.through) {
+        expect(from < point[along] && point[along] < to, `${id} at ${point[along]}, between ${from} and ${to}`).toBe(true)
+      }
+    }
+  })
+
   it.each(RECORDED_LEVELS)('places every step of $name, in either direction', ({ steps }) => {
-    // Handed one edge per connection, dagre 3.1 can lose the second of three
-    // parallel edges out of its own ordering and throw, on a shape as plain
-    // as conditional-repeat-runtime's: step 1 feeds step 2 three times and
-    // step 3 twice, and both feed step 4.
+    // Handed one edge per connection, dagre 3.1's own order can lose the
+    // second of three parallel edges and throw, on a shape as plain as
+    // conditional-repeat-runtime's: step 1 feeds step 2 three times and step
+    // 3 twice, and both feed step 4. The order by anchor stops it (#136), and
+    // whichever layout runs, every step is placed.
     for (const direction of ['LR', 'TB'] as const) {
       const { nodes } = workflowGraph(steps, direction)
 
@@ -362,27 +412,27 @@ function drawing(steps: Record<string, DescribedStep>, direction: GraphDirection
 
 /**
  * The most each recorded level may draw, per direction (#134): ceilings for
- * #123's layout and for every dagre bump after it (#133), which may lower
- * them and never raise them.
+ * every layout change and every dagre bump (#133), which may lower them and
+ * never raise them.
  *
- * Measured on today's canvas at dagre 3.1.1: 156 crossings, and 13
- * connections through a step, 19 connection–step pairs in all. #123's
- * design spike counted 154 crossings, with the same 13 connections, by
- * anchoring each line on the step's side; Vue Flow anchors it 3 px further
- * out, at the handle's outer edge. That moves one pair on ccqtl-today top to
- * bottom: `4:nrep_rds` and `3:out`, both into step 5, came within 0.02 px of
- * each other without crossing, and drawn where the canvas draws them they
- * cross twice, about 24 px apart, never more than about 2 px from each other
- * in between, which on screen is one line.
+ * Measured at dagre 3.1.1 on #136's layout, ranks ordered by anchor and
+ * longer connections drawn through their routes: 62 crossings, and no
+ * connection through a step. The canvas before it drew 156 crossings and
+ * ran 13 connections through a step, 19 connection–step pairs in all; no
+ * level rose. #123's design spike counted the same 62, anchoring each line
+ * on the step's side where Vue Flow anchors it 3 px further out, at the
+ * handle's outer edge. The 3 px had added two crossings to the old layout,
+ * on a pair of connections that ran within 0.02 px of each other; on this
+ * one it adds none.
  */
 const DRAWN_AT_MOST: Record<string, Record<GraphDirection, { crossings: number, throughAStep: number }>> = {
-  'ccqtl-today': { LR: { crossings: 25, throughAStep: 2 }, TB: { crossings: 27, throughAStep: 3 } },
+  'ccqtl-today': { LR: { crossings: 17, throughAStep: 0 }, TB: { crossings: 17, throughAStep: 0 } },
   'conditional-repeat-runtime': { LR: { crossings: 3, throughAStep: 0 }, TB: { crossings: 3, throughAStep: 0 } },
-  'fan-in': { LR: { crossings: 1, throughAStep: 1 }, TB: { crossings: 1, throughAStep: 1 } },
-  'subworkflow-nested': { LR: { crossings: 21, throughAStep: 1 }, TB: { crossings: 21, throughAStep: 1 } },
-  'subworkflow-nested/8': { LR: { crossings: 13, throughAStep: 0 }, TB: { crossings: 13, throughAStep: 0 } },
-  'subworkflow-nested/8/8': { LR: { crossings: 7, throughAStep: 1 }, TB: { crossings: 7, throughAStep: 1 } },
-  'subworkflow-nested/12': { LR: { crossings: 7, throughAStep: 1 }, TB: { crossings: 7, throughAStep: 1 } },
+  'fan-in': { LR: { crossings: 0, throughAStep: 0 }, TB: { crossings: 0, throughAStep: 0 } },
+  'subworkflow-nested': { LR: { crossings: 6, throughAStep: 0 }, TB: { crossings: 6, throughAStep: 0 } },
+  'subworkflow-nested/8': { LR: { crossings: 3, throughAStep: 0 }, TB: { crossings: 3, throughAStep: 0 } },
+  'subworkflow-nested/8/8': { LR: { crossings: 1, throughAStep: 0 }, TB: { crossings: 1, throughAStep: 0 } },
+  'subworkflow-nested/12': { LR: { crossings: 1, throughAStep: 0 }, TB: { crossings: 1, throughAStep: 0 } },
 }
 
 describe('workflowGraph, as the canvas draws it', () => {
@@ -409,6 +459,222 @@ describe('workflowGraph, as the canvas draws it', () => {
   it('pins no ceiling on a level that is no longer recorded', () => {
     // A ceiling for a level that has gone holds nothing to anything.
     expect(Object.keys(DRAWN_AT_MOST).filter(name => !RECORDED_LEVELS.some(level => level.name === name))).toEqual([])
+  })
+})
+
+describe('workflowGraph, as dagre lays it out', () => {
+  const dagreLayout = vi.mocked(layout)
+
+  beforeEach(() => {
+    dagreLayout.mockClear()
+  })
+
+  /** Whether each layout dagre was asked for was of one edge per connection, in the order asked. */
+  const keyings = () => dagreLayout.mock.calls.map(([graph]) => (graph.isMultigraph() ? 'per connection' : 'per pair'))
+
+  it.each(RECORDED_LEVELS)('lays $name out from one edge per connection in either direction, never per pair', ({ steps }) => {
+    // #136. Dagre 3.1.1 throws on three parallel connections, and
+    // conditional-repeat-runtime has them: step 1 feeds step 2 three times.
+    // An order that numbers each rank afresh stops it.
+    for (const direction of ['LR', 'TB'] as const) {
+      dagreLayout.mockClear()
+      workflowGraph(steps, direction)
+      expect(keyings(), direction).toEqual(['per connection'])
+    }
+  })
+
+  it.each(['LR', 'TB'] as const)('lays out per connection the four steps dagre\'s own order throws on, %s', (direction) => {
+    // The smallest shape that sets dagre 3.1.1 off: one step feeding another
+    // three times and a third once, both feeding a fourth. Numbering each
+    // rank afresh is what stops it, whether or not a sweep then finds an
+    // ordering crossing less. A dagre that stops throwing here fails the
+    // first assertion, which is the day #133 can remove the fallback.
+    const steps = {
+      0: aStep(0, { type: 'data_input', tool_id: null, tool_version: null }),
+      1: aStep(1, {
+        input_connections: {
+          a: { id: 0, output_name: 'output' },
+          b: { id: 0, output_name: 'output' },
+          c: { id: 0, output_name: 'output' },
+        },
+      }),
+      2: aStep(2, { input_connections: { in: { id: 0, output_name: 'output' } } }),
+      3: aStep(3, { input_connections: { x: { id: 1, output_name: 'out_file1' }, y: { id: 2, output_name: 'out_file1' } } }),
+    }
+    const { nodes, edges } = workflowGraph(steps, direction)
+    expect(() => layout(dagreGraph(nodes, edges, direction)), 'dagre\'s own order').toThrow('Not possible to find intersection inside of the rectangle')
+
+    dagreLayout.mockClear()
+    workflowGraph(steps, direction)
+    expect(keyings()).toEqual(['per connection'])
+  })
+
+  it('hands dagre every rank numbered 0 to n − 1, whatever dagre\'s own order left', () => {
+    // What stops the throw is the numbering, not the sweeps: dagre 3.1.1 can
+    // leave two nodes of one rank on the same place, and an ordering no
+    // sweep improves on is kept as it came. Here dagre's order leaves every
+    // node on place 0, which counts no crossing at all.
+    workflowGraph(describedSteps(FIXTURES.conditionalRepeatRuntime))
+    const customOrder = dagreLayout.mock.calls[0]![1]!.customOrder!
+    const graph = new Graph({ multigraph: true })
+    for (const [id, rank] of [['0', 0], ['1', 2], ['2', 2], ['3', 2], ['4', 4]] as const) {
+      graph.setNode(id, { width: 260, height: 96, rank })
+    }
+    for (const [v, w] of [['0', '1'], ['0', '2'], ['0', '3'], ['1', '4'], ['3', '4']] as const) {
+      graph.setEdge(v, w, { weight: 1 }, `${v}->${w}`)
+    }
+
+    customOrder(graph, (laid) => {
+      for (const v of laid.nodes()) {
+        laid.node(v).order = 0
+      }
+    })
+
+    expect(['1', '2', '3'].map(v => graph.node(v).order).sort()).toEqual([0, 1, 2])
+    expect([graph.node('0').order, graph.node('4').order]).toEqual([0, 0])
+  })
+
+  it('falls back to one edge per pair where dagre cannot lay a level out per connection, and draws every connection of it live', () => {
+    // #121's safety net, kept (#136): a pair's connections share one route,
+    // and drawn through it they would all pinch through its points.
+    const steps = describedSteps(FIXTURES.ccqtlToday)
+    expect(workflowGraph(steps).edges.some(edge => edge.data.route !== null), 'routed, laid out per connection').toBe(true)
+
+    dagreLayout.mockClear()
+    dagreLayout.mockImplementationOnce(() => {
+      throw new Error('Not possible to find intersection inside of the rectangle')
+    })
+    const { nodes, edges } = workflowGraph(steps)
+
+    expect(keyings()).toEqual(['per connection', 'per pair'])
+    // Ordered by anchor both times.
+    expect(dagreLayout.mock.calls.map(([, options]) => typeof options?.customOrder)).toEqual(['function', 'function'])
+    expect(edges.filter(edge => edge.data.route !== null).map(edge => edge.id)).toEqual([])
+    expect(nodes.filter(({ position }) => !Number.isFinite(position.x) || !Number.isFinite(position.y))).toEqual([])
+  })
+
+  it('draws a connection whose route is not finite live, and keeps the layout of the others', async () => {
+    // Dagre can place every step and still put a `NaN` inside a route (see
+    // `tryLayOut`). That connection draws the bezier between its anchors
+    // rather than a path that draws nothing, and nothing else moves.
+    const { layout: dagreItself } = await vi.importActual<typeof import('@dagrejs/dagre')>('@dagrejs/dagre')
+    const steps = describedSteps(FIXTURES.ccqtlToday)
+    const sound = workflowGraph(steps)
+    const [broken, ...others] = sound.edges.filter(edge => edge.data.route !== null)
+
+    dagreLayout.mockClear()
+    dagreLayout.mockImplementationOnce((graph, options) => {
+      const laidOut = dagreItself(graph, options)
+      const edge = graph.edges().find(({ name }) => name === broken!.id)!
+      const { points } = graph.edge(edge) as EdgeLabel
+      points![2]!.x = Number.NaN
+      return laidOut
+    })
+    const { nodes, edges } = workflowGraph(steps)
+
+    expect(keyings()).toEqual(['per connection'])
+    expect(edges.find(edge => edge.id === broken!.id)!.data.route).toBeNull()
+    expect(edges.filter(edge => edge.data.route !== null)).toEqual(others)
+    expect(nodes).toEqual(sound.nodes)
+  })
+})
+
+describe('connectionPath', () => {
+  // #136. The one function the canvas's own edge draws a connection with,
+  // and the one #134's count measures.
+
+  /** Two anchors left to right, as Vue Flow measures them, on steps at rest where they were laid out. */
+  const ends = {
+    sourceX: 100,
+    sourceY: 40,
+    sourcePosition: Position.Right,
+    targetX: 500,
+    targetY: 160,
+    targetPosition: Position.Left,
+  }
+  const sourceAt = { x: -163, y: 0 }
+  const targetAt = { x: 503, y: 112 }
+  const route: ConnectionRoute = {
+    through: [{ x: 200, y: 60 }, { x: 300, y: 90 }, { x: 400, y: 120 }],
+    sourceAt,
+    targetAt,
+  }
+
+  /** The pieces of a path, one cubic each, as the four points that draw it. */
+  function piecesOf(path: string): string[] {
+    const [start, ...cubics] = path.split(' C')
+    return cubics.reduce<{ from: string, pieces: string[] }>(({ from, pieces }, cubic) => {
+      const to = cubic.trim().split(' ').at(-1)!
+      return { from: to, pieces: [...pieces, `${from} C${cubic.trim()}`] }
+    }, { from: start!.replace(/^M/, ''), pieces: [] }).pieces
+  }
+
+  /** Vue Flow's own bezier between two points, left to right, as the same four points. */
+  function bezier(from: { x: number, y: number }, to: { x: number, y: number }): string {
+    const [path] = getBezierPath({ sourceX: from.x, sourceY: from.y, sourcePosition: Position.Right, targetX: to.x, targetY: to.y, targetPosition: Position.Left })
+    return path.replace(/^M/, '')
+  }
+
+  it('draws a connection with no route as Vue Flow\'s bezier between its anchors', () => {
+    const drawn = connectionPath({ ...ends, route: null, sourceStepAt: sourceAt, targetStepAt: targetAt })
+
+    expect(drawn).toEqual(getBezierPath(ends).slice(0, 3))
+  })
+
+  it('draws a routed connection as Vue Flow\'s bezier from each point of its route to the next, anchor to anchor', () => {
+    const [path] = connectionPath({ ...ends, route, sourceStepAt: sourceAt, targetStepAt: targetAt })
+
+    const points = [{ x: ends.sourceX, y: ends.sourceY }, ...route.through, { x: ends.targetX, y: ends.targetY }]
+    expect(piecesOf(path)).toEqual(points.slice(1).map((to, index) => bezier(points[index]!, to)))
+    // One line, not four: a path restarted at each point would restart a
+    // flowing connection's dashes there too.
+    expect(path.match(/M/g)).toHaveLength(1)
+  })
+
+  it('draws each piece of a route along the way the ranks run, top to bottom too', () => {
+    const down = {
+      sourceX: 40,
+      sourceY: 100,
+      sourcePosition: Position.Bottom,
+      targetX: 160,
+      targetY: 500,
+      targetPosition: Position.Top,
+    }
+    const through = [{ x: 60, y: 300 }]
+    const [path] = connectionPath({ ...down, route: { through, sourceAt, targetAt }, sourceStepAt: sourceAt, targetStepAt: targetAt })
+
+    const [first] = getBezierPath({ ...down, targetX: 60, targetY: 300 })
+    const [second] = getBezierPath({ ...down, sourceX: 60, sourceY: 300 })
+    expect(piecesOf(path)).toEqual([first, second].map(piece => piece.replace(/^M/, '')))
+  })
+
+  it('names a routed connection halfway along its route', () => {
+    // An even number of pieces meets at a point of the route, which is
+    // where every route dagre draws is halved: between its ends it puts one
+    // point per rank and one between each two.
+    const evenly: ConnectionRoute = { ...route, through: [{ x: 200, y: 60 }, { x: 300, y: 90 }, { x: 400, y: 150 }] }
+    const [, x, y] = connectionPath({ ...ends, route: evenly, sourceStepAt: sourceAt, targetStepAt: targetAt })
+    expect([x, y]).toEqual([300, 90])
+
+    // An odd number is halved inside its middle piece, where Vue Flow names
+    // that piece.
+    const oddly: ConnectionRoute = { ...route, through: [{ x: 200, y: 60 }, { x: 400, y: 150 }] }
+    const [, oddX, oddY] = connectionPath({ ...ends, route: oddly, sourceStepAt: sourceAt, targetStepAt: targetAt })
+    const [, middleX, middleY] = getBezierPath({ ...ends, sourceX: 200, sourceY: 60, targetX: 400, targetY: 150 })
+    expect([oddX, oddY]).toEqual([middleX, middleY])
+  })
+
+  it('draws the live bezier once a reader drags either step off where the route was laid out', () => {
+    // A route runs round the steps where they stood. Dragged, a step leaves
+    // its connections' routes behind, and the bezier between the anchors
+    // Vue Flow measured goes where the step went.
+    const live = getBezierPath(ends).slice(0, 3)
+    const dragged = { x: sourceAt.x + 1, y: sourceAt.y }
+
+    expect(connectionPath({ ...ends, route, sourceStepAt: dragged, targetStepAt: targetAt })).toEqual(live)
+    expect(connectionPath({ ...ends, route, sourceStepAt: sourceAt, targetStepAt: { x: targetAt.x, y: targetAt.y - 1 } })).toEqual(live)
+    // And back where it was laid out, the route is followed again.
+    expect(connectionPath({ ...ends, route, sourceStepAt: { ...sourceAt }, targetStepAt: { ...targetAt } })).not.toEqual(live)
   })
 })
 
