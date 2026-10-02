@@ -195,6 +195,14 @@ pnpm generate                   # Static generation
 node .output/server/index.mjs   # Test production
 ```
 
+`pnpm generate` exits 0 even when it prerenders nothing, so read its
+`Prerendered N routes` line. `nuxt-og-image`, which Docus pulls in, imports
+`h3` without declaring it, so it gets whatever h3 the workspace root hoists.
+An install over a reused `node_modules` can hoist h3 2.x there. Every route
+then answers 500 and none is prerendered. Declaring h3 in this package does
+not help (#81). Remove every `node_modules` and run
+`pnpm install --frozen-lockfile` before believing a result like that.
+
 ### Content Validation
 - Verify all internal links work
 - Check OG images generate correctly

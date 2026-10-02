@@ -18,6 +18,9 @@
 - `@pinia/nuxt`: ^0.11.3 (state management)
 - `blendtype`: workspace:* (Galaxy types and pure helpers)
 - `evlog`: catalog: (client logging, required by `docs/LOGGING-SPEC.md` §3)
+- `h3`: catalog: (devDependency only: the tests answer `registerEndpoint`
+  with its `createError` and `readBody`, so it is declared rather than left to
+  whatever the root hoists, which once was h3 2.x; #81)
 
 ## Section 2: Executable Commands With Full Flags
 

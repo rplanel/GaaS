@@ -76,6 +76,7 @@
     "@vue/test-utils": "catalog:testing",
     "drizzle-kit": "catalog:",
     "eslint": "catalog:",
+    "h3": "catalog:",
     "happy-dom": "catalog:testing",
     "nuxt": "catalog:nuxt",
     "playwright-core": "catalog:testing",

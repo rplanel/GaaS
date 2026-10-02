@@ -145,6 +145,9 @@ catalogs:
     evlog:
       specifier: ^2.22.3
       version: 2.22.3
+    h3:
+      specifier: ^1.15.11
+      version: 1.15.11
     htl:
       specifier: ^0.3.1
       version: 0.3.1
@@ -509,6 +512,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 9.39.5(jiti@2.7.0)
+      h3:
+        specifier: 'catalog:'
+        version: 1.15.11
       happy-dom:
         specifier: catalog:testing
         version: 20.11.1
@@ -693,6 +699,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 9.39.5(jiti@2.7.0)
+      h3:
+        specifier: 'catalog:'
+        version: 1.15.11
       happy-dom:
         specifier: catalog:testing
         version: 20.11.1
@@ -766,6 +775,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 9.39.5(jiti@2.7.0)
+      h3:
+        specifier: 'catalog:'
+        version: 1.15.11
       happy-dom:
         specifier: catalog:testing
         version: 20.11.1

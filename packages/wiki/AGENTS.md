@@ -34,6 +34,13 @@ Each of these is imported by name from this package, so it is declared here
 rather than left to resolve through whatever `@gaas/ui` or `nuxt-galaxy`
 happens to hoist.
 
+`h3` (catalog:, devDependency) is the exception: nothing here imports it, but
+`nuxt prepare` writes its path into `.playground/.nuxt/tsconfig.json`,
+resolved from this directory, and the ui files this layer typechecks get
+their typed `useFetch` and `$fetch` answers through it. Undeclared, that path
+followed the root hoist. Once the hoist was h3 2.x, those answers came back
+as `never` (#81).
+
 ## Section 2: Executable Commands With Full Flags
 
 ### Development (in .playground/)

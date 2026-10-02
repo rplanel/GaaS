@@ -41,6 +41,7 @@
     "@vue/test-utils": "catalog:testing",
     "embla-carousel": "catalog:",
     "eslint": "catalog:",
+    "h3": "catalog:",
     "happy-dom": "catalog:testing",
     "nuxt": "catalog:nuxt",
     "playwright-core": "catalog:testing",
