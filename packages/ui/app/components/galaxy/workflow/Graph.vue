@@ -11,6 +11,7 @@ import { stepKind } from '../../../utils/stepKind'
 import { stepMarkSummary, UNMARKED_STEP } from '../../../utils/stepMarks'
 import { stepStateAccent, stepStateLook } from '../../../utils/stepStateLook'
 import { anchorAlong, animatedEdges, handleSides, stepsAtPath, subworkflowTrail, workflowGraph } from '../../../utils/workflowGraph'
+import GraphConnection from './GraphConnection.vue'
 
 /**
  * A workflow revision drawn as a graph (#89).
@@ -95,7 +96,7 @@ const flowId = `workflow-graph-${useId()}`
  * `pane-ready`: fitting needs a viewport with a size, measuring a node does
  * not. `<VueFlow :id>` finds this same store by its id.
  */
-const { updateNodeInternals } = useVueFlow(flowId)
+const { getSelectedEdges, removeSelectedEdges, updateNodeInternals } = useVueFlow(flowId)
 
 /** The subworkflows drilled into, so a reader can get back out again. */
 const trail = computed(() => subworkflowTrail(props.steps, path.value))
@@ -236,6 +237,12 @@ function select(stepId: string | undefined) {
   selectedStepId.value = stepId
   const step = stepId === undefined ? undefined : levelSteps.value[stepId]
   if (stepId === undefined || step === undefined) {
+    // No step selected is no connection selected either. Vue Flow keeps a
+    // connection's selection for as long as an edge of its id is drawn, and
+    // the ids are built from order indexes, which every level and every
+    // revision of the same shape reuse — so the next graph's connection of
+    // that id would come up named at rest (#135).
+    removeSelectedEdges(getSelectedEdges.value)
     emit('select', undefined)
     return
   }
@@ -521,6 +528,15 @@ watch(graph, () => updateNodeInternals(), { flush: 'post' })
           </UBadge>
         </div>
       </div>
+    </template>
+
+    <!--
+      Every connection (#135). Its own component rather than markup here:
+      whether it is hovered or focused is a state of each edge, and the
+      canvas has none of it to share.
+    -->
+    <template #edge-connection="connection">
+      <GraphConnection v-bind="connection" />
     </template>
   </VueFlow>
 </template>
