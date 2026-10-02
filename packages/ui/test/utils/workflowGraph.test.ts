@@ -101,10 +101,8 @@ describe('workflowGraph', () => {
   })
 
   it('hands every connection to the canvas\'s own edge with its input name, and Vue Flow no label', () => {
-    // #135. Vue Flow draws an edge's `label` permanently, wherever it likes,
-    // and the names are pipe-flattened paths wider than a step. So the name
-    // travels as the edge's data, for the canvas's own edge to show only
-    // when asked, and Vue Flow is given nothing it would draw at rest.
+    // #135. Vue Flow draws an edge's `label` all the time, so it is given
+    // none, and the name travels as data for the canvas's own edge.
     const edges = RECORDED_LEVELS.flatMap(({ steps }) => workflowGraph(steps).edges)
 
     expect(edges.length).toBeGreaterThan(0)
@@ -357,9 +355,8 @@ describe('dagreGraph', () => {
   })
 
   it.each(['connection', 'pair'] as const)('makes room for no label when keyed by %s', (keying) => {
-    // #135. Nothing names a connection at rest, so there is nothing for the
-    // layout to keep clear. A size here would push the ranks apart for a
-    // label that is only drawn on hover, over whatever is beneath it.
+    // #135. Nothing names a connection at rest, so the layout has no label
+    // to keep clear.
     const { nodes, edges } = workflowGraph(describedSteps(FIXTURES.ccqtlToday))
     const graph = dagreGraph(nodes, edges, 'LR', keying)
 

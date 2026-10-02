@@ -128,6 +128,10 @@ export interface WorkflowGraphEdgeData {
   /**
    * The name of the input this connection feeds, shown only while a reader
    * is on the connection.
+   *
+   * The same string as `targetHandle` today, and kept apart from it: that is
+   * the anchor the edge arrives at, this is what a reader is shown, and #137
+   * means to show the input's label instead.
    */
   readonly inputName: string
 }
@@ -135,15 +139,10 @@ export interface WorkflowGraphEdgeData {
 export interface WorkflowGraphEdge {
   readonly id: string
   /**
-   * Drawn by the canvas's own edge, never by Vue Flow's (#135).
-   *
-   * Vue Flow's edges draw an edge's `label` permanently, wherever they like,
-   * on top of whatever is already there — and an input name is a Galaxy
-   * path such as `results_0|software_cond|output_0|type|input`, wider than a
-   * step. So the edge carries no `label` at all, and its name travels in
-   * `data`, for the canvas's edge to show while the connection is hovered,
-   * focused or selected. That edge reads what it draws from here rather
-   * than working it out, which is what lets the routing of #136 extend it.
+   * Drawn by the canvas's own edge, `GraphConnection`, never by Vue Flow's,
+   * which draws an edge's `label` all the time (#135). So the edge carries no
+   * `label`, and its input name travels in `data` for that edge to show only
+   * while a reader is on the connection.
    */
   readonly type: 'connection'
   readonly source: string

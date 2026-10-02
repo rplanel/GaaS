@@ -15,12 +15,14 @@
 
 import type { JobState } from 'blendtype'
 import type { DescribedStep } from 'nuxt-galaxy'
+import type { StepMark } from '../../app/utils/stepMarks'
 import { UApp } from '#components'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { useVueFlow } from '@vue-flow/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, ref } from 'vue'
 import Graph from '../../app/components/galaxy/workflow/Graph.vue'
+import GraphConnection from '../../app/components/galaxy/workflow/GraphConnection.vue'
 import GraphView from '../../app/components/galaxy/workflow/GraphView.vue'
 import { stepMarks } from '../../app/utils/stepMarks'
 import { FIXTURES } from '../characterisation/fixtures'
@@ -62,25 +64,30 @@ async function mountIn(component: unknown, props: Record<string, unknown>) {
 }
 
 /**
- * The canvas with `steps` a test can replace, for the claims about what
- * survives a change of revision.
+ * The canvas with `steps` and `marks` a test can replace, for the claims
+ * about what survives a change of revision or a change of what the jobs are
+ * doing.
  *
  * `wrapper.setProps` cannot serve: the wrapper is the sized `UApp` host, so it
  * would set a prop on that and never reach the canvas.
  */
-async function mountReactive(steps: Record<string, DescribedStep>) {
+async function mountReactive(steps: Record<string, DescribedStep>, marks?: Record<string, StepMark>) {
   const current = ref(steps)
+  const marked = ref(marks)
   const wrapper = await mountSuspended(defineComponent({
     setup: () => () => h(UApp, () => h(
       'div',
       { style: 'width: 1200px; height: 800px' },
-      [h(Graph, { steps: current.value })],
+      [h(Graph, { steps: current.value, marks: marked.value })],
     )),
   }))
   function setSteps(next: Record<string, DescribedStep>) {
     current.value = next
   }
-  return { wrapper, setSteps }
+  function setMarks(next: Record<string, StepMark>) {
+    marked.value = next
+  }
+  return { wrapper, setSteps, setMarks }
 }
 
 /**
@@ -619,14 +626,7 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     // (`vue-flow-core.mjs:3573`), so carrying the marks *inside* the node
     // data snapped every dragged node home on each realtime refetch — on the
     // one screen where the marks change every few seconds.
-    const marked = ref(marks(chain, [{ step_id: 1, state: 'queued' }]))
-    const wrapper = await mountSuspended(defineComponent({
-      setup: () => () => h(UApp, () => h(
-        'div',
-        { style: 'width: 1200px; height: 800px' },
-        [h(Graph, { steps: chain, marks: marked.value })],
-      )),
-    }))
+    const { wrapper, setMarks } = await mountReactive(chain, marks(chain, [{ step_id: 1, state: 'queued' }]))
     mounted = wrapper
 
     const flow = flowOf(wrapper)
@@ -636,7 +636,7 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     await nextTick()
     expect(transform(), 'the node moved').toContain('translate(999px,777px)')
 
-    marked.value = marks(chain, [{ step_id: 1, state: 'running' }])
+    setMarks(marks(chain, [{ step_id: 1, state: 'running' }]))
     await nextTick()
 
     expect(transform(), 'and stayed where it was put').toContain('translate(999px,777px)')
@@ -657,11 +657,9 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
 })
 
 describe('galaxyWorkflowGraph, naming a connection', () => {
-  // #135. Every connection carried its input name as a permanent label, put
-  // wherever Vue Flow liked on top of whatever was there, and the names are
-  // pipe-flattened paths wider than a step. The canvas now names a connection
-  // only while a reader is on it. Vue Flow never measures here, so what is
-  // read is the name and the edge it is shown for, never where it is drawn.
+  // #135: a connection is named only while a reader is on it. Vue Flow never
+  // measures here, so what is read is the name and the edge it is shown for,
+  // never where it is drawn.
 
   /**
    * One step fed through two inputs of different names, so that the name
@@ -689,6 +687,14 @@ describe('galaxyWorkflowGraph, naming a connection', () => {
   }
 
   const edgeOf = (wrapper: Mounted, id: string) => wrapper.find(`.vue-flow__edge[data-id="${id}"]`)
+
+  /** A key pressed on an element, as an event the test can ask was spent. */
+  async function press(element: Element, key: string) {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+    element.dispatchEvent(event)
+    await nextTick()
+    return event
+  }
 
   it('names no connection at rest', async () => {
     const steps = describedSteps(FIXTURES.ccqtlToday)
@@ -743,6 +749,19 @@ describe('galaxyWorkflowGraph, naming a connection', () => {
     expect(namesShown(wrapper)).toEqual([])
   })
 
+  it('draws each connection between the two anchors it names', async () => {
+    // The line is unchanged only if it still leaves and arrives where it did:
+    // the anchors are what Vue Flow positions both ends from. Read off the
+    // edge's own props, since where they are drawn is never measured here.
+    const wrapper = await mountIn(Graph, { steps: describedSteps(FIXTURES.fanIn) })
+    mounted = wrapper
+
+    const intoOneInput = wrapper.findAllComponents(GraphConnection)
+      .filter(edge => edge.props('target') === '19' && edge.props('targetHandleId') === 'batchmode|input_fastas')
+      .map(edge => edge.props('sourceHandleId'))
+    expect(intoOneInput.sort()).toEqual(['proviruses', 'viruses'])
+  })
+
   it('names a connection reached by keyboard, keeps it named once Enter selects it, and lets Escape go', async () => {
     // Attached to the document, because only a connected element takes
     // focus. happy-dom then focuses whatever it is asked to, so whether Tab
@@ -762,7 +781,7 @@ describe('galaxyWorkflowGraph, naming a connection', () => {
     expect(namesShown(wrapper)).toEqual([{ connection: READS, name: 'reads|forward' }])
 
     // Enter selects it, so it stays named once the reader tabs on.
-    await edgeOf(wrapper, READS).trigger('keydown', { key: 'Enter' })
+    expect((await press(reads, 'Enter')).defaultPrevented).toBe(true)
     expect(edgeOf(wrapper, READS).classes()).toContain('selected')
     reads.blur()
     await nextTick()
@@ -770,33 +789,71 @@ describe('galaxyWorkflowGraph, naming a connection', () => {
 
     // Escape deselects it and leaves it.
     reads.focus()
-    await edgeOf(wrapper, READS).trigger('keydown', { key: 'Escape' })
+    await press(reads, 'Escape')
     expect(edgeOf(wrapper, READS).classes()).not.toContain('selected')
     expect(document.activeElement).not.toBe(reads)
     expect(namesShown(wrapper)).toEqual([])
+
+    // Space selects it as Enter does, and is spent on that rather than on
+    // scrolling the panel the canvas sits in.
+    reads.focus()
+    expect((await press(reads, ' ')).defaultPrevented).toBe(true)
+    expect(edgeOf(wrapper, READS).classes()).toContain('selected')
   })
 
   it('keeps a selected connection named when the marks change', async () => {
     // The analysis panel hands the canvas new marks on every realtime event,
     // and a new object for every edge with them. A name that went with the
     // old object would vanish from under the reader every few seconds.
-    const marked = ref(stepMarks(twoInputs, [{ step_id: 2, state: 'queued' }]))
-    const wrapper = await mountSuspended(defineComponent({
-      setup: () => () => h(UApp, () => h(
-        'div',
-        { style: 'width: 1200px; height: 800px' },
-        [h(Graph, { steps: twoInputs, marks: marked.value })],
-      )),
-    }))
+    const { wrapper, setMarks } = await mountReactive(twoInputs, stepMarks(twoInputs, [{ step_id: 2, state: 'queued' }]))
     mounted = wrapper
 
     await edgeOf(wrapper, READS).trigger('click')
     expect(namesShown(wrapper)).toHaveLength(1)
 
-    marked.value = stepMarks(twoInputs, [{ step_id: 2, state: 'running' }])
+    setMarks(stepMarks(twoInputs, [{ step_id: 2, state: 'running' }]))
     await nextTick()
 
     expect(wrapper.find('[data-testid="workflow-node-2"]').attributes('data-state')).toBe('running')
     expect(namesShown(wrapper)).toEqual([{ connection: READS, name: 'reads|forward' }])
+  })
+
+  it('names nothing on a subworkflow\'s graph for a connection selected outside it', async () => {
+    // Vue Flow keeps a connection's selection across a redraw for as long as
+    // its id is drawn, and the ids are built from order indexes, which every
+    // level starts again from. So the nested graph has a connection of the
+    // same id as the one selected outside, and would come up named at rest.
+    const steps = {
+      ...twoInputs,
+      3: aStep(3, { type: 'subworkflow', tool_id: null, tool_version: null, subworkflow: { name: 'Align', steps: twoInputs } }),
+    }
+    const wrapper = await mountIn(Graph, { steps })
+    mounted = wrapper
+
+    await edgeOf(wrapper, READS).trigger('click')
+    expect(namesShown(wrapper)).toHaveLength(1)
+
+    await wrapper.find('[data-testid="open-subworkflow-3"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="graph-trail-3"]').exists()).toBe(true)
+    expect(edgeOf(wrapper, READS).exists()).toBe(true)
+    expect(namesShown(wrapper)).toEqual([])
+  })
+
+  it('names nothing on another revision for a connection selected on the last one', async () => {
+    // The same trap from the other end: another workflow of the same shape
+    // has the same connection ids.
+    const { wrapper, setSteps } = await mountReactive(twoInputs)
+    mounted = wrapper
+
+    await edgeOf(wrapper, READS).trigger('click')
+    expect(namesShown(wrapper)).toHaveLength(1)
+
+    setSteps(Object.fromEntries(Object.entries(twoInputs).map(([stepId, step]) => [stepId, { ...step, uuid: `other-${step.uuid}` }])))
+    await nextTick()
+
+    expect(edgeOf(wrapper, READS).exists()).toBe(true)
+    expect(namesShown(wrapper)).toEqual([])
   })
 })

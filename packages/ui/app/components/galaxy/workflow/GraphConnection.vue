@@ -9,44 +9,47 @@ import { useElementHover, useEventListener, useFocus } from '@vueuse/core'
  * One connection on the workflow graph, drawn by the canvas rather than by
  * Vue Flow (#135).
  *
- * The line is Vue Flow's own bezier between the two anchors, drawn through
- * Vue Flow's own `BaseEdge`, which is exactly what its default edge draws —
- * so the line is unchanged and a running step's connections still flow,
- * since Vue Flow's `animated` style is on the edge it wraps this in.
+ * The line is what Vue Flow's default edge drew: its bezier between the two
+ * anchors it measured, through its own `BaseEdge`. So the line is unchanged,
+ * and a running step's connections still flow, since Vue Flow's `animated`
+ * style is on the edge it wraps this in.
  *
- * What differs is the name. Vue Flow's edge drew the input name all the
- * time, wherever it fell, and a pipe-flattened Galaxy path runs wider than a
+ * What differs is when the input name is drawn, and in which layer. Vue
+ * Flow's edge drew it all the time, as SVG text at the same midpoint, on top
+ * of the lines around it, and a pipe-flattened Galaxy path runs wider than a
  * step. Here it is drawn only while the connection is hovered, focused or
- * selected, at the line's midpoint, through Vue Flow's HTML label layer. The
- * step details panel lists every connection by name for a reader who wants
- * them all at once.
+ * selected, through Vue Flow's HTML label layer. The step details panel
+ * names every connection feeding the selected step.
  *
- * Everything drawn comes off the edge `workflowGraph` built; nothing is
- * worked out here. That is the seam the routing of #136 extends.
+ * The name comes off the edge `workflowGraph` built rather than being worked
+ * out here, and so will the route of #136, which is the seam it extends.
  */
 
 const props = defineProps<EdgeProps<WorkflowGraphEdgeData>>()
 
-const bezier = computed(() => getBezierPath({
-  sourceX: props.sourceX,
-  sourceY: props.sourceY,
-  sourcePosition: props.sourcePosition,
-  targetX: props.targetX,
-  targetY: props.targetY,
-  targetPosition: props.targetPosition,
-  curvature: props.curvature,
-}))
+const line = computed(() => {
+  const [path, labelX, labelY] = getBezierPath({
+    sourceX: props.sourceX,
+    sourceY: props.sourceY,
+    sourcePosition: props.sourcePosition,
+    targetX: props.targetX,
+    targetY: props.targetY,
+    targetPosition: props.targetPosition,
+    curvature: props.curvature,
+  })
+  return { path, labelX, labelY }
+})
 
 /**
  * The `<g>` Vue Flow wraps this edge in, which is what a reader hovers and
- * focuses: it carries the edge's `tabindex`, and its hit area is the wide
- * transparent stroke `BaseEdge` draws alongside the line.
+ * focuses: its hit area is the wide transparent stroke `BaseEdge` draws
+ * alongside the line, and the `tabindex` set below is on it.
  */
 const { edgeEl } = useEdge(props.id)
 const hovered = useElementHover(edgeEl)
 const { focused } = useFocus(edgeEl)
 
-const named = computed(() => hovered.value || focused.value || props.selected === true)
+const nameShown = computed(() => hovered.value || focused.value || props.selected === true)
 
 /**
  * Reaching a connection by keyboard, which Vue Flow 1.48.2 means to offer
@@ -62,7 +65,8 @@ const named = computed(() => hovered.value || focused.value || props.selected ==
  *
  * So the edge is made focusable here, and the keys its wrapper meant to
  * handle are handled: Enter or Space selects the connection, Escape
- * deselects it and leaves it.
+ * deselects it and leaves it. The two that select are spent on it, or Space
+ * would also scroll the panel the canvas sits in.
  */
 watchEffect(() => edgeEl.value?.setAttribute('tabindex', '0'))
 
@@ -78,6 +82,7 @@ useEventListener(edgeEl, 'keydown', (event: KeyboardEvent) => {
     removeSelectedEdges([edge])
   }
   else if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
     addSelectedEdges([edge])
   }
 })
@@ -86,21 +91,25 @@ useEventListener(edgeEl, 'keydown', (event: KeyboardEvent) => {
 <template>
   <BaseEdge
     :id="id"
-    :path="bezier[0]"
+    :path="line.path"
     :marker-start="markerStart"
     :marker-end="markerEnd"
     :interaction-width="interactionWidth"
     :style="style"
   />
-  <EdgeLabelRenderer v-if="named">
+  <EdgeLabelRenderer v-if="nameShown">
     <!--
-      Centred on the midpoint, and nothing in it takes the pointer: the
-      label appears under the pointer, and a label that took it would hide
-      itself the moment it appeared.
+      Centred on the midpoint, and nothing in it takes the pointer: the name
+      appears under the pointer, and a name that took it would hide itself
+      the moment it appeared.
+
+      Above the steps, which Vue Flow paints over its label layer, and which
+      a long name centred between two ranks runs into at both ends. 1001
+      clears a selected step too, which Vue Flow lifts to 1000.
     -->
     <div
-      class="absolute pointer-events-none"
-      :style="{ transform: `translate(-50%, -50%) translate(${bezier[1]}px, ${bezier[2]}px)` }"
+      class="absolute z-[1001] pointer-events-none"
+      :style="{ transform: `translate(-50%, -50%) translate(${line.labelX}px, ${line.labelY}px)` }"
     >
       <UBadge
         size="xs"
