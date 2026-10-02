@@ -33,8 +33,8 @@ const { data: galaxyInstanceDetails } = await useFetch<GalaxyInstanceDetails>('/
           {{
             galaxyInstanceDetails.url
           }}
-        </ULink>
-        version <strong>{{ galaxyInstanceDetails.version_major }}</strong>
+        </ULink>,
+        running release <strong>{{ galaxyInstanceDetails.version_major }}</strong>
       </template>
     </UAlert>
   </div>
