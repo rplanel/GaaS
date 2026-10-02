@@ -571,6 +571,10 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     const edgeFrom = (id: string) => wrapper.find(`.vue-flow__edge[data-id^="${id}:"]`)
     expect(edgeFrom('1').classes()).toContain('animated')
     expect(edgeFrom('0').classes()).not.toContain('animated')
+    // Drawn by the canvas's own edge (#135), whose line is still the path
+    // Vue Flow's flowing style animates.
+    expect(edgeFrom('1').classes()).toContain('vue-flow__edge-connection')
+    expect(edgeFrom('1').find('path.vue-flow__edge-path').exists()).toBe(true)
   })
 
   it('badges a mapped step with every one of its jobs', async () => {
@@ -649,5 +653,150 @@ describe('galaxyWorkflowGraph, following a running invocation', () => {
     expect(stateOf(wrapper, '1')).toBe('unmarked')
     expect(wrapper.find('[data-testid="node-mark-1"]').exists()).toBe(false)
     expect(wrapper.findAll('.vue-flow__edge.animated')).toHaveLength(0)
+  })
+})
+
+describe('galaxyWorkflowGraph, naming a connection', () => {
+  // #135. Every connection carried its input name as a permanent label, put
+  // wherever Vue Flow liked on top of whatever was there, and the names are
+  // pipe-flattened paths wider than a step. The canvas now names a connection
+  // only while a reader is on it. Vue Flow never measures here, so what is
+  // read is the name and the edge it is shown for, never where it is drawn.
+
+  /**
+   * One step fed through two inputs of different names, so that the name
+   * shown says *which* connection it was shown for.
+   */
+  const twoInputs = {
+    0: aStep(0, { type: 'data_input', tool_id: null, tool_version: null }),
+    1: aStep(1, { type: 'data_input', tool_id: null, tool_version: null }),
+    2: aStep(2, {
+      input_connections: {
+        'reads|forward': { id: 0, output_name: 'output' },
+        'reference_source|ref_file': { id: 1, output_name: 'output' },
+      },
+    }),
+  }
+  const READS = '0:output->2:reads|forward'
+  const REFERENCE = '1:output->2:reference_source|ref_file'
+
+  type Mounted = Awaited<ReturnType<typeof mountIn>>
+
+  /** Every input name on the canvas, with the connection it is shown for. */
+  function namesShown(wrapper: Mounted) {
+    return wrapper.findAll('[data-testid="connection-name"]')
+      .map(name => ({ connection: name.attributes('data-connection'), name: name.text() }))
+  }
+
+  const edgeOf = (wrapper: Mounted, id: string) => wrapper.find(`.vue-flow__edge[data-id="${id}"]`)
+
+  it('names no connection at rest', async () => {
+    const steps = describedSteps(FIXTURES.ccqtlToday)
+    const wrapper = await mountIn(Graph, { steps })
+    mounted = wrapper
+
+    // Every connection is drawn, so what follows is not an empty canvas.
+    expect(wrapper.findAll('.vue-flow__edge')).toHaveLength(20)
+    expect(namesShown(wrapper)).toEqual([])
+    // No text in the label layer, nor on the lines themselves, which is
+    // where Vue Flow's own edge drew every name as SVG text.
+    expect(wrapper.find('.vue-flow__edge-labels').text()).toBe('')
+    expect(wrapper.findAll('.vue-flow__edges').map(layer => layer.text()).join('')).toBe('')
+  })
+
+  it('names the connection a reader hovers, and only that one, until the pointer leaves', async () => {
+    const wrapper = await mountIn(Graph, { steps: twoInputs })
+    mounted = wrapper
+
+    await edgeOf(wrapper, READS).trigger('mouseenter')
+    expect(namesShown(wrapper)).toEqual([{ connection: READS, name: 'reads|forward' }])
+    // In Vue Flow's HTML label layer, not as text inside the SVG.
+    expect(wrapper.find('.vue-flow__edge-labels [data-testid="connection-name"]').exists()).toBe(true)
+
+    await edgeOf(wrapper, READS).trigger('mouseleave')
+    expect(namesShown(wrapper)).toEqual([])
+
+    await edgeOf(wrapper, REFERENCE).trigger('mouseenter')
+    expect(namesShown(wrapper)).toEqual([{ connection: REFERENCE, name: 'reference_source|ref_file' }])
+  })
+
+  it('keeps a connection pressed on named after the pointer leaves, until something else is selected', async () => {
+    const wrapper = await mountIn(Graph, { steps: twoInputs })
+    mounted = wrapper
+
+    await edgeOf(wrapper, READS).trigger('mouseenter')
+    await edgeOf(wrapper, READS).trigger('click')
+    await edgeOf(wrapper, READS).trigger('mouseleave')
+    expect(edgeOf(wrapper, READS).classes()).toContain('selected')
+    expect(namesShown(wrapper)).toEqual([{ connection: READS, name: 'reads|forward' }])
+
+    // Pressing the other connection selects that one instead.
+    await edgeOf(wrapper, REFERENCE).trigger('click')
+    expect(namesShown(wrapper)).toEqual([{ connection: REFERENCE, name: 'reference_source|ref_file' }])
+
+    // And pressing a step, or the canvas, deselects it.
+    await wrapper.find('.vue-flow__node[data-id="2"]').trigger('click')
+    expect(namesShown(wrapper)).toEqual([])
+    await edgeOf(wrapper, READS).trigger('click')
+    expect(namesShown(wrapper)).toHaveLength(1)
+    await wrapper.find('.vue-flow__pane').trigger('click')
+    expect(namesShown(wrapper)).toEqual([])
+  })
+
+  it('names a connection reached by keyboard, keeps it named once Enter selects it, and lets Escape go', async () => {
+    // Attached to the document, because only a connected element takes
+    // focus. happy-dom then focuses whatever it is asked to, so whether Tab
+    // reaches the edge at all is read off its `tabIndex`: Vue Flow sets a
+    // camel-cased `tabIndex` attribute, which SVG does not recognise, and
+    // Chromium reads -1 for it.
+    const wrapper = await mountSuspended(defineComponent({
+      setup: () => () => h(UApp, () => h(Graph, { steps: twoInputs })),
+    }), { attachTo: document.body })
+    mounted = wrapper
+    const reads = edgeOf(wrapper, READS).element as SVGGElement
+    expect(reads.tabIndex).toBe(0)
+
+    reads.focus()
+    await nextTick()
+    expect(document.activeElement).toBe(reads)
+    expect(namesShown(wrapper)).toEqual([{ connection: READS, name: 'reads|forward' }])
+
+    // Enter selects it, so it stays named once the reader tabs on.
+    await edgeOf(wrapper, READS).trigger('keydown', { key: 'Enter' })
+    expect(edgeOf(wrapper, READS).classes()).toContain('selected')
+    reads.blur()
+    await nextTick()
+    expect(namesShown(wrapper)).toEqual([{ connection: READS, name: 'reads|forward' }])
+
+    // Escape deselects it and leaves it.
+    reads.focus()
+    await edgeOf(wrapper, READS).trigger('keydown', { key: 'Escape' })
+    expect(edgeOf(wrapper, READS).classes()).not.toContain('selected')
+    expect(document.activeElement).not.toBe(reads)
+    expect(namesShown(wrapper)).toEqual([])
+  })
+
+  it('keeps a selected connection named when the marks change', async () => {
+    // The analysis panel hands the canvas new marks on every realtime event,
+    // and a new object for every edge with them. A name that went with the
+    // old object would vanish from under the reader every few seconds.
+    const marked = ref(stepMarks(twoInputs, [{ step_id: 2, state: 'queued' }]))
+    const wrapper = await mountSuspended(defineComponent({
+      setup: () => () => h(UApp, () => h(
+        'div',
+        { style: 'width: 1200px; height: 800px' },
+        [h(Graph, { steps: twoInputs, marks: marked.value })],
+      )),
+    }))
+    mounted = wrapper
+
+    await edgeOf(wrapper, READS).trigger('click')
+    expect(namesShown(wrapper)).toHaveLength(1)
+
+    marked.value = stepMarks(twoInputs, [{ step_id: 2, state: 'running' }])
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="workflow-node-2"]').attributes('data-state')).toBe('running')
+    expect(namesShown(wrapper)).toEqual([{ connection: READS, name: 'reads|forward' }])
   })
 })

@@ -123,15 +123,35 @@ export interface WorkflowGraphNode {
   readonly data: WorkflowGraphNodeData
 }
 
+/** What the canvas's own edge draws a connection with, beyond its two ends (#135). */
+export interface WorkflowGraphEdgeData {
+  /**
+   * The name of the input this connection feeds, shown only while a reader
+   * is on the connection.
+   */
+  readonly inputName: string
+}
+
 export interface WorkflowGraphEdge {
   readonly id: string
+  /**
+   * Drawn by the canvas's own edge, never by Vue Flow's (#135).
+   *
+   * Vue Flow's edges draw an edge's `label` permanently, wherever they like,
+   * on top of whatever is already there — and an input name is a Galaxy
+   * path such as `results_0|software_cond|output_0|type|input`, wider than a
+   * step. So the edge carries no `label` at all, and its name travels in
+   * `data`, for the canvas's edge to show while the connection is hovered,
+   * focused or selected. That edge reads what it draws from here rather
+   * than working it out, which is what lets the routing of #136 extend it.
+   */
+  readonly type: 'connection'
   readonly source: string
   readonly target: string
   /** The output it leaves from and the input it arrives at, by name — the anchors on each node. */
   readonly sourceHandle: string
   readonly targetHandle: string
-  /** The name of the input this connection feeds, which is what the edge is labelled with. */
-  readonly label: string
+  readonly data: WorkflowGraphEdgeData
   /**
    * Whether the edge is drawn as flowing, which is Vue Flow's own
    * `animated`. Always `false` here; `animatedEdges` is what sets it.
@@ -292,6 +312,7 @@ export function workflowGraph(
       }
       return [{
         id: edgeId(connection, stepId),
+        type: 'connection' as const,
         source: connection.from,
         target: stepId,
         // Named anchors, so two edges between one pair of steps through one
@@ -299,7 +320,7 @@ export function workflowGraph(
         // rather than from one point on top of each other.
         sourceHandle: connection.outputName,
         targetHandle: connection.inputName,
-        label: connection.inputName,
+        data: { inputName: connection.inputName },
         animated: false,
       }]
     }),
@@ -404,6 +425,11 @@ function stepHeight(anchors: { source: string[], target: string[] } | undefined,
  * same pair overwrites the first — `ccqtl-today` joins ten pairs of steps
  * with twenty connections and was laid out from ten (#121). The name is the
  * one Vue Flow keys the same edge by, and for the same reason.
+ *
+ * No edge is given a label size, either way it is keyed. Nothing names a
+ * connection at rest, so the layout has no label to keep clear, and one
+ * sized here would push the ranks apart for a name drawn only on hover
+ * (#135).
  *
  * Keyed by `'pair'`, one edge per pair of steps instead, weighted by the
  * connections it stands for: what `layOut` falls back to on a level dagre

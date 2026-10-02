@@ -11,6 +11,7 @@ import { stepKind } from '../../../utils/stepKind'
 import { stepMarkSummary, UNMARKED_STEP } from '../../../utils/stepMarks'
 import { stepStateAccent, stepStateLook } from '../../../utils/stepStateLook'
 import { anchorAlong, animatedEdges, handleSides, stepsAtPath, subworkflowTrail, workflowGraph } from '../../../utils/workflowGraph'
+import GraphConnection from './GraphConnection.vue'
 
 /**
  * A workflow revision drawn as a graph (#89).
@@ -521,6 +522,16 @@ watch(graph, () => updateNodeInternals(), { flush: 'post' })
           </UBadge>
         </div>
       </div>
+    </template>
+
+    <!--
+      Every connection, which names its input only while a reader is on it
+      (#135). Its own component rather than markup here: whether it is
+      hovered or focused is a state of each edge, and the canvas has none of
+      it to share.
+    -->
+    <template #edge-connection="connection">
+      <GraphConnection v-bind="connection" />
     </template>
   </VueFlow>
 </template>

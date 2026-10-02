@@ -73,7 +73,7 @@ describe('workflowGraph', () => {
     const { edges } = workflowGraph(describedSteps(FIXTURES.fanIn))
 
     const intoStep = (target: string) =>
-      edges.filter(edge => edge.target === target && edge.label === 'batchmode|input_fastas')
+      edges.filter(edge => edge.target === target && edge.data.inputName === 'batchmode|input_fastas')
 
     // Two upstream steps feeding one input.
     expect(intoStep('9').map(edge => edge.source).sort()).toEqual(['5', '6'])
@@ -96,8 +96,24 @@ describe('workflowGraph', () => {
       1: aStep(1, { input_connections: { input1: { id: 0, output_name: 'output' }, other: { id: 7, output_name: 'output' } } }),
     })
 
-    expect(edges.map(edge => edge.label)).toEqual(['input1'])
+    expect(edges.map(edge => edge.data.inputName)).toEqual(['input1'])
     expect(dangling).toEqual(['7 → 1.other'])
+  })
+
+  it('hands every connection to the canvas\'s own edge with its input name, and Vue Flow no label', () => {
+    // #135. Vue Flow draws an edge's `label` permanently, wherever it likes,
+    // and the names are pipe-flattened paths wider than a step. So the name
+    // travels as the edge's data, for the canvas's own edge to show only
+    // when asked, and Vue Flow is given nothing it would draw at rest.
+    const edges = RECORDED_LEVELS.flatMap(({ steps }) => workflowGraph(steps).edges)
+
+    expect(edges.length).toBeGreaterThan(0)
+    for (const edge of edges) {
+      expect(edge.type).toBe('connection')
+      expect(edge.data.inputName).toBe(edge.targetHandle)
+      expect(edge).not.toHaveProperty('label')
+    }
+    expect(edges.map(edge => edge.data.inputName)).toContain('results_0|software_cond|output_0|type|input')
   })
 
   it('anchors each edge at the output it leaves and the input it arrives at', () => {
@@ -106,7 +122,7 @@ describe('workflowGraph', () => {
     // single line with both labels stacked on it.
     const { edges, nodes } = workflowGraph(describedSteps(FIXTURES.fanIn))
 
-    const intoOneInput = edges.filter(edge => edge.target === '19' && edge.label === 'batchmode|input_fastas')
+    const intoOneInput = edges.filter(edge => edge.target === '19' && edge.data.inputName === 'batchmode|input_fastas')
     expect(intoOneInput.map(edge => edge.sourceHandle).sort()).toEqual(['proviruses', 'viruses'])
     expect(intoOneInput.map(edge => edge.targetHandle)).toEqual(['batchmode|input_fastas', 'batchmode|input_fastas'])
 
@@ -338,6 +354,19 @@ describe('dagreGraph', () => {
     const held = graph.edges().map(({ v, w, name }) => `${name} (${v} → ${w})`).sort()
     const drawn = edges.map(({ source, target, id }) => `${id} (${source} → ${target})`).sort()
     expect(held).toEqual(drawn)
+  })
+
+  it.each(['connection', 'pair'] as const)('makes room for no label when keyed by %s', (keying) => {
+    // #135. Nothing names a connection at rest, so there is nothing for the
+    // layout to keep clear. A size here would push the ranks apart for a
+    // label that is only drawn on hover, over whatever is beneath it.
+    const { nodes, edges } = workflowGraph(describedSteps(FIXTURES.ccqtlToday))
+    const graph = dagreGraph(nodes, edges, 'LR', keying)
+
+    for (const edge of graph.edges()) {
+      expect(graph.edge(edge)).not.toHaveProperty('width')
+      expect(graph.edge(edge)).not.toHaveProperty('height')
+    }
   })
 
   it('falls back to one edge per pair of steps, weighted by the connections it stands for', () => {
