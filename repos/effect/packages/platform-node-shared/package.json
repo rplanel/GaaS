@@ -48,9 +48,9 @@
     "coverage": "vitest --coverage"
   },
   "dependencies": {
-    "@parcel/watcher": "^2.5.1",
-    "multipasta": "^0.2.7",
-    "ws": "^8.18.2"
+    "@parcel/watcher": "^2.6.0",
+    "multipasta": "^0.2.8",
+    "ws": "^8.22.0"
   },
   "peerDependencies": {
     "@effect/cluster": "workspace:^",
@@ -64,9 +64,9 @@
     "@effect/platform": "workspace:^",
     "@effect/rpc": "workspace:^",
     "@effect/sql": "workspace:^",
-    "@types/tar": "^6.1.12",
-    "@types/ws": "^8.18.1",
+    "@types/tar": "^6.1.13",
+    "@types/ws": "^8.18.2",
     "effect": "workspace:^",
-    "tar": "^6"
+    "tar": "^6.2.1"
   }
 }

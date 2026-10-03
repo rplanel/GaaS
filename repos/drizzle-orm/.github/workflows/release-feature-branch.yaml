@@ -45,7 +45,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { run_install: false }
       - uses: actions/setup-node@v6
-        with: { node-version: '24', registry-url: 'https://registry.npmjs.org', cache: 'pnpm', cache-dependency-path: pnpm-lock.yaml }
+        with: { node-version: '24.21.0', registry-url: 'https://registry.npmjs.org', cache: 'pnpm', cache-dependency-path: pnpm-lock.yaml }
       - run: pnpm install --frozen-lockfile --prefer-offline
       - name: Compute version suffix
         id: meta
@@ -144,7 +144,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { run_install: false }
       - uses: actions/setup-node@v6
-        with: { node-version: '24', registry-url: 'https://registry.npmjs.org', cache: 'pnpm', cache-dependency-path: pnpm-lock.yaml }
+        with: { node-version: '24.21.0', registry-url: 'https://registry.npmjs.org', cache: 'pnpm', cache-dependency-path: pnpm-lock.yaml }
       - run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Start DBs needed by shard (pre-warm)
@@ -295,7 +295,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { run_install: false }
       - uses: actions/setup-node@v6
-        with: { node-version: '24', registry-url: 'https://registry.npmjs.org', cache: 'pnpm', cache-dependency-path: pnpm-lock.yaml }
+        with: { node-version: '24.21.0', registry-url: 'https://registry.npmjs.org', cache: 'pnpm', cache-dependency-path: pnpm-lock.yaml }
       - run: pnpm install --frozen-lockfile --prefer-offline
       - uses: oven-sh/setup-bun@v2
       - name: Download package tarball
@@ -324,7 +324,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { run_install: false }
       - uses: actions/setup-node@v6
-        with: { node-version: '24', registry-url: 'https://registry.npmjs.org', cache: 'pnpm', cache-dependency-path: pnpm-lock.yaml }
+        with: { node-version: '24.21.0', registry-url: 'https://registry.npmjs.org', cache: 'pnpm', cache-dependency-path: pnpm-lock.yaml }
       - run: pnpm fetch && pnpm install --frozen-lockfile --prefer-offline
       - uses: oven-sh/setup-bun@v2
       - name: Download drizzle-orm tarball
@@ -357,7 +357,7 @@ jobs:
 
       # don't specify registry url, so there's no .npmrc config file
       - uses: actions/setup-node@v6
-        with: { node-version: '24' }
+        with: { node-version: '24.21.0' }
       
       # nuke, so npm can use OIDC
       - name: Remove temp npmrc

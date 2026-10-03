@@ -21,29 +21,29 @@
 		"fmt": "pnpm format"
 	},
 	"devDependencies": {
-		"bun-types": "^1.2.0",
-		"concurrently": "^8.2.1",
-		"dprint": "^0.50.2",
+		"bun-types": "^1.4.2",
+		"concurrently": "^8.2.2",
+		"dprint": "^0.59.0",
 		"drizzle-kit": "workspace:./drizzle-kit/dist",
 		"drizzle-orm": "workspace:./drizzle-orm/dist",
-		"drizzle-orm-old": "npm:drizzle-orm@^0.27.2",
+		"drizzle-orm-old": "npm:drizzle-orm@^0.45.3",
 		"eslint-plugin-drizzle-internal": "link:eslint/eslint-plugin-drizzle-internal",
-		"glob": "^10.3.10",
+		"glob": "^10.5.0",
 		"husky": "^9.1.7",
-		"lint-staged": "^16.2.4",
-		"oxlint": "^1.28.0",
-		"recast": "^0.23.9",
-		"resolve-tspaths": "^0.8.16",
-		"rolldown": "1.0.0-rc.9",
-		"tsdown": "^0.20.3",
-		"tsup": "^8.3.5",
-		"tsx": "^4.10.5",
-		"turbo": "^2.2.3",
-		"typescript": "5.9.2",
+		"lint-staged": "^16.4.0",
+		"oxlint": "^1.86.0",
+		"recast": "^0.24.0",
+		"resolve-tspaths": "^0.8.23",
+		"rolldown": "1.2.12",
+		"tsdown": "^0.23.0",
+		"tsup": "^8.5.1",
+		"tsx": "^4.23.15",
+		"turbo": "^2.11.7",
+		"typescript": "5.9.3",
 		"vite-tsconfig-paths": "^4.3.2",
-		"vitest": "4.0.13"
+		"vitest": "4.1.11"
 	},
-	"packageManager": "pnpm@10.15.0",
+	"packageManager": "pnpm@10.34.6",
 	"engines": {
 		"node": ">=24"
 	},
@@ -54,6 +54,6 @@
 		]
 	},
 	"volta": {
-		"node": "24.10.0"
+		"node": "24.21.0"
 	}
 }
