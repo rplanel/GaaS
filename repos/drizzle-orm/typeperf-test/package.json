@@ -19,12 +19,12 @@
 	"license": "Apache-2.0",
 	"private": true,
 	"devDependencies": {
-		"@ark/attest": "^0.56.0",
-		"tsx": "^4.19.0",
-		"vitest": "^2.1.8"
+		"@ark/attest": "^0.56.7",
+		"tsx": "^4.23.15",
+		"vitest": "^2.1.9"
 	},
 	"dependencies": {
-		"drizzle-beta": "npm:drizzle-orm@1.0.0-beta.21",
+		"drizzle-beta": "npm:drizzle-orm@1.0.0-rc.5-ab785fc",
 		"drizzle-seed": "workspace:../drizzle-seed/dist",
 		"drizzle-typebox": "workspace:../drizzle-typebox/dist",
 		"drizzle-valibot": "workspace:../drizzle-valibot/dist",

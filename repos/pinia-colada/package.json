@@ -67,44 +67,44 @@
     "prepare": "simple-git-hooks"
   },
   "devDependencies": {
-    "@ast-grep/cli": "^0.41.0",
+    "@ast-grep/cli": "^0.45.3",
     "@pinia/colada": "workspace:*",
     "@posva/prompts": "^2.4.4",
     "@posva/test-utils": "workspace:*",
-    "@shikijs/vitepress-twoslash": "^4.0.1",
-    "@size-limit/esbuild-why": "^12.0.0",
-    "@size-limit/preset-small-lib": "^12.0.0",
-    "@types/node": "^24.10.13",
-    "@types/semver": "^7.7.1",
-    "@vitejs/plugin-vue": "^6.0.4",
-    "@vitest/coverage-v8": "^4.0.18",
-    "@vitest/ui": "^4.0.18",
-    "@vue/test-utils": "^2.4.6",
+    "@shikijs/vitepress-twoslash": "^4.5.0",
+    "@size-limit/esbuild-why": "^12.1.0",
+    "@size-limit/preset-small-lib": "^12.1.0",
+    "@types/node": "^24.19.1",
+    "@types/semver": "^7.8.0",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/ui": "^4.1.11",
+    "@vue/test-utils": "^2.5.1",
     "chalk": "^5.6.2",
-    "conventional-changelog": "^7.1.1",
-    "conventional-changelog-angular": "^8.1.0",
+    "conventional-changelog": "^7.2.1",
+    "conventional-changelog-angular": "^8.3.1",
     "execa": "^9.6.1",
-    "happy-dom": "^20.7.0",
-    "lint-staged": "^16.2.7",
-    "oxfmt": "^0.35.0",
-    "oxlint": "^1.50.0",
+    "happy-dom": "^20.14.5",
+    "lint-staged": "^16.4.0",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
     "pinia": "^3.0.4",
-    "semver": "^7.7.4",
-    "simple-git-hooks": "^2.13.1",
-    "size-limit": "^12.0.0",
-    "tsdown": "^0.20.3",
-    "typedoc": "^0.28.17",
-    "typedoc-plugin-markdown": "^4.10.0",
-    "typedoc-vitepress-theme": "^1.1.2",
+    "semver": "^7.8.5",
+    "simple-git-hooks": "^2.14.0",
+    "size-limit": "^12.1.0",
+    "tsdown": "^0.23.0",
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-markdown": "^4.13.1",
+    "typedoc-vitepress-theme": "^1.1.4",
     "typescript": "~5.9.3",
     "vitepress": "1.6.4",
-    "vitepress-plugin-llms": "^1.11.0",
-    "vitest": "^4.0.18",
-    "vue": "^3.5.29"
+    "vitepress-plugin-llms": "^1.14.0",
+    "vitest": "^4.1.11",
+    "vue": "^3.5.43"
   },
   "peerDependencies": {
     "pinia": "^2.2.6 || ^3.0.0",
-    "vue": "^3.5.17"
+    "vue": "^3.5.43"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged",
@@ -146,11 +146,11 @@
       ]
     }
   ],
-  "packageManager": "pnpm@10.30.2",
+  "packageManager": "pnpm@10.34.6",
   "pnpm": {
     "overrides": {
-      "twoslash-vue": "0.3.6",
-      "vue-router": "^5.0.3"
+      "twoslash-vue": "0.3.9",
+      "vue-router": "^5.3.1"
     },
     "onlyBuiltDependencies": [
       "@ast-grep/cli",

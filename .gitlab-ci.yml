@@ -39,7 +39,7 @@ publish:gaas-cli:
 
 deploy:docs:
   stage: deploy
-  image: node:22.16.0-bookworm
+  image: node:22.23.3-bookworm
   # Functions that should be executed before the build script is run
   pages:
     publish: docs/.output/public

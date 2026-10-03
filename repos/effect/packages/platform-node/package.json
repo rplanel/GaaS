@@ -53,8 +53,8 @@
   "dependencies": {
     "@effect/platform-node-shared": "workspace:^",
     "mime": "^3.0.0",
-    "undici": "^7.10.0",
-    "ws": "^8.18.2"
+    "undici": "^7.30.0",
+    "ws": "^8.22.0"
   },
   "peerDependencies": {
     "@effect/cluster": "workspace:^",
@@ -69,8 +69,8 @@
     "@effect/rpc": "workspace:^",
     "@effect/sql": "workspace:^",
     "@types/mime": "^3.0.4",
-    "@types/ws": "^8.18.1",
+    "@types/ws": "^8.18.2",
     "effect": "workspace:^",
-    "vitest-websocket-mock": "^0.5.0"
+    "vitest-websocket-mock": "^0.8.0"
   }
 }
