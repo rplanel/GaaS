@@ -34,9 +34,10 @@ const userItems = ref([
     <template #left>
       <NuxtLink
         to="/"
-        class="flex items-end gap-2 font-bold text-xl text-highlighted min-w-0 focus-visible:outline-[var(--ui-primary)] shrink-0"
-        aria-label="Gass"
+        class="flex items-center gap-2 font-bold text-xl text-highlighted min-w-0 focus-visible:outline-[var(--ui-primary)] shrink-0"
+        :aria-label="name"
       >
+        <GaasMark class="size-7 shrink-0" />
         {{ name }}
       </NuxtLink>
     </template>
