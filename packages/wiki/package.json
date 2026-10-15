@@ -2,6 +2,11 @@
   "name": "@gaas/wiki",
   "type": "module",
   "version": "0.0.4-beta.4",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rplanel/GaaS.git",
+    "directory": "packages/wiki"
+  },
   "main": "./nuxt.config.ts",
   "files": [
     "app",

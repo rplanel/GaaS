@@ -1,0 +1,77 @@
+# Publishes blendtype, nuxt-galaxy, @gaas/ui and @gaas/wiki to npm when a
+# release tag reaches this mirror (ADR 0006).
+#
+# GitLab is where the code and its CI live; this mirror exists for this
+# workflow alone, because npm's trusted publishing does not trust a
+# self-hosted GitLab. npm trusts this file, under this name, in the `npm`
+# environment, which admits `v*` tags only. No token is involved: npm
+# exchanges the run's OIDC token for one valid for this upload alone.
+#
+# `pnpm release` and `pnpm release:beta` push the tag here only after GitLab
+# has accepted it, then watch this run to the end.
+
+name: publish
+
+on:
+  push:
+    tags:
+      # A full version, so a milestone tag such as v1.2 never starts a run.
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: read
+  # What lets npm exchange the run's identity for a publish token.
+  id-token: write
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Use the pnpm the repository pins
+        run: |
+          npm install --global corepack@latest
+          corepack enable
+
+      # Trusted publishing needs npm 11.5.1 or later. pnpm hands each upload
+      # to npm, and npm makes the OIDC exchange.
+      - name: Use an npm that publishes through OIDC
+        run: npm install --global npm@^11.5.1
+
+      - name: Test the release logic
+        run: node --test 'scripts/release/*.test.mts'
+
+      # Refuses a tag any package disagrees with, and any prerelease but a
+      # beta, before anything is built or uploaded.
+      - name: Choose the dist-tag
+        id: dist-tag
+        run: |
+          dist_tag="$(node scripts/release/dist-tag.mts "$GITHUB_REF_NAME")"
+          echo "dist-tag=$dist_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Recursive, so a re-run publishes only the packages not yet on npm.
+      # Each package's prepack builds it first. --no-git-checks because the
+      # tag is checked out detached, not on main.
+      - name: Publish
+        env:
+          DIST_TAG: ${{ steps.dist-tag.outputs.dist-tag }}
+        run: pnpm --recursive --filter './packages/**' publish --access public --tag "$DIST_TAG" --no-git-checks
+
+      - name: Confirm on the registry
+        env:
+          DIST_TAG: ${{ steps.dist-tag.outputs.dist-tag }}
+        run: node scripts/release/confirm-published.mts "$GITHUB_REF_NAME" "$DIST_TAG"

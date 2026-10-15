@@ -43,17 +43,44 @@ pnpm --filter ./packages/blendtype dev    # Run specific package
 
 # Build & Release
 pnpm build                                  # Build all packages (prepack)
-pnpm release                                # Full release: build + gates + changelog + tag + push + publish as `latest`
+pnpm release                                # Full release: gates + changelog + tag + push, then the mirror publishes as `latest`
 pnpm release:beta                           # Next beta, always at patch level: 0.0.4-beta.3 → 0.0.4-beta.4, 0.0.4 → 0.0.5-beta.0
 pnpm release:dry-run                        # Preview `pnpm release`, writes nothing
 pnpm release:beta:dry-run                   # Preview `pnpm release:beta`, writes nothing
-pnpm release:check                          # The gates alone, as CI runs them: build + dev:prepare + lint + typecheck + test
-# Never `pnpm release --dry-run`: pnpm hands extra arguments to the last
-# command of the chain only, so it bumps, tags and pushes for real and dry-runs
-# just the npm publish. If the publish fails after the push, do not re-run the
-# release (it would bump again); run `pnpm --filter './packages/**' run
-# release:publish` (or `release:publish:beta`).
+pnpm release:check                          # The gates alone, as CI runs them (build + dev:prepare + lint + typecheck + test), and the release scripts' own tests
+pnpm release:push                           # Push main and the tag to GitLab, then to the GitHub mirror only if GitLab accepted
+pnpm release:await                          # Watch the mirror's publish run for the current version; fails if it failed
+```
 
+Nothing is published from your machine (ADR 0006). The release scripts push
+the tag to the GitHub mirror, `rplanel/GaaS`, whose `publish` workflow
+publishes the four packages to npm through trusted publishing. No token or
+passkey is involved, and the release command waits for that run and fails
+with it. GitLab stays the CI. The mirror's only workflow is the publish.
+
+- **Never push a release tag with `git push all`.** That remote pushes to
+  GitHub first, so if GitLab then refused the push, the mirror would already
+  have published a release GitLab never received. `release:push` pushes to
+  GitLab first.
+- **Never `pnpm release --dry-run`.** pnpm hands extra arguments to the last
+  command of the chain only, so it bumps, tags and pushes for real. Use the
+  `:dry-run` scripts instead.
+- **When a step fails after the bump, do not re-run the release:** it would
+  bump again. Re-run only the step that failed:
+  - `pnpm release:push` if a push failed;
+  - `pnpm release:await` to watch again;
+  - re-run the workflow on GitHub, which publishes only the packages not yet
+    on npm.
+- **Manual fallback, when the mirror cannot publish.** Run each package's
+  `release:publish` or `release:publish:beta` **one package at a time**, from
+  its directory, in a terminal (blendtype, nuxt-galaxy, ui, then wiki). npm
+  then waits for your passkey. A recursive `pnpm --filter … run` cannot answer
+  npm's two-factor challenge.
+- **npm's metadata cache lags.** It can answer "not published" for minutes
+  after a release has gone out, so check with a cache-busted request, as
+  `scripts/release/confirm-published.mts` does.
+
+```bash
 # Testing
 pnpm test                                   # Run tests across all packages
 pnpm --filter './packages/**' test        # Filtered test run

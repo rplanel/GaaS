@@ -8,7 +8,8 @@
   "homepage": "https://github.com/rplanel/gaas#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rplanel/gaas.git"
+    "url": "git+https://github.com/rplanel/GaaS.git",
+    "directory": "packages/blendtype"
   },
   "bugs": "https://github.com/rplanel/gaas/issues",
   "keywords": [],
