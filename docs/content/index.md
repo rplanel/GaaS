@@ -1,8 +1,9 @@
 ---
 seo:
-  title: Nuxt Docs Template
-  description: Nuxt UI Pro is a collection of premium Vue components built on top
-    of Nuxt UI to create beautiful & responsive Nuxt applications in minutes.
+  title: GaaS docs
+  description: GaaS (Galaxy as a Service) is a set of components to build your
+    workflow interface on top of Galaxy.
+  ogImage: /gaas-card.png
 ---
 
 ::u-page-hero
