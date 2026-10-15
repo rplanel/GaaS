@@ -1,5 +1,12 @@
 # GaaS Monorepo
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/gaas-wordmark-dark.svg">
+    <img src="docs/public/gaas-wordmark-light.svg" alt="GaaS, Galaxy as a Service" width="560">
+  </picture>
+</p>
+
 ## Overview
 
 This monorepo contains all projects and packages related to GAAS (Galaxy As a Service), which provides tooling and interfaces for the [Galaxy Project](https://github.com/galaxyproject).
