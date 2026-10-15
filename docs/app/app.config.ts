@@ -7,7 +7,19 @@ export default defineAppConfig({
   },
   header: {
     title: 'GaaS docs',
-    to: '/'
+    to: '/',
+    logo: {
+      light: '/gaas-mark-light.svg',
+      dark: '/gaas-mark-dark.svg',
+      alt: 'GaaS',
+      // The header shows the wordmark without its cloud: at 24 px the cloud
+      // is invisible and would only pad the box.
+      wordmark: {
+        light: '/gaas-wordmark-plain-light.svg',
+        dark: '/gaas-wordmark-plain-dark.svg'
+      },
+      display: 'wordmark'
+    }
   },
   footer: {
     credits: `Copyright © ${new Date().getFullYear()}`
