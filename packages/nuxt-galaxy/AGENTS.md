@@ -78,7 +78,7 @@ pnpm exec nuxt-galaxy-seed --help                    # every option
 ### Release
 ```bash
 pnpm prepack                                # Build module (dev:prepare + nuxt-module-build)
-pnpm release:publish                        # Publish to npm
+pnpm release:publish                        # Manual fallback only: the GitHub mirror publishes (root AGENTS.md, ADR 0006)
 ```
 
 ### CLI Binary

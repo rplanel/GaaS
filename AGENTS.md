@@ -43,17 +43,51 @@ pnpm --filter ./packages/blendtype dev    # Run specific package
 
 # Build & Release
 pnpm build                                  # Build all packages (prepack)
-pnpm release                                # Full release: build + gates + changelog + tag + push + publish as `latest`
+pnpm release                                # Full package release: gates + changelog + tag + push, then the mirror publishes to npm as `latest`
 pnpm release:beta                           # Next beta, always at patch level: 0.0.4-beta.3 → 0.0.4-beta.4, 0.0.4 → 0.0.5-beta.0
 pnpm release:dry-run                        # Preview `pnpm release`, writes nothing
 pnpm release:beta:dry-run                   # Preview `pnpm release:beta`, writes nothing
-pnpm release:check                          # The gates alone, as CI runs them: build + dev:prepare + lint + typecheck + test
-# Never `pnpm release --dry-run`: pnpm hands extra arguments to the last
-# command of the chain only, so it bumps, tags and pushes for real and dry-runs
-# just the npm publish. If the publish fails after the push, do not re-run the
-# release (it would bump again); run `pnpm --filter './packages/**' run
-# release:publish` (or `release:publish:beta`).
+pnpm release:check                          # The gates alone, as CI runs them (build + dev:prepare + lint + typecheck + test), and the release scripts' own tests
+pnpm release:push                           # Push main and the release tag atomically to GitLab, then to the GitHub mirror only if GitLab accepted
+pnpm release:await                          # Watch the mirror's publish run for the current package version; fails if it failed
+```
 
+Nothing is published to npm from your machine (ADR 0006). The release
+scripts push the release tag to the GitHub mirror, `rplanel/GaaS`, whose
+`publish` workflow publishes the four packages to npm through trusted
+publishing. No token or passkey is involved, and the release command waits
+for that run and fails with it. GitLab stays the CI. The mirror's only
+workflow is the publish one. The release scripts under `scripts/release/` are
+plain Node: they need Node 22.18 or later, which strips their types.
+
+- **Never push a release tag with `git push all` or `--follow-tags`.** `all`
+  pushes to GitHub first: if GitLab then refused, the mirror would already
+  have published a package release GitLab never received. `--follow-tags` is
+  not atomic (a refused `main` still lands the tag), and it pushes every
+  missing tag. GitHub starts no run for more than three tags at once, and an
+  older `v` tag would start a publish run of its own. `release:push` pushes
+  `main` and the release tag alone, atomically, to GitLab first.
+- **Never `pnpm release --dry-run`.** pnpm hands extra arguments to the last
+  command of the chain only, so it bumps, tags and pushes for real. Use the
+  `:dry-run` scripts instead.
+- **When a step fails after the bump, do not run `pnpm release` again:** it
+  would bump again. Re-run only the step that failed:
+  - `pnpm release:push` if a push failed;
+  - `pnpm release:await` to watch again;
+  - re-run the workflow on GitHub, which publishes only the packages the
+    registry says are not out yet. Wait a few minutes first, because that
+    answer lags behind an upload and npm refuses a package that is already
+    out.
+- **Manual fallback, when the mirror cannot publish.** Run each package's
+  `release:publish` or `release:publish:beta` **one package at a time**, from
+  its directory, in a terminal (blendtype, nuxt-galaxy, ui, then wiki). npm
+  then waits for your passkey. A recursive `pnpm --filter … run` cannot answer
+  npm's two-factor challenge.
+- **npm's metadata cache lags.** It can answer "not published" for minutes
+  after a package release has gone out, so check with a cache-busted request,
+  as `scripts/release/confirm-published.mts` does.
+
+```bash
 # Testing
 pnpm test                                   # Run tests across all packages
 pnpm --filter './packages/**' test        # Filtered test run
@@ -165,6 +199,10 @@ pnpm test:watch                              # Watch mode
 
 ### Test Locations
 - Unit: `test/` directory
+- Release scripts: `scripts/release/*.test.mts`, beside the scripts. They run
+  under Node's own runner (`node --test`) through `pnpm release:check` and the
+  mirror's publish workflow, not through `pnpm test`, because the root
+  declares no test framework.
 - Components: `*.test.ts` alongside source
 - E2E: `playwright/tests/` or `.playground/`
 
@@ -172,7 +210,7 @@ pnpm test:watch                              # Watch mode
 
 ### Protected Files (DO NOT MODIFY)
 1. **pnpm-workspace.yaml** - Catalog versions, workspace packages list
-2. **Root package.json scripts** - Use --filter to customize
+2. **Root package.json scripts** - Do not add one package's behaviour to them; use --filter. The `release*` scripts are the exception, changed only with a ticket or an ADR (ADR 0006)
 3. **Generated directories** - `.nuxt/`, `dist/`, `.output/` - never commit
 
 ### Layer Dependency Architecture

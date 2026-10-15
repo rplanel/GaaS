@@ -61,7 +61,7 @@ pnpm test                                   # Vitest
 
 ### Release
 ```bash
-pnpm release:publish                        # Publish layer to npm
+pnpm release:publish                        # Manual fallback only: the GitHub mirror publishes (root AGENTS.md, ADR 0006)
 pnpm cleandep                              # Clean all generated files
 ```
 
