@@ -5,13 +5,13 @@
   "description": "A TypeScript wrapper for the Galaxy REST API built on Effect-TS. Provides type-safe, composable operations for workflows, histories, datasets, and TUS resumable uploads.",
   "author": "Rémi Planel <rplanel@pasteur.fr>",
   "license": "MIT",
-  "homepage": "https://github.com/rplanel/gaas#readme",
+  "homepage": "https://github.com/rplanel/GaaS#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rplanel/GaaS.git",
     "directory": "packages/blendtype"
   },
-  "bugs": "https://github.com/rplanel/gaas/issues",
+  "bugs": "https://github.com/rplanel/GaaS/issues",
   "keywords": [],
   "sideEffects": false,
   "exports": {

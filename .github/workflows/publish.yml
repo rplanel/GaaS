@@ -7,15 +7,16 @@
 # environment, which admits `v*` tags only. No token is involved: npm
 # exchanges the run's OIDC token for one valid for this upload alone.
 #
-# `pnpm release` and `pnpm release:beta` push the tag here only after GitLab
-# has accepted it, then watch this run to the end.
+# `pnpm release` and `pnpm release:beta` push `main` and the release tag here,
+# atomically, only after GitLab has accepted the same push. Then they watch
+# this run to the end.
 
 name: publish
 
 on:
   push:
     tags:
-      # A full version, so a milestone tag such as v1.2 never starts a run.
+      # A full package version, so a milestone tag such as v1.2 never starts a run.
       - 'v[0-9]+.[0-9]+.[0-9]+*'
 
 permissions:
@@ -63,9 +64,12 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      # Recursive, so a re-run publishes only the packages not yet on npm.
-      # Each package's prepack builds it first. --no-git-checks because the
-      # tag is checked out detached, not on main.
+      # Recursive, so a re-run publishes only the packages the registry says
+      # are not on npm yet. That answer can lag a few minutes behind an upload,
+      # and npm refuses a package that is already out, so wait before
+      # re-running a run that stopped partway. Each package's prepack builds it
+      # first. --no-git-checks because the tag is checked out detached, not on
+      # main.
       - name: Publish
         env:
           DIST_TAG: ${{ steps.dist-tag.outputs.dist-tag }}
@@ -74,4 +78,4 @@ jobs:
       - name: Confirm on the registry
         env:
           DIST_TAG: ${{ steps.dist-tag.outputs.dist-tag }}
-        run: node scripts/release/confirm-published.mts "$GITHUB_REF_NAME" "$DIST_TAG"
+        run: node scripts/release/confirm-published.mts "$DIST_TAG"

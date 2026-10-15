@@ -1,10 +1,12 @@
 /**
- * Whether a release is really on npm, asked of the registry itself (ADR 0006).
+ * Whether a package release is really on npm, asked of the registry itself
+ * (ADR 0006).
  *
- * `node scripts/release/confirm-published.mts v0.0.4-beta.5 beta` succeeds
- * once every published package has that version and its `beta` dist-tag
- * points at it. The publish workflow runs it last, so a run that reports
- * success has been seen from the outside.
+ * `node scripts/release/confirm-published.mts beta` succeeds once every
+ * published package's own version is on npm and its `beta` dist-tag points
+ * at it. The publish workflow runs it last, after the dist-tag guard has
+ * checked that every package carries the tag's version, so a run that
+ * reports success has been seen from the outside.
  *
  * Every request bypasses the registry's cache. On 2026-10-15 both `npm view`
  * and a plain GET answered "not published" for minutes after a package
@@ -12,8 +14,8 @@
  */
 
 import process from 'node:process'
-import { setTimeout as sleep } from 'node:timers/promises'
-import { releasedPackages } from './dist-tag.mts'
+import { poll } from './poll.mts'
+import { releasedPackages } from './release.mts'
 
 /** The part of an npm packument read here. */
 export interface Packument {
@@ -21,8 +23,8 @@ export interface Packument {
   readonly 'dist-tags'?: Readonly<Record<string, string>>
 }
 
-/** Why the release is not out yet, or `undefined` once it is. */
-export function notYetOut(packument: Packument, version: string, distTag: string): string | undefined {
+/** Why `version` is not out on npm under `distTag` yet, or `undefined` once it is. */
+export function whyNotOnNpm(packument: Packument, version: string, distTag: string): string | undefined {
   if (packument.versions?.[version] === undefined) {
     return `${version} is not on the registry yet`
   }
@@ -42,31 +44,32 @@ async function fetchPackument(name: string): Promise<Packument> {
   return await response.json() as Packument
 }
 
-/** Ten seconds apart, for five minutes. */
-const ATTEMPTS = 30
-const INTERVAL_MS = 10_000
-
 if (import.meta.main) {
-  const [tag = '', distTag = ''] = process.argv.slice(2)
-  const version = tag.replace(/^v/, '')
-  const names = releasedPackages(process.cwd()).filter(pkg => !pkg.private).map(pkg => pkg.name)
+  const distTag = process.argv[2] ?? ''
+  const published = releasedPackages(process.cwd()).filter(pkg => !pkg.private)
 
-  let waiting = new Map(names.map(name => [name, 'not asked yet']))
-  for (let attempt = 1; attempt <= ATTEMPTS && waiting.size > 0; attempt++) {
-    const answers = await Promise.all([...waiting.keys()].map(async name => [name, notYetOut(await fetchPackument(name), version, distTag)] as const))
-    for (const [name, reason] of answers) {
+  /** Why each package is not out yet, by name: emptied as the registry catches up. */
+  const waiting = new Map(published.map(pkg => [pkg.name, 'not asked yet']))
+  // Ten seconds apart, for five minutes.
+  const { lastError } = await poll(30, 10_000, async () => {
+    for (const pkg of published.filter(({ name }) => waiting.has(name))) {
+      const reason = whyNotOnNpm(await fetchPackument(pkg.name), pkg.version, distTag)
       if (reason === undefined) {
-        process.stdout.write(`${name}@${version} is on npm under ${distTag}\n`)
+        waiting.delete(pkg.name)
+        process.stdout.write(`${pkg.name}@${pkg.version} is on npm under ${distTag}\n`)
+      }
+      else {
+        waiting.set(pkg.name, reason)
       }
     }
-    waiting = new Map(answers.filter((answer): answer is readonly [string, string] => answer[1] !== undefined))
-    if (waiting.size > 0 && attempt < ATTEMPTS) {
-      await sleep(INTERVAL_MS)
-    }
-  }
+    return waiting.size === 0 ? true : undefined
+  })
 
   for (const [name, reason] of waiting) {
     process.stderr.write(`${name}: ${reason}\n`)
+  }
+  if (waiting.size > 0 && lastError !== undefined) {
+    process.stderr.write(`The last request failed: ${(lastError as Error).message}\n`)
   }
   process.exitCode = waiting.size > 0 ? 1 : 0
 }
