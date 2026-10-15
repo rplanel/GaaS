@@ -43,8 +43,16 @@ pnpm --filter ./packages/blendtype dev    # Run specific package
 
 # Build & Release
 pnpm build                                  # Build all packages (prepack)
-pnpm release                                # Full release: lint + test + changelog + publish + push
-pnpm release --dry-run                     # Preview only
+pnpm release                                # Full release: build + gates + changelog + tag + push + publish as `latest`
+pnpm release:beta                           # Next beta, always at patch level: 0.0.4-beta.3 → 0.0.4-beta.4, 0.0.4 → 0.0.5-beta.0
+pnpm release:dry-run                        # Preview `pnpm release`, writes nothing
+pnpm release:beta:dry-run                   # Preview `pnpm release:beta`, writes nothing
+pnpm release:check                          # The gates alone, as CI runs them: build + dev:prepare + lint + typecheck + test
+# Never `pnpm release --dry-run`: pnpm hands extra arguments to the last
+# command of the chain only, so it bumps, tags and pushes for real and dry-runs
+# just the npm publish. If the publish fails after the push, do not re-run the
+# release (it would bump again); run `pnpm --filter './packages/**' run
+# release:publish` (or `release:publish:beta`).
 
 # Testing
 pnpm test                                   # Run tests across all packages
