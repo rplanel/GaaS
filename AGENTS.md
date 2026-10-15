@@ -210,7 +210,7 @@ pnpm test:watch                              # Watch mode
 
 ### Protected Files (DO NOT MODIFY)
 1. **pnpm-workspace.yaml** - Catalog versions, workspace packages list
-2. **Root package.json scripts** - Use --filter to customize
+2. **Root package.json scripts** - Do not add one package's behaviour to them; use --filter. The `release*` scripts are the exception, changed only with a ticket or an ADR (ADR 0006)
 3. **Generated directories** - `.nuxt/`, `dist/`, `.output/` - never commit
 
 ### Layer Dependency Architecture
