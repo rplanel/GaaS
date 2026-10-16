@@ -47,7 +47,7 @@ pnpm release                                # Full package release: gates + chan
 pnpm release:beta                           # Next beta, always at patch level: 0.0.4-beta.3 → 0.0.4-beta.4, 0.0.4 → 0.0.5-beta.0
 pnpm release:dry-run                        # Preview `pnpm release`, writes nothing
 pnpm release:beta:dry-run                   # Preview `pnpm release:beta`, writes nothing
-pnpm release:check                          # The gates alone, as CI runs them (build + dev:prepare + lint + typecheck + test), and the release scripts' own tests
+pnpm release:check                          # The gates alone, as CI runs them (build + dev:prepare + lint + typecheck + test), and the tests of the scripts under scripts/
 pnpm release:push                           # Push main and the release tag atomically to GitLab, then to the GitHub mirror only if GitLab accepted
 pnpm release:await                          # Watch the mirror's publish run for the current package version; fails if it failed
 ```
@@ -99,7 +99,8 @@ pnpm typecheck                              # Type check all packages
 
 # Dependencies
 pnpm cleandep                               # Clean all node_modules + lockfile + reinstall
-pnpm install                               # Install all dependencies
+pnpm install                               # Install all dependencies, and link repos/ to what `pnpm repos` downloaded
+pnpm repos                                 # Download the other projects' source agents read under repos/, at the package version pnpm-lock.yaml names
 
 # Supabase (via nuxt-galaxy)
 pnpm supabase:start                         # Start Supabase local dev
@@ -199,10 +200,11 @@ pnpm test:watch                              # Watch mode
 
 ### Test Locations
 - Unit: `test/` directory
-- Release scripts: `scripts/release/*.test.mts`, beside the scripts. They run
-  under Node's own runner (`node --test`) through `pnpm release:check` and the
-  mirror's publish workflow, not through `pnpm test`, because the root
-  declares no test framework.
+- Root scripts: `scripts/*/*.test.mts` (`release`, `repos`), beside the
+  scripts. They run under Node's own runner (`node --test`) through
+  `pnpm release:check`, and the release ones through the mirror's publish
+  workflow too, not through `pnpm test`, because the root declares no test
+  framework.
 - Components: `*.test.ts` alongside source
 - E2E: `playwright/tests/` or `.playground/`
 
@@ -236,13 +238,16 @@ pnpm test:watch                              # Watch mode
 - **Optional**: GALAXY_DRIZZLE_DATABASE_URL (defaults to local)
 - **Security**: .env files gitignored, never commit secrets
 
-## Vendored Repositories
+## Other Projects' Source
 
-This project vendors external repositories under @repos/
+@repos/ holds the source of ten projects GaaS builds on, for agents to read: effect, drizzle-orm, zod, @nuxt/ui, @nuxtjs/supabase, @nuxt/test-utils, @pinia/colada, @vue/test-utils, @supabase/supabase-js and d3-selection. It is not in git (ADR 0007). Each `repos/<project>` is a link to a download that every checkout on the machine shares, taken at the package version `pnpm-lock.yaml` names, so it is the source of what GaaS installs.
 
-  - Use vendored repositories as read-only reference material when working with related libraries
-  - Prefer examples and patterns from the vendored source code over generated guesses or web search results
-  - Do not edit files under @repos/ unless explicitly asked
+  - `repos/` may be absent or incomplete: nothing is downloaded until someone runs `pnpm repos`, and CI never downloads. If a project you need is missing, run `pnpm repos` (about 180 MB on disk the first time on a machine, then nothing until a package version changes)
+  - `pnpm install` only links what is already downloaded, and relinks when the lockfile names another package version
+  - The list, and the tag each project releases a package version under, is `PROJECTS` in `scripts/repos/repos.mts`
+  - Use the source as read-only reference material when working with related libraries
+  - Prefer examples and patterns from it over generated guesses or web search results
+  - Do not edit files under @repos/ unless explicitly asked: every checkout on the machine shares them
   - Do not import from @repos/ - application code should continue importing from normal package dependencies
 
 When writing Effect code, inspect @repos/effect/ for examples of idiomatic usage, tests, module structure, and API design. Treat it as the source of truth for Effect patterns.

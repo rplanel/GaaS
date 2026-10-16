@@ -15,7 +15,7 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
-      '**/repos/**', // Vendored external repositories
+      '**/repos/**', // Other projects' source, linked by `pnpm repos` (ADR 0007)
       '**/.nuxt/**',
       '**/.output/**',
       '**/coverage/**',
