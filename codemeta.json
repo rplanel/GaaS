@@ -3,7 +3,7 @@
   "@type": "SoftwareSourceCode",
   "name": "GaaS",
   "description": "Galaxy as a Service (GaaS) - A monorepo providing Galaxy API client libraries, Nuxt modules, UI components, and documentation for building Galaxy-integrated web applications.",
-  "version": "0.0.4-beta.5",
+  "version": "0.0.4-beta.6",
   "license": "https://spdx.org/licenses/MIT.html",
   "copyrightHolder": {
     "@id": "https://ror.org/0495fxg12",
