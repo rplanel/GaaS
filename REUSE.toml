@@ -258,7 +258,3 @@ path = [
   "packages/ui/test/fixtures/galaxy-workflow/conditional-repeat-runtime/workflow.*.json",
   "packages/ui/test/fixtures/galaxy-workflow/conditional-repeat-runtime/revisions.json",
 ]
-
-# Other projects' source is never GaaS's.
-[[annotations]]
-path = "repos/**"
