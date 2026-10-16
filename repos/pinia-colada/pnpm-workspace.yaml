@@ -1,6 +1,0 @@
-packages:
-  - playground
-  - plugins/*
-  - nuxt
-  - devtools
-  - test-utils

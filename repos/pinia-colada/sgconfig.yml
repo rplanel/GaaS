@@ -1,6 +1,0 @@
-ruleDirs:
-  - ./codemods/rules
-testConfigs:
-  - testDir: ./codemods/rule-tests
-utilDirs:
-  - ./codemods/utils
