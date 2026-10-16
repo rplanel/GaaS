@@ -74,7 +74,9 @@ gaas-logo*
 
 tmp/
 
-repos
+# Links to other projects' source, which `pnpm repos` downloads (ADR 0007).
+# Anchored, or it would hide scripts/repos/ too.
+/repos
 
 # evlog local log files
 .evlog/

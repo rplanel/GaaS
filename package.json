@@ -8,6 +8,8 @@
   "license": "MIT",
   "keywords": [],
   "scripts": {
+    "postinstall": "node scripts/repos/postinstall.mjs",
+    "repos": "node scripts/repos/download.mts",
     "test": "pnpm --filter './packages/**' test",
     "dev": "pnpm run supabase:start && pnpm --filter ./playground dev",
     "lint": "pnpm --filter './packages/**' lint",
@@ -18,7 +20,7 @@
     "docs:dev": "pnpm --filter ./docs dev",
     "docs:build": "pnpm --filter ./docs build",
     "docs:generate": "pnpm --filter ./docs generate",
-    "release:check": "pnpm run build && pnpm run dev:prepare && pnpm run lint && pnpm run typecheck && pnpm run test && node --test 'scripts/release/*.test.mts'",
+    "release:check": "pnpm run build && pnpm run dev:prepare && pnpm run lint && pnpm run typecheck && pnpm run test && node --test 'scripts/*/*.test.mts'",
     "release": "pnpm run release:check && commit-and-tag-version --commit-all && pnpm run release:push && pnpm run release:await",
     "release:beta": "pnpm run release:check && commit-and-tag-version --commit-all --prerelease beta --release-as patch && pnpm run release:push && pnpm run release:await",
     "release:push": "node scripts/release/push.mts",
