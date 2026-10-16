@@ -1,7 +1,11 @@
 # Who holds the copyright in each file and under which licence (ADR 0007).
-# The first entry covers everything; each later one names a third-party
-# source and wins over the entries above it. A third-party entry overrides
-# whatever the file itself says, so its label is the one written here.
+# The first entry covers everything. Each later one wins over the entries
+# above it: a third-party source, which overrides whatever its files say, or,
+# at the end, files left unlabelled on purpose.
+#
+# Institut Pasteur's line also stands in every entry for a third-party file
+# GaaS changed, each with the contributor line, so a new holder wording
+# changes all of them.
 version = 1
 
 # GaaS's own work: code, docs, the logo, lockfiles and generated files.
@@ -10,11 +14,6 @@ path = "**"
 SPDX-FileCopyrightText = "2025 Institut Pasteur"
 SPDX-License-Identifier = "MIT"
 SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
-
-# Other projects' source is never GaaS's. Unlabelled, so a file tracked under
-# `repos/` fails `reuse lint` rather than passing as GaaS's.
-[[annotations]]
-path = "repos/**"
 
 # Agent skills, by source. endpoint-blast-radius and gaas-cli-dev are GaaS's.
 
@@ -134,6 +133,7 @@ SPDX-FileCopyrightText = [
   "2025 Institut Pasteur",
 ]
 SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
 
 [[annotations]]
 path = "patches/docus@*.patch"
@@ -143,9 +143,11 @@ SPDX-FileCopyrightText = [
   "2025 Institut Pasteur",
 ]
 SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
 
 # Types copied from Galaxy's client schema (client/src/api/schema), changed
-# and extended by GaaS.
+# and extended by GaaS. A file added here is labelled as a copy too; give it
+# an entry of its own if it is not one.
 [[annotations]]
 path = "packages/blendtype/src/types/*.ts"
 precedence = "override"
@@ -154,6 +156,30 @@ SPDX-FileCopyrightText = [
   "2025 Institut Pasteur",
 ]
 SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
+
+# Code copied from other projects, then changed by GaaS: the star field of
+# nuxt/ui's documentation site, and nuxt-meilisearch's search composable.
+
+[[annotations]]
+path = "packages/ui/app/components/SkyBg.vue"
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2023 Nuxt",
+  "2025 Institut Pasteur",
+]
+SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
+
+[[annotations]]
+path = "packages/ui/app/composables/meili/useMeiliSearch.ts"
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2022-present xlanex6 (Alex Duval)",
+  "2025 Institut Pasteur",
+]
+SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
 
 # Template content. The hero background is nuxt-ui-templates/saas's SVG,
 # copied as is; the four wiki pages are nuxt-ui-templates/docs's, edited by
@@ -178,9 +204,11 @@ SPDX-FileCopyrightText = [
   "2025 Institut Pasteur",
 ]
 SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
 
 # Recorded Galaxy payloads. What Galaxy served about a workflow is its
-# author's; `manifest.json` is written by GaaS's recorder.
+# author's; `manifest.json` is written by GaaS's recorder. `ccqtl-today` is
+# GaaS's: recorded from Rémi Planel's own workflow and Tool Shed tools.
 
 [[annotations]]
 path = [
@@ -220,6 +248,9 @@ precedence = "override"
 SPDX-FileCopyrightText = "2005-2026 Galaxy Contributors"
 SPDX-License-Identifier = "MIT"
 
+# Left unlabelled, last so that no entry above can label them, and each fails
+# `reuse lint` rather than passing as GaaS's.
+
 # Recorded from a workflow whose author set no licence, so it is not GaaS's to
 # label. Unlabelled until it is re-recorded from a workflow rebuilt for GaaS.
 [[annotations]]
@@ -227,3 +258,7 @@ path = [
   "packages/ui/test/fixtures/galaxy-workflow/conditional-repeat-runtime/workflow.*.json",
   "packages/ui/test/fixtures/galaxy-workflow/conditional-repeat-runtime/revisions.json",
 ]
+
+# Other projects' source is never GaaS's.
+[[annotations]]
+path = "repos/**"
