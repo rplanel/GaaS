@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { searchContentRef } from '../../app/utils/content/search'
+import { searchContentRef } from '../../../app/utils/content/search'
 
 describe('searchContentRef', () => {
   it('returns empty array for non-array content', () => {

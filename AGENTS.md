@@ -18,8 +18,7 @@ docs/                    # @gaas/docs - Documentation site
 packages/
   blendtype/             # TypeScript library (Galaxy API)
   nuxt-galaxy/           # Nuxt module (Galaxy integration)
-  ui/                    # @gaas/ui - Nuxt UI layer
-  wiki/                  # @gaas/wiki - Content layer
+  ui/                    # @gaas/ui - Nuxt UI layer, wiki included
   gaas-cli/              # Python CLI tool
   llm/                   # LLM utilities
 playground/              # Test application
@@ -54,7 +53,7 @@ pnpm release:await                          # Watch the mirror's publish run for
 
 Nothing is published to npm from your machine (ADR 0006). The release
 scripts push the release tag to the GitHub mirror, `rplanel/GaaS`, whose
-`publish` workflow publishes the four packages to npm through trusted
+`publish` workflow publishes the three packages to npm through trusted
 publishing. No token or passkey is involved, and the release command waits
 for that run and fails with it. GitLab stays the CI. The mirror's only
 workflow is the publish one. The release scripts under `scripts/release/` are
@@ -80,7 +79,7 @@ plain Node: they need Node 22.18 or later, which strips their types.
     out.
 - **Manual fallback, when the mirror cannot publish.** Run each package's
   `release:publish` or `release:publish:beta` **one package at a time**, from
-  its directory, in a terminal (blendtype, nuxt-galaxy, ui, then wiki). npm
+  its directory, in a terminal (blendtype, nuxt-galaxy, then ui). npm
   then waits for your passkey. A recursive `pnpm --filter … run` cannot answer
   npm's two-factor challenge.
 - **npm's metadata cache lags.** It can answer "not published" for minutes
@@ -125,7 +124,7 @@ pnpm dev            # Nuxt dev with playground
 pnpm supabase:start # Start local Supabase
 pnpm db:seed        # Seed database
 
-# From packages/ui/ or packages/wiki/
+# From packages/ui/
 pnpm dev            # Dev in .playground/
 pnpm typecheck      # vue-tsc --noEmit
 ```
@@ -147,7 +146,7 @@ pnpm typecheck      # vue-tsc --noEmit
 - **DI**: Context.Tag + Layer-based dependency injection
 - **Build**: ESM/CJS dual format via unbuild
 
-### Nuxt Packages (nuxt-galaxy, ui, wiki)
+### Nuxt Packages (nuxt-galaxy, ui)
 - **Module Pattern**: Use `defineNuxtModule<ModuleOptions>()` with complete meta
 - **Auto-imports**: Register via `addImports()`, `addImportsDir()`, `addServerHandler()`
 - **Server**: API handlers in `runtime/server/api/`
@@ -194,7 +193,7 @@ pnpm test:watch                              # Watch mode
 ### Testing Standards
 - **Framework**: Vitest + @vue/test-utils for Vue/Nuxt
 - **Mocking**: MSW for HTTP, Effect Layer.succeed() for services
-- **E2E**: Playwright for UI/wiki packages
+- **E2E**: Playwright for the UI package
 - **Coverage**: Required for blendtype, tracked via @vitest/coverage-v8
 - **Python**: pytest for gaas-cli
 
@@ -217,16 +216,14 @@ pnpm test:watch                              # Watch mode
 
 ### Layer Dependency Architecture
 ```
-@gaas/wiki (extends) → @gaas/ui (extends) → nuxt-galaxy → blendtype
+@gaas/ui (extends) → nuxt-galaxy → blendtype
 ```
 - **Direction**: Downstream layers import upstream only
-- **Violation**: wiki CANNOT import nuxt-galaxy directly (use UI abstractions)
 
 ### Package Boundaries
 - **blendtype**: Pure TypeScript library, NO Nuxt/Node code
 - **nuxt-galaxy**: Nuxt module ONLY, server-side DB via Drizzle
-- **ui**: UI components/composables, NO pages or content
-- **wiki**: Content collections + pages, imports UI only
+- **ui**: Pages, layouts, components and composables, the wiki included (ADR 0008); its content collections are placeholders an app redeclares
 - **docs**: Documentation content, NO library code
 
 ### Git Hooks

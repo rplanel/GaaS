@@ -49,18 +49,9 @@ The monorepo consists of three main packages:
   - Dataset browsers
   - Job monitoring dashboards
   - Tool interfaces
-
-### **gaas-wiki**
-
-- Nuxt layer providing comprehensive documentation and wiki capabilities
-- Built on top of @nuxt/content module for managing Markdown content
-- Features:
-  - Structured content organization with collections
-  - Full-text search functionality across wiki articles
-  - Documentation navigation with automatic TOC generation
-  - Article pagination and content relationships
-  - Support for rich Markdown content with frontmatter metadata
-  - Customizable wiki layouts and components
+- A wiki built on @nuxt/content:
+  - Markdown pages with full-text search and navigation
+  - DOI citations, with a bibliography appended to each page
   - TypeScript schema validation for content consistency
 
 ## Resources

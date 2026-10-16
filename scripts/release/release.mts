@@ -24,7 +24,7 @@ export type BumpFile = string | { readonly filename: string, readonly updater?: 
 
 /**
  * Every package a release bumps, as `.versionrc.json` lists them: the
- * private root, which carries the package version too, and the four
+ * private root, which carries the package version too, and the three
  * packages published to npm. The other files it bumps, such as
  * `codemeta.json`, are not packages.
  */

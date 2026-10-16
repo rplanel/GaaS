@@ -1,7 +1,7 @@
 import { defineCollection, defineContentConfig } from '@nuxt/content'
 // Import shared schemas
 import { landingSchema } from '../packages/ui/app/schemas/landing'
-import { bibliographySchema, wikiPageSchema } from '../packages/wiki/app/schemas/wiki'
+import { bibliographySchema, wikiPageSchema } from '../packages/ui/app/schemas/wiki'
 
 export default defineContentConfig({
   collections: {

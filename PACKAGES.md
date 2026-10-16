@@ -8,8 +8,7 @@ The GaaS monorepo consists of several interconnected packages designed to provid
 
 - **[blendtype](#blendtype)** - TypeScript client for Galaxy REST API
 - **[nuxt-galaxy](#nuxt-galaxy)** - Nuxt module for Galaxy integration
-- **[ui](#ui)** - UI layer with Galaxy-specific components
-- **[wiki](#wiki)** - Documentation and wiki layer
+- **[ui](#ui)** - UI layer with Galaxy-specific components and a wiki
 - **[gaas-cli](#gaas-cli)** - Command-line interface for GaaS operations
 
 ---
@@ -320,42 +319,16 @@ The UI layer uses a custom design system built on Tailwind CSS:
 - **Component Variants** - Standardized component styling
 - **Responsive Breakpoints** - Mobile-first responsive design
 
----
+### Wiki
 
-## wiki
-
-**Version**: 0.0.1-alpha.0
-**Type**: Nuxt Layer
-**License**: MIT
-
-### Description
-
-A specialized Nuxt layer for creating documentation and wiki sites. Extends the UI layer with content management capabilities using Nuxt Content.
-
-### Features
+The UI layer serves a wiki at `/wiki`, built on Nuxt Content (ADR 0008).
 
 - **Content Management** - Markdown-based content with frontmatter
 - **Search Functionality** - Full-text search across content
 - **Navigation Generation** - Automatic navigation from content structure
-- **SEO Optimization** - Built-in SEO meta tags and OpenGraph
-- **Responsive Design** - Mobile-optimized documentation layout
+- **Citations** - DOI references, with a bibliography appended to each page
 
-### Installation
-
-```bash
-pnpm add @gaas/wiki
-```
-
-### Usage
-
-```typescript
-// nuxt.config.ts
-export default defineNuxtConfig({
-  extends: ['@gaas/wiki']
-})
-```
-
-### Content Structure
+An app declares the `content` and `bibliography` collections over its own content:
 
 ```
 content/
@@ -365,37 +338,9 @@ content/
 │   │   └── installation.md
 │   └── guides/
 │       └── workflow-creation.md
+└── bibliography/
+    └── 10.1234-example.json
 ```
-
-### Configuration
-
-```typescript
-// app.config.ts
-export default defineAppConfig({
-  gaasWiki: {
-    name: 'My Documentation',
-    seo: {
-      title: 'Documentation Site',
-      titleTemplate: '%s - Docs'
-    }
-  }
-})
-```
-
-### Features
-
-#### Layout Components
-
-- **Wiki Navigation** - Sidebar navigation with search
-- **Table of Contents** - Auto-generated page TOC
-- **Content Search** - Integrated search functionality
-
-#### Content Features
-
-- **Markdown Support** - Full markdown with extensions
-- **Code Highlighting** - Syntax highlighting for code blocks
-- **Component Integration** - Vue components in markdown
-- **Frontmatter** - YAML frontmatter for metadata
 
 ---
 
@@ -506,8 +451,7 @@ pnpm typecheck
 packages/
 ├── blendtype/          # Galaxy TypeScript client
 ├── nuxt-galaxy/        # Nuxt module
-├── ui/                 # UI layer
-├── wiki/               # Documentation layer
+├── ui/                 # UI layer, wiki included
 └── gaas-cli/           # CLI tool
 ```
 

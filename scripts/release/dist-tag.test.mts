@@ -8,7 +8,6 @@ function everyPackageAt(version: string): Record<string, string> {
     'blendtype': version,
     'nuxt-galaxy': version,
     '@gaas/ui': version,
-    '@gaas/wiki': version,
   }
 }
 
@@ -31,10 +30,10 @@ describe('distTagFor', () => {
   })
 
   it('names every package whose version is not the tag', () => {
-    const versions = { ...everyPackageAt('0.0.4-beta.5'), 'nuxt-galaxy': '0.0.4-beta.4', '@gaas/wiki': '0.0.4' }
+    const versions = { ...everyPackageAt('0.0.4-beta.5'), 'nuxt-galaxy': '0.0.4-beta.4', '@gaas/ui': '0.0.4' }
     assert.throws(
       () => distTagFor('v0.0.4-beta.5', versions),
-      (error: Error) => error.message.includes('nuxt-galaxy 0.0.4-beta.4') && error.message.includes('@gaas/wiki 0.0.4') && !error.message.includes('blendtype'),
+      (error: Error) => error.message.includes('nuxt-galaxy 0.0.4-beta.4') && error.message.includes('@gaas/ui 0.0.4') && !error.message.includes('blendtype'),
     )
   })
 

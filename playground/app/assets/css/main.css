@@ -3,7 +3,7 @@
 
 /* Vue Flow's own stylesheets are no longer imported here: `@gaas/ui` declares
    the dependency and imports them in its own stylesheet since #89, and this
-   app extends that layer through `@gaas/wiki`. Importing them again would
-   emit every rule twice. */
+   app extends that layer. Importing them again would emit every rule
+   twice. */
 
 @source "../../../../node_modules/@gaas/ui";

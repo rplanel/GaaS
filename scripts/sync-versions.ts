@@ -7,7 +7,6 @@ const packages = [
   'packages/blendtype/package.json',
   'packages/nuxt-galaxy/package.json',
   'packages/ui/package.json',
-  'packages/wiki/package.json',
 ]
 
 for (const pkgPath of packages) {

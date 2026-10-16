@@ -46,4 +46,4 @@ Both are **blind** outside what they scan, and each says where in its own header
 
 **Done when** every page in the step 1 list that reaches the endpoint through something those headers list has had its gate read by hand — `definePageMeta`, or the in-page gate — and the result is in your answer.
 
-Run `pnpm dev:prepare` at the repo root before trusting a `ui` or `wiki` typecheck: a new named middleware or auto-import stays untyped until it does, and `wiki` checks `ui`'s pages against its own `.nuxt`.
+Run `pnpm dev:prepare` at the repo root before trusting a `ui` typecheck: a new named middleware or auto-import stays untyped until it does.

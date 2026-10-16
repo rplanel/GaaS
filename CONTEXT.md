@@ -1,6 +1,6 @@
 # GaaS — Galaxy as a Service
 
-Vocabulary shared by every package in this repository: the Galaxy API client, the Nuxt module, the UI and content layers, and the CLI. One context, one glossary.
+Vocabulary shared by every package in this repository: the Galaxy API client, the Nuxt module, the UI layer, and the CLI. One context, one glossary.
 
 ## Analyses
 
