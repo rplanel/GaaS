@@ -5,6 +5,11 @@
   "description": "Galaxy as a Service (GaaS) - A monorepo providing Galaxy API client libraries, Nuxt modules, UI components, and documentation for building Galaxy-integrated web applications.",
   "version": "0.0.4-beta.5",
   "license": "https://spdx.org/licenses/MIT.html",
+  "copyrightHolder": {
+    "@id": "https://ror.org/0495fxg12",
+    "@type": "Organization",
+    "name": "Institut Pasteur"
+  },
   "codeRepository": "https://gitlab.pasteur.fr/hub/GaaS",
   "issueTracker": "https://gitlab.pasteur.fr/hub/GaaS/-/issues",
   "dateModified": "2026-10-16",
@@ -16,6 +21,7 @@
       "familyName": "Planel",
       "email": "rplanel@gmail.com",
       "affiliation": {
+        "@id": "https://ror.org/0495fxg12",
         "@type": "Organization",
         "name": "Institut Pasteur"
       }
