@@ -19,6 +19,9 @@ export interface ReleasedPackage {
   readonly private: boolean
 }
 
+/** A file `.versionrc.json` has a release bump: its path, or the path and the updater that bumps it. */
+export type BumpFile = string | { readonly filename: string, readonly updater?: string }
+
 /**
  * Every package a release bumps, as `.versionrc.json` lists them: the
  * private root, which carries the package version too, and the four
@@ -26,7 +29,7 @@ export interface ReleasedPackage {
  * `codemeta.json`, are not packages.
  */
 export function releasedPackages(root: string): ReleasedPackage[] {
-  const { bumpFiles } = JSON.parse(readFileSync(join(root, '.versionrc.json'), 'utf8')) as { bumpFiles: (string | { filename: string })[] }
+  const { bumpFiles } = JSON.parse(readFileSync(join(root, '.versionrc.json'), 'utf8')) as { bumpFiles: BumpFile[] }
   return bumpFiles
     .map(file => typeof file === 'string' ? file : file.filename)
     .filter(file => basename(file) === 'package.json')

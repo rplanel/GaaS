@@ -1,12 +1,15 @@
+import type { BumpFile } from './release.mts'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { describe, it } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import { readVersion, writeVersion } from './codemeta.mts'
 
-const codemeta = readFileSync(new URL('../../codemeta.json', import.meta.url), 'utf8')
+const root = new URL('../../', import.meta.url)
+const codemeta = readFileSync(new URL('codemeta.json', root), 'utf8')
 
-describe('the codemeta.json updater', () => {
+describe('writeVersion', () => {
   it('writes the release\'s version and the day it was cut', (t) => {
     t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-11-02T09:30:00Z') })
 
@@ -26,18 +29,16 @@ describe('the codemeta.json updater', () => {
     assert.deepEqual(changed.map(line => line.trim().split(':')[0]), ['"version"', '"dateModified"'])
   })
 
-  // commit-and-tag-version resolves an updater's path from the working
-  // directory, which is the repository root under `pnpm release:check`.
-  it('is the updater commit-and-tag-version loads for codemeta.json from .versionrc.json', () => {
-    const { bumpFiles } = JSON.parse(readFileSync(new URL('../../.versionrc.json', import.meta.url), 'utf8')) as { bumpFiles: (string | { filename: string })[] }
+  // commit-and-tag-version requires an updater by its path from the working
+  // directory, the repository root. This test requires it the same way, but
+  // without commit-and-tag-version itself: the mirror's publish workflow runs
+  // these tests before anything is installed.
+  it('is what .versionrc.json has a release bump codemeta.json with, loaded with require', () => {
+    const { bumpFiles } = JSON.parse(readFileSync(new URL('.versionrc.json', root), 'utf8')) as { bumpFiles: BumpFile[] }
     const entry = bumpFiles.find(file => typeof file !== 'string' && file.filename === 'codemeta.json')
-    assert.ok(entry, '.versionrc.json bumps no codemeta.json')
+    assert.ok(typeof entry === 'object' && entry.updater !== undefined, '.versionrc.json names no updater for codemeta.json')
 
-    const { resolveUpdaterObjectFromArgument } = createRequire(import.meta.url)('commit-and-tag-version/lib/updaters/index.js') as {
-      resolveUpdaterObjectFromArgument: (entry: unknown) => false | { updater: { readVersion: typeof readVersion, writeVersion: typeof writeVersion } }
-    }
-    const resolved = resolveUpdaterObjectFromArgument(entry)
-    assert.ok(resolved, 'commit-and-tag-version found no updater for codemeta.json')
-    assert.equal(resolved.updater.readVersion(resolved.updater.writeVersion(codemeta, '0.0.4')), '0.0.4')
+    const updater = createRequire(import.meta.url)(fileURLToPath(new URL(entry.updater, root))) as { readVersion: typeof readVersion, writeVersion: typeof writeVersion }
+    assert.equal(updater.readVersion(updater.writeVersion(codemeta, '0.0.4')), '0.0.4')
   })
 })

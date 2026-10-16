@@ -5,6 +5,7 @@
  * answers for an ES module as long as it has no top-level `await`.
  */
 
+/** The part of `codemeta.json` a release rewrites. */
 interface CodeMeta {
   version: string
   dateModified: string
