@@ -7,9 +7,11 @@ const items = toRef(footerItems)
 <template>
   <UFooter>
     <template #left>
+      <!-- REUSE-IgnoreStart: page text naming nobody; REUSE.toml holds the notice -->
       <p class="text-muted text-sm">
         Copyright © {{ new Date().getFullYear() }}
       </p>
+      <!-- REUSE-IgnoreEnd -->
     </template>
 
     <UNavigationMenu :items="items" variant="link" />

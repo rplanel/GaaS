@@ -22,7 +22,9 @@ export default defineAppConfig({
     }
   },
   footer: {
+    // REUSE-IgnoreStart: page text naming nobody; REUSE.toml holds the notice
     credits: `Copyright © ${new Date().getFullYear()}`
+    // REUSE-IgnoreEnd
   },
   github: {
     url: 'https://github.com/rplanel/GaaS',
