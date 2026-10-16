@@ -4,7 +4,11 @@
     "packages/blendtype/package.json",
     "packages/nuxt-galaxy/package.json",
     "packages/ui/package.json",
-    "packages/wiki/package.json"
+    "packages/wiki/package.json",
+    {
+      "filename": "codemeta.json",
+      "updater": "scripts/release/codemeta.mts"
+    }
   ],
   "scripts": {
     "postbump": "pnpm --filter './packages/**' prepack"

@@ -8,7 +8,7 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
 /** The GitHub mirror, as GitHub spells it: npm compares the name case-sensitively. */
 export const MIRROR = 'rplanel/GaaS'
@@ -22,14 +22,18 @@ export interface ReleasedPackage {
 /**
  * Every package a release bumps, as `.versionrc.json` lists them: the
  * private root, which carries the package version too, and the four
- * packages published to npm.
+ * packages published to npm. The other files it bumps, such as
+ * `codemeta.json`, are not packages.
  */
 export function releasedPackages(root: string): ReleasedPackage[] {
-  const { bumpFiles } = JSON.parse(readFileSync(join(root, '.versionrc.json'), 'utf8')) as { bumpFiles: string[] }
-  return bumpFiles.map((file) => {
-    const manifest = JSON.parse(readFileSync(join(root, file), 'utf8')) as { name: string, version: string, private?: boolean }
-    return { name: manifest.name, version: manifest.version, private: manifest.private === true }
-  })
+  const { bumpFiles } = JSON.parse(readFileSync(join(root, '.versionrc.json'), 'utf8')) as { bumpFiles: (string | { filename: string })[] }
+  return bumpFiles
+    .map(file => typeof file === 'string' ? file : file.filename)
+    .filter(file => basename(file) === 'package.json')
+    .map((file) => {
+      const manifest = JSON.parse(readFileSync(join(root, file), 'utf8')) as { name: string, version: string, private?: boolean }
+      return { name: manifest.name, version: manifest.version, private: manifest.private === true }
+    })
 }
 
 /** The tag a package version is cut as, as commit-and-tag-version writes it. */
