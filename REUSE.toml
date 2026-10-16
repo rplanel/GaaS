@@ -1,0 +1,260 @@
+# Who holds the copyright in each file and under which licence (ADR 0007).
+# The first entry covers everything. Each later one wins over the entries
+# above it: a third-party source, which overrides whatever its files say, or,
+# at the end, files left unlabelled on purpose.
+#
+# Institut Pasteur's line also stands in every entry for a third-party file
+# GaaS changed, each with the contributor line, so a new holder wording
+# changes all of them.
+version = 1
+
+# GaaS's own work: code, docs, the logo, lockfiles and generated files.
+[[annotations]]
+path = "**"
+SPDX-FileCopyrightText = "2025 Institut Pasteur"
+SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
+
+# Agent skills, by source. endpoint-blast-radius and gaas-cli-dev are GaaS's.
+
+[[annotations]]
+path = [
+  "**/.agents/skills/analyze-logs/**",
+  "**/.agents/skills/build-audit-logs/**",
+  "**/.agents/skills/review-logging-patterns/**",
+  ".agents/skills/create-evlog-adapter/**",
+  ".agents/skills/create-evlog-enricher/**",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 HugoRCD"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+  ".agents/skills/attach-db/**",
+  ".agents/skills/duckdb-docs/**",
+  ".agents/skills/install-duckdb/**",
+  ".agents/skills/query/**",
+  ".agents/skills/read-file/**",
+  ".agents/skills/read-memories/**",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2018-2025 Stichting DuckDB Foundation"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ".agents/skills/modern-web-guidance/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Google LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ".agents/skills/nuxt/**"
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2016-present Nuxt Team",
+  "2025-present Anthony Fu <https://github.com/antfu>",
+]
+SPDX-License-Identifier = "MIT"
+
+# Generated from pnpm/pnpm.io, whatever its SKILL.md says.
+[[annotations]]
+path = ".agents/skills/pnpm/**"
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2016-2022 Zoltan Kochan and other contributors",
+  "2025-present Anthony Fu <https://github.com/antfu>",
+]
+SPDX-License-Identifier = "MIT"
+
+# Generated from vuejs/docs, which is CC-BY-4.0, so it is CC-BY-4.0 although
+# antfu/skills calls it MIT. Do not "fix" it to match upstream (ADR 0007).
+[[annotations]]
+path = ".agents/skills/vue/**"
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2019-present Yuxi (Evan) You and Vue documentation contributors",
+  "2025-present Anthony Fu <https://github.com/antfu>",
+]
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = ".agents/skills/vue-testing-best-practices/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2025 hyf0, SerKo <https://github.com/serkodev>"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ".agents/skills/vueuse-functions/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 SerKo <https://github.com/serkodev>"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+  ".agents/skills/supabase/**",
+  "packages/nuxt-galaxy/.agents/skills/supabase-postgres-best-practices/**",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Supabase"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ".agents/skills/tailwind-design-system/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2024 Seth Hobson"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ".agents/skills/web-design-guidelines/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Vercel"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "packages/ui/.agents/skills/nuxt-ui/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2023 Nuxt"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "packages/ui/.agents/skills/motion/**"
+precedence = "override"
+SPDX-FileCopyrightText = "onmax"
+SPDX-License-Identifier = "MIT"
+
+# Patches: the upstream project's code, changed by GaaS.
+
+[[annotations]]
+path = "patches/@nuxt__image@*.patch"
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2020-present Nuxt Project",
+  "2025 Institut Pasteur",
+]
+SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
+
+[[annotations]]
+path = "patches/docus@*.patch"
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "NuxtLabs",
+  "2025 Institut Pasteur",
+]
+SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
+
+# Types copied from Galaxy's client schema (client/src/api/schema), changed
+# and extended by GaaS. A file added here is labelled as a copy too; give it
+# an entry of its own if it is not one.
+[[annotations]]
+path = "packages/blendtype/src/types/*.ts"
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2005-2026 Galaxy Contributors",
+  "2025 Institut Pasteur",
+]
+SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
+
+# Code copied from other projects, then changed by GaaS: the star field of
+# nuxt/ui's documentation site, and nuxt-meilisearch's search composable.
+
+[[annotations]]
+path = "packages/ui/app/components/SkyBg.vue"
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2023 Nuxt",
+  "2025 Institut Pasteur",
+]
+SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
+
+[[annotations]]
+path = "packages/ui/app/composables/meili/useMeiliSearch.ts"
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2022-present xlanex6 (Alex Duval)",
+  "2025 Institut Pasteur",
+]
+SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
+
+# Template content. The hero background is nuxt-ui-templates/saas's SVG,
+# copied as is; the four wiki pages are nuxt-ui-templates/docs's, edited by
+# GaaS.
+
+[[annotations]]
+path = "packages/ui/app/components/HeroBackground.vue"
+precedence = "override"
+SPDX-FileCopyrightText = "2025 Nuxt UI Templates"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+  "docs/content/3.packages/4.gaas-wiki/2.writing-content/1.markdown-syntax.md",
+  "docs/content/3.packages/4.gaas-wiki/2.writing-content/2.code-blocks.md",
+  "docs/content/3.packages/4.gaas-wiki/2.writing-content/3.prose-components.md",
+  "docs/content/3.packages/4.gaas-wiki/2.writing-content/4.images-embeds.md",
+]
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2025 Nuxt UI Templates",
+  "2025 Institut Pasteur",
+]
+SPDX-License-Identifier = "MIT"
+SPDX-FileContributor = "Rémi Planel <rplanel@gmail.com>"
+
+# Recorded Galaxy payloads. What Galaxy served about a workflow is its
+# author's; `manifest.json` is written by GaaS's recorder. `ccqtl-today` is
+# GaaS's: recorded from Rémi Planel's own workflow and Tool Shed tools.
+
+[[annotations]]
+path = [
+  "packages/ui/test/fixtures/galaxy-workflow/fan-in/workflow.*.json",
+  "packages/ui/test/fixtures/galaxy-workflow/fan-in/revisions.json",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Nnaemeka Emmanuel Nnadi"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+  "packages/ui/test/fixtures/galaxy-workflow/subworkflow-nested/workflow.*.json",
+  "packages/ui/test/fixtures/galaxy-workflow/subworkflow-nested/revisions.json",
+]
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "Lucille Delisle",
+  "Mehmet Tekman",
+  "Hans-Rudolf Hotz",
+  "Daniel Blankenberg",
+  "Wendi Bacon",
+]
+SPDX-License-Identifier = "MIT"
+
+# Tool definitions: the IUC's Tool Shed tools, and Galaxy's built-in ones.
+
+[[annotations]]
+path = "packages/ui/test/fixtures/galaxy-workflow/*/tools/toolshed.g2.bx.psu.edu_repos_iuc_*.json"
+precedence = "override"
+SPDX-FileCopyrightText = "2014 galaxy-iuc"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "packages/ui/test/fixtures/galaxy-workflow/*/tools/__*__@*.json"
+precedence = "override"
+SPDX-FileCopyrightText = "2005-2026 Galaxy Contributors"
+SPDX-License-Identifier = "MIT"
+
+# Left unlabelled, last so that no entry above can label them, and each fails
+# `reuse lint` rather than passing as GaaS's.
+
+# Recorded from a workflow whose author set no licence, so it is not GaaS's to
+# label. Unlabelled until it is re-recorded from a workflow rebuilt for GaaS.
+[[annotations]]
+path = [
+  "packages/ui/test/fixtures/galaxy-workflow/conditional-repeat-runtime/workflow.*.json",
+  "packages/ui/test/fixtures/galaxy-workflow/conditional-repeat-runtime/revisions.json",
+]
