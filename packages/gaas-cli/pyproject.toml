@@ -3,6 +3,7 @@ name = "gaas-cli"
 dynamic = [ "version" ]
 description = "Add your description here"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.13.0"
 dependencies = [
   "meilisearch>=0.37.0",
@@ -41,6 +42,13 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 source = "uv-dynamic-versioning"
+
+# The package has no LICENSE of its own: the sdist takes the root one, and the
+# wheel built from it (as `uv build` does) carries it under dist-info/licenses/.
+# A wheel built straight from this directory (`uv build --wheel`, `hatch
+# build`) would not.
+[tool.hatch.build.targets.sdist.force-include]
+"../../LICENSE" = "LICENSE"
 
 [tool.uv-dynamic-versioning]
 vcs = "git"

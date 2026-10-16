@@ -76,4 +76,4 @@ Please see the contributing guidelines in each package for development setup and
 
 ## License
 
-This project is MIT licensed. See the LICENSE file in each package for details.
+GaaS is MIT licensed, copyright Institut Pasteur: see [LICENSE](./LICENSE). Each published package ships this same file. [ADR 0007](./docs/adr/0007-mit-copyright-institut-pasteur-checked-with-reuse.md) records why Institut Pasteur holds the copyright while Rémi Planel is named as author.

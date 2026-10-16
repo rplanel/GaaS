@@ -75,8 +75,9 @@ hatch version                               # Show current version
 hatch version patch                         # Bump patch version
 
 # Building
-hatch build                                 # Build wheel + sdist
-python -m build                             # Alternative
+uv build                                    # sdist, then the wheel from it, as CI does
+python -m build                             # Alternative, same order
+# Not `hatch build`: it builds the wheel from this directory, without the LICENSE
 
 # Publishing (handled by root release script)
 hatch publish                               # Publish to PyPI
