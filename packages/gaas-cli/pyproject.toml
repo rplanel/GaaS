@@ -45,7 +45,8 @@ source = "uv-dynamic-versioning"
 
 # The package has no LICENSE of its own: the sdist takes the root one, and the
 # wheel built from it (as `uv build` does) carries it under dist-info/licenses/.
-# A wheel built straight from this directory (`uv build --wheel`) would not.
+# A wheel built straight from this directory (`uv build --wheel`, `hatch
+# build`) would not.
 [tool.hatch.build.targets.sdist.force-include]
 "../../LICENSE" = "LICENSE"
 
