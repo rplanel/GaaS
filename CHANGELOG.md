@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.4-beta.6](https://gitlab.pasteur.fr/gaas/GaaS/compare/v0.0.4-beta.5...v0.0.4-beta.6) (2026-10-16)
+
+
+### Features
+
+* **ui:** show the GaaS mark in the app header ([b921bec](https://gitlab.pasteur.fr/gaas/GaaS/commit/b921bec08e93a2fe2fca8d140476c0f9387c015b))
+
+
+### Bug Fixes
+
+* **gaas-cli:** declare MIT and put the licence text in the wheel [#151](https://gitlab.pasteur.fr/gaas/GaaS/issues/151) ([0ceff47](https://gitlab.pasteur.fr/gaas/GaaS/commit/0ceff4763fc85c592733d447f5224875ef444de5))
+* name Institut Pasteur in the LICENSE every npm package ships [#151](https://gitlab.pasteur.fr/gaas/GaaS/issues/151) ([78b9ec5](https://gitlab.pasteur.fr/gaas/GaaS/commit/78b9ec56e0940e2dc65dd85e2eb85ddc798384df))
+
 ## [0.0.4-beta.5](https://gitlab.pasteur.fr/gaas/GaaS/compare/v0.0.4-beta.4...v0.0.4-beta.5) (2026-10-15)
 
 ## [0.0.4-beta.4](https://gitlab.pasteur.fr/gaas/GaaS/compare/v0.0.4-beta.3...v0.0.4-beta.4) (2026-10-15)
