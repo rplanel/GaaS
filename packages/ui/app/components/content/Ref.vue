@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, toValue } from 'vue'
+import { parseDois } from '../../utils/content/search'
 
 export interface Props {
   dois?: string | undefined
@@ -11,10 +12,7 @@ const dois = toRef(() => props.dois)
 const doisList = computed(() => {
   const doisVal = toValue(dois)
   if (doisVal) {
-    return doisVal
-      .split(',')
-      .map(doi => doi.trim())
-      .filter(doi => doi !== '' && doi)
+    return parseDois([doisVal])
   }
   return []
 })

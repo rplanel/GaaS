@@ -3,7 +3,7 @@ import type { FileAfterParseHook } from '@nuxt/content'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { logger } from 'nuxt/kit'
-import { searchContentRef } from './app/utils/content/search'
+import { parseDois, searchContentRef } from './app/utils/content/search'
 
 // import { createResolver } from '@nuxt/kit'
 
@@ -71,20 +71,15 @@ export default defineNuxtConfig({
         for (const block of body.value) {
           dois.push(...searchContentRef(block))
         }
-        const uniqueDois = new Set(
-          dois.flatMap((doi: string) => doi
-            .split(',')
-            .map((doi: string) => doi.trim()),
-          ),
-        )
+        const uniqueDois = parseDois(dois)
 
-        if (uniqueDois.size === 0) {
+        if (uniqueDois.length === 0) {
           return
         }
 
         // Add bibliography section to content
         body.value.push(
-          ['bibliography-section', { ':dois': JSON.stringify(Array.from(uniqueDois)) }],
+          ['bibliography-section', { ':dois': JSON.stringify(uniqueDois) }],
         )
         // Add bibliography section to table of contents
         body.toc.links.push({ depth: 2, text: 'Bibliography', id: 'bibliography' })

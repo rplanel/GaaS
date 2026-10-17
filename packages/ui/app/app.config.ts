@@ -28,7 +28,7 @@ export default defineAppConfig({
       },
       {
         label: 'Wiki',
-        icon: 'mdi:wikipedia',
+        icon: 'i-mdi:wikipedia',
         to: '/wiki',
         order: 4,
       },

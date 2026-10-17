@@ -10,6 +10,9 @@ navigation:
 
 Section where you can test the references components
 
+::ref{dois="10/100,10/101"}
+::
+
 ## the different callout
 
 Section where you can test the Nuxt/ui callout components

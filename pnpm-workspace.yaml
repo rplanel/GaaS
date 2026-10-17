@@ -138,7 +138,6 @@ ignoredBuiltDependencies:
   - vue-demi
 
 onlyBuiltDependencies:
-  - better-sqlite3
   - msw
   - sharp
   - simple-git-hooks

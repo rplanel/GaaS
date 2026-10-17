@@ -1,3 +1,21 @@
+/**
+ * Parses the raw `dois` strings `searchContentRef` finds in `::ref` blocks.
+ * Each string is one attribute value, which may itself hold several
+ * comma-separated DOIs. Returns trimmed DOIs, without duplicates or empties.
+ */
+export function parseDois(dois: string[]): string[] {
+  const uniqueDois = new Set<string>()
+  for (const doi of dois) {
+    for (const part of doi.split(',')) {
+      const trimmed = part.trim()
+      if (trimmed) {
+        uniqueDois.add(trimmed)
+      }
+    }
+  }
+  return [...uniqueDois]
+}
+
 export function searchContentRef(content: unknown) {
   let dois: string[] = []
 
