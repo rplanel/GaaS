@@ -26,11 +26,13 @@ const { range, granularity, workflowSelection } = useUsageFilters()
 
 // refetch, not refresh: refresh honours the stale window, so pressing the
 // button moments after the page loaded would return the cached numbers.
+const requestFetch = useRequestFetch()
 const { data: stats, isLoading, error, refetch } = useQuery(() =>
   ownUsageStatisticsQuery({
     range: range.value,
     granularity: granularity.value,
     workflowSelection: workflowSelection.value,
+    requestFetch,
   }),
 )
 

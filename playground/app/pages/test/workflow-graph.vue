@@ -59,8 +59,9 @@ watch(workflowItems, (items) => {
  * Galaxy lists, which is the one they described before. #91 replaces both
  * pages with the real graph and this goes with them.
  */
+const requestFetch = useRequestFetch()
 const { data: revisions } = useQuery(() => ({
-  ...galaxyWorkflowRevisionsQuery({ workflowId: selectedWorkflowId.value ?? '' }),
+  ...galaxyWorkflowRevisionsQuery({ workflowId: selectedWorkflowId.value ?? '', requestFetch }),
   enabled: selectedWorkflowId.value !== undefined,
 }))
 

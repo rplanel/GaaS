@@ -1,4 +1,5 @@
 import type { GalaxyInstanceDetails } from '../../../types/nuxt-galaxy'
+import type { RequestFetch } from '../utils'
 import { defineQueryOptions } from '@pinia/colada'
 
 export const GALAXY_INSTANCE_QUERY_KEYS = {
@@ -13,7 +14,7 @@ export const GALAXY_INSTANCE_QUERY_KEYS = {
  * moves when the instance is upgraded, but a form left open across an
  * upgrade should not go on judging by the old one.
  */
-export const galaxyInstanceQuery = defineQueryOptions(() => ({
+export const galaxyInstanceQuery = defineQueryOptions(({ requestFetch }: { requestFetch: RequestFetch }) => ({
   key: GALAXY_INSTANCE_QUERY_KEYS.root,
-  query: () => $fetch<GalaxyInstanceDetails>('/api/galaxy/instance'),
+  query: () => requestFetch<GalaxyInstanceDetails>('/api/galaxy/instance'),
 }))

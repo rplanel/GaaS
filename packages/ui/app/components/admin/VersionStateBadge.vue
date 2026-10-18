@@ -20,7 +20,8 @@ const props = defineProps<{
   version: WorkflowRow
 }>()
 
-const { data: state, error, asyncStatus, refetch } = useQuery(() => versionStateQuery({ id: props.version.id }))
+const requestFetch = useRequestFetch()
+const { data: state, error, asyncStatus, refetch } = useQuery(() => versionStateQuery({ id: props.version.id, requestFetch }))
 const { errorMessage } = useErrorMessage(error)
 
 // a reading that failed is worth a log, at `warn`: the administrator can

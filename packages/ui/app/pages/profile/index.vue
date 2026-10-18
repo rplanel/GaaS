@@ -15,7 +15,8 @@ const storageUsed = computed(() => getHumanSize(toValue(diskUsage)))
 // These two tiles need no trend, and all time is what the usage page draws by
 // month, so asking for the same width means the hub and `/profile/usage?range=all`
 // share one cache entry rather than fetching the same numbers twice.
-const { data: stats, error } = useQuery(() => ownUsageStatisticsQuery({ granularity: automaticGranularity({}) }))
+const requestFetch = useRequestFetch()
+const { data: stats, error } = useQuery(() => ownUsageStatisticsQuery({ granularity: automaticGranularity({}), requestFetch }))
 
 const successRate = computed(() => (stats.value ? formatSuccessRate(stats.value) : undefined))
 

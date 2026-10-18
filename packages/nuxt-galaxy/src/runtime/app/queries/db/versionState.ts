@@ -1,4 +1,5 @@
 import type { VersionState } from '../../../types/nuxt-galaxy'
+import type { RequestFetch } from '../utils'
 import { defineQueryOptions } from '@pinia/colada'
 
 /**
@@ -17,7 +18,7 @@ export const VERSION_STATE_QUERY_KEYS = {
  * revision mismatch. A failed read rejects, and the badge says the version
  * could not be checked rather than guessing a state.
  */
-export const versionStateQuery = defineQueryOptions(({ id }: { id: number }) => ({
+export const versionStateQuery = defineQueryOptions(({ id, requestFetch }: { id: number, requestFetch: RequestFetch }) => ({
   key: VERSION_STATE_QUERY_KEYS.byId(id),
-  query: () => $fetch<VersionState>(`/api/db/workflows/${id}/state`),
+  query: () => requestFetch<VersionState>(`/api/db/workflows/${id}/state`),
 }))

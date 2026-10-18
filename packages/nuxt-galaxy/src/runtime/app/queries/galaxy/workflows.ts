@@ -1,6 +1,7 @@
 import type { GalaxyWorkflowRevision } from 'blendtype'
 import type { Tables } from '../../../types/database'
 import type { RevisionToolCheck, WorkflowDescription } from '../../../types/nuxt-galaxy'
+import type { RequestFetch } from '../utils'
 import { defineQueryOptions } from '@pinia/colada'
 
 export const GALAXY_WORKFLOWS_QUERY_KEYS = {
@@ -18,9 +19,9 @@ export const GALAXY_WORKFLOWS_QUERY_KEYS = {
   revisionDescription: (workflowId: string, revision: number) => [...GALAXY_WORKFLOWS_QUERY_KEYS.root, 'descriptions', workflowId, revision] as const,
 }
 
-export const galaxyWorkflowsListQuery = defineQueryOptions(() => ({
+export const galaxyWorkflowsListQuery = defineQueryOptions(({ requestFetch }: { requestFetch: RequestFetch }) => ({
   key: GALAXY_WORKFLOWS_QUERY_KEYS.list(),
-  query: () => $fetch<Tables<'workflows'>[]>('/api/galaxy/workflows'),
+  query: () => requestFetch<Tables<'workflows'>[]>('/api/galaxy/workflows'),
 }))
 
 /**
@@ -28,12 +29,12 @@ export const galaxyWorkflowsListQuery = defineQueryOptions(() => ({
  * for the publish dialog to choose one from.
  *
  * No envelope to unwrap (#125): the endpoint answers the list itself and
- * uses real statuses, so a refusal is an `$fetch` rejection and Colada
- * reports it as the query's error.
+ * uses real statuses, so a refusal rejects the fetch and Colada reports it
+ * as the query's error.
  */
-export const galaxyWorkflowRevisionsQuery = defineQueryOptions(({ workflowId }: { workflowId: string }) => ({
+export const galaxyWorkflowRevisionsQuery = defineQueryOptions(({ workflowId, requestFetch }: { workflowId: string, requestFetch: RequestFetch }) => ({
   key: GALAXY_WORKFLOWS_QUERY_KEYS.revisions(workflowId),
-  query: () => $fetch<GalaxyWorkflowRevision[]>(`/api/galaxy/workflows/${workflowId}/versions`),
+  query: () => requestFetch<GalaxyWorkflowRevision[]>(`/api/galaxy/workflows/${workflowId}/versions`),
 }))
 
 /**
@@ -43,9 +44,9 @@ export const galaxyWorkflowRevisionsQuery = defineQueryOptions(({ workflowId }: 
  * would refuse to run the version and the server refuses to publish it.
  * Answered and refused the same way as the revisions list.
  */
-export const galaxyRevisionToolsQuery = defineQueryOptions(({ workflowId, revision }: { workflowId: string, revision: number }) => ({
+export const galaxyRevisionToolsQuery = defineQueryOptions(({ workflowId, revision, requestFetch }: { workflowId: string, revision: number, requestFetch: RequestFetch }) => ({
   key: GALAXY_WORKFLOWS_QUERY_KEYS.revisionTools(workflowId, revision),
-  query: () => $fetch<RevisionToolCheck>(`/api/galaxy/workflows/${workflowId}/revisions/${revision}/tools`),
+  query: () => requestFetch<RevisionToolCheck>(`/api/galaxy/workflows/${workflowId}/revisions/${revision}/tools`),
 }))
 
 /**
@@ -56,8 +57,8 @@ export const galaxyRevisionToolsQuery = defineQueryOptions(({ workflowId, revisi
  * revision share one answer instead of fetching 1+N times each.
  *
  * No envelope to unwrap: the endpoint answers the description itself and
- * uses real statuses, so a refusal is an `$fetch` rejection and Colada
- * reports it as the query's error.
+ * uses real statuses, so a refusal rejects the fetch and Colada reports it
+ * as the query's error.
  *
  * `staleTime` is forever, and the contract is what makes that correct: a
  * pinned revision is immutable, and Galaxy treats a tool's version string as
@@ -65,8 +66,8 @@ export const galaxyRevisionToolsQuery = defineQueryOptions(({ workflowId, revisi
  * `unavailable` — a tool installed since, or a Galaxy that has come back —
  * and that is what the retry beside an unavailable step refetches.
  */
-export const galaxyWorkflowDescriptionQuery = defineQueryOptions(({ workflowId, revision }: { workflowId: string, revision: number }) => ({
+export const galaxyWorkflowDescriptionQuery = defineQueryOptions(({ workflowId, revision, requestFetch }: { workflowId: string, revision: number, requestFetch: RequestFetch }) => ({
   key: GALAXY_WORKFLOWS_QUERY_KEYS.revisionDescription(workflowId, revision),
-  query: () => $fetch<WorkflowDescription>(`/api/galaxy/workflows/${workflowId}/revisions/${revision}/description`),
+  query: () => requestFetch<WorkflowDescription>(`/api/galaxy/workflows/${workflowId}/revisions/${revision}/description`),
   staleTime: Number.POSITIVE_INFINITY,
 }))

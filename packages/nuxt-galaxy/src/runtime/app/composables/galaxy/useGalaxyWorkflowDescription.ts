@@ -6,7 +6,7 @@ import type {
 import type { DescribedStep, DescribedToolStep, UnavailableTool } from '../../../types/nuxt-galaxy'
 import type { ToolInputParameter } from '../../utils/offeredToolInputs'
 import type { UnconnectedDatasetInput } from '../../utils/unconnectedDatasetInputs'
-import { computed, toRaw, toValue, watch } from '#imports'
+import { computed, toRaw, toValue, useRequestFetch, watch } from '#imports'
 import { useQuery } from '@pinia/colada'
 import { log } from 'evlog/client'
 import { toolKey } from '../../../shared/toolKey'
@@ -112,11 +112,14 @@ export function useGalaxyWorkflowDescription(
   workflowId: MaybeRefOrGetter<string | undefined>,
   revision: MaybeRefOrGetter<number | undefined>,
 ) {
+  // The analysis page reads this while it is rendered on the server, where
+  // only the request's fetch carries the reader's session (#139).
+  const requestFetch = useRequestFetch()
   const { data: description, error, isLoading, refetch } = useQuery(() => {
     const workflowIdVal = toValue(workflowId)
     const revisionVal = toValue(revision)
     return {
-      ...galaxyWorkflowDescriptionQuery({ workflowId: workflowIdVal ?? '', revision: revisionVal ?? 0 }),
+      ...galaxyWorkflowDescriptionQuery({ workflowId: workflowIdVal ?? '', revision: revisionVal ?? 0, requestFetch }),
       // Both arrive from the same workflow row, which the screen is still
       // loading on its first render; asking for revision 0 of the empty
       // workflow id would be a 404 cached under a key nothing else reads.
