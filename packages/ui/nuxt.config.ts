@@ -62,7 +62,7 @@ export default defineNuxtConfig({
   hooks: {
     'content:file:afterParse': function (ctx: FileAfterParseHook) {
       if (ctx.file.id.startsWith('content/wiki/')) {
-        log.info(`Parsed content: ${ctx.file.id}`)
+        log.debug(`Parsed content: ${ctx.file.id}`)
         const body = ctx.content.body as {
           value: unknown[]
           toc: { links: { depth: number, id: string, text: string }[] }

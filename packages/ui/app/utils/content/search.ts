@@ -19,9 +19,6 @@ export function parseDois(dois: string[]): string[] {
 export function searchContentRef(content: unknown) {
   let dois: string[] = []
 
-  // console.log('dans searchContentRef in utils===============')
-  // const parsedContent = content.value
-  // console.log('parsedContent', content)
   if (!Array.isArray(content) || content.length <= 1) {
     return dois
   }
