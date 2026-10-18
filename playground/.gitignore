@@ -29,5 +29,6 @@ seed.json
 
 # Playground data
 
-content/bibliography
+content/bibliography/*
+!content/bibliography/samples
 content/wiki/satellites

@@ -39,8 +39,8 @@ test:packages:
     - pnpm config set store-dir .pnpm-store
   script:
     # `blendtype` has to be built before anything that imports it typechecks,
-    # and `dev:prepare` generates the `.nuxt` tsconfigs `ui` and `wiki` are
-    # checked against — neither has a `prepack`, so `build` alone misses them.
+    # and `dev:prepare` generates the `.nuxt` tsconfig `ui` is checked
+    # against — it has no `prepack`, so `build` alone misses it.
     - pnpm install --frozen-lockfile
     - pnpm build
     - pnpm dev:prepare

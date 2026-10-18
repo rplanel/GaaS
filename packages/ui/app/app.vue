@@ -1,5 +1,12 @@
 <script setup lang="ts">
-const { gaasUi: { seo } } = useAppConfig()
+import type { Database } from 'nuxt-galaxy'
+
+const { gaasUi: { seo, navigationMenuItems: navigationMenuItemsFromConf } } = useAppConfig()
+const { data: navigation } = await useAsyncData('navigation', () => queryCollectionNavigation('content'))
+const { data: files } = useLazyAsyncData('search', () => queryCollectionSearchSections('content'), {
+  server: false,
+})
+
 useHead({
   meta: [
     { name: 'viewport', content: 'width=device-width, initial-scale=1' },
@@ -17,11 +24,34 @@ useSeoMeta({
   ogSiteName: seo?.siteName,
   titleTemplate: `%s - ${seo?.siteName}`,
 })
+const supabase = useSupabaseClient<Database>()
+const { userRole } = useUserRole(supabase)
+const { navigationMenuItems } = useNavigationMenuItems({ navigationMenuItems: navigationMenuItemsFromConf, userRole })
+
+const links = computed(() => {
+  return toValue(navigationMenuItems).map((item) => {
+    return {
+      label: item.label,
+      icon: item.icon,
+      to: item.to,
+    }
+  })
+})
+
+const searchTerm = ref('')
+
+provide('navigation', navigation)
 </script>
 
 <template>
   <UApp>
     <NuxtLoadingIndicator />
+    <ClientOnly>
+      <LazyUContentSearch
+        v-model:search-term="searchTerm" :files="files" shortcut="meta_k" :navigation="navigation"
+        :links="links" :fuse="{ resultLimit: 42 }"
+      />
+    </ClientOnly>
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>

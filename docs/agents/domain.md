@@ -2,7 +2,7 @@
 
 How the engineering skills should consume this repo's domain documentation when exploring the codebase.
 
-**This repo is single-context**: one `CONTEXT.md` at the root and one `docs/adr/` folder. The workspace packages (`blendtype`, `nuxt-galaxy`, `ui`, `wiki`, `gaas-cli`) are layers over the same Galaxy domain and share one vocabulary, so they do not get separate contexts.
+**This repo is single-context**: one `CONTEXT.md` at the root and one `docs/adr/` folder. The workspace packages (`blendtype`, `nuxt-galaxy`, `ui`, `gaas-cli`) are layers over the same Galaxy domain and share one vocabulary, so they do not get separate contexts.
 
 ## Before exploring, read these
 

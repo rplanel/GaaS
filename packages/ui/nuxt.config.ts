@@ -1,12 +1,16 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import type { FileAfterParseHook } from '@nuxt/content'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { logger } from 'nuxt/kit'
+import { parseDois, searchContentRef } from './app/utils/content/search'
 
 // import { createResolver } from '@nuxt/kit'
 
 // const { resolve } = createResolver(import.meta.url)
 
 const currentDir = dirname(fileURLToPath(import.meta.url))
+const log = logger.withTag('@gaas/ui')
 
 // import { defineNuxtConfig } from 'nuxt/config'
 
@@ -54,6 +58,33 @@ export default defineNuxtConfig({
   },
   experimental: {
     typedPages: true,
+  },
+  hooks: {
+    'content:file:afterParse': function (ctx: FileAfterParseHook) {
+      if (ctx.file.id.startsWith('content/wiki/')) {
+        log.debug(`Parsed content: ${ctx.file.id}`)
+        const body = ctx.content.body as {
+          value: unknown[]
+          toc: { links: { depth: number, id: string, text: string }[] }
+        }
+        const dois = []
+        for (const block of body.value) {
+          dois.push(...searchContentRef(block))
+        }
+        const uniqueDois = parseDois(dois)
+
+        if (uniqueDois.length === 0) {
+          return
+        }
+
+        // Add bibliography section to content
+        body.value.push(
+          ['bibliography-section', { ':dois': JSON.stringify(uniqueDois) }],
+        )
+        // Add bibliography section to table of contents
+        body.toc.links.push({ depth: 2, text: 'Bibliography', id: 'bibliography' })
+      }
+    },
   },
 
   vite: {

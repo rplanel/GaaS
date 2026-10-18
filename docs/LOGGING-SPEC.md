@@ -10,8 +10,8 @@ These conventions apply to the six GaaS logging surfaces:
 
 1. **Server API routes and middleware** — `packages/nuxt-galaxy/src/runtime/server/api/**/*.ts` and `packages/nuxt-galaxy/src/runtime/server/middleware/**/*.ts`. Middleware logs as a server route does: `useLogger(event)`, a stable `handler`, and `user.id` once a user is known — a request refused before it reaches a route is the only record that refusal leaves
 2. **Scheduled tasks / scripts** — `packages/nuxt-galaxy/src/runtime/server/tasks/**/*.ts`, `packages/nuxt-galaxy/bin/*.mjs`, and `packages/nuxt-galaxy/src/runtime/server/lib/*.ts`
-3. **Client composables and components** — `packages/nuxt-galaxy/src/runtime/app/composables/**/*.ts`, `packages/ui/app/composables/**/*.ts`, `packages/ui/app/components/**/*.vue`, and `packages/wiki/app/**/*.ts` / `*.vue`
-4. **Module lifecycle and build-time scripts** — `packages/nuxt-galaxy/src/module.ts`, `packages/wiki/nuxt.config.ts` build-time hooks, and similar module setup code
+3. **Client composables and components** — `packages/nuxt-galaxy/src/runtime/app/composables/**/*.ts`, `packages/ui/app/composables/**/*.ts`, `packages/ui/app/components/**/*.vue`, and the wiki's `packages/ui/app/{pages,layouts}/wiki/**/*.vue`. `packages/ui/app/utils/content/**/*.ts` is on no surface: the build-time hook in `packages/ui/nuxt.config.ts` imports it as well as `Ref.vue`, so it takes no logger and its callers log
+4. **Module lifecycle and build-time scripts** — `packages/nuxt-galaxy/src/module.ts`, `packages/ui/nuxt.config.ts` build-time hooks, and similar module setup code
 5. **Effect programs** — `packages/nuxt-galaxy/src/runtime/server/utils/**/*.ts`
 6. **`blendtype`** — `packages/blendtype/src/**/*.ts`, which logs through its own context tag rather than evlog
 
@@ -282,7 +282,7 @@ The root `AGENTS.md` originally stated high-level logging guidance. Research and
 
 2. **Client composable adoption.** `AGENTS.md` said to use evlog for all client composables, but many `@gaas/ui` files still used raw `console.warn` / `console.error`. Phase 2 migrated these to `evlog/client` structured calls.
 
-3. **Module lifecycle distinction.** `AGENTS.md` grouped module lifecycle with evlog. Build-time module setup (`module.ts`, `packages/wiki/nuxt.config.ts` content hooks) now uses `@nuxt/kit`'s `logger.withTag(...)`. Runtime module wiring still uses `evlog/nuxt` configuration. Seed/migrate scripts use `initLogger` + `createRequestLogger`.
+3. **Module lifecycle distinction.** `AGENTS.md` grouped module lifecycle with evlog. Build-time module setup (`module.ts`, the content hooks now in `packages/ui/nuxt.config.ts`) now uses `@nuxt/kit`'s `logger.withTag(...)`. Runtime module wiring still uses `evlog/nuxt` configuration. Seed/migrate scripts use `initLogger` + `createRequestLogger`.
 
 4. **`createError` alias.** `AGENTS.md` says to use `createError` from `evlog`. In Nuxt/Nitro code, `createError` is also exported by `h3` / `#imports`. Prefer importing `createError` from `evlog` directly (or relying on the auto-imported `createEvlogError` alias) to avoid collision. Server routes currently using `h3`'s `createError` are acceptable but should be migrated when the error catalog is wired in a future phase.
 

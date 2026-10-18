@@ -1,0 +1,19 @@
+{
+  "DOI": "10/101",
+  "title": "A second sample article for the playground",
+  "container-title": "Journal of Playground Samples",
+  "type": "article-journal",
+  "author": [
+    {
+      "family": "Pasteur",
+      "given": "Louis"
+    }
+  ],
+  "issued": {
+    "date-parts": [
+      [
+        2026
+      ]
+    ]
+  }
+}

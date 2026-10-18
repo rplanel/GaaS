@@ -1,4 +1,4 @@
-# Publishes blendtype, nuxt-galaxy, @gaas/ui and @gaas/wiki to npm when a
+# Publishes blendtype, nuxt-galaxy and @gaas/ui to npm when a
 # release tag reaches this mirror (ADR 0006).
 #
 # GitLab is where the code and its CI live; this mirror exists for this

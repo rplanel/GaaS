@@ -18,6 +18,8 @@
 - `@pinia/nuxt`: ^0.11.3 (state management)
 - `blendtype`: workspace:* (Galaxy types and pure helpers)
 - `evlog`: catalog: (client logging, required by `docs/LOGGING-SPEC.md` §3)
+- `@nuxt/content`: catalog:nuxt (the landing page and the wiki's pages,
+  navigation, search and bibliography; ADR 0008)
 - `h3`: catalog: (devDependency only: the tests answer `registerEndpoint`
   with its `createError` and `readBody`, so it is declared rather than left to
   whatever the root hoists, which once was h3 2.x; #81)
@@ -52,21 +54,27 @@ pnpm cleandep                              # Clean node_modules + generated file
 ```
 app/
 ├── assets/css/main.css     # Global styles
-├── components/             # Reusable UI components
+├── components/             # Reusable UI components; `content/` holds the wiki's
+│                           # MDC components (`Ref`, `BibliographySection`)
 ├── composables/            # Shared composables
-├── layouts/                # Page layouts
+├── layouts/                # Page layouts; `wiki/` holds the wiki's `wiki-article`
+│                           # and `wiki-datatable`
 ├── middleware/             # Route middleware. `admin` refuses a non-administrator;
 │                           # a page reading an `admin`-level endpoint must declare it,
 │                           # and `test/pageAccess.test.ts` fails the suite if one doesn't (#99)
+├── pages/                  # Pages, `wiki/[...slug].vue` included (ADR 0008)
 ├── plugins/                # Nuxt plugins
 ├── types/                  # Shared types; `public/` is the `#gaas/ui` alias target (ResultsViewProps)
-├── utils/                  # Utility functions
+├── utils/                  # Utility functions; `content/search.ts` finds a wiki
+│                           # page's DOIs for the bibliography hook in nuxt.config.ts
 └── workflows/              # Results views (ADR 0003), each declaring `defineProps<ResultsViewProps>()`
                             # imported from '#gaas/ui': <name>/<version>/results.vue (exact),
                             # <name>/results.vue (name-level), results.vue (app-wide); the app's file
                             # wins over a layer's, and dev logs the shadowed one once
 modules/                    # Build-time Nuxt modules the layer ships (results-views scanner)
-nuxt.config.ts              # Layer configuration
+content.config.ts           # `landing`, `content` and `bibliography`, as placeholders:
+                            # each app redeclares them over its own `content/` (ADR 0008)
+nuxt.config.ts              # Layer configuration, and the hook appending a wiki page's bibliography
 .playground/                # Development playground
 ```
 
@@ -207,7 +215,8 @@ describe('MyComponent', () => {
   composables and server endpoints. Importing `blendtype` *types*, and its
   pure helpers such as `getWorkflowTagName`, is fine: both are declared
   dependencies of this package. What must not live here is Galaxy access.
-- **DON'T**: Define pages or content (that's for wiki/docs)
+- **DON'T**: Ship content. The collections are placeholders, and each app
+  supplies its own `content/` (ADR 0008)
 - **DON'T**: Access database directly (use API endpoints)
 
 ### Dependency Direction
@@ -220,14 +229,13 @@ Depends on:
   ↓ Mosaic/D3 (visualization)
 
 Extended by:
-  ↑ @gaas/wiki
   ↑ @gaas/docs
   ↑ apps/
 ```
 
 ### Using This Layer
 ```typescript
-// In extending app/wiki
+// In an extending app
 export default defineNuxtConfig({
   extends: ['@gaas/ui'],
   // Auto-inherits all UI components and composables

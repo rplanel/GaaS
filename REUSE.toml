@@ -193,10 +193,10 @@ SPDX-License-Identifier = "MIT"
 
 [[annotations]]
 path = [
-  "docs/content/3.packages/4.gaas-wiki/2.writing-content/1.markdown-syntax.md",
-  "docs/content/3.packages/4.gaas-wiki/2.writing-content/2.code-blocks.md",
-  "docs/content/3.packages/4.gaas-wiki/2.writing-content/3.prose-components.md",
-  "docs/content/3.packages/4.gaas-wiki/2.writing-content/4.images-embeds.md",
+  "docs/content/3.packages/3.gaas-ui/5.writing-content/1.markdown-syntax.md",
+  "docs/content/3.packages/3.gaas-ui/5.writing-content/2.code-blocks.md",
+  "docs/content/3.packages/3.gaas-ui/5.writing-content/3.prose-components.md",
+  "docs/content/3.packages/3.gaas-ui/5.writing-content/4.images-embeds.md",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = [
