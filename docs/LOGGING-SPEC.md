@@ -10,7 +10,7 @@ These conventions apply to the six GaaS logging surfaces:
 
 1. **Server API routes and middleware** — `packages/nuxt-galaxy/src/runtime/server/api/**/*.ts` and `packages/nuxt-galaxy/src/runtime/server/middleware/**/*.ts`. Middleware logs as a server route does: `useLogger(event)`, a stable `handler`, and `user.id` once a user is known — a request refused before it reaches a route is the only record that refusal leaves
 2. **Scheduled tasks / scripts** — `packages/nuxt-galaxy/src/runtime/server/tasks/**/*.ts`, `packages/nuxt-galaxy/bin/*.mjs`, and `packages/nuxt-galaxy/src/runtime/server/lib/*.ts`
-3. **Client composables and components** — `packages/nuxt-galaxy/src/runtime/app/composables/**/*.ts`, `packages/ui/app/composables/**/*.ts`, `packages/ui/app/components/**/*.vue`, and the wiki's `packages/ui/app/{pages,layouts}/wiki/**/*.vue` and `packages/ui/app/utils/content/**/*.ts`
+3. **Client composables and components** — `packages/nuxt-galaxy/src/runtime/app/composables/**/*.ts`, `packages/ui/app/composables/**/*.ts`, `packages/ui/app/components/**/*.vue`, and the wiki's `packages/ui/app/{pages,layouts}/wiki/**/*.vue`. `packages/ui/app/utils/content/**/*.ts` is on no surface: the build-time hook in `packages/ui/nuxt.config.ts` imports it as well as `Ref.vue`, so it takes no logger and its callers log
 4. **Module lifecycle and build-time scripts** — `packages/nuxt-galaxy/src/module.ts`, `packages/ui/nuxt.config.ts` build-time hooks, and similar module setup code
 5. **Effect programs** — `packages/nuxt-galaxy/src/runtime/server/utils/**/*.ts`
 6. **`blendtype`** — `packages/blendtype/src/**/*.ts`, which logs through its own context tag rather than evlog
