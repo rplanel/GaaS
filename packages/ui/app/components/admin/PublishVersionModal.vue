@@ -59,10 +59,11 @@ const state = reactive<Partial<Schema>>({
   label: getWorkflowTagVersion(props.workflow.tags) ?? undefined,
 })
 
+const requestFetch = useRequestFetch()
+
 // The revisions Galaxy holds for this stored workflow, asked for when the
 // dialog opens: the dialog is keyed on the stored workflow, so it is one list
 // per opening.
-const requestFetch = useRequestFetch()
 const { data: revisions, error: revisionsError } = useQuery(() =>
   galaxyWorkflowRevisionsQuery({ workflowId: props.workflow.id, requestFetch }),
 )

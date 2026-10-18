@@ -24,9 +24,10 @@ const computedBreadcrumbsItems = computed(() => {
 // read the same source and a link carries the view it was copied from
 const { range, granularity, workflowSelection } = useUsageFilters()
 
+const requestFetch = useRequestFetch()
+
 // refetch, not refresh: refresh honours the stale window, so pressing the
 // button moments after the page loaded would return the cached numbers.
-const requestFetch = useRequestFetch()
 const { data: stats, isLoading, error, refetch } = useQuery(() =>
   ownUsageStatisticsQuery({
     range: range.value,

@@ -7,9 +7,9 @@ export const GALAXY_HEALTH_QUERY_KEYS = {
 }
 
 /**
- * Handed the request's fetch like every other query, though the endpoint is
- * open and needs no session: a query that cannot reach past it stays right
- * if the endpoint's level is ever raised.
+ * Handed the request's fetch like every query that calls this application's
+ * server, though the endpoint is open and needs no session: a query that
+ * cannot reach past it stays right if the endpoint's level is ever raised.
  */
 export const galaxyHealthQuery = defineQueryOptions(({ requestFetch }: { requestFetch: RequestFetch }) => ({
   key: GALAXY_HEALTH_QUERY_KEYS.root,

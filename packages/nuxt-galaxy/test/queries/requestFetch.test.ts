@@ -63,12 +63,12 @@ const cases: readonly Case[] = [
     asked: ['/api/galaxy/instance'],
   },
   {
-    name: 'the reader\'s own usage',
+    name: 'own usage',
     options: requestFetch => ownUsageStatisticsQuery({ granularity: 'month', requestFetch }),
     asked: ['/api/db/analyses/monitoring', { query: { granularity: 'month' } }],
   },
   {
-    name: 'every user\'s usage',
+    name: 'global usage',
     options: requestFetch => globalUsageStatisticsQuery({ granularity: 'month', requestFetch }),
     asked: ['/api/db/analyses/monitoring/admin', { query: { granularity: 'month' } }],
   },

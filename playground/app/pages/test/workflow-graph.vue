@@ -51,6 +51,8 @@ watch(workflowItems, (items) => {
   }
 }, { immediate: true })
 
+const requestFetch = useRequestFetch()
+
 /**
  * The revision to describe. `useGalaxyWorkflowDescription` takes one because
  * the endpoint behind it does (#87, Q15): a pinned revision is immutable and
@@ -59,7 +61,6 @@ watch(workflowItems, (items) => {
  * Galaxy lists, which is the one they described before. #91 replaces both
  * pages with the real graph and this goes with them.
  */
-const requestFetch = useRequestFetch()
 const { data: revisions } = useQuery(() => ({
   ...galaxyWorkflowRevisionsQuery({ workflowId: selectedWorkflowId.value ?? '', requestFetch }),
   enabled: selectedWorkflowId.value !== undefined,
