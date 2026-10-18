@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.4-beta.7](https://gitlab.pasteur.fr/gaas/GaaS/compare/v0.0.4-beta.6...v0.0.4-beta.7) (2026-10-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** `@gaas/wiki` is no longer published. Its wiki pages,
+layouts, DOI citations and content search are part of `@gaas/ui`, so an
+app extends `@gaas/ui` instead, in `package.json` and in `extends`. The
+wiki's collection schemas are at `@gaas/ui/app/schemas/wiki`. Every app
+on `@gaas/ui` now serves `/wiki` and shows the Wiki menu link.
+
+* **ui:** serve the wiki from @gaas/ui and remove @gaas/wiki [#157](https://gitlab.pasteur.fr/gaas/GaaS/issues/157) ([1f22a0d](https://gitlab.pasteur.fr/gaas/GaaS/commit/1f22a0dc6457dfcc584147328b90f621f801e860))
+
+
+### Bug Fixes
+
+* **ui:** address the code-review findings on !179 [#157](https://gitlab.pasteur.fr/gaas/GaaS/issues/157) ([0615c9d](https://gitlab.pasteur.fr/gaas/GaaS/commit/0615c9d439a8c6795f616d89f7e03de4cf13a125))
+
 ## [0.0.4-beta.6](https://gitlab.pasteur.fr/gaas/GaaS/compare/v0.0.4-beta.5...v0.0.4-beta.6) (2026-10-16)
 
 
