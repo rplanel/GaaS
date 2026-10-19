@@ -63,8 +63,8 @@ async function withRollback(body: (tx: Tx) => Promise<void>) {
   })
 }
 
-/** Become an API role carrying these JWT claims, the way PostgREST does per request. */
-async function actAs(tx: Tx, role: 'authenticated' | 'anon', claims: { sub: string, user_role?: 'admin' | 'user' }) {
+/** Become an API role carrying these JWT claims, the way PostgREST does per request; the service role carries none. */
+async function actAs(tx: Tx, role: 'authenticated' | 'anon' | 'service_role', claims: { sub?: string, user_role?: 'admin' | 'user' } = {}) {
   await tx`select set_config('request.jwt.claims', ${JSON.stringify({ ...claims, role })}, true)`
   await tx.unsafe(`set local role ${role}`)
 }
@@ -184,7 +184,7 @@ type Write = (tx: Tx, world: World) => Promise<unknown>
  */
 const WRITES = {
   tags: {
-    insert: tx => tx`insert into galaxy.tags (label) values ('sample-171-planted')`,
+    insert: tx => tx`insert into galaxy.tags (label) values ('sample-171-new')`,
     update: (tx, w) => tx`update galaxy.tags set label = label where id = ${w.mine.inputTagId}`,
     delete: (tx, w) => tx`delete from galaxy.tags where id = ${w.mine.inputTagId}`,
   },
@@ -206,24 +206,24 @@ const WRITES = {
   analyses: {
     insert: (tx, w) => tx`
       insert into galaxy.analyses (name, state, parameters, owner_id, history_id, workflow_id, workflow_revision, galaxy_id, invocation)
-      values ('run', 'scheduled', '{}', ${OWNER}, ${w.spareHistoryId}, ${w.versionId}, 3, 'inv-171-planted', '{}')`,
+      values ('run', 'scheduled', '{}', ${OWNER}, ${w.spareHistoryId}, ${w.versionId}, 3, 'inv-171-new', '{}')`,
     update: (tx, w) => tx`update galaxy.analyses set galaxy_id = galaxy_id where id = ${w.mine.analysisId}`,
     delete: (tx, w) => tx`delete from galaxy.analyses where id = ${w.mine.analysisId}`,
   },
   histories: {
-    insert: (tx, w) => tx`insert into galaxy.histories (galaxy_id, name, state, user_id, owner_id) values ('hist-171-planted', 'run', 'ok', ${w.galaxyUserId}, ${OWNER})`,
+    insert: (tx, w) => tx`insert into galaxy.histories (galaxy_id, name, state, user_id, owner_id) values ('hist-171-new', 'run', 'ok', ${w.galaxyUserId}, ${OWNER})`,
     update: (tx, w) => tx`update galaxy.histories set galaxy_id = galaxy_id where id = ${w.mine.historyId}`,
     delete: (tx, w) => tx`delete from galaxy.histories where id = ${w.spareHistoryId}`,
   },
   jobs: {
-    insert: (tx, w) => tx`insert into galaxy.jobs (state, tool_id, owner_id, galaxy_id, step_id, analysis_id) values ('ok', 'cat1', ${OWNER}, 'job-171-planted', 2, ${w.mine.analysisId})`,
+    insert: (tx, w) => tx`insert into galaxy.jobs (state, tool_id, owner_id, galaxy_id, step_id, analysis_id) values ('ok', 'cat1', ${OWNER}, 'job-171-new', 2, ${w.mine.analysisId})`,
     update: (tx, w) => tx`update galaxy.jobs set galaxy_id = galaxy_id where id = ${w.mine.jobId}`,
     delete: (tx, w) => tx`delete from galaxy.jobs where id = ${w.mine.jobId}`,
   },
   datasets: {
     insert: (tx, w) => tx`
       insert into galaxy.datasets (owner_id, history_id, uuid, galaxy_metadata, dataset_name, galaxy_id)
-      values (${OWNER}, ${w.mine.historyId}, gen_random_uuid(), '{"extension": "txt"}', 'planted.txt', 'ds-171-planted')`,
+      values (${OWNER}, ${w.mine.historyId}, gen_random_uuid(), '{"extension": "txt"}', 'new.txt', 'ds-171-new')`,
     update: (tx, w) => tx`update galaxy.datasets set galaxy_id = galaxy_id where id = ${w.mine.inputDatasetId}`,
     delete: (tx, w) => tx`delete from galaxy.datasets where id = ${w.mine.outputDatasetId}`,
   },
@@ -240,7 +240,7 @@ const WRITES = {
   analysis_monitoring: {
     insert: (tx, w) => tx`
       insert into galaxy.analysis_monitoring (owner_id, workflow_id, name, galaxy_invocation_id, outcome)
-      values (${OWNER}, ${w.versionId}, 'run', 'inv-171-planted', 'success')`,
+      values (${OWNER}, ${w.versionId}, 'run', 'inv-171-new', 'success')`,
     update: (tx, w) => tx`update galaxy.analysis_monitoring set outcome = outcome where analysis_id = ${w.mine.analysisId}`,
     delete: (tx, w) => tx`delete from galaxy.analysis_monitoring where analysis_id = ${w.mine.analysisId}`,
   },
@@ -250,17 +250,17 @@ const WRITES = {
     delete: (tx, w) => tx`delete from galaxy.sync_locks where analysis_id = ${w.mine.analysisId}`,
   },
   instances: {
-    insert: tx => tx`insert into galaxy.instances (url, name) values ('https://galaxy.test/171-planted', 'Planted Galaxy')`,
+    insert: tx => tx`insert into galaxy.instances (url, name) values ('https://galaxy.test/171-new', 'New Galaxy')`,
     update: (tx, w) => tx`update galaxy.instances set url = url where id = ${w.instanceId}`,
     delete: (tx, w) => tx`delete from galaxy.instances where id = ${w.instanceId}`,
   },
   user: {
-    insert: (tx, w) => tx`insert into galaxy."user" (email, instance_id) values ('planted@galaxy.test', ${w.instanceId})`,
+    insert: (tx, w) => tx`insert into galaxy."user" (email, instance_id) values ('new@galaxy.test', ${w.instanceId})`,
     update: (tx, w) => tx`update galaxy."user" set email = email where id = ${w.galaxyUserId}`,
     delete: (tx, w) => tx`delete from galaxy."user" where id = ${w.galaxyUserId}`,
   },
   maintenance_windows: {
-    insert: tx => tx`insert into galaxy.maintenance_windows (message, start_at, end_at, created_by) values ('planted', now(), now() + interval '1 hour', ${OWNER})`,
+    insert: tx => tx`insert into galaxy.maintenance_windows (message, start_at, end_at, created_by) values ('new', now(), now() + interval '1 hour', ${OWNER})`,
     update: tx => tx`update galaxy.maintenance_windows set message = message`,
     delete: tx => tx`delete from galaxy.maintenance_windows`,
   },
@@ -305,7 +305,7 @@ describe.skipIf(!live)('the tag tables', () => {
   // an output's off the output. PostgREST joins through the link tables with
   // every table's policy applied, as this select does. A tag table with row
   // security and no read policy raises nothing: the view just gets no tags.
-  it('gives the results view of an analysis the tags of its own inputs and outputs', async () => {
+  it('gives the results view of an analysis the tags of its own input datasets and outputs', async () => {
     await withRollback(async (tx) => {
       const { mine } = await twoOwners(tx)
       await actAs(tx, 'authenticated', { sub: OWNER, user_role: 'user' })
@@ -327,14 +327,14 @@ describe.skipIf(!live)('the tag tables', () => {
   })
 
   // A label can carry a sample name, so a reader sees only the tags of their
-  // own datasets and outputs, and not another user's, even by asking for it.
+  // own datasets and outputs, and none of another user's.
   it('shows a signed-in user the tags of their own datasets and outputs, and none of another user\'s', async () => {
     await withRollback(async (tx) => {
       const { mine, theirs } = await twoOwners(tx)
       await actAs(tx, 'authenticated', { sub: OWNER, user_role: 'user' })
 
-      const ours = [mine.inputTagId, mine.outputTagId, theirs.inputTagId, theirs.outputTagId]
-      const tags = await labels(tx`select label from galaxy.tags where id in ${tx(ours)}`)
+      const asked = [mine.inputTagId, mine.outputTagId, theirs.inputTagId, theirs.outputTagId]
+      const tags = await labels(tx`select label from galaxy.tags where id in ${tx(asked)}`)
       const datasetLinks = await tx`select dataset_id from galaxy.datasets_to_tags where dataset_id in ${tx([mine.inputDatasetId, theirs.inputDatasetId])}`
       const outputLinks = await tx`select analysis_output_id from galaxy.analysis_outputs_to_tags where analysis_output_id in ${tx([mine.outputId, theirs.outputId])}`
 
@@ -353,16 +353,16 @@ describe.skipIf(!live)('the tag tables', () => {
       const [seen] = await tx`
         select
           (select count(*)::int from galaxy.tags) as tags,
-          (select count(*)::int from galaxy.datasets_to_tags) as dataset_links,
-          (select count(*)::int from galaxy.analysis_outputs_to_tags) as output_links,
-          (select count(*)::int from galaxy.workflows_to_tags) as version_links`
+          (select count(*)::int from galaxy.datasets_to_tags) as datasets_to_tags,
+          (select count(*)::int from galaxy.analysis_outputs_to_tags) as analysis_outputs_to_tags,
+          (select count(*)::int from galaxy.workflows_to_tags) as workflows_to_tags`
 
-      expect(seen).toEqual({ tags: 0, dataset_links: 0, output_links: 0, version_links: 0 })
+      expect(seen).toEqual({ tags: 0, datasets_to_tags: 0, analysis_outputs_to_tags: 0, workflows_to_tags: 0 })
     })
   })
 
-  // Nothing reads a version's tag links since ADR 0004 made tags a pre-fill.
-  it('shows a signed-in user no version tag link', async () => {
+  // Nothing reads the tags linked to a version since ADR 0004 made tags a pre-fill.
+  it('shows a signed-in user no tag linked to a version', async () => {
     await withRollback(async (tx) => {
       const world = await twoOwners(tx)
       await tx`insert into galaxy.workflows_to_tags (workflow_id, tag_id) values (${world.versionId}, ${world.mine.inputTagId})`
@@ -498,7 +498,7 @@ describe.skipIf(!live)('the instance configuration', () => {
 
 describe.skipIf(!live)('the API roles across the schema', () => {
   // The writes the application makes through a user's session, and nothing
-  // else: no write through a view, no TRUNCATE, which no policy governs.
+  // else: no write through a view, and no TRUNCATE.
   it('hold no privilege beyond reading, but for the writes the browser makes', async () => {
     const held = await sql`
       select c.relname as table, r.rolname as role, p.privilege
@@ -663,8 +663,7 @@ describe.skipIf(!live)('the server', () => {
   it('keeps every write the sync makes through the service role', async () => {
     await withRollback(async (tx) => {
       const { mine } = await twoOwners(tx)
-      await tx`select set_config('request.jwt.claims', ${JSON.stringify({ role: 'service_role' })}, true)`
-      await tx.unsafe('set local role service_role')
+      await actAs(tx, 'service_role')
 
       expect(await tx`select galaxy.acquire_sync_lock(${mine.analysisId}, 60) as locked`).toEqual([{ locked: true }])
       await tx`update galaxy.analyses set state = 'scheduled', is_sync = true, sync_attempts = 0 where id = ${mine.analysisId}`
@@ -685,8 +684,8 @@ describe.skipIf(!live)('the server', () => {
     })
   })
 
-  // `galaxy_rbac.authorize()` reads the role permissions, and `galaxy_rbac`
-  // is exposed through the API too, with no row security on that table.
+  // `galaxy_rbac.authorize()` reads the role permissions for a policy, as
+  // its definer; the API roles themselves read and write none of them.
   it('leaves the API roles nothing in galaxy_rbac.role_permissions', async () => {
     const [held] = await sql`
       select
