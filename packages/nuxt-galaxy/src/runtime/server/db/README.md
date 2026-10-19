@@ -231,51 +231,26 @@ insert into galaxy_rbac.roles (name) values ('user');
 
 ## Seeding Data
 
-After all migrations are applied, seed the database with required parameters:
+After all migrations are applied, seed the database with the `nuxt-galaxy-seed` CLI. It takes a config file, modelled on `seed.example.json` in this directory, and reads `GALAXY_DRIZZLE_DATABASE_URL` from the `.env` of the directory it runs in:
 
 ```bash
-npx ts-node src/runtime/server/db/seed.ts --url "https://usegalaxy.org" --name "Galaxy Main"
-```
-
-Or with short flags:
-
-```bash
-npx ts-node src/runtime/server/db/seed.ts -u "https://usegalaxy.org" -n "Galaxy Main"
-```
-
-### Required Parameters
-
-- `--url` / `-u`: Galaxy instance URL (required)
-- `--name` / `-n`: Galaxy instance name (required)
-
-### Optional Parameters
-
-- `--userEmail` / `-e`: User email to create an initial user (optional)
-
-### Example with all parameters
-
-```bash
-npx ts-node src/runtime/server/db/seed.ts \
-  --url "https://usegalaxy.org" \
-  --name "Galaxy Main" \
-  --userEmail "user@example.com"
+pnpm exec nuxt-galaxy-seed <config.json> --dry-run   # validate, write nothing
+pnpm exec nuxt-galaxy-seed <config.json>             # apply, idempotent
+pnpm exec nuxt-galaxy-seed --help                    # every option
 ```
 
 ### What gets seeded
 
-The seed creates:
+The seed creates, from the config file:
 
-- **Galaxy instance** with the provided URL and name (e.g., `usegalaxy.org`)
-- **Initial user** (if `--userEmail` provided) linked to the instance
-- **Role permissions** - Links admin role to permissions like:
-  - `workflows.insert`, `workflows.delete`
-  - `instances.insert`, `instances.delete`
-  - `users.delete`
+- **Galaxy instances** from `instances`, each with its URL and name
+- **Galaxy users** from `users`, each linked to an instance by its URL
+- **Role permissions** from `rolePermissions`. The example gives the `admin` role `workflows.insert`, `workflows.update` and `workflows.delete`, the only permissions a policy checks
 
 **Prerequisites:**
 
 - Roles (`admin`, `user`) must already exist in `galaxy_rbac.roles` table (created in Step 3 migration)
-- The seed only creates the `role_permissions` junction entries linking roles to permissions
+- The seed only creates the `role_permissions` junction entries linking roles to permissions; it does not assign anyone a role (`galaxy_rbac.user_roles`)
 
 ## Schema Files
 
@@ -289,21 +264,21 @@ Key files to understand:
 
 ### How Admin Access Works in RLS Policies
 
-In schema files like `workflows.ts`, `instances.ts`, or `users.ts`:
+In `workflows.ts`, the only schema file whose policies call `authorize()`:
 
 ```typescript
 import { authenticatedRole } from 'drizzle-orm/supabase';
 
 // All policies use authenticatedRole (any authenticated user)
-(pgPolicy('Users can query instances', {
+(pgPolicy('Users can query workflows', {
   for: 'select',
   to: authenticatedRole,
   using: sql`true`, // Public access for SELECT
 }),
-pgPolicy('Admin can insert instances', {
+pgPolicy('Admin can insert workflows', {
   for: 'insert',
   to: authenticatedRole, // Any authenticated user can try to insert
-  withCheck: sql`(SELECT galaxy_rbac.authorize('instances.insert')) = TRUE`, // But authorize() checks if they have admin role
+  withCheck: sql`(SELECT galaxy_rbac.authorize('workflows.insert')) = TRUE`, // But authorize() checks the caller's role holds workflows.insert
 }))
 ```
 
