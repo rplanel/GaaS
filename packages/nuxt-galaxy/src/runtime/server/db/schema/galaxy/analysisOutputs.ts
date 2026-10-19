@@ -27,11 +27,6 @@ export const analysisOutputs = galaxy.table(
       to: authenticatedRole,
       using: sql`${table.datasetId} IN (SELECT ${datasets.id} FROM ${datasets} WHERE ${datasets.ownerId} = (SELECT auth.uid()))`,
     }),
-    pgPolicy('Users can insert output datasets', {
-      for: 'insert',
-      to: authenticatedRole,
-      withCheck: sql`${table.datasetId} IN (SELECT ${datasets.id} FROM ${datasets} WHERE ${datasets.ownerId} = (SELECT auth.uid()))`,
-    }),
   ],
 )
 
@@ -44,6 +39,11 @@ export const analysisOutputsToTags = galaxy.table('analysis_outputs_to_tags', {
     .notNull()
     .references(() => analysisOutputs.id, { onDelete: 'cascade' }),
   tagId: integer('tag_id').notNull().references(() => tags.id),
-}, t => ({
-  pk: primaryKey({ columns: [t.analysisOutputId, t.tagId] }),
-}))
+}, t => [
+  primaryKey({ columns: [t.analysisOutputId, t.tagId] }),
+  pgPolicy('Users can view the tags of their own outputs', {
+    for: 'select',
+    to: authenticatedRole,
+    using: sql`${t.analysisOutputId} IN (SELECT ${analysisOutputs.id} FROM ${analysisOutputs} WHERE ${analysisOutputs.datasetId} IN (SELECT ${datasets.id} FROM ${datasets} WHERE ${datasets.ownerId} = (SELECT auth.uid())))`,
+  }),
+])

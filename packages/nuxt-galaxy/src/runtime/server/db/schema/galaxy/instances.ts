@@ -21,10 +21,5 @@ export const instances = galaxy.table(
       to: authenticatedRole,
       using: sql`true`,
     }),
-    pgPolicy('Admin can insert instances', {
-      for: 'insert',
-      to: authenticatedRole,
-      withCheck: sql`(SELECT galaxy_rbac.authorize('instances.insert')) = TRUE`,
-    }),
   ],
 )

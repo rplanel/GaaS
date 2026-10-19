@@ -316,6 +316,15 @@ GALAXY_DRIZZLE_DATABASE_URL=postgresql://...
 - NEVER edit files in supabase/migrations/ directly
 - Run `supabase:generate:types` after schema changes
 - Test migrations with `supabase:db:reset` before committing
+- Grant the API roles by hand, in the migration that adds a galaxy table,
+  view, sequence or routine: `anon` and `authenticated` get nothing on it by
+  default. A table or view gets `SELECT`, plus a write only when the browser
+  makes it through the user's session (the sync and the routes write with
+  Drizzle or the service role); a routine gets `REVOKE EXECUTE ... FROM
+  PUBLIC`, which no default privilege does for you.
+  `test/server/db/apiRoles.test.ts` holds the allow-list and fails on a new
+  object left out of it, but only against a running `pnpm supabase:start`: CI
+  has no database and skips it
 
 <!-- evlog:start -->
 ## Logging

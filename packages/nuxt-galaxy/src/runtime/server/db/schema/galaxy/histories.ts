@@ -22,24 +22,8 @@ export const histories = galaxy.table(
     index().on(t.userId),
     index().on(t.ownerId),
     index().on(t.galaxyId),
-    pgPolicy('Authenticated users can create their own history', {
-      for: 'insert',
-      to: authenticatedRole,
-      withCheck: eq(t.ownerId, authUid),
-    }),
     pgPolicy('Users can view their own history', {
       for: 'select',
-      to: authenticatedRole,
-      using: eq(t.ownerId, authUid),
-    }),
-    pgPolicy('Users can update their own history', {
-      for: 'update',
-      to: authenticatedRole,
-      using: eq(t.ownerId, authUid),
-      withCheck: eq(t.ownerId, authUid),
-    }),
-    pgPolicy('Users can delete their own history', {
-      for: 'delete',
       to: authenticatedRole,
       using: eq(t.ownerId, authUid),
     }),

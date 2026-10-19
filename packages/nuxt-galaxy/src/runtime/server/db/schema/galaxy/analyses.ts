@@ -50,11 +50,6 @@ export const analyses = galaxy.table(
     index().on(table.historyId),
     index().on(table.workflowId),
     index().on(table.galaxyId),
-    pgPolicy('Authenticated users can create their own analysis', {
-      for: 'insert',
-      to: authenticatedRole,
-      withCheck: eq(table.ownerId, authUid),
-    }),
     pgPolicy('Users can view their own analysis', {
       for: 'select',
       to: authenticatedRole,
@@ -65,11 +60,6 @@ export const analyses = galaxy.table(
       to: authenticatedRole,
       using: eq(table.ownerId, authUid),
       withCheck: eq(table.ownerId, authUid),
-    }),
-    pgPolicy('Users can delete their own analysis', {
-      for: 'delete',
-      to: authenticatedRole,
-      using: eq(table.ownerId, authUid),
     }),
   ],
 )
