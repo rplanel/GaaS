@@ -22,10 +22,5 @@ export const analysisInputs = galaxy.table(
       to: authenticatedRole,
       using: sql`${table.datasetId} IN (SELECT ${datasets.id} FROM ${datasets} WHERE ${datasets.ownerId} = (SELECT auth.uid()))`,
     }),
-    pgPolicy('Users can insert input datasets', {
-      for: 'insert',
-      to: authenticatedRole,
-      withCheck: sql`${table.datasetId} IN (SELECT ${datasets.id} FROM ${datasets} WHERE ${datasets.ownerId} = (SELECT auth.uid()))`,
-    }),
   ],
 )

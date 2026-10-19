@@ -85,8 +85,9 @@ export const workflows = galaxy.table(
  * pre-fill, but a development database may still hold associations from
  * before; they go with the version they were attached to (#72), so that a
  * stale one never stands in the way of a delete the way an analysis does.
+ * Row security with no policy: nothing reads it either.
  */
-export const workflowsToTags = galaxy.table('workflows_to_tags', {
+export const workflowsToTags = galaxy.table.withRLS('workflows_to_tags', {
   workflowId: integer('workflow_id').notNull().references(() => workflows.id, { onDelete: 'cascade' }),
   tagId: integer('tag_id').notNull().references(() => tags.id),
 }, t => [

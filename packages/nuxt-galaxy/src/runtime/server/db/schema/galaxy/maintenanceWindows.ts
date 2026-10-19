@@ -24,10 +24,5 @@ export const maintenanceWindows = galaxy.table(
       to: authenticatedRole,
       using: sql`true`,
     }),
-    pgPolicy('Users can insert maintenance windows', {
-      for: 'insert',
-      to: authenticatedRole,
-      withCheck: sql`true`,
-    }),
   ],
 )

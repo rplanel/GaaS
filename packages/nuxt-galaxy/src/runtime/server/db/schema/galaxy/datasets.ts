@@ -1,4 +1,4 @@
-import { eq, getColumns } from 'drizzle-orm'
+import { eq, getColumns, sql } from 'drizzle-orm'
 import {
   index,
   integer,
@@ -58,11 +58,6 @@ export const datasets = galaxy.table(
     index().on(t.historyId),
     index().on(t.storageObjectId),
     index().on(t.galaxyId),
-    pgPolicy('Users can insert documents', {
-      for: 'insert',
-      to: authenticatedRole,
-      withCheck: eq(t.ownerId, authUid),
-    }),
     pgPolicy('Users can query their own documents', {
       for: 'select',
       to: authenticatedRole,
@@ -80,6 +75,11 @@ export const datasetsToTags = galaxy.table('datasets_to_tags', {
   tagId: integer('tag_id').notNull().references(() => tags.id),
 }, t => [
   primaryKey({ columns: [t.datasetId, t.tagId] }),
+  pgPolicy('Users can view the tags of their own datasets', {
+    for: 'select',
+    to: authenticatedRole,
+    using: sql`${t.datasetId} IN (SELECT ${datasets.id} FROM ${datasets} WHERE ${datasets.ownerId} = (SELECT auth.uid()))`,
+  }),
 ])
 
 /**

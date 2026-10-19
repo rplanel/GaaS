@@ -62,16 +62,5 @@ export const analysisMonitoring = galaxy.table(
       to: authenticatedRole,
       using: sql`(SELECT galaxy_rbac.is_admin()) = TRUE`,
     }),
-    pgPolicy('Authenticated users can create their own monitoring rows', {
-      for: 'insert',
-      to: authenticatedRole,
-      withCheck: eq(table.ownerId, authUid),
-    }),
-    pgPolicy('Authenticated users can update their own monitoring rows', {
-      for: 'update',
-      to: authenticatedRole,
-      using: eq(table.ownerId, authUid),
-      withCheck: eq(table.ownerId, authUid),
-    }),
   ],
 )

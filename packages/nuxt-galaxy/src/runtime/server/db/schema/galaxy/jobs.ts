@@ -32,24 +32,8 @@ export const jobs = galaxy.table(
     index().on(t.ownerId),
     index().on(t.analysisId),
     index().on(t.galaxyId),
-    pgPolicy('Authenticated users can create their own jobs', {
-      for: 'insert',
-      to: authenticatedRole,
-      withCheck: eq(t.ownerId, authUid),
-    }),
     pgPolicy('Users can view their own jobs', {
       for: 'select',
-      to: authenticatedRole,
-      using: eq(t.ownerId, authUid),
-    }),
-    pgPolicy('Users can update their own jobs', {
-      for: 'update',
-      to: authenticatedRole,
-      using: eq(t.ownerId, authUid),
-      withCheck: eq(t.ownerId, authUid),
-    }),
-    pgPolicy('Users can delete their own jobs', {
-      for: 'delete',
       to: authenticatedRole,
       using: eq(t.ownerId, authUid),
     }),
