@@ -20,17 +20,7 @@
       "permissions": [
         "workflows.insert",
         "workflows.update",
-        "workflows.delete",
-        "instances.insert",
-        "instances.delete",
-        "users.delete"
-      ]
-    },
-    {
-      "roleName": "user",
-      "permissions": [
-        "workflows.select",
-        "instances.select"
+        "workflows.delete"
       ]
     }
   ]
