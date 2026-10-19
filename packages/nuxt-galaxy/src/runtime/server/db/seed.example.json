@@ -30,8 +30,7 @@
       "roleName": "user",
       "permissions": [
         "workflows.select",
-        "instances.select",
-        "users.select"
+        "instances.select"
       ]
     }
   ]
