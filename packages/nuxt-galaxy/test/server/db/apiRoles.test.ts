@@ -13,8 +13,9 @@ import { afterAll, describe, expect, it } from 'vitest'
  * analysis, recording an upload, and an administrator publishing, retiring
  * and deleting a version. Every other write goes through a server route,
  * which writes with Drizzle or the service role, and neither is bound by
- * these grants. Reads stay as they were, and the tag tables are read only
- * through the reader's own datasets.
+ * these grants. Reads stay as they were, but the tag tables are read only
+ * through the reader's own datasets, and galaxy.user by the server alone
+ * (#172).
  *
  * Same harness as `workflowsImmutability.test.ts`: the local Supabase (the
  * module's default URL, or `GALAXY_DRIZZLE_DATABASE_URL`), one transaction
@@ -492,6 +493,23 @@ describe.skipIf(!live)('the instance configuration', () => {
       await actAs(tx, 'authenticated', { sub: OWNER, user_role: 'admin' })
 
       expect(await refusal(tx, tx => write(tx, world))).toEqual(PERMISSION_DENIED)
+    })
+  })
+
+  // galaxy.user holds the Galaxy service account the server runs every job
+  // as, and the server reads it with Drizzle. Nothing in the browser reads
+  // it, so no session does, whatever this database was seeded with.
+  it.each([
+    ['an anonymous caller', 'anon', { sub: OWNER }],
+    ['a signed-in user', 'authenticated', { sub: OWNER, user_role: 'user' }],
+    ['an administrator', 'authenticated', { sub: OWNER, user_role: 'admin' }],
+  ] as const)('shows %s no row of galaxy.user', async (_who, role, claims) => {
+    await withRollback(async (tx) => {
+      await twoOwners(tx)
+      await tx`insert into galaxy_rbac.role_permissions (role_id, permission) select id, 'users.select' from galaxy_rbac.roles on conflict do nothing`
+      await actAs(tx, role, claims)
+
+      expect(await tx`select id from galaxy."user"`).toEqual([])
     })
   })
 })
