@@ -209,7 +209,12 @@ describe('MyComponent', () => {
 
 ### Layer Boundaries
 - **DO**: Create reusable UI components using @nuxt/ui
-- **DO**: Create composables that wrap nuxt-galaxy functionality
+- **DO**: Keep a new file here when it renders, styles or decides how
+  something looks (Nuxt UI, Tailwind, icons, colours, sizes), or when it
+  imports something that still lives in this layer. A new framework-free file
+  whose imports are all `nuxt-galaxy`, Vue or Nuxt goes in `nuxt-galaxy`
+  instead. Existing framework-free files move only in a ticket that the
+  second UI in `nuxt-galaxy`'s playground pulls (ADR 0009)
 - **DO**: Define data visualization utilities with Mosaic/D3
 - **DON'T**: Call the Galaxy API from this layer — go through nuxt-galaxy's
   composables and server endpoints. Importing `blendtype` *types*, and its

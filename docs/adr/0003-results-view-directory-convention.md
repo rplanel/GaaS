@@ -30,3 +30,12 @@ The two transformations were lossy. Stripping dots made `1.10`, `11.0` and `110`
 
 The pattern gains the plus sign: `^[A-Za-z0-9][A-Za-z0-9._+-]*$`. A Galaxy tool version carries one (`0.10+galaxy2`), so the `version:` tag a publish dialog pre-fills from almost always did, and the rule refused it every time while the scanner, the registry and the matcher already handled a `+` directory, as the fixture trees under `packages/ui/test/fixtures/results-views/` had shown since the convention was written. A `+` is legal in a directory name on Linux and macOS, literal in a URL path segment, and nothing to a component prop; only a query string decodes it to a space, and neither value ever travels in one. The rule was the only thing refusing it, so it is the only thing that changes: the other excluded characters, the leading-character rule and exact matching, case included, are unchanged.
 
+## Amendment, 2026-10-19
+
+The convention moves from `@gaas/ui` to `nuxt-galaxy` (ADR 0009). It is the one piece of logic that moves before a second UI pulls it: none of it uses a UI framework, and every app that adopts results views while it still lives in `@gaas/ui` would have to change its imports when it moved.
+
+- **What moves.** `nuxt-galaxy`'s module now scans every layer for `app/workflows/<name>/<version>/results.vue` and builds the registry. It also owns the lookup and the props type.
+- **What stays the same.** Directory names, exact matching and the fallback from exact version to workflow name to app-wide.
+- **The props type.** It is imported from an alias that `nuxt-galaxy` declares. `#gaas/ui` is removed, which is a breaking change for any app that imported it. The rest of the consequence above stands: Vue resolves a `defineProps` type only through an import in the file.
+- **What stays in `@gaas/ui`.** The results page that hosts a view, the generic results view, and the admin workflows page's column that reads a match as exact, fallback or none.
+- **The consequence about `modules/` lapses.** `@gaas/ui` no longer has to publish its `modules/` directory for this convention.
