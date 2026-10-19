@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.4-beta.8](https://gitlab.pasteur.fr/gaas/GaaS/compare/v0.0.4-beta.7...v0.0.4-beta.8) (2026-10-19)
+
+
+### Bug Fixes
+
+* **nuxt-galaxy:** narrow the API roles' grants on the galaxy schema [#171](https://gitlab.pasteur.fr/gaas/GaaS/issues/171) ([4ad0535](https://gitlab.pasteur.fr/gaas/GaaS/commit/4ad053532e933e5fd1b7dd4f4ba4377d13e901c0))
+
 ## [0.0.4-beta.7](https://gitlab.pasteur.fr/gaas/GaaS/compare/v0.0.4-beta.6...v0.0.4-beta.7) (2026-10-18)
 
 
