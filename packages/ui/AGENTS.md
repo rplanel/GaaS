@@ -16,8 +16,8 @@
 - `nuxt-galaxy`: workspace:* (auto-registered)
 - `@nuxt/ui`: ^4.6.1 (extends base)
 - `@pinia/nuxt`: ^0.11.3 and `@pinia/colada-nuxt` (state management and
-  server state). `nuxt-galaxy` installs both as well, since its queries run on
-  them (#162); listing them here too is harmless, Nuxt runs each once
+  server state). `nuxt-galaxy` installs both too (#162); listing them here
+  as well is fine
 - `blendtype`: workspace:* (Galaxy types and pure helpers)
 - `evlog`: catalog: (client logging, required by `docs/LOGGING-SPEC.md` §3)
 - `@nuxt/content`: catalog:nuxt (the landing page and the wiki's pages,
@@ -95,9 +95,8 @@ export default defineNuxtConfig({
   ],
   supabase: {
     types: false, // Use nuxt-galaxy types
-    // The sign-in redirects are this layer's, because the pages are;
-    // nuxt-galaxy sets none (ADR 0009, #162). An app adds pages to `exclude`
-    // and keeps these four, since Nuxt concatenates the lists.
+    // The sign-in redirects for this layer's pages, with its four public
+    // pages; nuxt-galaxy sets none (ADR 0009, #162).
     // `test/signInRedirects.test.ts` reads them back from the runtime config.
     redirectOptions: {
       login: '/login',

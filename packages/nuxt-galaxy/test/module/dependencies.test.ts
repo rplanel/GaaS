@@ -11,7 +11,8 @@ function installedModules(options: NuxtOptions) {
 /**
  * What the module installs, and what it sets for the modules it installs, in
  * an app built on `nuxt-galaxy` alone. The fixture is such an app: it lists
- * this module and nothing else (ADR 0009, #162).
+ * this module and nothing else. `src/module.ts` says why each one is or is
+ * not there (ADR 0009, #162).
  */
 async function loadResolvedConfig() {
   return withFixtureNuxt(options => ({
@@ -34,9 +35,6 @@ describe('the modules nuxt-galaxy installs', () => {
   })
 
   it('sets no sign-in redirect options, so the app gets @nuxtjs/supabase\'s own', () => {
-    // Nuxt concatenates a module dependency's array defaults with the app's,
-    // so an exemption set here is one no app could remove. The sign-in pages
-    // and their exemptions are the UI layer's to choose.
     expect(resolved.supabase.redirectOptions).toBeUndefined()
     expect(resolved.redirectOptions.exclude).toEqual([])
     expect(resolved.redirectOptions.saveRedirectToCookie).toBe(false)
@@ -51,30 +49,29 @@ describe('the modules nuxt-galaxy installs', () => {
   })
 
   it('does not install @nuxt/content, which nothing in it reads', () => {
-    // Only the UI layer's wiki reads content (ADR 0008), and the layer
-    // registers it itself. Installed from here, every app on the module
-    // alone carried a content database it never read.
     expect(resolved.installed).not.toContain('@nuxt/content')
   })
 
   it('installs Pinia and Pinia Colada, which its queries run on', () => {
-    // The queries under `runtime/app/queries` are Pinia Colada query options.
-    // They ran only because the UI layer happened to register both modules,
-    // and an app on the module alone had no Colada plugin to run them.
     expect(resolved.installed).toContain('@pinia/nuxt')
     expect(resolved.installed).toContain('@pinia/colada-nuxt')
   })
 })
 
-describe('an app that lists the Pinia modules itself', () => {
-  it('loads, and runs each of them once', async () => {
-    // The UI layer is such an app. Nuxt skips a dependency the app already
-    // lists, so the module adds nothing to it.
-    const installed = await withFixtureNuxt(installedModules, {
-      modules: ['@pinia/nuxt', '@pinia/colada-nuxt'],
-    })
+function timesInstalled(installed: ReturnType<typeof installedModules>, name: string) {
+  return installed.filter(entry => entry === name).length
+}
 
-    expect(installed.filter(name => name === '@pinia/nuxt')).toHaveLength(1)
-    expect(installed.filter(name => name === '@pinia/colada-nuxt')).toHaveLength(1)
+describe('an app that lists a Pinia module itself, after nuxt-galaxy', () => {
+  it.each([
+    { lists: '@pinia/nuxt alone', modules: ['@pinia/nuxt'] },
+    { lists: '@pinia/colada-nuxt alone', modules: ['@pinia/colada-nuxt'] },
+    // the order @gaas/ui's nuxt.config lists them in
+    { lists: 'both', modules: ['@pinia/nuxt', '@pinia/colada-nuxt'] },
+  ])('loads, and runs each Pinia module once, when it lists $lists', async ({ modules }) => {
+    const installed = await withFixtureNuxt(installedModules, { modules })
+
+    expect(timesInstalled(installed, '@pinia/nuxt')).toBe(1)
+    expect(timesInstalled(installed, '@pinia/colada-nuxt')).toBe(1)
   })
 })

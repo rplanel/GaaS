@@ -168,7 +168,7 @@ export default defineNuxtModule<ModuleOptions>({
   moduleDependencies: {
     // No sign-in redirect options: the pages they name are the UI layer's,
     // and Nuxt concatenates a dependency's array defaults with the app's, so
-    // an exemption set here is one no app could remove (ADR 0009, #162).
+    // a public page set here is one no app could remove (ADR 0009, #162).
     '@nuxtjs/supabase': {
       version: '^2.0.3',
       defaults: {
@@ -182,8 +182,13 @@ export default defineNuxtModule<ModuleOptions>({
     // The queries under `runtime/app/queries` are Pinia Colada query
     // options, so the module installs what runs them rather than relying on
     // the UI layer to. An app that lists either module itself gets it once.
-    '@pinia/nuxt': {},
-    '@pinia/colada-nuxt': {},
+    // The ranges are the `catalog:nuxt` ones package.json declares.
+    '@pinia/nuxt': {
+      version: '^0.11.3',
+    },
+    '@pinia/colada-nuxt': {
+      version: '^1.0.1',
+    },
   },
   // Default configuration options for your module, can also be a function returning those
   defaults: {

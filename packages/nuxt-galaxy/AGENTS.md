@@ -19,14 +19,16 @@ package dependency: an app on this module alone has nothing else to install
 them from, and fails to load with "Could not resolve `@pinia/nuxt` (specified
 as a dependency of `nuxt-galaxy`)" when the package dependency is missing.
 `test/module/dependencies.test.ts` reads what the fixture installed.
-- `@nuxtjs/supabase`: ^2.0.4, with the client on the `galaxy` schema. **No
-  sign-in redirect options**: the pages they name belong to whichever UI the
-  app uses, and Nuxt concatenates a dependency's array defaults with the
-  app's, so an exemption set here is one no app could remove. `@gaas/ui` sets
-  its own.
-- `@pinia/nuxt` and `@pinia/colada-nuxt`: catalog:nuxt, because the queries in
-  `runtime/app/queries` are Pinia Colada query options. An app that lists
-  either itself gets it once.
+- `@nuxtjs/supabase`, version-checked against `^2.0.3`, with the client on
+  the `galaxy` schema. **No sign-in redirect options**: the pages they name
+  belong to whichever UI the app uses, and Nuxt concatenates a dependency's
+  array defaults with the app's, so a public page set here is one no app
+  could remove. `@gaas/ui` sets its own.
+- `@pinia/nuxt` and `@pinia/colada-nuxt`, version-checked against `^0.11.3`
+  and `^1.0.1`, the `catalog:nuxt` ranges package.json declares, because the
+  queries in `runtime/app/queries` are Pinia Colada query options. Nuxt skips
+  a module dependency the app already lists, so an app that lists either
+  itself gets it once.
 - Not `@nuxt/content`: only the UI layer's wiki reads it (ADR 0008).
 
 ### Package Dependencies
@@ -149,8 +151,8 @@ export default defineNuxtModule<ModuleOptions>({
       version: '^2.0.3',
       defaults: { clientOptions: { db: { schema: 'galaxy' } } },
     },
-    '@pinia/nuxt': {},
-    '@pinia/colada-nuxt': {},
+    '@pinia/nuxt': { version: '^0.11.3' },
+    '@pinia/colada-nuxt': { version: '^1.0.1' },
   },
   defaults: {
     url: process.env.GALAXY_URL || 'http://localhost:9000',

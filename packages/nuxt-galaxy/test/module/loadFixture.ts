@@ -10,7 +10,7 @@ type Nuxt = Awaited<ReturnType<typeof loadNuxt>>
 export interface FixtureOptions {
   /** Module options to put under `galaxy` in the fixture's config. */
   readonly galaxy?: Record<string, unknown>
-  /** Modules the app lists itself, ahead of this one. */
+  /** Modules the app lists itself, after this one. */
   readonly modules?: readonly string[]
   /** Register hooks here; it runs before `ready()`, which is the only moment some fire. */
   readonly before?: (nuxt: Nuxt) => void
@@ -38,7 +38,8 @@ export async function withFixtureNuxt<T>(
       ssr: false,
       test: true,
       galaxy,
-      // Concatenated ahead of the fixture's own list, not in place of it.
+      // Added to the fixture's own list, not put in place of it. They install
+      // after this module: Nuxt installs a layer's own list first, then these.
       modules: [...modules],
     },
   })

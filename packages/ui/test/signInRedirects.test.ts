@@ -1,11 +1,6 @@
 /**
- * The sign-in redirects every app on the UI layer runs with (#162).
- *
- * They are the layer's because the pages are: `/login`, `/signup` and
- * `/confirm` live in `app/pages/`, and `/` is the landing page. `nuxt-galaxy`
- * used to set them for it, which imposed this layer's pages on every app built
- * on the module alone, and left no app able to drop an exemption, since Nuxt
- * concatenates the list (ADR 0009).
+ * The sign-in redirects every app on the UI layer runs with. They are the
+ * layer's, not `nuxt-galaxy`'s, because the pages are (ADR 0009, #162).
  *
  * Read from the runtime config, which is where `@nuxtjs/supabase`'s redirect
  * plugin reads them, so these are the values sign-in actually runs with.
@@ -28,7 +23,7 @@ describe('the UI layer\'s sign-in redirects', () => {
     expect(redirectOptions().saveRedirectToCookie).toBe(true)
   })
 
-  it('lets a signed-out visitor reach the landing page and the three sign-in pages', () => {
+  it('makes the landing page and the three sign-in pages its public pages', () => {
     expect(redirectOptions().exclude).toEqual(['/', '/login', '/signup', '/confirm'])
   })
 })

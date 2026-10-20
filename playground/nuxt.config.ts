@@ -55,7 +55,11 @@ export default defineNuxtConfig({
     },
   },
   supabase: {
+    // Public pages of this app, on top of @gaas/ui's. The type requires
+    // `login` and `callback`, so these repeat the layer's.
     redirectOptions: {
+      login: '/login',
+      callback: '/confirm',
       exclude: ['/wiki', '/wiki/**'],
     },
   },
