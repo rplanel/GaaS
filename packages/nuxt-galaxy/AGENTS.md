@@ -88,6 +88,14 @@ callback. Those are `@nuxtjs/supabase`'s defaults, written out because this
 module sets none. No page is served at `/confirm`, because a password
 sign-in never comes back through it.
 
+`/start` starts an analysis (#165). The reader chooses an active workflow,
+picks a dataset for each input and names the analysis. The page validates
+through `startAnalysisSchema`, refuses through `startAnalysisRefused` and
+says why, and starts through `useStartAnalysis`. `start` applies neither the
+schema nor the gate itself, so a page that skips them sends what they would
+refuse. It sends the parameters saved in the revision its version pins;
+editing them is #167.
+
 ### Supabase Commands
 ```bash
 pnpm supabase:start                         # Start local Supabase
@@ -340,6 +348,11 @@ pnpm --filter . vitest run  # From root
   so any request a test fails to fake fails instead of reaching a local
   Supabase. The tests replace the Supabase client with
   `mockNuxtImport('useSupabaseClient', …)` and assert what a page sent.
+  The application's own endpoints, such as a workflow's description, the
+  Galaxy instance and the start of an analysis, are answered with
+  `registerEndpoint`, which matches a path literally. The Colada cache
+  outlives a mount, so a test file that reads queries empties it before
+  each test.
 
 ## Section 5: "Don't Touch" Zones and Permission Boundaries
 
