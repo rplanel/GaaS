@@ -1,4 +1,4 @@
-import { serverWordsOf, statusCodeOf } from './serverRefusal'
+import { serverWordsOf, statusCodeOf } from '#imports'
 
 /**
  * Turn the failure a Galaxy read rejected with into a sentence for the

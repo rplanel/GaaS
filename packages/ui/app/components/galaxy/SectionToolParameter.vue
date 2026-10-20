@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GalaxySectionToolParameter, WorkflowConditionalParametersValue, WorkflowParameterValue } from 'blendtype'
-import { isParameterGroupValue } from '../../composables/galaxy/parameterValue'
+import { isParameterGroupValue } from '#imports'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
 export interface GalaxySectionToolParameterProps

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { AnalysisDetail, Database, JobRow } from 'nuxt-galaxy'
-import type { EncodedGalaxyWorkflowParameter } from '../../composables/galaxy/types'
+import type { AnalysisDetail, Database, EncodedGalaxyWorkflowParameter, JobRow } from 'nuxt-galaxy'
 import { useSupabaseClient } from '#imports'
 import { stepMarks } from '../../utils/stepMarks'
 

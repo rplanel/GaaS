@@ -22,15 +22,15 @@
 
 import type { WorkflowToolParameters } from 'blendtype'
 import type { DescribedStep } from 'nuxt-galaxy'
-import type { WorkflowFixture } from '../characterisation/fixtures'
+import type { WorkflowFixture } from '../../../nuxt-galaxy/test/characterisation/fixtures'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
 import { toValue } from 'vue'
+import { declaredParameter, FIXTURES, loadFixture, toolOfStep } from '../../../nuxt-galaxy/test/characterisation/fixtures'
 import BooleanToolParameter from '../../app/components/galaxy/BooleanToolParameter.vue'
 import IntegerToolParameter from '../../app/components/galaxy/IntegerToolParameter.vue'
 import Step from '../../app/components/galaxy/workflow/Step.vue'
 import { useGalaxyToolInputComponent } from '../../app/composables/galaxy/useGalaxyToolInputComponent'
-import { declaredParameter, FIXTURES, loadFixture, toolOfStep } from '../characterisation/fixtures'
 
 const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
 const ccqtl = loadFixture(FIXTURES.ccqtlToday)

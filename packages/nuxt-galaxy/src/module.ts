@@ -15,9 +15,13 @@ import * as logOptions from './log-options'
 import { GALAXY_CACHE_MOUNT } from './runtime/server/utils/galaxyCacheMount'
 
 const log = logger.withTag('nuxt-galaxy')
+export type { EncodedGalaxyWorkflowParameter, WorkflowParametersModel } from './runtime/app/composables/galaxy/types'
+export type { StartAnalysisRequest } from './runtime/app/composables/useStartAnalysis'
 export type { UsageStatisticsRange, UsageStatisticsRequest } from './runtime/app/queries/db/usageStatistics'
 export type { DatasetBlob } from './runtime/app/queries/supabase/datasetsBlob'
 export * from './runtime/app/utils/errors'
+export type { StartAnalysisGate } from './runtime/app/utils/startAnalysis'
+export type { StartAnalysisFailure } from './runtime/app/utils/startAnalysisFailure'
 export type { CompositeTypes, Database, Enums, Json, Tables, TablesInsert, TablesUpdate } from './runtime/types/database'
 export * from './runtime/types/nuxt-galaxy'
 export interface ModuleOptions {
@@ -331,6 +335,17 @@ export default defineNuxtModule<ModuleOptions>({
       // `runtime/shared/` by path.
       { name: 'inputStepLabel', path: './runtime/shared/stepLabel' },
       { name: 'isInputStep', path: './runtime/shared/stepLabel' },
+      // Parameter encoding and decoding, one format tested as a round trip
+      // (#163): what an analysis is started with and what copying one, or
+      // its jobs panel, reads back. `isParameterGroupValue` is the one
+      // helper a field component needs; the rest stay unregistered.
+      { name: 'useGalaxyEncodeParameters', path: './runtime/app/composables/galaxy/useGalaxyEncodeParameters' },
+      { name: 'useGalaxyDecodeParameters', path: './runtime/app/composables/galaxy/useGalaxyDecodeParameters' },
+      { name: 'isParameterGroupValue', path: './runtime/app/composables/galaxy/parameterValue' },
+      // Starting an analysis (#163): the request, its encoding and the
+      // description of a refused start. The rules for what may be sent and
+      // the gate that refuses it first are in `runtime/app/utils/startAnalysis`.
+      { name: 'useStartAnalysis', path: './runtime/app/composables/useStartAnalysis' },
       { name: 'useUploadFileToStorage', path: './runtime/app/composables/useUploadFileToStorage' },
       { name: 'useDiskUsage', path: './runtime/app/composables/useDiskUsage' },
       { name: 'useSupabaseRealtime', path: './runtime/app/composables/useSupabaseRealtime' },

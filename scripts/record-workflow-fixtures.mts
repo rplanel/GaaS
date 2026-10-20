@@ -27,7 +27,7 @@
  *                             Galaxy describes and exports its latest, which
  *                             is what an unpinned caller gets.
  *     --out <dir>             Fixtures root. Defaults to
- *                             packages/ui/test/fixtures/galaxy-workflow.
+ *                             packages/nuxt-galaxy/test/fixtures/galaxy-workflow.
  *     --keep-dataset-options  Do not blank a data parameter's `options`.
  *                             See `redactDatasetOptions` for why the default
  *                             is to blank them.
@@ -112,7 +112,7 @@ function parseArgs(argv: string[]): Options {
     workflowId: workflowId ?? '',
     name: typeof name === 'string' ? name : undefined,
     revision,
-    out: typeof out === 'string' ? out : path.join('packages', 'ui', 'test', 'fixtures', 'galaxy-workflow'),
+    out: typeof out === 'string' ? out : path.join('packages', 'nuxt-galaxy', 'test', 'fixtures', 'galaxy-workflow'),
     keepDatasetOptions: flags.get('keep-dataset-options') === true,
     censusOnly: flags.get('census-only') === true,
   }

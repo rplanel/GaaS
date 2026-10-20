@@ -13,11 +13,11 @@
  * Same rule as the encoder: only `undefined` is an absence.
  */
 
-import type { EncodedGalaxyWorkflowParameter, WorkflowParametersModel } from '../../app/composables/galaxy/types'
+import type { EncodedGalaxyWorkflowParameter, WorkflowParametersModel } from '../../../../src/runtime/app/composables/galaxy/types'
 import { describe, expect, it } from 'vitest'
 import { toValue } from 'vue'
-import { useGalaxyDecodeParameters } from '../../app/composables/galaxy/useGalaxyDecodeParameters'
-import { useGalaxyEncodeParameters } from '../../app/composables/galaxy/useGalaxyEncodeParameters'
+import { useGalaxyDecodeParameters } from '../../../../src/runtime/app/composables/galaxy/useGalaxyDecodeParameters'
+import { useGalaxyEncodeParameters } from '../../../../src/runtime/app/composables/galaxy/useGalaxyEncodeParameters'
 
 /**
  * See the note in the encoder suite: both dicts hold what their types do not,

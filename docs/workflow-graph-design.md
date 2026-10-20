@@ -758,7 +758,7 @@ does (`workflows.ts:208`); this checks only that Galaxy honours it.
 ### What the recordings settled (#86)
 
 Three real workflows are recorded under
-`packages/ui/test/fixtures/galaxy-workflow/`: `ccqtl-today` from Pasteur at
+`packages/nuxt-galaxy/test/fixtures/galaxy-workflow/`: `ccqtl-today` from Pasteur at
 22.05, and two from usegalaxy.eu at 26.1 for the shapes Pasteur's account does
 not have. A survey of 160 published workflows found only four carrying all five
 shapes at once, the smallest 57 steps, which is why it is a set rather than one.

@@ -18,9 +18,9 @@
 import type { GalaxyRepeatToolParameter, WorkflowParameterValue } from 'blendtype'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
+import { FIXTURES, loadFixture, toolOfStep } from '../../../nuxt-galaxy/test/characterisation/fixtures'
 import Conditional from '../../app/components/galaxy/Conditional.vue'
 import RepeatToolParameter from '../../app/components/galaxy/RepeatToolParameter.vue'
-import { FIXTURES, loadFixture, toolOfStep } from '../characterisation/fixtures'
 
 const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
 

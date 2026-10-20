@@ -15,8 +15,8 @@
 import type { JobState } from 'blendtype'
 import type { MarkableJob } from '../../app/utils/stepMarks'
 import { describe, expect, it } from 'vitest'
+import { aStep } from '../../../nuxt-galaxy/test/describedSteps'
 import { stepMarks, stepMarkSummary } from '../../app/utils/stepMarks'
-import { aStep } from '../describedSteps'
 
 /** One recorded job row, reduced to the two fields a mark is derived from. */
 function aJob(stepId: number, state: JobState): MarkableJob {

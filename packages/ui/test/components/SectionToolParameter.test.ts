@@ -16,13 +16,13 @@
  */
 
 import type { GalaxySectionToolParameter, WorkflowConditionalParametersValue } from 'blendtype'
+import { isParameterGroupValue } from '#imports'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
+import { FIXTURES, loadFixture, toolOfStep } from '../../../nuxt-galaxy/test/characterisation/fixtures'
 import BooleanToolParameter from '../../app/components/galaxy/BooleanToolParameter.vue'
 import IntegerToolParameter from '../../app/components/galaxy/IntegerToolParameter.vue'
 import SectionToolParameter from '../../app/components/galaxy/SectionToolParameter.vue'
-import { isParameterGroupValue } from '../../app/composables/galaxy/parameterValue'
-import { FIXTURES, loadFixture, toolOfStep } from '../characterisation/fixtures'
 
 const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
 

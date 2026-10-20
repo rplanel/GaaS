@@ -8,9 +8,11 @@
  * taken apart again. A separator written out at each end is the kind of agreement that
  * holds right up until one end changes.
  *
- * Not auto-imported: Nuxt scans only the top level of `composables/`, so
- * everything under `composables/galaxy/` is reached by path — which is why
- * these can carry short names without claiming them globally.
+ * Not auto-imported, which is why these can carry short names without
+ * claiming them globally: `module.ts` registers composables one name at a
+ * time, and the only one registered from here is `isParameterGroupValue`,
+ * which a section's field reads to tell its bag from a scalar. The rest are
+ * reached by path.
  */
 
 import type { WorkflowConditionalParametersValue } from 'blendtype'

@@ -11,9 +11,9 @@
 import type { Line, Point, StepBox } from './drawnLines'
 import { getBezierPath } from '@vue-flow/core'
 import { describe, expect, it } from 'vitest'
+import { FIXTURES } from '../../nuxt-galaxy/test/characterisation/fixtures'
+import { aStep, describedSteps } from '../../nuxt-galaxy/test/describedSteps'
 import { workflowGraph } from '../app/utils/workflowGraph'
-import { FIXTURES } from './characterisation/fixtures'
-import { aStep, describedSteps } from './describedSteps'
 import { crossings, drawnLine, entersStep } from './drawnLines'
 
 function line(...points: [number, number][]): Line {

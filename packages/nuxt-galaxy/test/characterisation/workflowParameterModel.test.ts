@@ -33,6 +33,7 @@ import type { WorkflowFixture } from './fixtures'
 import { mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
+import { useGalaxyWorkflowDescription } from '../../src/runtime/app/composables/galaxy/useGalaxyWorkflowDescription'
 import { describedRevision } from '../describedSteps'
 import { FIXTURES, loadFixture } from './fixtures'
 import {
@@ -92,7 +93,7 @@ for (const fixture of [ccqtl, nested, fanIn]) {
       // that Galaxy holds when the question is asked — not on the revision.
       // So `tools` is every definition the recording captured, and
       // `unavailable` is empty because a recording has no way to say
-      // otherwise. `test/components/InvokeForm.test.ts` is where an
+      // otherwise. `@gaas/ui`'s `test/components/InvokeForm.test.ts` is where an
       // unresolved tool is exercised; nothing here can pin that pairing, and
       // the test below asserting that the recorded tools are exactly the
       // pins the definition declares is as close as a recording gets.

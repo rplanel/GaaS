@@ -4,11 +4,15 @@
  * `$fetch` rejects with an ofetch `FetchError`: `statusCode` is the response's
  * status, `data` is the parsed JSON body, and `statusMessage` is the
  * response's reason phrase (`response.statusText`), mapped straight across.
- * Two utils in this layer turn such a rejection into words for a reader,
- * `describePublishFailure` and `describeStartAnalysisFailure`, and each
- * used to carry its own copy of these readers. The copies disagreed on one
- * point, which is the point this module settles (#63): the reason phrase is
- * never read.
+ * Several utils turn such a rejection into words for a reader:
+ * `describeStartAnalysisFailure` beside this one, and `describePublishFailure`
+ * with its siblings in `@gaas/ui`, which reach these through the auto-imports.
+ * The first two used to carry their own copies of these readers. The copies
+ * disagreed on one point, which is the point this module settles (#63): the
+ * reason phrase is never read.
+ *
+ * Here rather than in `@gaas/ui` since #163, because a start's refusal is
+ * described with it and any UI starting an analysis needs that unchanged.
  */
 
 /**

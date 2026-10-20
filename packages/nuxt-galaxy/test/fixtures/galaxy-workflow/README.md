@@ -2,7 +2,9 @@
 
 Real payloads from real Galaxy instances, recorded once and committed, so the
 characterisation suite in `../../characterisation/` runs without a live
-Galaxy (#86).
+Galaxy (#86). `@gaas/ui`'s step, field and graph tests read them too, from
+across the workspace: they moved here with the suites (#163), because
+`@gaas/ui` depends on `nuxt-galaxy` and not the other way round.
 
 Nothing here is hand-written, and nothing here should be hand-edited. The
 point of recording was to capture the shapes Galaxy really emits — including

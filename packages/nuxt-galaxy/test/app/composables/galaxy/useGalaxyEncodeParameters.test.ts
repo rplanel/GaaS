@@ -14,10 +14,10 @@
  * something somebody chose, including `0`, `''` and `null`.
  */
 
-import type { WorkflowParametersModel } from '../../app/composables/galaxy/types'
+import type { WorkflowParametersModel } from '../../../../src/runtime/app/composables/galaxy/types'
 import { describe, expect, it } from 'vitest'
 import { toValue } from 'vue'
-import { useGalaxyEncodeParameters } from '../../app/composables/galaxy/useGalaxyEncodeParameters'
+import { useGalaxyEncodeParameters } from '../../../../src/runtime/app/composables/galaxy/useGalaxyEncodeParameters'
 
 /**
  * The model as it really arrives, not as its type declares it.

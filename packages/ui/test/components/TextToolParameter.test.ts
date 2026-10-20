@@ -18,8 +18,8 @@
 import type { GalaxyTextToolParameter, WorkflowParameterValue } from 'blendtype'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
+import { declaredParameter, FIXTURES, loadFixture, savedValue } from '../../../nuxt-galaxy/test/characterisation/fixtures'
 import TextToolParameter from '../../app/components/galaxy/TextToolParameter.vue'
-import { declaredParameter, FIXTURES, loadFixture, savedValue } from '../characterisation/fixtures'
 
 const ccqtl = loadFixture(FIXTURES.ccqtlToday)
 const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
