@@ -60,9 +60,33 @@ pnpm dev:prepare                           # Prepare module + playground
 ```bash
 pnpm lint                                   # ESLint check
 pnpm typecheck                              # vue-tsc + playground typecheck
-pnpm test                                   # Vitest run
+pnpm test                                   # Vitest run: module, server, then playground
+pnpm test:playground                        # The playground's mounted pages alone
 pnpm test:watch                             # Vitest watch mode
 ```
+
+### The playground is the second UI
+`playground/` is the second UI that ADR 0009 uses as proof that the line
+between this module and `@gaas/ui` holds. It is plain HTML on this module
+alone: no Tailwind, no Nuxt UI, and its pages import only `nuxt-galaxy`, Vue
+and Nuxt. If a page needs logic that lives in `@gaas/ui`, the move to this
+module is a ticket of its own, landed first. Do not copy it into the
+playground.
+
+A `no-restricted-imports` rule in the root `eslint.config.mjs` refuses
+imports of `@gaas/ui`, `@nuxt/ui` and `#layers/**` from anywhere under
+`playground/`. The workspace hoists `@gaas/ui` and `@nuxt/ui`, so an import
+of either would otherwise resolve. The rule checks static imports only.
+Review has to catch three things it cannot see:
+- a dynamic `import()`;
+- a relative path into `packages/ui`;
+- a layer or module named in `playground/nuxt.config.ts`, which is a string,
+  not an import.
+
+The playground names its own sign-in routes: `/login`, and `/confirm` as the
+callback. Those are `@nuxtjs/supabase`'s defaults, written out because this
+module sets none. No page is served at `/confirm`, because a password
+sign-in never comes back through it.
 
 ### Supabase Commands
 ```bash
@@ -308,6 +332,14 @@ pnpm --filter . vitest run  # From root
 ### Test File Locations
 - Unit: `test/` directory
 - API tests: Test files alongside handlers or in `test/server/`
+- The playground's pages: `playground/test/`, run by
+  `vitest.config.playground.ts`. The Nuxt test environment boots one app per
+  configuration, so the playground needs its own, separate from the module
+  fixture's. It loads the tracked `playground/.env.test`, whose Supabase
+  settings are fake. The URL is on `.invalid`, a domain that never resolves,
+  so any request a test fails to fake fails instead of reaching a local
+  Supabase. The tests replace the Supabase client with
+  `mockNuxtImport('useSupabaseClient', …)` and assert what a page sent.
 
 ## Section 5: "Don't Touch" Zones and Permission Boundaries
 
