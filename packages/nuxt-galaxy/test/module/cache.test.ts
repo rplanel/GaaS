@@ -18,13 +18,7 @@ async function loadModuleConfig(galaxyOverrides: Record<string, unknown> = {}) {
 
 /**
  * One load per distinct configuration, shared by the tests that ask about
- * it.
- *
- * `@nuxt/content` is a module dependency of this one, and its `close` hook
- * drops its content tables from a SQLite database the fixture never builds.
- * Enough load/close cycles across the suite and that rejection lands
- * unhandled, failing the run with every test passing — so a load is worth
- * making only once per question (#87).
+ * it: a whole Nuxt per assertion buys nothing but seconds.
  */
 const loaded = new Map<string, ReturnType<typeof loadModuleConfig>>()
 
