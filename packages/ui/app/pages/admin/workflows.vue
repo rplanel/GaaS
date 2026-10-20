@@ -215,7 +215,8 @@ const columns = ref<TableColumn<StoredWorkflowRow>[]>([
   },
 ])
 
-const { data: allWorkflows, error: errorWorkflows } = useQuery(() => galaxyWorkflowsListQuery())
+const requestFetch = useRequestFetch()
+const { data: allWorkflows, error: errorWorkflows } = useQuery(() => galaxyWorkflowsListQuery({ requestFetch }))
 
 if (toValue(errorWorkflows)) {
   const { errorStatus } = useErrorStatus(errorWorkflows)

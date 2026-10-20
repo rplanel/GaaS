@@ -55,6 +55,7 @@ const startingAnalysis = ref<boolean>(false)
 const submitError = ref<StartAnalysisFailure | null>(null)
 const invokeWorkflowParameterModel = ref<Record<string, WorkflowToolParameters>>({})
 const supabase = useSupabaseClient<Database>()
+const requestFetch = useRequestFetch()
 
 const analysesListInjected = inject<AnalysesListProvide>('analysesList')
 const { refreshAnalysesList } = analysesListInjected || {}
@@ -363,7 +364,7 @@ const {
 
 // The Galaxy this form submits to, for the release it runs (#105). Until it
 // answers, and if it never does, nothing is refused on the release's account.
-const { data: galaxyInstance, error: galaxyInstanceError } = useQuery(galaxyInstanceQuery)
+const { data: galaxyInstance, error: galaxyInstanceError } = useQuery(() => galaxyInstanceQuery({ requestFetch }))
 
 // Not reaching it opens the gate for good, which on 24.2 and later lets
 // through a submission Galaxy will refuse after the upload, so it leaves a

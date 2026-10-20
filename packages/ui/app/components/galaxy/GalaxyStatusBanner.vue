@@ -1,5 +1,6 @@
 <script setup lang="ts">
-const { data: health, isLoading } = useQuery(galaxyHealthQuery)
+const requestFetch = useRequestFetch()
+const { data: health, isLoading } = useQuery(() => galaxyHealthQuery({ requestFetch }))
 
 const isVisible = computed(() => {
   if (isLoading.value)

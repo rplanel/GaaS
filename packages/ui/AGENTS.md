@@ -158,11 +158,12 @@ function createChart(data: Ref<any[]>) {
 
 ### State Management
 ```typescript
-// Pinia Colada for server state
-const { state } = useQuery({
-  key: () => ['workflows'],
-  query: () => $fetch('/api/galaxy/workflows'),
-})
+// Pinia Colada for server state, through nuxt-galaxy's query options. One
+// that calls this application's server is handed the request's fetch, read
+// in setup: the global `$fetch` sends no cookie while the page is rendered on
+// the server, so a reload was answered 401 (#139).
+const requestFetch = useRequestFetch()
+const { data: workflows } = useQuery(() => galaxyWorkflowsListQuery({ requestFetch }))
 ```
 
 ## Section 4: Testing Rules

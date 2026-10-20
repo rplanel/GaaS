@@ -1,4 +1,5 @@
 import type { AnalysisMonitoringStats, TrendGranularity, WorkflowSelection } from '../../../types/nuxt-galaxy'
+import type { RequestFetch } from '../utils'
 import { defineQueryOptions } from '@pinia/colada'
 import { TREND_GRANULARITY_WHEN_ABSENT } from '../../../types/nuxt-galaxy'
 
@@ -86,9 +87,9 @@ function requestParameters({
  * Every number comes from the server, including the success rate, so that one
  * formula is the only one in play.
  */
-export const ownUsageStatisticsQuery = defineQueryOptions((request: UsageStatisticsRequest = {}) => ({
+export const ownUsageStatisticsQuery = defineQueryOptions(({ requestFetch, ...request }: UsageStatisticsRequest & { requestFetch: RequestFetch }) => ({
   key: USAGE_STATISTICS_QUERY_KEYS.own(request),
-  query: () => $fetch<AnalysisMonitoringStats>('/api/db/analyses/monitoring', { query: requestParameters(request) }),
+  query: () => requestFetch<AnalysisMonitoringStats>('/api/db/analyses/monitoring', { query: requestParameters(request) }),
 }))
 
 /**
@@ -98,7 +99,7 @@ export const ownUsageStatisticsQuery = defineQueryOptions((request: UsageStatist
  * own key, because the two cover different analyses and must never share a
  * cache entry. The endpoint answers 403 to anyone who is not an administrator.
  */
-export const globalUsageStatisticsQuery = defineQueryOptions((request: UsageStatisticsRequest = {}) => ({
+export const globalUsageStatisticsQuery = defineQueryOptions(({ requestFetch, ...request }: UsageStatisticsRequest & { requestFetch: RequestFetch }) => ({
   key: USAGE_STATISTICS_QUERY_KEYS.global(request),
-  query: () => $fetch<AnalysisMonitoringStats>('/api/db/analyses/monitoring/admin', { query: requestParameters(request) }),
+  query: () => requestFetch<AnalysisMonitoringStats>('/api/db/analyses/monitoring/admin', { query: requestParameters(request) }),
 }))

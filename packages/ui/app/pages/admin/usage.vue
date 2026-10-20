@@ -30,6 +30,8 @@ const isAdmin = computed(() => userRole.value === 'admin')
 // read the same source and a link carries the view it was copied from
 const { range, granularity, workflowSelection } = useUsageFilters()
 
+const requestFetch = useRequestFetch()
+
 // The endpoint answers 403 to anyone else, so asking before the role claim says
 // admin only buys a refusal. The claim is still only a hint: should it disagree
 // with the server, the 403 arrives as an error state below. `enabled` is a
@@ -43,6 +45,7 @@ const { data: stats, isLoading, error, refetch } = useQuery(() => ({
     range: range.value,
     granularity: granularity.value,
     workflowSelection: workflowSelection.value,
+    requestFetch,
   }),
   enabled: isAdmin.value,
 }))

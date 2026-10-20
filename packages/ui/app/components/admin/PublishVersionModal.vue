@@ -59,11 +59,13 @@ const state = reactive<Partial<Schema>>({
   label: getWorkflowTagVersion(props.workflow.tags) ?? undefined,
 })
 
+const requestFetch = useRequestFetch()
+
 // The revisions Galaxy holds for this stored workflow, asked for when the
 // dialog opens: the dialog is keyed on the stored workflow, so it is one list
 // per opening.
 const { data: revisions, error: revisionsError } = useQuery(() =>
-  galaxyWorkflowRevisionsQuery({ workflowId: props.workflow.id }),
+  galaxyWorkflowRevisionsQuery({ workflowId: props.workflow.id, requestFetch }),
 )
 const revisionsErrorMessage = computed(() => describeGalaxyReadFailure(revisionsError.value))
 
@@ -116,7 +118,7 @@ watch(defaultRevision, (fallback) => {
 // Publish, rather than in a refusal after. One check per revision selected;
 // nothing is asked while no revision is.
 const { data: toolCheck, error: toolCheckError } = useQuery(() => ({
-  ...galaxyRevisionToolsQuery({ workflowId: props.workflow.id, revision: chosenRevision.value ?? -1 }),
+  ...galaxyRevisionToolsQuery({ workflowId: props.workflow.id, revision: chosenRevision.value ?? -1, requestFetch }),
   enabled: chosenRevision.value !== undefined,
 }))
 const toolCheckErrorMessage = computed(() => describeGalaxyReadFailure(toolCheckError.value))
