@@ -1,4 +1,2 @@
-export { useGalaxyDecodeParameters } from './galaxy/useGalaxyDecodeParameters'
-export { useGalaxyEncodeParameters } from './galaxy/useGalaxyEncodeParameters'
 export { useGalaxyToolInputComponent } from './galaxy/useGalaxyToolInputComponent'
 export { useMosaic } from './mosaic/useMosaic'

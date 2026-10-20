@@ -11,16 +11,17 @@
  * - `aStep` builds one by hand, for the claims that are about this
  *   application's own code and not about Galaxy.
  *
- * `describedStepsOf` and `describedInputsOf` come from `nuxt-galaxy`'s public
- * entry, through the `workspace:*` dependency this package declares. They
- * were reached by path into `runtime/server/` first, which is the route the
- * layer's own dependency rules forbid.
+ * `describedStepsOf` and `describedInputsOf` are the ones `nuxt-galaxy`
+ * publishes from its entry, reached here by path because this is their own
+ * package. `@gaas/ui`'s graph suites read this file across the workspace
+ * (#163): the recordings moved here with the characterisation suites, since
+ * the package that depends on the other is the one that may reach into it.
  */
 
-import type { DescribedStep, DescribedWorkflowInput } from 'nuxt-galaxy'
+import type { DescribedStep, DescribedWorkflowInput } from '../src/runtime/types/nuxt-galaxy'
 import type { WorkflowFixture } from './characterisation/fixtures'
 import { galaxyWorkflowExportSchema } from 'blendtype'
-import { describedInputsOf, describedStepsOf } from 'nuxt-galaxy'
+import { describedInputsOf, describedStepsOf } from '../src/runtime/server/utils/grizzle/storedDefinition'
 import { loadFixture } from './characterisation/fixtures'
 
 /**

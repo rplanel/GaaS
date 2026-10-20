@@ -1,4 +1,4 @@
-import { serverWordsOf, statusCodeOf } from './serverRefusal'
+import { serverWordsOf, statusCodeOf } from '#imports'
 
 /**
  * What an administrator is told when retiring a version, or making it active

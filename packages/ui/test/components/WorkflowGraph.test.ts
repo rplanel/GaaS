@@ -21,13 +21,13 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { useVueFlow } from '@vue-flow/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, ref } from 'vue'
+import { FIXTURES } from '../../../nuxt-galaxy/test/characterisation/fixtures'
+import { aStep, describedSteps } from '../../../nuxt-galaxy/test/describedSteps'
 import Graph from '../../app/components/galaxy/workflow/Graph.vue'
 import GraphConnection from '../../app/components/galaxy/workflow/GraphConnection.vue'
 import GraphView from '../../app/components/galaxy/workflow/GraphView.vue'
 import { stepMarks } from '../../app/utils/stepMarks'
 import { workflowGraph } from '../../app/utils/workflowGraph'
-import { FIXTURES } from '../characterisation/fixtures'
-import { aStep, describedSteps } from '../describedSteps'
 
 /**
  * Which side of the small-screen breakpoint the view is mounted on.

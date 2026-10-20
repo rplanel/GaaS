@@ -174,7 +174,7 @@ export interface WorkflowRepeatInstanceValue {
  * is no narrower contract to import.
  *
  * Which shapes the recordings *actually* hold is pinned in
- * `packages/ui/test/characterisation/parameterValueTypes.test.ts`, whose walk
+ * `packages/nuxt-galaxy/test/characterisation/parameterValueTypes.test.ts`, whose walk
  * names each of them and refuses anything else — narrower than this union on
  * purpose, so that a re-recording carrying something new fails a test rather
  * than passing silently.

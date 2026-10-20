@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import type { AccordionItem } from '@nuxt/ui'
-import type { JobRow } from 'nuxt-galaxy'
-import type { EncodedGalaxyWorkflowParameter } from '../../../composables/galaxy/types'
-import { computed, toValue } from '#imports'
-import { useGalaxyDecodeParameters } from '../../../composables/galaxy/useGalaxyDecodeParameters'
+import type { EncodedGalaxyWorkflowParameter, JobRow } from 'nuxt-galaxy'
+import { computed, toValue, useGalaxyDecodeParameters } from '#imports'
 import { useGalaxyToolsInputComponents } from '../../../composables/galaxy/useGalaxyToolInputComponent'
 
 /**

@@ -6,20 +6,15 @@ import type {
   WorkflowToolParameters,
 } from 'blendtype'
 // import type { SupabaseTypes } from '#build/types/database'
-import type { Database } from 'nuxt-galaxy'
+import type { Database, EncodedGalaxyWorkflowParameter } from 'nuxt-galaxy'
+import type * as z from 'zod'
 import type { Props as WorkflowStepProps } from '../../../components/galaxy/workflow/Step.vue'
-import type { EncodedGalaxyWorkflowParameter } from '../../../composables/galaxy/types'
 import type { AnalysesListProvide } from '../../../layouts/default.vue'
-import type { StartAnalysisFailure } from '../../../utils/startAnalysisFailure'
 import { NuxtErrorBoundary } from '#components'
-import { computed, ref, toValue } from '#imports'
+import { computed, ref, startAnalysisRefused, startAnalysisSchema, toValue, useGalaxyDecodeParameters, useStartAnalysis } from '#imports'
 
 import { log } from 'evlog/client'
-import * as z from 'zod'
-import { useGalaxyDecodeParameters } from '../../../composables/galaxy/useGalaxyDecodeParameters'
-import { useGalaxyEncodeParameters } from '../../../composables/galaxy/useGalaxyEncodeParameters'
 import { useGalaxyToolsInputComponents } from '../../../composables/galaxy/useGalaxyToolInputComponent'
-import { describeStartAnalysisFailure, unexplainedStartAnalysisFailure } from '../../../utils/startAnalysisFailure'
 // The same naming the graph draws on a node (#89). It was written here first,
 // and twice would be two answers to "what is this tool called" — the version
 // is still read off `tool_version`, never out of the id, since only a
@@ -50,9 +45,9 @@ const redirectInfo = useSupabaseCookieRedirect()
 
 const workflowId = toRef(() => props.workflowId)
 const analysisId = toRef(() => props.analysisId)
-const startingAnalysis = ref<boolean>(false)
-/** Why the last submission was refused, or `null` if none was. */
-const submitError = ref<StartAnalysisFailure | null>(null)
+// The request, its encoding and the words for a refused start are
+// nuxt-galaxy's (#163), so any UI starting an analysis sends and says the same.
+const { start: startAnalysis, starting: startingAnalysis, failure: submitError } = useStartAnalysis()
 const invokeWorkflowParameterModel = ref<Record<string, WorkflowToolParameters>>({})
 const supabase = useSupabaseClient<Database>()
 const requestFetch = useRequestFetch()
@@ -61,47 +56,13 @@ const analysesListInjected = inject<AnalysesListProvide>('analysesList')
 const { refreshAnalysesList } = analysesListInjected || {}
 
 /**
- * Both ways of arriving at an empty name, kept in one place: zod does not
- * cascade a schema-level `error` into `.min()`, so the two have to be written
- * separately and must not drift.
- */
-const REQUIRED = 'Required'
-
-/**
  * Rebuilt whenever the workflow arrives, because what it declares is what
  * there is to validate: one entry per input, so `required` on those fields is
  * something `UForm` can act on rather than a marker beside a field it never
- * sees.
+ * sees. The rules themselves, the name's and the datamap's, are nuxt-galaxy's
+ * (#163).
  */
-const schema = computed(() => z.object({
-  // `min(1)` is what makes the `required` marker on the field mean something:
-  // plain `z.string()` rejects the untouched `undefined` but accepts the `''`
-  // a reader leaves behind by typing a name and clearing it again. `trim()`
-  // comes first so that a name of only spaces is that same `''` rather than a
-  // string with a length: the server refuses it either way (#47), but here
-  // the reader is told by the marker beside the field, not after a round
-  // trip. What the schema outputs is the trimmed name, and that is what is
-  // sent, so the length rule measures what will be stored (`varchar(256)`,
-  // 256 allowed).
-  analysisName: z
-    .string({ error: REQUIRED })
-    .trim()
-    .min(1, REQUIRED)
-    .max(256, 'Must be at most 256 characters'),
-  inputs: z.object(
-    Object.fromEntries(
-      Object.keys(toValue(workflowInputs)).map(stepId => [
-        stepId,
-        // There is nothing to check about a selection beyond its being
-        // there: the picker writes back one of the rows it was given.
-        z.custom<UploadedDatasetDb>(
-          selection => selection !== undefined && selection !== null,
-          REQUIRED,
-        ),
-      ]),
-    ),
-  ),
-}))
+const schema = computed(() => startAnalysisSchema<UploadedDatasetDb>(Object.keys(toValue(workflowInputs))))
 
 type Schema = z.output<typeof schema.value>
 
@@ -235,80 +196,30 @@ function rememberThisPage() {
  * fall through, because there is no `undefined` to fall through on.
  *
  * It also decides what the datamap may contain: the schema names the inputs
- * this workflow declares, and `z.object` keeps nothing else, so a selection
- * stored against a step the workflow has since dropped is not sent. The form
- * asks for exactly what it showed.
+ * this workflow declares, and keeps nothing else, so a selection stored
+ * against a step the workflow has since dropped is not sent. The form asks
+ * for exactly what it showed.
  */
 async function runAnalysis(event: FormSubmitEvent<Schema>) {
-  // Cleared first, so a refusal still on screen from an earlier attempt is
-  // never read as this one's answer.
+  // Cleared even when the gate below refuses, so a refusal still on screen
+  // from an earlier attempt is never read as this one's answer. A start that
+  // is sent clears it as well.
   submitError.value = null
-  // Galaxy refuses to run a revision whose tools are not installed at the
-  // versions it pins, so the submission is refused here rather than by
-  // Galaxy after the datasets have been uploaded. The alert above the button
-  // has already named them; Run is disabled too, and this is the refusal
-  // that does not depend on the button.
-  //
-  // A description that *failed* refuses too: the form then knows neither
-  // the inputs nor the tools, so what it would send is whatever the reader
-  // could see, which is nothing. The alert above the button says so.
-  //
-  // A description still *in flight* deliberately does not refuse. It would
-  // silently reject a reader who types a name and presses Enter before the
-  // answer lands — Enter submits a form whatever the button's disabled state
-  // — and the worst it risks is the submission Galaxy would have refused
-  // anyway, which is where this stood before #87. Refusing without being
-  // able to say why is worse than refusing late. The release is the same
-  // (#105): until it is known, nothing is refused on its account.
+  // The refusal that does not depend on the button: Enter submits a form
+  // whatever Run's disabled state. `startAnalysisRefused` says what refuses,
+  // and why a description still in flight does not; the alerts above Run
+  // have already named the reason.
   if (toValue(submissionRefused)) {
     return
   }
-  const analysesNameVal = event.data.analysisName
-  const workflowIdVal = toValue(props.workflowId)
-  const workflowParametersModelVal = toValue(invokeWorkflowParameterModel)
-  const { encodedParameters } = useGalaxyEncodeParameters(
-    workflowParametersModelVal,
-  )
-  const parameters = toValue(encodedParameters)
-  const payload = {
-    name: analysesNameVal,
+  const created = await startAnalysis({
+    name: event.data.analysisName,
     datamap: event.data.inputs,
-    parameters,
-    workflowId: workflowIdVal,
-  }
-  startingAnalysis.value = true
-  // Only the request is guarded, so a failed submission is the only thing
-  // this handler can claim.
-  const created = await $fetch('/api/db/analyses', {
-    method: 'POST',
-    body: payload,
-  }).catch((error: unknown) => {
-    // Shown rather than thrown: every status this endpoint refuses with is
-    // one the reader may be able to act on, and a fatal page would cost
-    // them the form they just filled in. The rejection itself is handed
-    // over, not just its status: a 400 carries the server's own words for
-    // which input was left out (#43, #46), and the status alone cannot say.
-    // The cause is still only ever worth a log.
-    const { errorStatus } = useErrorStatus(error)
-    log.error({
-      action: 'analysis:start_failed',
-      tag: 'InvokeForm',
-      status: toValue(errorStatus),
-      error: String(error),
-    })
-    submitError.value = describeStartAnalysisFailure(error)
-    return null
+    parameters: toValue(invokeWorkflowParameterModel),
+    workflowId: toValue(props.workflowId),
   })
-  startingAnalysis.value = false
+  // Refused, or answered with no analysis: either way already described.
   if (!created) {
-    // Either the request was refused above and is already described, or it
-    // answered 200 with no analysis to navigate to. ADR 0002 and #25 took
-    // that empty body out of the server; if it returns, the reader is told
-    // rather than left with a stopped spinner and nothing else.
-    if (submitError.value === null) {
-      log.error({ action: 'analysis:start_returned_no_analysis', tag: 'InvokeForm' })
-      submitError.value = unexplainedStartAnalysisFailure
-    }
     return
   }
   // A missing provide is this application's mistake rather than a refused
@@ -412,11 +323,12 @@ const stepsWarnedForUnconnectedInputs = computed(() => toValue(stepsWithUnconnec
  * that Run's disabled state and the refusal in `runAnalysis` — the one that
  * holds when Enter submits past a disabled button — cannot disagree.
  */
-const submissionRefused = computed(() =>
-  toValue(blockingTools).length > 0
-  || toValue(stepsRefusingUnconnectedInputs).length > 0
-  || Boolean(toValue(describeError)),
-)
+const submissionRefused = computed(() => startAnalysisRefused({
+  blockingTools: toValue(blockingTools),
+  unconnectedInputsByStep: toValue(unconnectedInputsByStep),
+  galaxyRelease: toValue(galaxyInstance)?.version_major,
+  descriptionFailed: Boolean(toValue(describeError)),
+}))
 
 /**
  * The same sentence, by step, so the panel and the summary cannot word one

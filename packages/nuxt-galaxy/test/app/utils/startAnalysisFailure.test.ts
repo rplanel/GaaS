@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeStartAnalysisFailure } from '../../app/utils/startAnalysisFailure'
+import { describeStartAnalysisFailure } from '../../../src/runtime/app/utils/startAnalysisFailure'
 
 /**
  * What `$fetch` rejects with. The `statusMessage` on the error itself is the
@@ -85,7 +85,7 @@ describe('describeStartAnalysisFailure', () => {
     it('does not show the reader the reason phrase when the body carried no words', () => {
       // Node fills in "Bad Request" for a 400 whose server set no reason
       // phrase, so the error's own `statusMessage` says something the server
-      // never wrote; nothing in this layer reads it (#63), and this pins that
+      // never wrote; `serverWordsOf` never reads it (#63), and this pins that
       const described = describeStartAnalysisFailure(
         fetchError(400, { statusCode: 400, statusMessage: '' }, 'Bad Request'),
       )

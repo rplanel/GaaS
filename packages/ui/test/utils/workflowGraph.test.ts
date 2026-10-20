@@ -16,6 +16,8 @@ import type { ConnectionRoute, GraphDirection } from '../../app/utils/workflowGr
 import { Graph, layout } from '@dagrejs/dagre'
 import { getBezierPath, Position } from '@vue-flow/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { FIXTURES } from '../../../nuxt-galaxy/test/characterisation/fixtures'
+import { aStep, describedSteps } from '../../../nuxt-galaxy/test/describedSteps'
 import { stepMarks } from '../../app/utils/stepMarks'
 import { toolDisplayName } from '../../app/utils/toolName'
 import {
@@ -29,8 +31,6 @@ import {
   subworkflowTrail,
   workflowGraph,
 } from '../../app/utils/workflowGraph'
-import { FIXTURES } from '../characterisation/fixtures'
-import { aStep, describedSteps } from '../describedSteps'
 import { crossings, drawnLine, entersStep } from '../drawnLines'
 
 /**
