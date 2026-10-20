@@ -12,6 +12,8 @@ type Nuxt = Awaited<ReturnType<typeof loadNuxt>>
 export interface FixtureOptions {
   /** Module options to put under `galaxy` in the fixture's config. */
   readonly galaxy?: Record<string, unknown>
+  /** Modules the app lists itself, ahead of this one. */
+  readonly modules?: readonly string[]
   /** Register hooks here; it runs before `ready()`, which is the only moment some fire. */
   readonly before?: (nuxt: Nuxt) => void
 }
@@ -41,7 +43,7 @@ export interface FixtureOptions {
  */
 export async function withFixtureNuxt<T>(
   read: (options: Nuxt['options']) => T | Promise<T>,
-  { galaxy = {}, before }: FixtureOptions = {},
+  { galaxy = {}, modules = [], before }: FixtureOptions = {},
 ): Promise<T> {
   // A random name, not a counter: vitest's `threads` pool runs its workers
   // in one process, so a per-process counter collides across them and puts
@@ -55,6 +57,8 @@ export async function withFixtureNuxt<T>(
       ssr: false,
       test: true,
       galaxy,
+      // Concatenated ahead of the fixture's own list, not in place of it.
+      modules: [...modules],
       // `_localDatabase`, not `database`: the latter is the production
       // connection, while this is the one content builds into and the one
       // `dropContentTables()` runs against.

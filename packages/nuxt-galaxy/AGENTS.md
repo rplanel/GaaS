@@ -13,8 +13,23 @@
 | **JWT Decode** | ^4.0.0 (catalog:) | Token parsing |
 
 ### Module Dependencies
-- `@nuxtjs/supabase`: ^2.0.4 (auto-configured)
-- `@nuxt/content`: ^3.11.2 (content management)
+The module installs what it needs and nothing that only the UI layer needs
+(ADR 0009). Each is both a `moduleDependencies` entry in `src/module.ts` and a
+package dependency: an app on this module alone has nothing else to install
+them from, and fails to load with "Could not resolve `@pinia/nuxt` (specified
+as a dependency of `nuxt-galaxy`)" when the package dependency is missing.
+`test/module/dependencies.test.ts` reads what the fixture installed.
+- `@nuxtjs/supabase`: ^2.0.4, with the client on the `galaxy` schema. **No
+  sign-in redirect options**: the pages they name belong to whichever UI the
+  app uses, and Nuxt concatenates a dependency's array defaults with the
+  app's, so an exemption set here is one no app could remove. `@gaas/ui` sets
+  its own.
+- `@pinia/nuxt` and `@pinia/colada-nuxt`: catalog:nuxt, because the queries in
+  `runtime/app/queries` are Pinia Colada query options. An app that lists
+  either itself gets it once.
+- Not `@nuxt/content`: only the UI layer's wiki reads it (ADR 0008).
+
+### Package Dependencies
 - `blendtype`: workspace:* (Galaxy API client)
 
 ### Peer Dependencies
@@ -130,7 +145,12 @@ export default defineNuxtModule<ModuleOptions>({
     compatibility: { nuxt: '>=4.0.0' },
   },
   moduleDependencies: {
-    '@nuxtjs/supabase': { version: '^2.0.3', defaults: {} },
+    '@nuxtjs/supabase': {
+      version: '^2.0.3',
+      defaults: { clientOptions: { db: { schema: 'galaxy' } } },
+    },
+    '@pinia/nuxt': {},
+    '@pinia/colada-nuxt': {},
   },
   defaults: {
     url: process.env.GALAXY_URL || 'http://localhost:9000',

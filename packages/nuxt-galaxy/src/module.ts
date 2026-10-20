@@ -166,17 +166,12 @@ export default defineNuxtModule<ModuleOptions>({
     },
   },
   moduleDependencies: {
+    // No sign-in redirect options: the pages they name are the UI layer's,
+    // and Nuxt concatenates a dependency's array defaults with the app's, so
+    // an exemption set here is one no app could remove (ADR 0009, #162).
     '@nuxtjs/supabase': {
       version: '^2.0.3',
       defaults: {
-        redirectOptions: {
-          login: '/login',
-          callback: '/confirm',
-          include: [],
-          exclude: ['/', '/login', '/signup', '/confirm'],
-          saveRedirectToCookie: true,
-
-        },
         clientOptions: {
           db: {
             schema: 'galaxy',
@@ -184,9 +179,11 @@ export default defineNuxtModule<ModuleOptions>({
         },
       },
     },
-    '@nuxt/content': {
-      version: '^3.11.2',
-    },
+    // The queries under `runtime/app/queries` are Pinia Colada query
+    // options, so the module installs what runs them rather than relying on
+    // the UI layer to. An app that lists either module itself gets it once.
+    '@pinia/nuxt': {},
+    '@pinia/colada-nuxt': {},
   },
   // Default configuration options for your module, can also be a function returning those
   defaults: {
@@ -308,9 +305,6 @@ export default defineNuxtModule<ModuleOptions>({
     if (!nuxt.options.runtimeConfig.galaxy.drizzle.databaseUrl) {
       log.warn('Missing galaxy database url, set it either in `nuxt.config.js` or via env variable')
     }
-
-    // // Install nuxt content module
-    // await installModule('@nuxt/content', { }, nuxt)
 
     // From the runtime directory
 
