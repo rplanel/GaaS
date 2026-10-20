@@ -68,10 +68,11 @@
   },
   "dependencies": {
     "@dotenvx/dotenvx": "catalog:",
-    "@nuxt/content": "catalog:nuxt",
     "@nuxt/kit": "catalog:nuxt",
     "@nuxtjs/supabase": "catalog:nuxt",
     "@pinia/colada": "catalog:vue",
+    "@pinia/colada-nuxt": "catalog:nuxt",
+    "@pinia/nuxt": "catalog:nuxt",
     "blendtype": "workspace:*",
     "citty": "catalog:",
     "d3-dsv": "catalog:dataviz",

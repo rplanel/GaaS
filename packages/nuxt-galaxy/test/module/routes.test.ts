@@ -41,9 +41,9 @@ async function loadRegisteredHandlers() {
       middleware: handlers
         .filter(handler => handler.middleware)
         .map(handler => String(handler.handler)),
-      // Every handler this module registers, read by its path: the other
-      // modules' own routes (content's, supabase's) are in the same list and
-      // are no business of this file.
+      // Every handler this module registers, read by its path: other
+      // modules' routes are in the same list and are no business of this
+      // file.
       registrations: handlers
         .filter(handler => String(handler.handler).startsWith(srcDir))
         .map(handler => ({
@@ -64,13 +64,8 @@ async function loadRegisteredHandlers() {
  * The handler list, read once for the whole file.
  *
  * Every test here asks one question of one answer, and loading a whole Nuxt
- * per test bought nothing but seconds — and a hazard. `@nuxt/content` is a
- * module dependency of this one, and its `close` hook drops its content
- * tables from a SQLite database the fixture never builds; enough load/close
- * cycles in one file and that rejection lands unhandled, failing the run
- * with every test passing. Four loads in this file was under the threshold,
- * nine was over it (#87). So the tests added for #99 and #79 read this same
- * one rather than taking a load of their own.
+ * per test buys nothing but seconds. So the tests added for #99 and #79 read
+ * this same one rather than taking a load of their own.
  */
 let routes: Awaited<ReturnType<typeof loadRegisteredHandlers>>['routes']
 let middleware: Awaited<ReturnType<typeof loadRegisteredHandlers>>['middleware']

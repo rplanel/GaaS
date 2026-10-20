@@ -46,6 +46,15 @@ export default defineNuxtConfig({
   // Supabase types are provided by nuxt-galaxy module
   supabase: {
     types: false, // Disable default type generation, use nuxt-galaxy's types
+    // The sign-in redirects for this layer's pages, with its four public
+    // pages; nuxt-galaxy sets none (ADR 0009, #162). Login and confirm read
+    // the saved cookie to send the user back to the page they were on.
+    redirectOptions: {
+      login: '/login',
+      callback: '/confirm',
+      saveRedirectToCookie: true,
+      exclude: ['/', '/login', '/signup', '/confirm'],
+    },
   },
   css: [
     join(currentDir, './app/assets/css/main.css'),

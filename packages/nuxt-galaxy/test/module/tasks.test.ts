@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { withFixtureNuxt } from './loadFixture'
 
 /**
- * One load per distinct configuration, each with its own content database —
- * see `loadFixture`, which explains why both matter.
+ * One load per distinct configuration, shared by the tests that ask about
+ * it: a whole Nuxt per assertion buys nothing but seconds.
  */
 const loaded = new Map<string, ReturnType<typeof loadNitroConfig>>()
 
