@@ -99,10 +99,11 @@ editing them is #167.
 What each parameter's widget decides, as against how it looks, is in
 `runtime/app/utils/parameterRules.ts` (#166), and `@gaas/ui`'s widgets
 render with it: a repeat's instances by position, a parameter group's bag,
-the parameters of a conditional's saved case, a select's options and label,
-and how a boolean reads and is written. The second UI's widgets (#167) are
-to call these rather than decide any of it again. Which component renders a
-parameter type stays in `@gaas/ui`. An analysis cannot add or remove a
+the parameters of a conditional's saved case, a select's options by label
+and value and the labels its saved value names, and how a boolean reads and
+is written. The second UI's widgets (#167) are to call these rather than
+decide any of it again. Which component renders a parameter type stays in
+`@gaas/ui`. An analysis cannot add or remove a
 repeat's instances, so there is no rule for that.
 
 ### Supabase Commands

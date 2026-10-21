@@ -70,10 +70,15 @@ describe('module auto-imports', () => {
       'parameterGroupValue',
       'parameterGroupWithChild',
       'conditionalCaseInputs',
-      'selectOptionValues',
-      'selectOptionLabel',
+      'selectOptions',
+      'selectOptionLabels',
       'isBooleanParameterTrue',
       'booleanParameterSpelling',
     ]))
+  })
+
+  it('no longer registers the select rules that read values alone (#183)', () => {
+    expect(names).not.toContain('selectOptionValues')
+    expect(names).not.toContain('selectOptionLabel')
   })
 })
