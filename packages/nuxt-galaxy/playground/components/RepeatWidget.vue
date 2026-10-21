@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { GalaxyRepeatToolParameter, WorkflowParameterValue } from 'blendtype'
-import { savedParameters } from '../utils/savedParameters'
 import ParameterWidget from './ParameterWidget.vue'
 
 const props = defineProps<{
@@ -11,17 +10,14 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:modelValue': [value: WorkflowParameterValue[]] }>()
 
 /**
- * One block per instance the revision saved, and an edit of one parameter of
- * one of them written back into the list: `nuxt-galaxy`'s rules (#166).
+ * One block per instance the revision saved, the parameters in each that are
+ * offered a widget, and an edit of one of them written back into the list:
+ * `nuxt-galaxy`'s rules (#166, #167).
  *
  * Nothing adds or removes an instance. Only the workflow's author can
  * (`CONTEXT.md`, *Repeat*).
  */
-const instances = computed(() => repeatInstances(props.modelValue).map(({ position, instance }) => ({
-  position,
-  index: instance.__index__,
-  children: savedParameters(props.parameter.inputs, instance),
-})))
+const instances = computed(() => repeatInstances(props.modelValue))
 
 function setChild(position: number, name: string, value: WorkflowParameterValue) {
   emit('update:modelValue', repeatWithChild(props.modelValue, position, name, value))
@@ -39,15 +35,15 @@ const heading = computed(() => props.parameter.title || props.parameter.name)
   <fieldset>
     <legend>{{ heading }}</legend>
     <!-- Keyed by `__index__`, which identifies an instance, where the position is only where it sits. -->
-    <fieldset v-for="{ position, index, children } in instances" :key="index">
+    <fieldset v-for="{ position, instance } in instances" :key="instance.__index__">
       <!-- Numbered from the position, one-based, as Galaxy's form numbers an instance. -->
       <legend>{{ position + 1 }}: {{ heading }}</legend>
       <ParameterWidget
-        v-for="child in children"
-        :key="child.parameter.name"
-        :parameter="child.parameter"
-        :model-value="child.value"
-        @update:model-value="setChild(position, child.parameter.name, $event)"
+        v-for="child in parametersSavedIn(parameter.inputs, instance)"
+        :key="child.name"
+        :parameter="child"
+        :model-value="instance[child.name]"
+        @update:model-value="setChild(position, child.name, $event)"
       />
     </fieldset>
   </fieldset>

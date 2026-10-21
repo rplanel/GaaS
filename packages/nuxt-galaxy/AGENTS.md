@@ -101,20 +101,20 @@ What each parameter's widget decides, as against how it looks, is in
 second UI's both render with it: a repeat's instances by position, a
 parameter group's bag, the parameters of a conditional's saved case, a
 select's options by label and value and the labels its saved value names,
-and how a boolean reads and is written. `@gaas/ui`'s map from a parameter
-type to its widget stays in `@gaas/ui` (ADR 0009), so the second UI has its
-own: `playground/components/ParameterWidget.vue`, with one plain widget for
-each type `@gaas/ui`'s start form renders. The widgets take their types from
+how a boolean reads and is written, and which declared parameters are
+offered a widget at all: those the saved bag holds, by name (#167).
+`@gaas/ui`'s map from a parameter type to its widget stays in `@gaas/ui`
+(ADR 0009), so the second UI has its own:
+`playground/components/ParameterWidget.vue`, with one plain widget for each
+type `@gaas/ui`'s start form renders. The widgets take their types from
 `blendtype`, type-only. This module's own types are written in them, and
 `blendtype` resolves as this package's dependency. An analysis cannot add or
 remove a repeat's instances, so there is no rule for that, and a
 conditional's test parameter is shown and never written (#94).
 
-The second UI's widgets decide three things outside `parameterRules.ts`:
-- `playground/utils/savedParameters.ts` offers a widget only for a parameter
-  the saved bag holds a value for. `@gaas/ui` makes the same check with
-  `name in saved` at every level. The two differ only for a key that holds
-  `undefined`, which neither Galaxy's JSON nor these widgets ever write.
+The second UI's widgets decide three things outside `parameterRules.ts`,
+all about how a value is shown:
+- `ParameterWidget.vue` shows an `undefined` the way it shows `null`.
 - A text widget shows no text for anything but a string, as `@gaas/ui`'s
   `TextToolParameter.vue` does.
 - A multiple select reads a saved string as a list of one, as

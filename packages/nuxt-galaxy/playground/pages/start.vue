@@ -2,7 +2,6 @@
 import type { WorkflowParameterValue } from 'blendtype'
 import type { Database } from 'nuxt-galaxy'
 import ParameterWidget from '../components/ParameterWidget.vue'
-import { savedParameters } from '../utils/savedParameters'
 
 type Dataset = Database['galaxy']['Views']['uploaded_datasets_with_storage_path']['Row']
 
@@ -75,13 +74,13 @@ watch(workflowParametersModel, (saved) => {
 })
 
 /**
- * The parameters a tool step offers a widget for, by the tool the step pins,
- * each with the value it holds.
+ * The parameters a tool step offers a widget for: those the tool the step
+ * pins declares, as far as the step saved them (`nuxt-galaxy`'s rule, #167).
  */
 function stepParameters(stepId: string) {
   const pinned = stepToTool.value[stepId]
-  const offered = pinned === undefined ? [] : toolInputParameters.value[pinned] ?? []
-  return savedParameters(offered, parameters.value[stepId] ?? {})
+  const declared = pinned === undefined ? [] : toolInputParameters.value[pinned] ?? []
+  return parametersSavedIn(declared, parameters.value[stepId] ?? {})
 }
 
 /** An edit of one of a step's parameters, written as a new bag for the step, as every level below writes one. */
@@ -196,10 +195,10 @@ async function startAnalysis() {
         <legend>Step {{ stepId }}: {{ step.tool_id }}</legend>
         <ParameterWidget
           v-for="offered in stepParameters(stepId)"
-          :key="offered.parameter.name"
-          :parameter="offered.parameter"
-          :model-value="offered.value"
-          @update:model-value="setParameter(stepId, offered.parameter.name, $event)"
+          :key="offered.name"
+          :parameter="offered"
+          :model-value="parameters[stepId]?.[offered.name]"
+          @update:model-value="setParameter(stepId, offered.name, $event)"
         />
       </fieldset>
       <div v-if="describeError" role="alert" data-testid="workflow-description-error">

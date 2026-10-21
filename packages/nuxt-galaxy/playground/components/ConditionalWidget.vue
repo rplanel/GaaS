@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { GalaxyConditionalParameter, WorkflowConditionalParametersValue, WorkflowParameterValue } from 'blendtype'
-import { savedParameters } from '../utils/savedParameters'
 import ParameterWidget from './ParameterWidget.vue'
 
 const props = defineProps<{
@@ -11,13 +10,13 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:modelValue': [value: WorkflowConditionalParametersValue] }>()
 
 /**
- * The bag the conditional saved, the parameters of the case it was saved on,
- * and an edit of one of them written back as a new bag: `nuxt-galaxy`'s rules
- * (#166).
+ * The bag the conditional saved, its test parameter and the parameters of the
+ * case it was saved on as far as the bag holds them, and an edit of one of
+ * them written back as a new bag: `nuxt-galaxy`'s rules (#166, #167).
  */
 const saved = computed(() => parameterGroupValue(props.modelValue))
-const testParameter = computed(() => savedParameters([props.parameter.test_param], saved.value))
-const children = computed(() => savedParameters(conditionalCaseInputs(props.parameter, props.modelValue) ?? [], saved.value))
+const testParameter = computed(() => parametersSavedIn([props.parameter.test_param], saved.value))
+const offered = computed(() => parametersSavedIn(conditionalCaseInputs(props.parameter, props.modelValue) ?? [], saved.value))
 
 function setChild(name: string, value: WorkflowParameterValue) {
   emit('update:modelValue', parameterGroupWithChild(props.modelValue, name, value))
@@ -35,17 +34,17 @@ function setChild(name: string, value: WorkflowParameterValue) {
     -->
     <ParameterWidget
       v-for="test in testParameter"
-      :key="test.parameter.name"
-      :parameter="test.parameter"
-      :model-value="test.value"
+      :key="test.name"
+      :parameter="test"
+      :model-value="saved[test.name]"
       disabled
     />
     <ParameterWidget
-      v-for="child in children"
-      :key="child.parameter.name"
-      :parameter="child.parameter"
-      :model-value="child.value"
-      @update:model-value="setChild(child.parameter.name, $event)"
+      v-for="child in offered"
+      :key="child.name"
+      :parameter="child"
+      :model-value="saved[child.name]"
+      @update:model-value="setChild(child.name, $event)"
     />
   </div>
 </template>
