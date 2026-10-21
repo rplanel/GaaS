@@ -64,15 +64,15 @@ const parametersInputsComponent = toRef(() => props.parametersInputsComponent)
  * the type it really receives, so the declaration is honest even where
  * nothing reads it.
  *
- * `BooleanToolParameter` has been through that second half (#111), and
- * `TextToolParameter` was written through it (#113). The other five are
+ * `BooleanToolParameter` has been through that second half (#111),
+ * `TextToolParameter` was written through it (#113), and `GalaxyConditional`
+ * declares the bag a conditional saves since #182. The other four are
  * untouched and none of their declarations has been measured against a
  * recording: `modelValue` is `string` on `FloatToolParameter`,
- * `number` on `IntegerToolParameter`, `any` on `DataToolParameter`,
- * `{ __current_case__: number } & Record<string, string>` on
- * `GalaxyConditional`, and `string` / `string[]` on `SelectToolParameter`
- * — the last of which #111 did check, and a select's saved value really is
- * a string or a list of them on both releases.
+ * `number` on `IntegerToolParameter`, `any` on `DataToolParameter`, and
+ * `string` / `string[]` on `SelectToolParameter` — the last of which #111
+ * did check, and a select's saved value really is a string or a list of
+ * them on both releases.
  *
  * At least one of the rest is already contradicted by the payloads: the
  * recordings save every integer parameter as a **string**, `calin_threshold`
