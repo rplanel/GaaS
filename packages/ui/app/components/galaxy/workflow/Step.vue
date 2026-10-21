@@ -66,7 +66,7 @@ const parametersInputsComponent = toRef(() => props.parametersInputsComponent)
  *
  * `BooleanToolParameter` has been through that second half (#111),
  * `TextToolParameter` was written through it (#113), and `GalaxyConditional`
- * declares the bag a conditional saves since #182. The other four are
+ * went through it in #182. The other four are
  * untouched and none of their declarations has been measured against a
  * recording: `modelValue` is `string` on `FloatToolParameter`,
  * `number` on `IntegerToolParameter`, `any` on `DataToolParameter`, and

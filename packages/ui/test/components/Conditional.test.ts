@@ -13,12 +13,13 @@
  * parameter is hand-written below and says so.
  */
 
-import type { WorkflowConditionalParametersValue } from 'blendtype'
+import type { WorkflowConditionalParametersValue, WorkflowParameterValue } from 'blendtype'
 import { isParameterGroupValue } from '#imports'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
 import { declaredParameter, FIXTURES, loadFixture, savedValue } from '../../../nuxt-galaxy/test/characterisation/fixtures'
 import Conditional from '../../app/components/galaxy/Conditional.vue'
+import SelectToolParameter from '../../app/components/galaxy/SelectToolParameter.vue'
 import TextToolParameter from '../../app/components/galaxy/TextToolParameter.vue'
 
 const nested = loadFixture(FIXTURES.conditionalRepeatRuntime)
@@ -39,7 +40,7 @@ function savedConflict(): WorkflowConditionalParametersValue {
  * Mounted, with its accordion opened: the case's parameters are rendered in
  * the accordion's body, which is not in the document until it is.
  */
-async function mountOpen(modelValue: WorkflowConditionalParametersValue) {
+async function mountOpen(modelValue: WorkflowParameterValue) {
   const wrapper = await mountSuspended(Conditional, {
     props: { ...conflict, modelValue },
   })
@@ -104,9 +105,37 @@ describe('what a conditional puts on screen', () => {
     expect(shown[0]?.props('name')).toBe('suffix_pattern')
     expect(shown[0]?.props('modelValue')).toBe('_#')
   })
+
+  it('reads a saved value that is not a bag as one with no case, and still heads it', async () => {
+    // Hand-written: no recording saves one, and Galaxy does not write `null`
+    // for a conditional. `Step.vue` hands every widget its value through
+    // `<component :is>`, which checks no type (#111), so the conditional
+    // reads what it is given as the section does rather than failing to
+    // render the step.
+    const wrapper = await mountOpen(null)
+    expect(wrapper.get('button[aria-expanded]').text()).toContain('How should conflicts (or potential conflicts) be handled?')
+    expect(wrapper.findAllComponents(TextToolParameter)).toHaveLength(0)
+  })
 })
 
 describe('what a conditional writes back', () => {
+  it('writes nothing back from its test parameter, so the case is never switched', async () => {
+    // The test parameter's widget is read-only and does not emit today. This
+    // pins that the conditional would not act on it if it did: a test
+    // parameter written alone would leave `__current_case__` and the case's
+    // parameters on the old case, which is the switch #94 refused.
+    const handed = { __current_case__: 3, duplicate_options: 'keep_first' }
+    const wrapper = await mountOpen(handed)
+    const testParameter = wrapper.findAllComponents(SelectToolParameter)
+    expect(testParameter).toHaveLength(1)
+
+    testParameter[0]!.vm.$emit('update:modelValue', 'suffix_conflict')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    expect(handed).toEqual({ __current_case__: 3, duplicate_options: 'keep_first' })
+  })
+
   it('emits an edit inside the shown case as a new value, and leaves the one it was handed alone', async () => {
     // Hand-written, as above: no recording saves a case that holds an
     // editable parameter. A section or a repeat above hears of the edit only

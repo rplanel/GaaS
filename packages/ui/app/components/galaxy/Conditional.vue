@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GalaxyConditionalParameter, WorkflowConditionalParametersValue, WorkflowParameterValue } from 'blendtype'
-import { conditionalCaseInputs, parameterGroupWithChild } from '#imports'
+import { conditionalCaseInputs, parameterGroupValue, parameterGroupWithChild } from '#imports'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
 export interface GalaxyConditionalParameterProps
@@ -10,8 +10,12 @@ export interface GalaxyConditionalParameterProps
    * parameter, `__current_case__`, and whatever the case holds, which is not
    * only strings (a boolean, a repeat, a `ConnectedValue` marker, another
    * conditional).
+   *
+   * `WorkflowParameterValue` rather than the bag itself, for the reason the
+   * section's is (#111): `<component :is>` does not typecheck what it
+   * passes, so a narrower declaration would be a promise nothing keeps.
    */
-  modelValue: WorkflowConditionalParametersValue
+  modelValue: WorkflowParameterValue
   variant?: 'form' | 'display'
 }
 
@@ -26,14 +30,11 @@ const { hint } = useGalaxyHint(
   props.test_param.argument,
 )
 
-const conditionalModel = computed({
-  get() {
-    return props.modelValue
-  },
-  set(val) {
-    emit('update:modelValue', val)
-  },
-})
+/**
+ * The bag the conditional saved, read as empty when the saved value is not
+ * one: `nuxt-galaxy`'s rule (#166).
+ */
+const saved = computed(() => parameterGroupValue(props.modelValue))
 
 /**
  * What heads the conditional: the test parameter's label, or its name when
@@ -51,7 +52,7 @@ function setChild(name: string, value: WorkflowParameterValue) {
   emit('update:modelValue', parameterGroupWithChild(props.modelValue, name, value))
 }
 
-const selectedInputs = computed(() => conditionalCaseInputs(props, conditionalModel.value))
+const selectedInputs = computed(() => conditionalCaseInputs(props, props.modelValue))
 const { inputComponentsObject: inputTestParamComponents }
   = useGalaxyToolInputComponent([props.test_param])
 
@@ -77,9 +78,14 @@ const inputConditionalComponents = computed(() => {
       }"
     >
       <template #default>
+        <!--
+          Read, never written back: the case is not switched (#94), and a
+          test parameter written alone would leave `__current_case__` and
+          the case's parameters on the old case.
+        -->
         <component
           :is="inputTestParamComponents?.[props?.test_param.name]?.component"
-          v-model="conditionalModel[props.test_param.name]"
+          :model-value="saved[props.test_param.name]"
           v-bind="props.test_param"
           :label="heading"
           :hint :disabled="true"
@@ -94,7 +100,7 @@ const inputConditionalComponents = computed(() => {
           >
             <component
               :is="inputConditionalComponents?.[input?.name]?.component"
-              :model-value="props.modelValue[input.name]"
+              :model-value="saved[input.name]"
               :variant v-bind="input"
               @update:model-value="setChild(input.name, $event)"
             />
