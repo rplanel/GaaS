@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GalaxyRepeatToolParameter, WorkflowParameterValue } from 'blendtype'
-import { repeatInstances, repeatWithChild } from '#imports'
+import { parametersSavedIn, repeatInstances, repeatWithChild } from '#imports'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
 export interface GalaxyRepeatToolParameterProps
@@ -86,23 +86,20 @@ const { hint } = useGalaxyHint(props.help)
       <div class="text-sm font-medium opacity-70 px-2 pt-2">
         {{ title }} {{ position + 1 }}
       </div>
-      <template
-        v-for="input in inputs"
+      <!-- Only the parameters the instance names: `nuxt-galaxy`'s rule (#167). -->
+      <div
+        v-for="input in parametersSavedIn(inputs, instance)"
         :key="input.name"
+        class="border-b border-[var(--ui-border)] last:border-none px-2 py-3 w-full"
       >
-        <div
-          v-if="input.name in instance"
-          class="border-b border-[var(--ui-border)] last:border-none px-2 py-3 w-full"
-        >
-          <component
-            :is="inputComponentsObject?.[input.name]?.component"
-            :model-value="instance[input.name]"
-            :variant
-            v-bind="input"
-            @update:model-value="setChild(position, input.name, $event)"
-          />
-        </div>
-      </template>
+        <component
+          :is="inputComponentsObject?.[input.name]?.component"
+          :model-value="instance[input.name]"
+          :variant
+          v-bind="input"
+          @update:model-value="setChild(position, input.name, $event)"
+        />
+      </div>
     </div>
   </div>
 </template>

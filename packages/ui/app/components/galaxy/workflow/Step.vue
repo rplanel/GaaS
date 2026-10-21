@@ -2,6 +2,7 @@
 import type { GalaxyToolParameters, WorkflowToolParameters } from 'blendtype'
 import type { DescribedStep } from 'nuxt-galaxy'
 import type { GalaxyToolInputComponent } from '../../../composables/galaxy/useGalaxyToolInputComponent'
+import { parametersSavedIn } from '#imports'
 
 export interface Props {
   variant?: 'form' | 'display'
@@ -90,14 +91,14 @@ function getComponent(toolInput: GalaxyToolParameters) {
     v-if="workflowStep && toolParameters"
     class="grid grid-flow-row"
   >
-    <template
-      v-for="toolInput in toolParameters"
-      :key="toolInput.name"
-    >
+    <!--
+      Only the parameters the step's saved values name, one a reader has
+      emptied included: `nuxt-galaxy`'s rule (#167), which says why.
+    -->
+    <template v-if="workflowParametersModel">
       <div
-        v-if=" workflowParametersModel
-          && toolInput.name in workflowParametersModel
-        "
+        v-for="toolInput in parametersSavedIn(toolParameters, workflowParametersModel)"
+        :key="toolInput.name"
         class="border-b border-[var(--ui-border)] last:border-none px-4 py-5 w-full grow-1"
       >
         <component

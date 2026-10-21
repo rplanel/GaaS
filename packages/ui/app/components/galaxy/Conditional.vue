@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GalaxyConditionalParameter, WorkflowConditionalParametersValue, WorkflowParameterValue } from 'blendtype'
-import { conditionalCaseInputs, parameterGroupValue, parameterGroupWithChild } from '#imports'
+import { conditionalCaseInputs, parameterGroupValue, parameterGroupWithChild, parametersSavedIn } from '#imports'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
 export interface GalaxyConditionalParameterProps
@@ -94,25 +94,23 @@ const inputConditionalComponents = computed(() => {
       </template>
       <template #body>
         <div v-if="selectedInputs && inputConditionalComponents" class="mx-5 grid grid-flow-row gap-3">
-          <template v-for="input in selectedInputs" :key="input.name">
-            <!--
-              The intersection the section, the repeat and `Step.vue` take: a
-              parameter the case declares but the revision saved nothing for
-              has no value to edit, and a widget bound to `undefined` would
-              submit a value nobody chose (#185).
-            -->
-            <div
-              v-if="input.name in saved"
-              class="border-b border-[var(--ui-border)] last:border-none px-4 py-5 mx-5 w-full"
-            >
-              <component
-                :is="inputConditionalComponents?.[input?.name]?.component"
-                :model-value="saved[input.name]"
-                :variant v-bind="input"
-                @update:model-value="setChild(input.name, $event)"
-              />
-            </div>
-          </template>
+          <!--
+            Only the parameters of the case the bag names, as the section, the
+            repeat and `Step.vue` offer theirs: `nuxt-galaxy`'s rule (#185,
+            #167), which says why.
+          -->
+          <div
+            v-for="input in parametersSavedIn(selectedInputs, saved)"
+            :key="input.name"
+            class="border-b border-[var(--ui-border)] last:border-none px-4 py-5 mx-5 w-full"
+          >
+            <component
+              :is="inputConditionalComponents?.[input?.name]?.component"
+              :model-value="saved[input.name]"
+              :variant v-bind="input"
+              @update:model-value="setChild(input.name, $event)"
+            />
+          </div>
         </div>
       </template>
     </UAccordion>
