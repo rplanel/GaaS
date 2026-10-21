@@ -3,7 +3,7 @@ import type {
   GalaxyMultipleSelectToolParameter,
   GalaxySingleSelectToolParameter,
 } from 'blendtype'
-import { computed, selectOptionLabel, selectOptionValues } from '#imports'
+import { computed, selectOptionLabels, selectOptions } from '#imports'
 
 /**
  * The two variants are discriminated by `multiple`, which is also the only
@@ -57,9 +57,10 @@ const model = computed({
 })
 const { hint: help } = useGalaxyHint(props.help, props.argument)
 // What the select offers and how it names the saved value: `nuxt-galaxy`'s
-// rules (#166).
-const optionValues = computed(() => selectOptionValues(props))
-const selectedOptionLabel = computed(() => selectOptionLabel(props, toValue(model)))
+// rules (#166). The menu is handed label and value pairs and keyed on the
+// value, so it shows the label while the model holds what Galaxy saves (#183).
+const options = computed(() => selectOptions(props))
+const selectedOptionLabels = computed(() => selectOptionLabels(props, toValue(model)))
 </script>
 
 <template>
@@ -84,7 +85,8 @@ const selectedOptionLabel = computed(() => selectOptionLabel(props, toValue(mode
         <USelectMenu
           v-model="model"
           persistent-hint
-          :items="optionValues"
+          :items="options"
+          value-key="value"
           :multiple
           :disabled
           class="my-3 w-full"
@@ -101,9 +103,14 @@ const selectedOptionLabel = computed(() => selectOptionLabel(props, toValue(mode
       <div>
         <USeparator orientation="vertical" />
       </div>
-      <div>
-        <UBadge color="primary" class="self-center">
-          {{ selectedOptionLabel }}
+      <div class="flex flex-row flex-wrap gap-1">
+        <UBadge
+          v-for="(selectedLabel, position) in selectedOptionLabels"
+          :key="position"
+          color="primary"
+          class="self-center"
+        >
+          {{ selectedLabel }}
         </UBadge>
       </div>
     </div>

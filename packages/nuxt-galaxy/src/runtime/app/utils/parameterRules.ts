@@ -126,21 +126,45 @@ export function conditionalCaseInputs(
   return typeof currentCase === 'number' ? conditional.cases[currentCase]?.inputs : undefined
 }
 
-/**
- * What a select offers: the value of each option its tool declares, in the
- * declared order. Galaxy declares an option as `[label, value, selected]`, and
- * the value is what the state saves.
- */
-export function selectOptionValues(select: Pick<GalaxySelectToolParameter, 'options'>): string[] | undefined {
-  return select.options?.map(([_label, value]) => value)
+/** One option of a select: what the reader is shown, and what the state saves. */
+export interface SelectOption {
+  label: string
+  value: string
 }
 
-/** The label of the option holding the saved value, or `undefined` when no option does. */
-export function selectOptionLabel(
+/**
+ * What a select offers: each option its tool declares, by label and value,
+ * in the declared order (#183). Galaxy declares an option as `[label, value,
+ * selected]`, shows the label and saves the value, on both releases
+ * (`ui-misc.js:208` at 22.05, `FormSelection.vue:76` at 26.1), so a widget
+ * that listed the values showed `--circ` where the tool says "circular
+ * (--circ)".
+ *
+ * `options` is read without a guard: blendtype declares it on every select,
+ * and Galaxy's `SelectToolParameter.to_dict` always writes it, as an empty
+ * list when a dynamic select has nothing to offer (`basic.py:1106` at 22.05,
+ * `:1228` at 26.1).
+ */
+export function selectOptions(select: Pick<GalaxySelectToolParameter, 'options'>): SelectOption[] {
+  return select.options.map(([label, value]) => ({ label, value }))
+}
+
+/**
+ * The label of each option the saved value holds, in the saved order, which
+ * is the order Galaxy keeps a multiple select's values in. A value no option
+ * holds is named by nothing (#183).
+ *
+ * A multiple select saves a list and a single one a string, which reads here
+ * as a list of one. Reading the string alone named nothing for a multiple
+ * select, because the saved list matched no single value.
+ */
+export function selectOptionLabels(
   select: Pick<GalaxySelectToolParameter, 'options'>,
   saved: WorkflowParameterValue,
-): string | undefined {
-  return select.options?.find(([_label, value]) => value === saved)?.[0]
+): string[] {
+  const options = selectOptions(select)
+  const savedValues = Array.isArray(saved) ? saved : [saved]
+  return savedValues.flatMap(savedValue => options.find(option => option.value === savedValue)?.label ?? [])
 }
 
 /**

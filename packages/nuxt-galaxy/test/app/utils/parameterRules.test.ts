@@ -8,8 +8,8 @@ import {
   parameterGroupWithChild,
   repeatInstances,
   repeatWithChild,
-  selectOptionLabel,
-  selectOptionValues,
+  selectOptionLabels,
+  selectOptions,
 } from '../../../src/runtime/app/utils/parameterRules'
 import { declaredParameter, FIXTURES, loadFixture, savedValue } from '../../characterisation/fixtures'
 
@@ -161,23 +161,48 @@ describe('conditionalCaseInputs', () => {
 
 /** `ccqtl_find_peaks`'s `level`, whose labels (`95%`) differ from their values (`95`). */
 const level = declaredParameter(ccqtl, '5', 'level', 'select')
+/** `integron_finder`'s `type_replicon`, whose labels name the flag each value is. */
+const typeReplicon = declaredParameter(nested, '1', 'type_replicon', 'select')
 
-describe('selectOptionValues', () => {
-  it('offers the value of every option its tool declares', () => {
-    expect(selectOptionValues(level)).toEqual(['80', '90', '95', '99'])
+describe('selectOptions', () => {
+  it('offers every option its tool declares, by label and value, in the declared order', () => {
+    expect(selectOptions(level)).toEqual([
+      { label: '80%', value: '80' },
+      { label: '90%', value: '90' },
+      { label: '95%', value: '95' },
+      { label: '99%', value: '99' },
+    ])
+    expect(selectOptions(typeReplicon)).toEqual([
+      { label: 'linear (--linear)', value: '--linear' },
+      { label: 'circular (--circ)', value: '--circ' },
+    ])
   })
 })
 
-describe('selectOptionLabel', () => {
+/** Hand-written: no recording has a multiple select, so this is `level` declared multiple. */
+const levels = { ...level, multiple: true as const }
+
+describe('selectOptionLabels', () => {
   it('names the saved value by its option\'s label', () => {
     expect(savedValue(ccqtl, '5', 'level')).toBe('95')
-    expect(selectOptionLabel(level, savedValue(ccqtl, '5', 'level'))).toBe('95%')
+    expect(selectOptionLabels(level, savedValue(ccqtl, '5', 'level'))).toEqual(['95%'])
   })
 
-  it('names nothing for a value no option holds', () => {
+  it('names each value a multiple select saved by its label, in the saved order', () => {
+    expect(selectOptionLabels(levels, ['99', '80'])).toEqual(['99%', '80%'])
+  })
+
+  it('leaves out a value no option holds', () => {
     // Hand-written: no recording saves a value its tool does not offer.
-    expect(selectOptionLabel(level, '42')).toBeUndefined()
-    expect(selectOptionLabel(level, '95%')).toBeUndefined()
+    expect(selectOptionLabels(level, '42')).toEqual([])
+    expect(selectOptionLabels(level, '95%')).toEqual([])
+    expect(selectOptionLabels(levels, ['42', '95'])).toEqual(['95%'])
+  })
+
+  it('names nothing for a select saved `null`', () => {
+    // `type_replicon` is optional and saved `null` in the recording.
+    expect(savedValue(nested, '1', 'type_replicon')).toBeNull()
+    expect(selectOptionLabels(typeReplicon, savedValue(nested, '1', 'type_replicon'))).toEqual([])
   })
 })
 
