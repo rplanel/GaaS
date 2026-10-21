@@ -60,4 +60,20 @@ describe('module auto-imports', () => {
     expect(names).toContain('inputStepLabel')
     expect(names).toContain('isInputStep')
   })
+
+  it('registers the rules each parameter\'s widget reads, which any UI renders with (#166)', () => {
+    // From `runtime/app/utils/`, whose every export the directory scan
+    // registers. `@gaas/ui`'s widgets reach them only through these names.
+    expect(names).toEqual(expect.arrayContaining([
+      'repeatInstances',
+      'repeatWithChild',
+      'parameterGroupValue',
+      'parameterGroupWithChild',
+      'conditionalCaseInputs',
+      'selectOptionValues',
+      'selectOptionLabel',
+      'isBooleanParameterTrue',
+      'booleanParameterSpelling',
+    ]))
+  })
 })

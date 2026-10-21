@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { GalaxyRepeatToolParameter, WorkflowParameterValue, WorkflowRepeatInstanceValue } from 'blendtype'
-import { isWorkflowRepeatInstanceValue } from 'blendtype'
+import type { GalaxyRepeatToolParameter, WorkflowParameterValue } from 'blendtype'
+import { repeatInstances, repeatWithChild } from '#imports'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
 export interface GalaxyRepeatToolParameterProps
@@ -25,54 +25,17 @@ const props = withDefaults(defineProps<GalaxyRepeatToolParameterProps>(), {
 
 const emit = defineEmits<{ 'update:modelValue': [value: WorkflowParameterValue[]] }>()
 
-interface RepeatBlock {
-  /** Where the instance sits in the saved list, which is what Galaxy names it by. */
-  position: number
-  instance: WorkflowRepeatInstanceValue
-}
-
 /**
- * One block per saved instance — and only for the entries that really are
- * instances.
- *
- * `isWorkflowRepeatInstanceValue` is the test, so an entry with no
- * `__index__` is skipped rather than rendered: Galaxy back-fills a missing
- * one "for backward compatibility" (`grouping.py`, both releases), which
- * makes such an entry legacy state this component cannot name, not an
- * impossibility. The entry stays in the model untouched — `setChild` below
- * maps the list it was given rather than this one.
+ * One block per saved instance, and the write of one parameter of one block
+ * back into the list: `nuxt-galaxy`'s rules, which say why an entry with no
+ * `__index__` is skipped here and carried through an edit (#166).
  */
-const blocks = computed<RepeatBlock[]>(() => {
-  const saved = props.modelValue
-  if (!Array.isArray(saved)) {
-    return []
-  }
-  const found: RepeatBlock[] = []
-  saved.forEach((value, position) => {
-    if (isWorkflowRepeatInstanceValue(value)) {
-      found.push({ position, instance: value })
-    }
-  })
-  return found
-})
+const blocks = computed(() => repeatInstances(props.modelValue))
 
 const { inputComponentsObject } = useGalaxyToolInputComponent(toRef(() => props.inputs))
 
-/**
- * Write one parameter of one block back, keeping every other entry of the
- * list as it was.
- *
- * Mapped over the **saved** list rather than over `blocks`, so an entry
- * `blocks` skipped is carried through instead of being dropped by the first
- * edit anywhere in the repeat.
- */
 function setChild(position: number, name: string, value: WorkflowParameterValue) {
-  const saved = Array.isArray(props.modelValue) ? props.modelValue : []
-  emit('update:modelValue', saved.map((entry, index) => (
-    index === position && isWorkflowRepeatInstanceValue(entry)
-      ? { ...entry, [name]: value }
-      : entry
-  )))
+  emit('update:modelValue', repeatWithChild(props.modelValue, position, name, value))
 }
 
 const { hint } = useGalaxyHint(props.help)

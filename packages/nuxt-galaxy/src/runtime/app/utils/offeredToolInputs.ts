@@ -43,7 +43,7 @@ function isOffered(input: GalaxyToolParameters): input is ToolInputParameter {
  * and a titled empty block would only suggest otherwise.
  *
  * A conditional keeps every case, and only each case's inputs are filtered:
- * `Conditional.vue` indexes `cases` with the saved `__current_case__`, so
+ * `conditionalCaseInputs` indexes `cases` with the saved `__current_case__`, so
  * dropping a case would silently renumber the rest. A conditional is never
  * dropped for being empty either — its `test_param` is a widget in its own
  * right, and the branch it names is what #94 is about.

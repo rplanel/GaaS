@@ -337,8 +337,9 @@ export default defineNuxtModule<ModuleOptions>({
       { name: 'isInputStep', path: './runtime/shared/stepLabel' },
       // Parameter encoding and decoding, one format tested as a round trip
       // (#163): what an analysis is started with and what copying one, or
-      // its jobs panel, reads back. `isParameterGroupValue` is the one
-      // helper a field component needs; the rest stay unregistered.
+      // its jobs panel, reads back. `isParameterGroupValue` tells a group's
+      // bag from a scalar; the rest stay unregistered. The widgets read the
+      // bag through `parameterGroupValue` in `runtime/app/utils` (#166).
       { name: 'useGalaxyEncodeParameters', path: './runtime/app/composables/galaxy/useGalaxyEncodeParameters' },
       { name: 'useGalaxyDecodeParameters', path: './runtime/app/composables/galaxy/useGalaxyDecodeParameters' },
       { name: 'isParameterGroupValue', path: './runtime/app/composables/galaxy/parameterValue' },
