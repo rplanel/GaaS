@@ -11,8 +11,8 @@
  * Not auto-imported, which is why these can carry short names without
  * claiming them globally: `module.ts` registers composables one name at a
  * time, and the only one registered from here is `isParameterGroupValue`,
- * which a section's field reads to tell its bag from a scalar. The rest are
- * reached by path.
+ * which tells a group's bag from a scalar and is what `parameterGroupValue`
+ * reads a section's bag with (#166). The rest are reached by path.
  */
 
 import type { WorkflowConditionalParametersValue } from 'blendtype'
