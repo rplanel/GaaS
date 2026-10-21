@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { GalaxyConditionalParameter } from 'blendtype'
+import { conditionalCaseInputs } from '#imports'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
 export interface GalaxyConditionalParameterProps
@@ -28,10 +29,7 @@ const conditionalModel = computed({
   },
 })
 
-const selectedInputs = computed(() => {
-  const selectedCase = props.cases[conditionalModel.value.__current_case__]
-  return selectedCase?.inputs
-})
+const selectedInputs = computed(() => conditionalCaseInputs(props, conditionalModel.value))
 const { inputComponentsObject: inputTestParamComponents }
   = useGalaxyToolInputComponent([props.test_param])
 

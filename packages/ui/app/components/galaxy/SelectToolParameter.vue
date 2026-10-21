@@ -3,7 +3,7 @@ import type {
   GalaxyMultipleSelectToolParameter,
   GalaxySingleSelectToolParameter,
 } from 'blendtype'
-import { computed } from '#imports'
+import { computed, selectOptionLabel, selectOptionValues } from '#imports'
 
 /**
  * The two variants are discriminated by `multiple`, which is also the only
@@ -45,7 +45,6 @@ const props = withDefaults(defineProps<GalaxySelectToolParameterProps>(), {
 const emit = defineEmits(['update:modelValue'])
 const variant = toRef(() => props.variant)
 const multiple = toRef(() => props.multiple)
-const options = toRef(() => props.options)
 const disabled = toRef(() => props.disabled)
 
 const model = computed({
@@ -57,31 +56,10 @@ const model = computed({
   },
 })
 const { hint: help } = useGalaxyHint(props.help, props.argument)
-const sanitizedOptions = computed(() => {
-  const optionsVal = toValue(options)
-  if (optionsVal) {
-    return optionsVal.map(([_title, value]) => {
-      return value
-    })
-  }
-  return undefined
-})
-
-const selectedOption = computed(() => {
-  const optionsVal = toValue(options)
-  if (optionsVal) {
-    return optionsVal.find(([_title, value]) => value === toValue(model))
-  }
-  return undefined
-})
-
-const selectedOptionLabel = computed(() => {
-  const selectedOptionVal = toValue(selectedOption)
-  if (selectedOptionVal) {
-    return selectedOptionVal[0]
-  }
-  return undefined
-})
+// What the select offers and how it names the saved value: `nuxt-galaxy`'s
+// rules (#166).
+const optionValues = computed(() => selectOptionValues(props))
+const selectedOptionLabel = computed(() => selectOptionLabel(props, toValue(model)))
 </script>
 
 <template>
@@ -106,7 +84,7 @@ const selectedOptionLabel = computed(() => {
         <USelectMenu
           v-model="model"
           persistent-hint
-          :items="sanitizedOptions"
+          :items="optionValues"
           :multiple
           :disabled
           class="my-3 w-full"

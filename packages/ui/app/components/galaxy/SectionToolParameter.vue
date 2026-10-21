@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GalaxySectionToolParameter, WorkflowConditionalParametersValue, WorkflowParameterValue } from 'blendtype'
-import { isParameterGroupValue } from '#imports'
+import { parameterGroupValue, parameterGroupWithChild } from '#imports'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
 export interface GalaxySectionToolParameterProps
@@ -27,29 +27,16 @@ const props = withDefaults(defineProps<GalaxySectionToolParameterProps>(), {
 const emit = defineEmits<{ 'update:modelValue': [value: WorkflowConditionalParametersValue] }>()
 
 /**
- * A section saves a plain bag, and anything else is state this component did
- * not model. Reading it as empty renders the section with no children rather
- * than throwing on the way past, which is the same reading `Step.vue` gives a
- * parameter the model has no value for.
+ * The bag the section saved, and the write of one child back as a new bag:
+ * `nuxt-galaxy`'s rules, which say why anything else reads as empty and why
+ * a nested section has to hand its parent a new value (#166).
  */
-const saved = computed<WorkflowConditionalParametersValue>(
-  () => isParameterGroupValue(props.modelValue) ? props.modelValue : {},
-)
+const saved = computed(() => parameterGroupValue(props.modelValue))
 
 const { inputComponentsObject } = useGalaxyToolInputComponent(toRef(() => props.inputs))
 
-/**
- * Write one child back by replacing the bag, rather than by mutating the one
- * the props carry.
- *
- * A section can be nested — `settings` holds `attc_settings` holds
- * `dist_thresh` — so every level has to hand its parent a new value for the
- * chain to reach the step's model. Mutating in place happens to work while
- * the model is the same object all the way down, and stops working the first
- * time any level copies.
- */
 function setChild(name: string, value: WorkflowParameterValue) {
-  emit('update:modelValue', { ...toValue(saved), [name]: value })
+  emit('update:modelValue', parameterGroupWithChild(props.modelValue, name, value))
 }
 
 const { hint } = useGalaxyHint(props.help)
