@@ -93,18 +93,36 @@ picks a dataset for each input and names the analysis. The page validates
 through `startAnalysisSchema`, refuses through `startAnalysisRefused` and
 says why, and starts through `useStartAnalysis`. `start` applies neither the
 schema nor the gate itself, so a page that skips them sends what they would
-refuse. It sends the parameters saved in the revision its version pins;
-editing them is #167.
+refuse. It sends the parameters saved in the revision its version pins, as
+the reader has edited them (#167).
 
 What each parameter's widget decides, as against how it looks, is in
-`runtime/app/utils/parameterRules.ts` (#166), and `@gaas/ui`'s widgets
-render with it: a repeat's instances by position, a parameter group's bag,
-the parameters of a conditional's saved case, a select's options by label
-and value and the labels its saved value names, and how a boolean reads and
-is written. The second UI's widgets (#167) are to call these rather than
-decide any of it again. Which component renders a parameter type stays in
-`@gaas/ui`. An analysis cannot add or remove a
-repeat's instances, so there is no rule for that.
+`runtime/app/utils/parameterRules.ts` (#166). `@gaas/ui`'s widgets and the
+second UI's both render with it: a repeat's instances by position, a
+parameter group's bag, the parameters of a conditional's saved case, a
+select's options by label and value and the labels its saved value names,
+and how a boolean reads and is written. `@gaas/ui`'s map from a parameter
+type to its widget stays in `@gaas/ui` (ADR 0009), so the second UI has its
+own: `playground/components/ParameterWidget.vue`, with one plain widget for
+each type `@gaas/ui`'s start form renders. The widgets take their types from
+`blendtype`, type-only. This module's own types are written in them, and
+`blendtype` resolves as this package's dependency. An analysis cannot add or
+remove a repeat's instances, so there is no rule for that, and a
+conditional's test parameter is shown and never written (#94).
+
+The second UI's widgets decide three things outside `parameterRules.ts`:
+- `playground/utils/savedParameters.ts` offers a widget only for a parameter
+  the saved bag holds a value for. `@gaas/ui` makes the same check with
+  `name in saved` at every level. The two differ only for a key that holds
+  `undefined`, which neither Galaxy's JSON nor these widgets ever write.
+- A text widget shows no text for anything but a string, as `@gaas/ui`'s
+  `TextToolParameter.vue` does.
+- A multiple select reads a saved string as a list of one, as
+  `selectOptionLabels` does. `@gaas/ui` hands its menu the saved value
+  unchanged.
+
+A number is written as the string typed, which is what Galaxy's own form
+sends. `@gaas/ui` writes a number. Galaxy reads either.
 
 ### Supabase Commands
 ```bash
