@@ -106,6 +106,17 @@ describe('what a conditional puts on screen', () => {
     expect(shown[0]?.props('modelValue')).toBe('_#')
   })
 
+  it('shows no widget for a parameter of the case the revision saved nothing for', async () => {
+    // Hand-written, as above: the suffix case, holding nothing for
+    // `suffix_pattern`. A widget bound to `undefined` would submit a value
+    // the workflow's author never saved, where an absent value is left out
+    // and Galaxy substitutes the tool's own default (#185). The section, the
+    // repeat and the step refuse one the same way.
+    const wrapper = await mountOpen({ __current_case__: 0, duplicate_options: 'suffix_conflict' })
+    expect(wrapper.get('button[aria-expanded]').attributes('aria-expanded')).toBe('true')
+    expect(wrapper.findAllComponents(TextToolParameter)).toHaveLength(0)
+  })
+
   it('reads a saved value that is not a bag as one with no case, and still heads it', async () => {
     // Hand-written: no recording saves one, and Galaxy does not write `null`
     // for a conditional. `Step.vue` hands every widget its value through
