@@ -1,7 +1,8 @@
 /**
  * Starting an analysis in the second UI, the plain-HTML playground that
  * imports only `nuxt-galaxy` (ADR 0009, #165): choose a workflow, pick a
- * dataset for each of its inputs, name the analysis and start it.
+ * dataset for each of its inputs, name the analysis, set its parameters
+ * (#167) and start it.
  *
  * Everything the page reads is faked at the boundary it reads it from: the
  * Supabase client for the workflows and the datasets, and the application's
@@ -9,15 +10,19 @@
  * start itself. So what a test reads is what the page sent.
  */
 
-import type { GalaxyTool } from 'blendtype'
+import type { DOMWrapper } from '@vue/test-utils'
+import type { GalaxyTool, WorkflowRepeatInstanceValue } from 'blendtype'
 import type { IncomingMessage } from 'node:http'
 import type { Database, DescribedStep, DescribedWorkflowInput, UnavailableTool } from 'nuxt-galaxy'
+import type { WorkflowFixture } from '../../test/characterisation/fixtures'
 import { GALAXY_INSTANCE_QUERY_KEYS } from '#imports'
 import { mockNuxtImport, mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
 import { useQueryCache } from '@pinia/colada'
 import { flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
+import { declaredParameter, FIXTURES, loadFixture } from '../../test/characterisation/fixtures'
+import { aStep, describedRevision } from '../../test/describedSteps'
 import StartPage from '../pages/start.vue'
 
 type Dataset = Database['galaxy']['Views']['uploaded_datasets_with_storage_path']['Row']
@@ -326,6 +331,40 @@ async function releaseSettled() {
   await nextTick()
 }
 
+/** What a widget is found inside: the page, or a group of widgets on it. */
+interface Scope {
+  findAll: (selector: string) => DOMWrapper<Element>[]
+}
+
+/** The control of the widget labelled `text`, inside `scope`. */
+function widget(scope: Scope, text: string): DOMWrapper<Element> {
+  const label = scope.findAll('label').find(candidate => candidate.find('span').exists() && candidate.find('span').text() === text)
+  expect(label, `a widget is labelled "${text}"`).toBeDefined()
+  return label!.find('input, select, textarea')
+}
+
+/** The group of widgets whose legend reads `legend`, inside `scope`. */
+function group(scope: Scope, legend: string): DOMWrapper<Element> {
+  const found = scope.findAll('fieldset').find(candidate => candidate.find('legend').text() === legend)
+  expect(found, `a group of widgets is headed "${legend}"`).toBeDefined()
+  return found!
+}
+
+/** The widgets of one step, once its tool's declaration has arrived. */
+async function stepWidgets(page: Page, stepId: string): Promise<DOMWrapper<Element>> {
+  return vi.waitFor(() => {
+    const found = page.find(`[data-testid="step-${stepId}"]`)
+    expect(found.exists(), `step ${stepId} offers its parameters`).toBe(true)
+    expect(found.findAll('label').length, `step ${stepId} has widgets`).toBeGreaterThan(0)
+    return found
+  })
+}
+
+/** The encoded parameters the last start sent, by step index. */
+function sentParameters(): Record<string, Record<string, unknown>> {
+  return lastBody?.parameters as Record<string, Record<string, unknown>>
+}
+
 describe('the playground\'s start page', () => {
   it('starts the analysis with the name, the datamap keyed by each input\'s step index, and the workflow', async () => {
     workflowInputs = { 0: anInput('Replicon'), 1: anInput('Reads') }
@@ -455,5 +494,183 @@ describe('the playground\'s start page', () => {
       await submit(page)
       await vi.waitFor(() => expect(requestsMade).toBe(1))
     })
+  })
+})
+
+/**
+ * The parameters a reader sets (#167), on a recorded workflow.
+ *
+ * `conditional-repeat-runtime` is integron_finder at 26.1. Its first tool
+ * step holds booleans, an optional select, and a section inside a section
+ * that holds integers. Then come a repeat whose instances each hold a
+ * conditional, and a conditional inside a section. All of those conditionals
+ * are saved on a case that holds nothing, so two of them are moved by hand
+ * onto a case that holds a text parameter, in the shape Galaxy saves when its
+ * editor chooses that case. A float, a multiple select and a multi-line text
+ * are in no recording, so one hand-built step declares those.
+ */
+describe('the parameters a reader sets', () => {
+  const HAND_BUILT_TOOL_ID = 'toolshed.g2.bx.psu.edu/repos/devteam/hand_built/hand_built/1.0.0'
+  const HAND_BUILT_TOOL_VERSION = '1.0.0'
+
+  /**
+   * A tool declaring the three parameter types no recording holds, each in
+   * the shape Galaxy's `to_dict` writes it.
+   */
+  function aToolOfTheUnrecordedTypes(): GalaxyTool {
+    const declared = { argument: null, help: '', refresh_on_change: false, optional: false, hidden: false, is_dynamic: false }
+    return {
+      model_class: 'Tool',
+      id: HAND_BUILT_TOOL_ID,
+      name: 'hand_built',
+      version: HAND_BUILT_TOOL_VERSION,
+      description: 'Every kind no recording holds',
+      edam_operations: [],
+      edam_topics: [],
+      tool_shed_repository: { name: 'hand_built', owner: 'devteam', changeset_revision: 'abc123', tool_shed: 'toolshed.g2.bx.psu.edu' },
+      inputs: [
+        { ...declared, model_class: 'FloatToolParameter', type: 'float', name: 'evalue', label: 'E-value threshold', min: 0, max: 1, value: '0.5', area: false },
+        {
+          ...declared,
+          model_class: 'SelectToolParameter',
+          type: 'select',
+          name: 'formats',
+          label: 'Output formats',
+          multiple: true,
+          display: null,
+          textable: false,
+          value: ['gff'],
+          options: [['GFF3', 'gff', true], ['GenBank', 'gbk', false], ['FASTA', 'fasta', false]],
+        },
+        { ...declared, model_class: 'TextToolParameter', type: 'text', name: 'notes', label: 'Notes', area: true, value: '', datalist: [] },
+      ],
+      outputs: [],
+    }
+  }
+
+  /** The recording the description is built from, its declarations served as they stand. */
+  let fixture: WorkflowFixture
+
+  beforeEach(() => {
+    fixture = loadFixture(FIXTURES.conditionalRepeatRuntime)
+    const { steps, inputs } = describedRevision(fixture)
+    // __BUILD_LIST__'s fifth dataset, labelled by hand: the case that holds
+    // the identifier to label it with. The recording labels it by index.
+    const datasets = steps[2]!.tool_inputs.datasets as WorkflowRepeatInstanceValue[]
+    datasets[4] = { ...datasets[4]!, id_cond: { __current_case__: 2, id_select: 'manual', identifier: 'sample-5' } }
+    // __MERGE_COLLECTION__'s conflict handling, on the first case, which
+    // holds the suffix to append. The recording keeps the first of each.
+    steps[3]!.tool_inputs.advanced = {
+      conflict: { __current_case__: 0, duplicate_options: 'suffix_conflict', suffix_pattern: '_#' },
+    }
+    workflowInputs = inputs
+    workflowSteps = {
+      ...steps,
+      5: aStep(5, {
+        tool_id: HAND_BUILT_TOOL_ID,
+        tool_version: HAND_BUILT_TOOL_VERSION,
+        tool_inputs: { evalue: '0.5', formats: ['gff'], notes: '' },
+      }),
+    }
+    workflowTools = { ...fixture.tools, [`${HAND_BUILT_TOOL_ID}@${HAND_BUILT_TOOL_VERSION}`]: aToolOfTheUnrecordedTypes() }
+  })
+
+  it('sends a value of each kind the reader edited, under the name Galaxy reads it by', async () => {
+    const page = await mountPage()
+    await chooseTheWorkflow(page)
+
+    const integronFinder = await stepWidgets(page, '1')
+    await widget(integronFinder, 'Genbank output?').setValue(false)
+    // Saved as `null`: the optional select was left on nothing.
+    await widget(integronFinder, 'Default replicons topology').setValue('--circ')
+    const attcOptions = group(group(integronFinder, 'Advanced Parameters'), 'Attc options')
+    await widget(attcOptions, 'Threshold for clustering (in base)').setValue('5000')
+
+    const buildList = await stepWidgets(page, '2')
+    await widget(group(group(buildList, 'Dataset(s)'), '5: Dataset(s)'), 'Identifier').setValue('replicon-5')
+
+    const mergeCollections = await stepWidgets(page, '3')
+    await widget(group(mergeCollections, 'Advanced Options'), 'Use the following suffix pattern:').setValue('-#')
+
+    const handBuilt = await stepWidgets(page, '5')
+    await widget(handBuilt, 'E-value threshold').setValue('0.01')
+    await widget(handBuilt, 'Output formats').setValue(['gff', 'fasta'])
+    await widget(handBuilt, 'Notes').setValue('first line\nsecond line')
+
+    await fillIn(page, { name: 'Integron run', datasets: { 0: 'genome.fasta' } })
+    await submit(page)
+
+    await vi.waitFor(() => expect(requestsMade).toBe(1))
+    expect(sentParameters()[1]).toMatchObject({
+      // A boolean as `'false'`, the spelling Galaxy reads back on both releases.
+      'gbk': 'false',
+      // A select by the value of the option chosen, not its label.
+      'type_replicon': '--circ',
+      // A number as typed, which is what Galaxy's own form sends, inside a
+      // section inside a section, by the path to it.
+      'settings|attc_settings|dist_thresh': '5000',
+      // Beside it, a value nobody edited, sent as the revision saved it.
+      'settings|attc_settings|calin_threshold': '2',
+    })
+    // A text inside a conditional inside one instance of a repeat, which
+    // Galaxy names by its position; the instance before it as saved.
+    expect(sentParameters()[2]).toMatchObject({
+      'datasets_3|id_cond|id_select': 'identifier',
+      'datasets_4|id_cond|id_select': 'manual',
+      'datasets_4|id_cond|identifier': 'replicon-5',
+    })
+    // A text inside the case a conditional is on, inside a section.
+    expect(sentParameters()[3]).toMatchObject({
+      'advanced|conflict|duplicate_options': 'suffix_conflict',
+      'advanced|conflict|suffix_pattern': '-#',
+    })
+    // The same tool in the next step, which nothing edited.
+    expect(sentParameters()[4]).toMatchObject({ 'advanced|conflict|duplicate_options': 'keep_first' })
+    // A float as typed, a multiple select as the list of the values chosen,
+    // and a text that keeps the lines it was typed on.
+    expect(sentParameters()[5]).toEqual({ evalue: '0.01', formats: ['gff', 'fasta'], notes: 'first line\nsecond line' })
+  })
+
+  it('shows the case a conditional was saved on, and does not let the reader switch it', async () => {
+    const page = await mountPage()
+    await chooseTheWorkflow(page)
+
+    const fifthDataset = group(group(await stepWidgets(page, '2'), 'Dataset(s)'), '5: Dataset(s)')
+    const testParameter = widget(fifthDataset, 'Label to use').element as HTMLSelectElement
+    expect(testParameter.options[testParameter.selectedIndex]?.text.trim()).toBe('Manual')
+    expect(testParameter.disabled).toBe(true)
+  })
+
+  /**
+   * Galaxy sends `label: ''` for a parameter the tool declares without one,
+   * as the `to_dict` doctest at `basic.py:218` shows at 26.1, and `title:
+   * null` for a section or a repeat (`tools/__init__.py:2010` and `:1921` at
+   * 26.1). Its form shows the name instead for a parameter and a section,
+   * and from 26.1 for a conditional's test parameter. It shows a repeat's
+   * title alone, which the second UI does not follow.
+   */
+  it('names a parameter, a section and a repeat the tool left untitled by their names', async () => {
+    declaredParameter(fixture, '3', 'advanced', 'section').title = null
+    const conflict = declaredParameter(fixture, '3', 'conflict', 'conditional')
+    conflict.test_param = { ...conflict.test_param, label: '' }
+    Object.assign(declaredParameter(fixture, '2', 'datasets', 'repeat'), { title: null })
+    const page = await mountPage()
+    await chooseTheWorkflow(page)
+
+    widget(group(await stepWidgets(page, '3'), 'advanced'), 'duplicate_options')
+    group(group(await stepWidgets(page, '2'), 'datasets'), '5: datasets')
+  })
+
+  // The case's other parameter is the control: the conditional does render
+  // what its case saved.
+  it('offers no widget for a parameter the revision saved nothing for', async () => {
+    workflowSteps[3]!.tool_inputs.advanced = { conflict: { __current_case__: 0, duplicate_options: 'suffix_conflict' } }
+    const page = await mountPage()
+    await chooseTheWorkflow(page)
+
+    const advanced = group(await stepWidgets(page, '3'), 'Advanced Options')
+    const labels = advanced.findAll('label span').map(label => label.text())
+    expect(labels).toContain('How should conflicts (or potential conflicts) be handled?')
+    expect(labels).not.toContain('Use the following suffix pattern:')
   })
 })

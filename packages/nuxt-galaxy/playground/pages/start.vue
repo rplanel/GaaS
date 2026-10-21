@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import type { WorkflowParameterValue } from 'blendtype'
 import type { Database } from 'nuxt-galaxy'
+import ParameterWidget from '../components/ParameterWidget.vue'
+import { savedParameters } from '../utils/savedParameters'
 
 type Dataset = Database['galaxy']['Views']['uploaded_datasets_with_storage_path']['Row']
 
@@ -18,6 +21,8 @@ const {
   workflowInputs,
   workflowToolSteps,
   workflowParametersModel,
+  stepToTool,
+  toolInputParameters,
   blockingTools,
   unconnectedInputsByStep,
   error: describeError,
@@ -57,6 +62,34 @@ const stepsWarnedForUnconnectedInputs = computed(() => stepsWithUnconnectedInput
 const analysisName = ref('')
 /** The dataset picked for each input, keyed by the input's step index. */
 const datamap = ref<Record<string, Dataset | undefined>>({})
+
+/**
+ * The parameters the reader edits, by step index, seeded with what the
+ * revision saved (#167). The description gives a fresh copy each time it
+ * changes, and so only when another workflow is chosen: it is cached for
+ * ever and never refetched under the reader.
+ */
+const parameters = ref(workflowParametersModel.value)
+watch(workflowParametersModel, (saved) => {
+  parameters.value = saved
+})
+
+/**
+ * The parameters a tool step offers a widget for, by the tool the step pins,
+ * each with the value it holds.
+ */
+function stepParameters(stepId: string) {
+  const pinned = stepToTool.value[stepId]
+  const offered = pinned === undefined ? [] : toolInputParameters.value[pinned] ?? []
+  return savedParameters(offered, parameters.value[stepId] ?? {})
+}
+
+/** An edit of one of a step's parameters, written as a new bag for the step, as every level below writes one. */
+function setParameter(stepId: string, name: string, value: WorkflowParameterValue) {
+  const step = parameters.value[stepId]
+  if (step !== undefined)
+    parameters.value = { ...parameters.value, [stepId]: { ...step, [name]: value } }
+}
 
 // The request, its encoding and the words for a refused start (#163).
 const { start, starting, failure } = useStartAnalysis()
@@ -101,7 +134,7 @@ async function startAnalysis() {
   const created = await start({
     name: parsed.data.analysisName,
     datamap: parsed.data.inputs,
-    parameters: workflowParametersModel.value,
+    parameters: parameters.value,
     workflowId: chosen.id,
   })
   startedId.value = created?.id
@@ -159,6 +192,16 @@ async function startAnalysis() {
         </label>
         <span v-if="issueId('analysisName')" :id="issueId('analysisName')">{{ issues.analysisName }}</span>
       </p>
+      <fieldset v-for="(step, stepId) in workflowToolSteps" :key="stepId" :data-testid="`step-${stepId}`">
+        <legend>Step {{ stepId }}: {{ step.tool_id }}</legend>
+        <ParameterWidget
+          v-for="offered in stepParameters(stepId)"
+          :key="offered.parameter.name"
+          :parameter="offered.parameter"
+          :model-value="offered.value"
+          @update:model-value="setParameter(stepId, offered.parameter.name, $event)"
+        />
+      </fieldset>
       <div v-if="describeError" role="alert" data-testid="workflow-description-error">
         <p><strong>This workflow could not be read</strong></p>
         <p>{{ describeError.message }}</p>
