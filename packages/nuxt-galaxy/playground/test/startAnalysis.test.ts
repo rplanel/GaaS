@@ -673,4 +673,19 @@ describe('the parameters a reader sets', () => {
     expect(labels).toContain('How should conflicts (or potential conflicts) be handled?')
     expect(labels).not.toContain('Use the following suffix pattern:')
   })
+
+  // Hand-written: Galaxy saves the test parameter in every conditional's
+  // bag. The heading is shown all the same when it does not, as `@gaas/ui`'s
+  // is, so the two UIs cannot disagree about it (!193, F2).
+  it('heads a conditional by its test parameter even where the bag holds none', async () => {
+    workflowSteps[3]!.tool_inputs.advanced = { conflict: { __current_case__: 0, suffix_pattern: '_#' } }
+    const page = await mountPage()
+    await chooseTheWorkflow(page)
+
+    const advanced = group(await stepWidgets(page, '3'), 'Advanced Options')
+    const testParameter = widget(advanced, 'How should conflicts (or potential conflicts) be handled?').element as HTMLSelectElement
+    expect(testParameter.disabled).toBe(true)
+    expect(testParameter.selectedIndex).toBe(-1)
+    widget(advanced, 'Use the following suffix pattern:')
+  })
 })

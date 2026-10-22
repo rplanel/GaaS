@@ -32,7 +32,9 @@ const props = defineProps<{
   modelValue: WorkflowParameterValue | undefined
   /**
    * Shown and never written, as a conditional's test parameter is. Only a
-   * select or a boolean can be one, so only their widgets take it.
+   * select or a boolean can be one, so only their widgets take it. 26.1
+   * asserts so (`tools/__init__.py:1967`), and 22.05 reads the test
+   * parameter's `legal_values` (`:1435`), which only those two define.
    */
   disabled?: boolean
 }>()

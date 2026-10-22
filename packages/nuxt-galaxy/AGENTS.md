@@ -122,7 +122,16 @@ all about how a value is shown:
   unchanged.
 
 A number is written as the string typed, which is what Galaxy's own form
-sends. `@gaas/ui` writes a number. Galaxy reads either.
+sends. `@gaas/ui` writes a number. Galaxy reads either. An emptied box is
+sent as `''`, as Galaxy's form and `@gaas/ui`'s float widget send it, and
+Galaxy refuses that for a number not declared optional. Rémi chose `''` in
+!193's first review round. `@gaas/ui`'s integer widget leaves the parameter
+out instead (#187).
+
+A repeat is headed by its title, or by its name when the tool gave none.
+Galaxy's form shows the title alone on both releases, so an untitled repeat
+reads "1: null" at 26.1. This is the one heading where the second UI departs
+from Galaxy's form.
 
 ### Supabase Commands
 ```bash
