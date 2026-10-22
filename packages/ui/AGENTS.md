@@ -4,7 +4,7 @@
 
 | Component | Version | Purpose |
 |-----------|---------|---------|
-| **Nuxt** | ^4.3.0 (catalog:nuxt) | Framework |
+| **Nuxt** | ^4.6.2 (catalog:nuxt) | Framework |
 | **@nuxt/ui** | ^4.6.1 (catalog:nuxt) | UI component library |
 | **nuxt-galaxy** | workspace:* | Galaxy module integration |
 | **@pinia/colada** | ^0.21.5 (catalog:vue) | Data fetching |

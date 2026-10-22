@@ -4,11 +4,11 @@
 
 | Component | Version | Purpose |
 |-----------|---------|---------|
-| **Nuxt** | ^4.3.0 (catalog:nuxt) | Framework |
+| **Nuxt** | ^4.6.2 (catalog:nuxt) | Framework |
 | **Drizzle ORM** | ^1.0.0-beta.16 (catalog:) | Database access |
 | **Supabase** | ^2.72.8 (catalog:) | Auth + Database |
 | **Effect-TS** | ^3.19.6 (catalog:) | Server-side effects |
-| **@nuxt/kit** | ^4.3.0 (catalog:nuxt) | Module development |
+| **@nuxt/kit** | ^4.6.2 (catalog:nuxt) | Module development |
 | **Drizzle-Kit** | ^1.0.0-beta.16 (catalog:) | Migrations |
 | **JWT Decode** | ^4.0.0 (catalog:) | Token parsing |
 

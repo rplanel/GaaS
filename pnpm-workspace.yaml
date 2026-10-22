@@ -88,8 +88,8 @@ catalog:
   ufo: ^1.6.1
   unbuild: ^3.6.1
   uuid: ^13.0.0
-  vue: latest
-  vue-router: latest
+  vue: ^3.5.44
+  vue-router: ^5.4.0
   vue-tsc: ^3.1.5
   zod: ^4.3.6
   zod-validation-error: ^5.0.0
@@ -108,20 +108,20 @@ catalogs:
     '@nuxt/devtools': ^2.7.0
     '@nuxt/eslint': ^1.10.0
     '@nuxt/image': ^1.11.0
-    '@nuxt/kit': ^4.3.0
-    '@nuxt/module-builder': ^1.0.2
-    '@nuxt/schema': ^4.3.0
+    '@nuxt/kit': ^4.6.2
+    '@nuxt/module-builder': ^1.0.3
+    '@nuxt/schema': ^4.6.2
     '@nuxt/ui': ^4.6.1
     '@nuxtjs/supabase': ^2.0.4
     '@pinia/colada-nuxt': ^1.0.1
     '@pinia/nuxt': ^0.11.3
     docus: ^5.12.3
-    nuxt: ^4.3.0
+    nuxt: ^4.6.2
     nuxt-studio: ^1.1.0
   testing:
     '@nuxt/test-utils': ^4.0.0
     '@vitest/coverage-v8': ^4.1.0
-    '@vue/test-utils': ^2.4.6
+    '@vue/test-utils': ^2.5.1
     happy-dom: ^20.4.0
     msw: ^2.12.12
     playwright-core: ^1.56.1

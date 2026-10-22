@@ -47,10 +47,13 @@ describe('usage range filter', () => {
 
     await wrapper.find('[data-testid="usage-preset-7d"]').trigger('click')
 
-    // a bookmark of this must still mean "last 7 days" next month
+    // a bookmark of this must still mean "last 7 days" next month. The default
+    // 1s `vi.waitFor` window is no longer enough: under nuxt 4.6 and
+    // vue-router 5.4, the first programmatic navigation after `mountSuspended`
+    // can take seconds, and under a loaded suite run it lands just past it.
     await vi.waitFor(() => {
       expect(query(wrapper).range).toBe('7d')
-    })
+    }, { timeout: 5000 })
     expect(query(wrapper).from).toBeUndefined()
   })
 

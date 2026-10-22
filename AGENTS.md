@@ -5,10 +5,10 @@
 | Component | Version | Purpose |
 |-----------|---------|---------|
 | **Package Manager** | pnpm@10.27.0 | Workspace management |
-| **Node.js** | v20+ | Runtime environment |
+| **Node.js** | ^22.22.3 \|\| ^24.15.0 \|\| >=26 | Runtime environment (Nuxt 4.6 floor) |
 | **TypeScript** | ^5.9.3 (catalog:) | Type safety |
 | **ESLint** | ^9.39.1 + @antfu/eslint-config@^6.7.1 | Linting |
-| **Nuxt** | ^4.3.0 (catalog:nuxt) | Framework |
+| **Nuxt** | ^4.6.2 (catalog:nuxt) | Framework |
 | **Effect-TS** | ^3.19.6 (catalog:) | Functional programming |
 | **Vitest** | ^4.1.0 (catalog:testing) | Testing |
 

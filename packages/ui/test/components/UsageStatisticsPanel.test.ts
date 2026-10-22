@@ -271,9 +271,12 @@ describe('the per-workflow table as the workflow picker', () => {
 
     await row(wrapper, 'Bacterial assembly')!.trigger('click')
 
+    // See UsageRangeFilter.test.ts for why the window is wider than the
+    // default: the first programmatic navigation after `mountSuspended` can
+    // take seconds on nuxt 4.6 + vue-router 5.4, past the default 1s.
     await vi.waitFor(() => {
       expect(query(wrapper).workflowId).toBe('7')
-    })
+    }, { timeout: 5000 })
   })
 
   it('selects the Unknown workflow, which is a row like any other', async () => {

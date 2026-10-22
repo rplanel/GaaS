@@ -83,7 +83,8 @@ publish:gaas-cli:
 
 deploy:docs:
   stage: deploy
-  image: node:22.16.0-bookworm
+  # Nuxt 4.6 requires node ^22.22.3 || ^24.15.0 || >=26; keep this pin at or above that floor
+  image: node:22.22.3-bookworm
   # Functions that should be executed before the build script is run
   pages:
     publish: docs/.output/public
