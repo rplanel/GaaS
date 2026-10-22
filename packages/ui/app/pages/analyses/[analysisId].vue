@@ -47,9 +47,10 @@ watch(() => {
 }, { immediate: true, deep: true })
 
 // Display-only refresh: these subscriptions re-fetch displayed rows and must not trigger Galaxy sync.
-useSupabaseRealtime(`histories:${toValue(analysisIdFromRoute)}`, 'histories', handleUpdates)
-useSupabaseRealtime(`jobs:${toValue(analysisIdFromRoute)}`, 'jobs', handleUpdates)
-useSupabaseRealtime(`analysis_outputs:${toValue(analysisIdFromRoute)}`, 'analysis_outputs', handleUpdates)
+// The names are the history panel's, so the two share one channel per table (#170).
+useSupabaseRealtime(`galaxy:histories:${toValue(analysisIdFromRoute)}`, 'histories', handleUpdates)
+useSupabaseRealtime(`galaxy:jobs:${toValue(analysisIdFromRoute)}`, 'jobs', handleUpdates)
+useSupabaseRealtime(`galaxy:analysis_outputs:${toValue(analysisIdFromRoute)}`, 'analysis_outputs', handleUpdates)
 
 // Every cache entry under this analysis, not only this page's own: the results
 // page below reads a dedicated entry of the same analysis (ADR 0003) and the
@@ -64,10 +65,7 @@ function handleUpdates() {
 async function syncAnalysis() {
   isSyncing.value = true
   try {
-    // Nitro omits module-registered param-in-middle routes from layer-generated typed routes;
-    // resolve the URL in a variable so $fetch does not match the sibling DELETE route.
-    const syncUrl = `/api/db/analyses/${analysisIdFromRoute.value}/sync`
-    await $fetch(syncUrl, { method: 'POST' })
+    await $fetch(`/api/db/analyses/${analysisIdFromRoute.value}/sync`, { method: 'POST' })
     toast.add({
       title: 'Sync queued',
       description: 'The analysis sync has been queued.',
