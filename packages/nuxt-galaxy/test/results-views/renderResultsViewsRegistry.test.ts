@@ -50,7 +50,7 @@ describe('renderResultsViewsTypes', () => {
   it('declares the registry module the page imports, with one entry type per rung', () => {
     const types = renderResultsViewsTypes()
 
-    expect(types).toContain(`declare module '#build/gaas/results-views.mjs'`)
+    expect(types).toContain(`declare module '#build/nuxt-galaxy/results-views.mjs'`)
     expect(types).toContain('resultsViews')
     expect(types).toContain(`rung: 'exact'`)
     expect(types).toContain(`rung: 'name-level'`)

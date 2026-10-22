@@ -213,9 +213,9 @@ src/
 The results-view convention lives here, not in `@gaas/ui`, so that an app's
 views outlive a swap of the UI layer (ADR 0003's 2026-10-19 amendment, #168).
 - `src/results-views/` runs at build time. `setupResultsViews` scans every
-  layer and writes the registry to `#build/gaas/results-views.mjs`, with its
-  types beside it. In development it rescans when a `workflows/` entry is
-  added or removed.
+  layer and writes the registry to `#build/nuxt-galaxy/results-views.mjs`,
+  with its types beside it, under the module's own name as the alias is. In
+  development it rescans when a `workflows/` entry is added or removed.
 - `matchResultsView` (in `runtime/app/utils`) and `useResultsView` are
   auto-imported. The results page reads the second, and the admin workflows
   page runs the first on the registry it imports.

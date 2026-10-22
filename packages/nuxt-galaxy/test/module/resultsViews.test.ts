@@ -14,10 +14,10 @@ const layerWorkflows = join(layerDir, 'app/workflows')
  */
 async function loadResultsViews() {
   return withFixtureNuxt(async (options) => {
-    const registry = options.build.templates.find(template => template.filename === 'gaas/results-views.mjs')
+    const registry = options.build.templates.find(template => template.filename === 'nuxt-galaxy/results-views.mjs')
     return {
       registry: await registry?.getContents?.({} as Parameters<NonNullable<typeof registry.getContents>>[0]),
-      typesRegistered: options.build.templates.some(template => template.filename === 'gaas/results-views.d.ts'),
+      typesRegistered: options.build.templates.some(template => template.filename === 'nuxt-galaxy/results-views.d.ts'),
       alias: options.alias['#nuxt-galaxy'],
     }
   }, { layers: [layerDir] })

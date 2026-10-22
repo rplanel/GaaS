@@ -15,7 +15,7 @@ import AnalysisResultsPage from '../../app/pages/analyses/[analysisId]/results.v
  * a view cannot learn on its own (ADR 0003) and so the one thing that shows
  * whether the page around it keeps the analysis fresh.
  */
-vi.mock('#build/gaas/results-views.mjs', async () => {
+vi.mock('#build/nuxt-galaxy/results-views.mjs', async () => {
   const { defineComponent, h } = await import('vue')
   return {
     resultsViews: [

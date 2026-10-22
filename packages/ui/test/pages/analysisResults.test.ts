@@ -11,7 +11,7 @@ import AnalysisResultsPage from '../../app/pages/analyses/[analysisId]/results.v
  * `app/workflows/satelliteFinder/0.11/results.vue`: one view, whose rendered
  * text can only come from it, and only from the props the page hands it.
  */
-vi.mock('#build/gaas/results-views.mjs', async () => {
+vi.mock('#build/nuxt-galaxy/results-views.mjs', async () => {
   const { defineComponent, h } = await import('vue')
   return {
     resultsViews: [
