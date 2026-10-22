@@ -1,6 +1,6 @@
 import type { VueWrapper } from '@vue/test-utils'
 import { UApp } from '#components'
-import { SUPABASE_ANALYSES_INPUTS_VIEW_QUERY_KEYS, SUPABASE_ANALYSES_QUERY_KEYS } from '#imports'
+import { SUPABASE_ANALYSES_INPUTS_VIEW_QUERY_KEYS, SUPABASE_ANALYSES_OUTPUTS_VIEW_QUERY_KEYS, SUPABASE_ANALYSES_QUERY_KEYS } from '#imports'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
@@ -118,8 +118,9 @@ mockNuxtImport('analysisInputsViewByIdQuery', () => ({ analysisId }: { analysisI
   },
 }))
 
+/** The panel's outputs, under their real key, which neither handler reaches today; nothing here counts them. */
 mockNuxtImport('analysisOutputsViewByIdQuery', () => ({ analysisId }: { analysisId: number }) => ({
-  key: ['test', 'analysis-outputs', analysisId],
+  key: SUPABASE_ANALYSES_OUTPUTS_VIEW_QUERY_KEYS.byAnalysisId(analysisId),
   query: async () => [],
 }))
 
