@@ -1,7 +1,7 @@
 import type { ScannedResultsView } from './scan'
 
 /** Where the generated registry is imported from, in the page and in its type declaration. */
-export const RESULTS_VIEWS_MODULE_ID = '#build/gaas/results-views.mjs'
+export const RESULTS_VIEWS_MODULE_ID = '#build/nuxt-galaxy/results-views.mjs'
 
 /**
  * The registry the page imports: one entry per view, keyed by its rung and

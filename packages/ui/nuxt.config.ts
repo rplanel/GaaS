@@ -59,12 +59,6 @@ export default defineNuxtConfig({
   css: [
     join(currentDir, './app/assets/css/main.css'),
   ],
-  // The layer's public types (`ResultsViewProps`), reached the same way from
-  // the layer itself, a layer extending it and an application: absolute, so
-  // the alias resolves wherever the layer is loaded from (ADR 0003).
-  alias: {
-    '#gaas/ui': join(currentDir, './app/types/public'),
-  },
   experimental: {
     typedPages: true,
   },

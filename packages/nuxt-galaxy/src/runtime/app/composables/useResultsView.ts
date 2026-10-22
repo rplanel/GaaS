@@ -1,6 +1,7 @@
 import type { MaybeRefOrGetter } from 'vue'
 import type { ResultsViewKey } from '../utils/resultsViews'
-import { resultsViews } from '#build/gaas/results-views.mjs'
+import { resultsViews } from '#build/nuxt-galaxy/results-views.mjs'
+import { computed, toValue } from 'vue'
 import { matchResultsView } from '../utils/resultsViews'
 
 /**

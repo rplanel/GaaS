@@ -1,4 +1,4 @@
-import type { ResultsViewAnalysis } from '#gaas/ui'
+import type { ResultsViewAnalysis } from 'nuxt-galaxy'
 import type { PropType } from 'vue'
 import { UApp } from '#components'
 import { SUPABASE_ANALYSES_QUERY_KEYS } from '#imports'
@@ -15,7 +15,7 @@ import AnalysisResultsPage from '../../app/pages/analyses/[analysisId]/results.v
  * a view cannot learn on its own (ADR 0003) and so the one thing that shows
  * whether the page around it keeps the analysis fresh.
  */
-vi.mock('#build/gaas/results-views.mjs', async () => {
+vi.mock('#build/nuxt-galaxy/results-views.mjs', async () => {
   const { defineComponent, h } = await import('vue')
   return {
     resultsViews: [

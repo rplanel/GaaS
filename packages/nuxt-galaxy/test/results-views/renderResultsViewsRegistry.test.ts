@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renderResultsViewsRegistry, renderResultsViewsTypes } from '../../modules/results-views/template'
+import { renderResultsViewsRegistry, renderResultsViewsTypes } from '../../src/results-views/template'
 
 describe('renderResultsViewsRegistry', () => {
   it('writes one entry per view with its rung and a dynamic import of its file', () => {
@@ -50,7 +50,7 @@ describe('renderResultsViewsTypes', () => {
   it('declares the registry module the page imports, with one entry type per rung', () => {
     const types = renderResultsViewsTypes()
 
-    expect(types).toContain(`declare module '#build/gaas/results-views.mjs'`)
+    expect(types).toContain(`declare module '#build/nuxt-galaxy/results-views.mjs'`)
     expect(types).toContain('resultsViews')
     expect(types).toContain(`rung: 'exact'`)
     expect(types).toContain(`rung: 'name-level'`)

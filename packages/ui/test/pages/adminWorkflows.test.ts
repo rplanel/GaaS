@@ -14,7 +14,7 @@ import AdminWorkflowsPage from '../../app/pages/admin/workflows.vue'
  * `app/workflows/defenseFinder/results.vue`: one exact view, one name-level
  * view, and no app-wide one, so a version neither names has no view at all.
  */
-vi.mock('#build/gaas/results-views.mjs', async () => {
+vi.mock('#build/nuxt-galaxy/results-views.mjs', async () => {
   const { defineComponent, h } = await import('vue')
   const view = (text: string) => defineComponent({ setup: () => () => h('p', text) })
   return {

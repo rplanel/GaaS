@@ -2,12 +2,12 @@
 import type { BadgeProps, BreadcrumbItem, TableColumn } from '@nuxt/ui'
 import type { GalaxyWorkflowsItem } from 'blendtype'
 import type { Database, WorkflowRow } from 'nuxt-galaxy'
-import type { ResultsViewReading } from '../../utils/resultsViews'
-import { resultsViews } from '#build/gaas/results-views.mjs'
+import type { ResultsViewReading } from '../../utils/resultsViewReading'
+import { resultsViews } from '#build/nuxt-galaxy/results-views.mjs'
 import { galaxyRevisionNumber } from 'blendtype'
 import { log } from 'evlog/client'
 import { describeActiveSwitchFailure } from '../../utils/activeSwitchFailure'
-import { matchResultsView, resultsViewReading } from '../../utils/resultsViews'
+import { resultsViewReading } from '../../utils/resultsViewReading'
 
 /**
  * One version published for a stored workflow, with how its results view

@@ -41,31 +41,6 @@ export type ResultsViewMatch<T>
     | { rung: 'none', view: undefined }
 
 /**
- * How a match reads to an administrator: `exact` when a view names this
- * workflow, `fallback` when a name-level or app-wide view stands in for one,
- * `none` when the generic results view shows.
- */
-export type ResultsViewReading = 'exact' | 'fallback' | 'none'
-
-/**
- * The reading of a match's rung. The two wider rungs collapse into one word
- * because the administrator's question is whether a view was written for
- * this workflow or something wider is standing in; which wider one it is
- * belongs to the developer, and to the results page.
- */
-export function resultsViewReading(rung: ResultsViewMatch<unknown>['rung']): ResultsViewReading {
-  switch (rung) {
-    case 'exact':
-      return 'exact'
-    case 'name-level':
-    case 'app-wide':
-      return 'fallback'
-    case 'none':
-      return 'none'
-  }
-}
-
-/**
  * The results view that applies to a workflow, and the rung it was found at.
  *
  * The rungs are tried from the most specific down: the exact view for the

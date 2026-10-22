@@ -84,6 +84,22 @@ export interface ResultsViewAnalysis extends AnalysisRow {
   analysis_outputs: AnalysisOutputWithDatasetAndTags[]
 }
 
+/**
+ * What a results view receives (ADR 0003): the analysis it is opened on, with
+ * its workflow, its inputs and its outputs, each carrying its dataset and its
+ * tags. The view never has to query the analysis before rendering.
+ *
+ * A view imports it through the alias this module declares, since Vue
+ * resolves a `defineProps<T>()` type only through an import in the file:
+ * `import type { ResultsViewProps } from '#nuxt-galaxy'`.
+ */
+export interface ResultsViewProps {
+  /** The analysis the view is opened on, as the route names it. */
+  analysisId: number
+  /** The analysis row with its workflow, inputs and outputs. */
+  analysis: ResultsViewAnalysis
+}
+
 export interface AnalysisWithJobs extends AnalysisRow {
   jobs: JobRow[]
 }

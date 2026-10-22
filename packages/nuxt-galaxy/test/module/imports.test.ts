@@ -77,6 +77,13 @@ describe('module auto-imports', () => {
     ]))
   })
 
+  it('registers the results-view lookup and the match it runs, which the UI layer\'s pages read (#168)', () => {
+    // The results page calls the first and the admin workflows page the
+    // second, each without an import; unregistered, either is an empty render.
+    expect(names).toContain('useResultsView')
+    expect(names).toContain('matchResultsView')
+  })
+
   it('no longer registers the select rules that read values alone (#183)', () => {
     expect(names).not.toContain('selectOptionValues')
     expect(names).not.toContain('selectOptionLabel')

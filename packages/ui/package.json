@@ -12,7 +12,6 @@
   "files": [
     "app",
     "content.config.ts",
-    "modules",
     "nuxt.config.ts"
   ],
   "scripts": {

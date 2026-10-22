@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { scanResultsViews } from '../../modules/results-views/scan'
+import { scanResultsViews } from '../../src/results-views/scan'
 
 /**
  * Two layers as Nuxt hands them to a module: the application first, then the

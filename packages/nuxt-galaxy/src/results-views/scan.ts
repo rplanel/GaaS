@@ -1,6 +1,6 @@
 // A type-only import: the rung vocabulary lives with the match policy the page
 // runs, and the build-time scanner reads it from there rather than restating it.
-import type { ResultsViewScope } from '../../app/utils/resultsViews'
+import type { ResultsViewScope } from '../runtime/app/utils/resultsViews'
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 

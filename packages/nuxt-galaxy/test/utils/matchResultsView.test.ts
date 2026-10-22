@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchResultsView, resultsViewReading } from '../../app/utils/resultsViews'
+import { matchResultsView } from '../../src/runtime/app/utils/resultsViews'
 
 /** A registry as the module generates it, with a stand-in for each component. */
 const exactOnly = [
@@ -53,17 +53,5 @@ describe('matchResultsView', () => {
     expect(matchResultsView(exactOnly, { name: 'satelliteFinder', version: '0.1.1' }).rung).toBe('none')
     expect(matchResultsView(exactOnly, { name: 'satelliteFinder', version: '011' }).rung).toBe('none')
     expect(matchResultsView(exactOnly, { name: 'satelliteFinder', version: '0.10' }).rung).toBe('none')
-  })
-})
-
-describe('resultsViewReading', () => {
-  it('reads the exact rung as exact and no rung as none', () => {
-    expect(resultsViewReading('exact')).toBe('exact')
-    expect(resultsViewReading('none')).toBe('none')
-  })
-
-  it('reads both wider rungs as one fallback, since either stands in for a view of the workflow itself', () => {
-    expect(resultsViewReading('name-level')).toBe('fallback')
-    expect(resultsViewReading('app-wide')).toBe('fallback')
   })
 })
