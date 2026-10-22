@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GalaxySectionToolParameter, WorkflowConditionalParametersValue, WorkflowParameterValue } from 'blendtype'
-import { parameterGroupValue, parameterGroupWithChild } from '#imports'
+import { parameterGroupValue, parameterGroupWithChild, parametersSavedIn } from '#imports'
 import { useGalaxyToolInputComponent } from '../../composables/galaxy/useGalaxyToolInputComponent'
 
 export interface GalaxySectionToolParameterProps
@@ -65,29 +65,23 @@ const { hint } = useGalaxyHint(props.help)
       {{ hint }}
     </p>
     <div class="ms-4 ps-2 border-s border-[var(--ui-border)] mt-2">
-      <template
-        v-for="input in inputs"
+      <!--
+        Only the parameters the section's bag names, as `Step.vue` and the
+        repeat offer theirs: `nuxt-galaxy`'s rule (#167).
+      -->
+      <div
+        v-for="input in parametersSavedIn(inputs, saved)"
         :key="input.name"
+        class="border-b border-[var(--ui-border)] last:border-none px-2 py-3 w-full"
       >
-        <!--
-          The same intersection `Step.vue` takes one level up: a parameter the
-          tool declares but the revision saved nothing for has no value to
-          edit, and a widget bound to `undefined` would submit a value nobody
-          chose.
-        -->
-        <div
-          v-if="input.name in saved"
-          class="border-b border-[var(--ui-border)] last:border-none px-2 py-3 w-full"
-        >
-          <component
-            :is="inputComponentsObject?.[input.name]?.component"
-            :model-value="saved[input.name]"
-            :variant
-            v-bind="input"
-            @update:model-value="setChild(input.name, $event)"
-          />
-        </div>
-      </template>
+        <component
+          :is="inputComponentsObject?.[input.name]?.component"
+          :model-value="saved[input.name]"
+          :variant
+          v-bind="input"
+          @update:model-value="setChild(input.name, $event)"
+        />
+      </div>
     </div>
   </div>
 </template>

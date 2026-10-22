@@ -6,6 +6,7 @@ import {
   isBooleanParameterTrue,
   parameterGroupValue,
   parameterGroupWithChild,
+  parametersSavedIn,
   repeatInstances,
   repeatWithChild,
   selectOptionLabels,
@@ -17,8 +18,8 @@ import { declaredParameter, FIXTURES, loadFixture, savedValue } from '../../char
  * #166. What each parameter's widget decides, as against how it looks: which
  * instances a repeat has and how one is written back, which parameters a
  * conditional's case holds, what a select offers, and how a boolean reads and
- * is written. `@gaas/ui`'s widgets render with these, and the second UI's
- * are to (#167).
+ * is written. #167 added which declared parameters are offered a widget at
+ * all. `@gaas/ui`'s widgets and the second UI's both render with these.
  *
  * Driven from the recordings where one holds the case, for the reason the
  * characterisation suite gives: a hand-written value can only carry the
@@ -156,6 +157,46 @@ describe('conditionalCaseInputs', () => {
     expect(conditionalCaseInputs(conflict, { __current_case__: 6 })).toBeUndefined()
     expect(conditionalCaseInputs(conflict, { duplicate_options: 'keep_first' })).toBeUndefined()
     expect(conditionalCaseInputs(conflict, null)).toBeUndefined()
+  })
+})
+
+describe('parametersSavedIn', () => {
+  /** `__MERGE_COLLECTION__`'s `advanced|conflict`, whose first case declares `suffix_pattern`. */
+  const suffixCase = declaredParameter(nested, '3', 'conflict', 'conditional').cases[0]!.inputs
+
+  it('offers a parameter the saved bag holds, and none it holds nothing for', () => {
+    // Hand-written: no recording saves a suffix case (#185).
+    expect(parametersSavedIn(suffixCase, { __current_case__: 0, duplicate_options: 'suffix_conflict', suffix_pattern: '_#' }).map(input => input.name))
+      .toEqual(['suffix_pattern'])
+    expect(parametersSavedIn(suffixCase, { __current_case__: 0, duplicate_options: 'suffix_conflict' })).toEqual([])
+  })
+
+  it('still offers an integer whose box a reader emptied', () => {
+    // Hand-written: `@gaas/ui`'s integer widget writes `undefined` for an
+    // emptied box, which no recording can hold.
+    const attc = declaredParameter(nested, '1', 'attc_settings', 'section')
+    const saved = parameterGroupValue(parameterGroupValue(savedValue(nested, '1', 'settings')).attc_settings!)
+    const emptied = Object.assign(structuredClone(saved), { dist_thresh: undefined })
+    expect(parametersSavedIn(attc.inputs, emptied).map(input => input.name)).toContain('dist_thresh')
+  })
+
+  it('offers them in the order the tool declares them, whatever the order saved', () => {
+    // Hand-written: the recorded bag, its two sections saved the other way round.
+    const settings = declaredParameter(nested, '1', 'settings', 'section')
+    const { attc_settings, protein_settings } = parameterGroupValue(savedValue(nested, '1', 'settings'))
+    expect(parametersSavedIn(settings.inputs, { protein_settings: protein_settings!, attc_settings: attc_settings! }).map(input => input.name))
+      .toEqual(['attc_settings', 'protein_settings'])
+  })
+
+  it('reads one instance of a repeat as its bag, `__index__` being no parameter', () => {
+    const datasets = declaredParameter(nested, '2', 'datasets', 'repeat')
+    expect(parametersSavedIn(datasets.inputs, savedDatasets()[0]!).map(input => input.name)).toEqual(['input', 'id_cond'])
+  })
+
+  it('offers nothing out of a value that is not a bag', () => {
+    expect(parametersSavedIn(suffixCase, null)).toEqual([])
+    expect(parametersSavedIn(suffixCase, 'suffix_pattern')).toEqual([])
+    expect(parametersSavedIn(suffixCase, ['suffix_pattern'])).toEqual([])
   })
 })
 

@@ -1,14 +1,16 @@
 /**
  * What a parameter's widget decides, as against how it looks (#166): which
  * instances a repeat has and how one is written back, the parameters a
- * conditional's case holds, what a select offers, and how a boolean reads and
- * is written.
+ * conditional's case holds, what a select offers, how a boolean reads and is
+ * written, and which declared parameters are offered a widget at all (#167).
  *
  * A UI renders with these and decides nothing of its own about what is
  * offered or stored, so `@gaas/ui`'s widgets and the second UI in the
  * playground cannot disagree about it (ADR 0009). Which component renders a
  * parameter type stays in `@gaas/ui`. Auto-imported, as every export of this
  * directory is, which is why each name says which parameter type it is about.
+ * `parametersSavedIn` serves every level alike, so its name says where it
+ * reads instead.
  */
 
 import type {
@@ -124,6 +126,33 @@ export function conditionalCaseInputs(
 ): GalaxyToolParameters[] | undefined {
   const currentCase = parameterGroupValue(saved).__current_case__
   return typeof currentCase === 'number' ? conditional.cases[currentCase]?.inputs : undefined
+}
+
+/**
+ * The declared parameters a saved bag holds, in the order the tool declares
+ * them, which are the ones a widget is offered for (#167). The bag is a
+ * step's saved parameters, a section's or a conditional's, or one instance of
+ * a repeat. Anything else holds none.
+ *
+ * A parameter the revision saved nothing for has nothing to edit. A widget
+ * for it would be bound to `undefined`, and a reader who acted on it would
+ * submit a value the workflow's author never saved, where leaving it out has
+ * Galaxy use the tool's own default (`CONTEXT.md`, *Absent value*).
+ *
+ * Read by name and not by value. A reader who empties an integer's box in
+ * `@gaas/ui` leaves `undefined` under its name: `UInputNumber` passes on what
+ * reka-ui's `NumberField` writes for a box that holds no number
+ * (`applyInputValue`, `NumberFieldRoot.js:175` at reka-ui 2.10.1). The widget
+ * has to stay so the box can be filled again. The encoder still leaves that
+ * `undefined` out, so what is offered and what is submitted are two
+ * questions: a parameter can be offered a widget and be absent.
+ */
+export function parametersSavedIn<P extends { name: string }>(
+  declared: readonly P[],
+  saved: WorkflowParameterValue,
+): P[] {
+  const bag = parameterGroupValue(saved)
+  return declared.filter(parameter => parameter.name in bag)
 }
 
 /** One option of a select: what the reader is shown, and what the state saves. */
