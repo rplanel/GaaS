@@ -456,7 +456,11 @@ GALAXY_DRIZZLE_DATABASE_URL=postgresql://...
   PUBLIC`, which no default privilege does for you.
   `test/server/db/apiRoles.test.ts` holds the allow-list and fails on a new
   object left out of it, but only against a running `pnpm supabase:start`: CI
-  has no database and skips it
+  has no database and skips it. For a routine, CI runs
+  `test/server/db/routineRevokes.test.ts`, which reads the migrations' SQL in
+  order and fails, naming the routine and the migration, when no revoke from
+  `PUBLIC` follows its creation. A schema-wide revoke covers only the
+  routines that exist when it runs, so a new routine needs a revoke of its own
 
 <!-- evlog:start -->
 ## Logging

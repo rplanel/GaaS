@@ -473,7 +473,8 @@ describe.skipIf(!live)('the sync locks', () => {
   // No client calls a galaxy routine, and the server's one call goes through
   // the service role. A routine is executable by PUBLIC unless its migration
   // says otherwise, and no default privilege per schema can change that, so
-  // this is what catches a new one.
+  // this is what catches a new one on a database. routineRevokes.test.ts
+  // reads the migrations instead, for CI, which has none.
   it('leaves the API roles no galaxy routine to execute', async () => {
     const executable = await sql`
       select p.proname, r.rolname
