@@ -21,10 +21,17 @@ const STATEMENT_BREAKPOINT = '--> statement-breakpoint'
 const IDENTIFIER = String.raw`"(?:[^"]|"")+"|[a-z_][\w$]*`
 const QUALIFIED_NAME = String.raw`(?<schema>${IDENTIFIER}) ?\. ?(?<name>${IDENTIFIER})`
 const LEADING_NAME = new RegExp(String.raw`^${QUALIFIED_NAME}`, 'i')
-const CREATE_ROUTINE = new RegExp(String.raw`^create (?:or replace )?(?<kind>function|procedure) ${QUALIFIED_NAME} ?\(`, 'i')
+const CREATE_ROUTINE = new RegExp(String.raw`^create (?:or replace )?(?<kind>function|procedure|aggregate) ${QUALIFIED_NAME} ?\(`, 'i')
 const ON_SCHEMA = /^all (?<kinds>functions|procedures|routines) in schema (?<schemas>.+)$/i
 const ON_ROUTINES = /^(?:function|procedure|routine) (?<routines>.+)$/i
 const DOLLAR_QUOTE = /\$(?:[a-z_]\w*)?\$/iy
+
+// GRANT reads an aggregate as a function.
+const KIND_CREATED: Record<string, RoutineKind> = {
+  function: 'function',
+  aggregate: 'function',
+  procedure: 'procedure',
+}
 
 // ALL FUNCTIONS leaves the procedures, and ALL PROCEDURES the functions.
 const KINDS_COVERED: Record<string, readonly RoutineKind[]> = {
@@ -136,19 +143,27 @@ function statements(sql: string): string[] {
   return found
 }
 
+// The text with each quoted identifier's inside blanked to underscores, so
+// that a keyword, comma or parenthesis a name holds is not found. Every
+// position is kept, so an index into it is an index into the text.
+function maskQuoted(text: string): string {
+  return text.replace(/"(?:[^"]|"")*"/g, quoted => `"${'_'.repeat(quoted.length - 2)}"`)
+}
+
 // Splits a list on its top-level commas, so an argument list stays whole.
 function listItems(list: string): string[] {
+  const masked = maskQuoted(list)
   const items: string[] = []
   let depth = 0
   let start = 0
-  for (let i = 0; i < list.length; i++) {
-    if (list[i] === '(') {
+  for (let i = 0; i < masked.length; i++) {
+    if (masked[i] === '(') {
       depth++
     }
-    else if (list[i] === ')') {
+    else if (masked[i] === ')') {
       depth--
     }
-    else if (list[i] === ',' && depth === 0) {
+    else if (masked[i] === ',' && depth === 0) {
       items.push(list.slice(start, i).trim())
       start = i + 1
     }
@@ -166,12 +181,13 @@ function qualifiedName({ schema, name }: Record<string, string>): string {
 // takes away only the right to grant on, which leaves the privilege itself in
 // place.
 function objectsRevokedFromPublic(statement: string): string | undefined {
-  if (!/^revoke /i.test(statement) || /^revoke grant option for /i.test(statement)) {
+  const masked = maskQuoted(statement)
+  if (!/^revoke /i.test(masked) || /^revoke grant option for /i.test(masked)) {
     return undefined
   }
-  const on = statement.search(/ on /i)
-  const from = [...statement.matchAll(/ from /gi)].at(-1)?.index
-  if (on === -1 || from === undefined || from < on) {
+  const on = masked.search(/ on /i)
+  const from = on === -1 ? undefined : [...masked.matchAll(/ from /gi)].find(match => match.index > on)?.index
+  if (from === undefined) {
     return undefined
   }
   // The last grantee may be followed by GRANTED BY and by CASCADE or RESTRICT.
@@ -203,7 +219,8 @@ export function readMigrations(): Migration[] {
  * says why), so each migration that adds a routine revokes it itself. A revoke
  * covers a routine when it takes EXECUTE or ALL from PUBLIC and either names
  * the routine or is ON ALL … IN SCHEMA galaxy, which covers only the routines
- * that exist when it runs. Every CREATE OR REPLACE counts as a new routine.
+ * that exist when it runs. Every CREATE OR REPLACE counts as a new routine,
+ * and an aggregate counts as a function, as GRANT reads it.
  *
  * This reads SQL text, so that CI can run it without a database.
  * apiRoles.test.ts reads the privileges themselves and stays the authority
@@ -223,7 +240,7 @@ export function routinesNotRevokedFromPublic(migrations: readonly Migration[]): 
       const created = CREATE_ROUTINE.exec(statement)?.groups
       if (created && foldIdentifier(created.schema!) === SCHEMA) {
         const routine = qualifiedName(created)
-        uncovered.set(routine, { migration: migration.name, routine, kind: created.kind!.toLowerCase() as RoutineKind })
+        uncovered.set(routine, { migration: migration.name, routine, kind: KIND_CREATED[created.kind!.toLowerCase()]! })
         continue
       }
       const objects = objectsRevokedFromPublic(statement)

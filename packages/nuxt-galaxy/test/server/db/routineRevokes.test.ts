@@ -99,6 +99,42 @@ CREATE FUNCTION "galaxy"."count_jobs"() RETURNS integer LANGUAGE sql AS $$ SELEC
     expect(found).toEqual([{ migration: '20270101000000_count_jobs', routine: 'galaxy.count_jobs' }])
   })
 
+  // GRANT reads an aggregate as a function: ON FUNCTION names one, and ALL
+  // FUNCTIONS covers it.
+  it('names an aggregate no revoke follows, as a function', () => {
+    const created = { name: '20270101000000_sum_attempts', sql: `CREATE AGGREGATE "galaxy"."sum_attempts"(integer) (SFUNC = int4pl, STYPE = integer);` }
+
+    expect(routinesNotRevokedFromPublic([created])).toEqual([{ migration: '20270101000000_sum_attempts', routine: 'galaxy.sum_attempts' }])
+    expect(routinesNotRevokedFromPublic([
+      created,
+      { name: '20270102000000_revoke_functions', sql: `REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA galaxy FROM PUBLIC;` },
+    ])).toEqual([])
+  })
+
+  it('reads a revoke\'s FROM outside the quoted names before and after it', () => {
+    const found = routinesNotRevokedFromPublic([
+      {
+        name: '20270101000000_count_jobs',
+        sql: `CREATE FUNCTION "galaxy"."jobs from owners"() RETURNS integer LANGUAGE sql AS $$ SELECT count(*)::integer FROM "galaxy"."jobs" $$;
+REVOKE EXECUTE ON FUNCTION "galaxy"."jobs from owners"() FROM PUBLIC GRANTED BY "a from b";`,
+      },
+    ])
+
+    expect(found).toEqual([])
+  })
+
+  it('passes a routine whose quoted name holds a comma, revoked by that name', () => {
+    const found = routinesNotRevokedFromPublic([
+      {
+        name: '20270101000000_count_jobs',
+        sql: `CREATE FUNCTION "galaxy"."count,jobs"() RETURNS integer LANGUAGE sql AS $$ SELECT count(*)::integer FROM "galaxy"."jobs" $$;
+REVOKE EXECUTE ON FUNCTION "galaxy"."count,jobs"() FROM PUBLIC;`,
+      },
+    ])
+
+    expect(found).toEqual([])
+  })
+
   it('names a routine whose quoted name holds a semicolon', () => {
     const found = routinesNotRevokedFromPublic([
       { name: '20270101000000_count_jobs', sql: `CREATE FUNCTION "galaxy"."count;jobs"() RETURNS integer LANGUAGE sql AS $$ SELECT count(*)::integer FROM "galaxy"."jobs" $$;` },
