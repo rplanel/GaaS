@@ -23,9 +23,59 @@ packages:
   - docs
   - playground
 
+# One version for every @tiptap package, because @nuxt/ui's tiptap peers are
+# loose ^3 ranges and nothing in the workspace declares tiptap directly: a
+# fresh re-resolution otherwise fills the peers with the versions it last
+# locked (3.28) while starter-kit's own dependencies resolve to the newest
+# ^3 release (3.32), and vite's dependency optimization then dies on
+# extension-list importing a core export 3.28 does not have. The names are
+# spelled out rather than a '@tiptap/*' glob, which pnpm 10.27 does not
+# honour for these, and `y-tiptap` versions independently and stays on its
+# own line.
+overrides:
+  '@tiptap/core': 3.28.0
+  '@tiptap/extension-blockquote': 3.28.0
+  '@tiptap/extension-bold': 3.28.0
+  '@tiptap/extension-bubble-menu': 3.28.0
+  '@tiptap/extension-bullet-list': 3.28.0
+  '@tiptap/extension-code': 3.28.0
+  '@tiptap/extension-code-block': 3.28.0
+  '@tiptap/extension-collaboration': 3.28.0
+  '@tiptap/extension-document': 3.28.0
+  '@tiptap/extension-drag-handle': 3.28.0
+  '@tiptap/extension-drag-handle-vue-3': 3.28.0
+  '@tiptap/extension-dropcursor': 3.28.0
+  '@tiptap/extension-floating-menu': 3.28.0
+  '@tiptap/extension-gapcursor': 3.28.0
+  '@tiptap/extension-hard-break': 3.28.0
+  '@tiptap/extension-heading': 3.28.0
+  '@tiptap/extension-horizontal-rule': 3.28.0
+  '@tiptap/extension-image': 3.28.0
+  '@tiptap/extension-italic': 3.28.0
+  '@tiptap/extension-link': 3.28.0
+  '@tiptap/extension-list': 3.28.0
+  '@tiptap/extension-list-item': 3.28.0
+  '@tiptap/extension-list-keymap': 3.28.0
+  '@tiptap/extension-mention': 3.28.0
+  '@tiptap/extension-node-range': 3.28.0
+  '@tiptap/extension-ordered-list': 3.28.0
+  '@tiptap/extension-paragraph': 3.28.0
+  '@tiptap/extension-placeholder': 3.28.0
+  '@tiptap/extension-strike': 3.28.0
+  '@tiptap/extension-text': 3.28.0
+  '@tiptap/extension-underline': 3.28.0
+  '@tiptap/extensions': 3.28.0
+  '@tiptap/markdown': 3.28.0
+  '@tiptap/pm': 3.28.0
+  '@tiptap/starter-kit': 3.28.0
+  '@tiptap/suggestion': 3.28.0
+  '@tiptap/vue-3': 3.28.0
+  '@tiptap/y-tiptap': 3.0.7
+
 patchedDependencies:
   '@nuxt/image@1.11.0': patches/@nuxt__image@1.11.0.patch
   docus@5.12.3: patches/docus@5.12.3.patch
+
 catalog:
   '@antfu/eslint-config': ^6.7.1
   '@dagrejs/dagre': ^3.1.1
