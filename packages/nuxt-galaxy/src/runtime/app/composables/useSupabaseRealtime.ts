@@ -20,6 +20,15 @@ const channels: Record<string, ChannelData> = {}
  * Galaxy sync state mutations. The `galaxy:sync-analyses` scheduled task is the
  * sole owner of sync-state changes.
  *
+ * Callers that pass the same name share one channel: each change runs every
+ * handler registered on it, and the channel is removed when its last caller
+ * unmounts. A name is `galaxy:<table>`, the schema and table it listens to,
+ * followed by `:<id>` when the caller shows one analysis, as in
+ * `galaxy:jobs:42` for analysis 42's jobs (#170). One name always goes with
+ * one table, since the channel listens to the table its first caller named.
+ * The listener takes the whole table with no row filter, so the id keeps
+ * channels apart but does not change which events arrive.
+ *
  * @param channelName - The name of the channel to subscribe to.
  * @param tableName - The name of the table to listen for changes.
  * @param eventHandler - The function to call when an event occurs.
