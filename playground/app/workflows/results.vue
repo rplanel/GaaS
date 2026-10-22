@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { ResultsViewProps } from '#gaas/ui'
+import type { ResultsViewProps } from '#nuxt-galaxy'
 
 // The app-wide results view (ADR 0003): it applies to every workflow of the
 // application that has neither an exact nor a name-level view.

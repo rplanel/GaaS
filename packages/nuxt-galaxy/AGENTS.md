@@ -178,6 +178,8 @@ nuxt-galaxy-migrate                         # Run migrations manually
 ```
 src/
 ├── module.ts               # Module definition & setup
+├── results-views/          # Build time: scans every layer's `app/workflows/`
+│                           # into the results-view registry (ADR 0003)
 ├── runtime/
 │   ├── app/
 │   │   ├── composables/    # Auto-imported composables
@@ -206,6 +208,28 @@ src/
 │       ├── database.ts     # Generated Supabase types
 │       └── nuxt-galaxy.ts  # Module types
 ```
+
+### Results views
+The results-view convention lives here, not in `@gaas/ui`, so that an app's
+views outlive a swap of the UI layer (ADR 0003's 2026-10-19 amendment, #168).
+- `src/results-views/` runs at build time. `setupResultsViews` scans every
+  layer and writes the registry to `#build/gaas/results-views.mjs`, with its
+  types beside it. In development it rescans when a `workflows/` entry is
+  added or removed.
+- `matchResultsView` (in `runtime/app/utils`) and `useResultsView` are
+  auto-imported. The results page reads the second, and the admin workflows
+  page runs the first on the registry it imports.
+- `ResultsViewProps` is in `runtime/types/nuxt-galaxy.ts`. The module points
+  the `#nuxt-galaxy` alias at that file, because Vue resolves a
+  `defineProps` type only through an import in the SFC.
+- `@gaas/ui` keeps the page that hosts a view, the generic results view, and
+  `resultsViewReading`, which the admin column uses to read a match as exact,
+  fallback or none.
+- Tests: the scanner, registry and report are tested in `test/results-views/`
+  against `test/fixtures/results-views/`. The match is tested in
+  `test/utils/matchResultsView.test.ts`. `test/module/resultsViews.test.ts`
+  boots the fixture extending `test/fixtures/results-views-layer/` and reads
+  the registry and alias the module produced.
 
 ### Module Definition Pattern
 ```typescript

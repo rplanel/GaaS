@@ -12,6 +12,7 @@ import {
 } from '@nuxt/kit'
 import { defu } from 'defu'
 import * as logOptions from './log-options'
+import { setupResultsViews } from './results-views'
 import { GALAXY_CACHE_MOUNT } from './runtime/server/utils/galaxyCacheMount'
 
 const log = logger.withTag('nuxt-galaxy')
@@ -20,6 +21,7 @@ export type { StartAnalysisRequest } from './runtime/app/composables/useStartAna
 export type { UsageStatisticsRange, UsageStatisticsRequest } from './runtime/app/queries/db/usageStatistics'
 export type { DatasetBlob } from './runtime/app/queries/supabase/datasetsBlob'
 export * from './runtime/app/utils/errors'
+export type { ResultsViewKey, ResultsViewMatch, ResultsViewRung, ResultsViewScope } from './runtime/app/utils/resultsViews'
 export type { StartAnalysisGate } from './runtime/app/utils/startAnalysis'
 export type { StartAnalysisFailure } from './runtime/app/utils/startAnalysisFailure'
 export type { CompositeTypes, Database, Enums, Json, Tables, TablesInsert, TablesUpdate } from './runtime/types/database'
@@ -354,6 +356,9 @@ export default defineNuxtModule<ModuleOptions>({
       { name: 'useParse', path: './runtime/app/composables/parser/useParse' },
       { name: 'useParseCsv', path: './runtime/app/composables/parser/useParseCsv' },
       { name: 'useParseTsv', path: './runtime/app/composables/parser/useParseTsv' },
+      // The results view that applies to a workflow (ADR 0003), looked up in
+      // the registry `setupResultsViews` builds below.
+      { name: 'useResultsView', path: './runtime/app/composables/useResultsView' },
       // database composables
       { name: 'useDatabaseAnalysisOutput', path: './runtime/app/composables/database/useDatabaseAnalysisOutput' },
       { name: 'useDatabaseResultDatasets', path: './runtime/app/composables/database/useDatabaseResultDatasets' },
@@ -374,6 +379,15 @@ export default defineNuxtModule<ModuleOptions>({
     // addImportsDir(resolver.resolve('./runtime/app/composables'))
     // addImportsDir(resolver.resolve('./runtime/app/composables/galaxy'))
     addImportsDir(resolver.resolve('./runtime/app/utils'))
+
+    // Results views (ADR 0003): every layer's `app/workflows/` is scanned
+    // into the registry the results page imports. They are here, not in the
+    // UI layer that hosts that page, so that an app's views outlive a swap of
+    // that layer (ADR 0009). A view imports its props type through
+    // `#nuxt-galaxy`, because Vue resolves a `defineProps` type only through
+    // an import in the file, and Nuxt hands auto-imported types to no SFC.
+    await setupResultsViews(nuxt)
+    nuxt.options.alias['#nuxt-galaxy'] = resolver.resolve('./runtime/types/nuxt-galaxy')
 
     addServerImportsDir(resolver.resolve('./runtime/server/utils'))
     addServerImportsDir(resolver.resolve('./runtime/server/db'))

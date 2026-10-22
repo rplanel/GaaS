@@ -12,6 +12,8 @@ export interface FixtureOptions {
   readonly galaxy?: Record<string, unknown>
   /** Modules the app lists itself, after this one. */
   readonly modules?: readonly string[]
+  /** Layers the app extends, as absolute paths to their roots. */
+  readonly layers?: readonly string[]
   /** Register hooks here; it runs before `ready()`, which is the only moment some fire. */
   readonly before?: (nuxt: Nuxt) => void
 }
@@ -28,7 +30,7 @@ export interface FixtureOptions {
  */
 export async function withFixtureNuxt<T>(
   read: (options: Nuxt['options']) => T | Promise<T>,
-  { galaxy = {}, modules = [], before }: FixtureOptions = {},
+  { galaxy = {}, modules = [], layers = [], before }: FixtureOptions = {},
 ): Promise<T> {
   const nuxt = await loadNuxt({
     cwd: fixtureDir,
@@ -41,6 +43,7 @@ export async function withFixtureNuxt<T>(
       // Added to the fixture's own list, not put in place of it. They install
       // after this module: Nuxt installs a layer's own list first, then these.
       modules: [...modules],
+      extends: [...layers],
     },
   })
   try {

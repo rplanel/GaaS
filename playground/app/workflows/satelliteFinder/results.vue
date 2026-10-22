@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { ResultsViewProps } from '#gaas/ui'
+import type { ResultsViewProps } from '#nuxt-galaxy'
 
 // The name-level results view (ADR 0003): it applies to every version of the
 // `satelliteFinder` workflow that has no `satelliteFinder/<version>/results.vue`

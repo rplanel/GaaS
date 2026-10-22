@@ -1,4 +1,4 @@
-import type { ResultsViewAnalysis } from '#gaas/ui'
+import type { ResultsViewAnalysis } from 'nuxt-galaxy'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it, vi } from 'vitest'
 import WorkflowResultGeneric from '../../app/components/workflow/result/WorkflowResultGeneric.vue'

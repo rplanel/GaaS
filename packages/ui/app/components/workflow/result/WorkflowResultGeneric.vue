@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ResultsViewProps } from '#gaas/ui'
+import type { ResultsViewProps } from '#nuxt-galaxy'
 
 // The same props every results view receives, so a developer can start from
 // this component's contract when writing their own (ADR 0003).

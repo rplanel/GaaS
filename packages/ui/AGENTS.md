@@ -66,14 +66,17 @@ app/
 │                           # and `test/pageAccess.test.ts` fails the suite if one doesn't (#99)
 ├── pages/                  # Pages, `wiki/[...slug].vue` included (ADR 0008)
 ├── plugins/                # Nuxt plugins
-├── types/                  # Shared types; `public/` is the `#gaas/ui` alias target (ResultsViewProps)
+├── types/                  # Shared types
 ├── utils/                  # Utility functions; `content/search.ts` finds a wiki
-│                           # page's DOIs for the bibliography hook in nuxt.config.ts
+│                           # page's DOIs for the bibliography hook in nuxt.config.ts;
+│                           # `resultsViewReading.ts` reads a results-view match as
+│                           # exact, fallback or none for the admin workflows page
 └── workflows/              # Results views (ADR 0003), each declaring `defineProps<ResultsViewProps>()`
-                            # imported from '#gaas/ui': <name>/<version>/results.vue (exact),
-                            # <name>/results.vue (name-level), results.vue (app-wide); the app's file
-                            # wins over a layer's, and dev logs the shadowed one once
-modules/                    # Build-time Nuxt modules the layer ships (results-views scanner)
+                            # imported from '#nuxt-galaxy': <name>/<version>/results.vue (exact),
+                            # <name>/results.vue (name-level), results.vue (app-wide). nuxt-galaxy
+                            # scans every layer and builds the registry; the app's file wins over
+                            # a layer's, and dev logs the shadowed one once. This layer keeps the
+                            # results page that hosts a view and the generic results view (ADR 0009)
 content.config.ts           # `landing`, `content` and `bibliography`, as placeholders:
                             # each app redeclares them over its own `content/` (ADR 0008)
 nuxt.config.ts              # Layer configuration, and the hook appending a wiki page's bibliography
@@ -114,8 +117,6 @@ export default defineNuxtConfig({
     },
   },
   css: [join(currentDir, './app/assets/css/main.css')],
-  // The layer's public types, imported as '#gaas/ui' by results views (ADR 0003)
-  alias: { '#gaas/ui': join(currentDir, './app/types/public') },
   vite: {
     optimizeDeps: {
       include: [

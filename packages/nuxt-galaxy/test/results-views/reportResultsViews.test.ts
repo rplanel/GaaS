@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createShadowedReporter, describeResultsViews } from '../../modules/results-views/report'
+import { createShadowedReporter, describeResultsViews } from '../../src/results-views/report'
 
 describe('createShadowedReporter', () => {
   it('names each shadowed file and the file that hides it', () => {

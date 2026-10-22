@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import type { ResultsViewProps } from '#gaas/ui'
 import type { Sequence } from '#layers/@gaas/ui/app/types/sequenceBrowser'
+import type { ResultsViewProps } from '#nuxt-galaxy'
 import type { AnalysisInputWithStoragePathRow, AnalysisOutputWithStoragePathRow, Database, DatasetBlob } from 'nuxt-galaxy'
 import type { Seq } from 'seqparse'
 import { parseFile } from 'seqparse'

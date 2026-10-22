@@ -1,4 +1,4 @@
-import type { ResultsViewAnalysis } from '#gaas/ui'
+import type { ResultsViewAnalysis } from 'nuxt-galaxy'
 import type { PropType } from 'vue'
 import { UApp } from '#components'
 import { SUPABASE_ANALYSES_QUERY_KEYS } from '#imports'
