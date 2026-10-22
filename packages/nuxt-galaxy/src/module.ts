@@ -337,6 +337,10 @@ export default defineNuxtModule<ModuleOptions>({
       // `runtime/shared/` by path.
       { name: 'inputStepLabel', path: './runtime/shared/stepLabel' },
       { name: 'isInputStep', path: './runtime/shared/stepLabel' },
+      // The word the Unknown workflow travels under, which the usage
+      // endpoints parse and a UI's usage pages compare a selection against
+      // (#169); registered for the same reason.
+      { name: 'UNKNOWN_WORKFLOW_SELECTION', path: './runtime/shared/unknownWorkflow' },
       // Parameter encoding and decoding, one format tested as a round trip
       // (#163): what an analysis is started with and what copying one, or
       // its jobs panel, reads back. `isParameterGroupValue` tells a group's

@@ -5,6 +5,7 @@ import type { histories } from '../server/db/schema/galaxy/histories'
 import type { jobs } from '../server/db/schema/galaxy/jobs'
 import type { tags } from '../server/db/schema/galaxy/tags'
 import type { workflows } from '../server/db/schema/galaxy/workflows'
+import type { UNKNOWN_WORKFLOW_SELECTION } from '../shared/unknownWorkflow'
 import type { Database } from './database'
 
 export type AnalysisRow = Database['galaxy']['Tables']['analyses']['Row']
@@ -260,11 +261,10 @@ export function isTrendGranularity(value: unknown): value is TrendGranularity {
 
 /**
  * The token standing for the Unknown workflow bucket wherever a workflow is
- * named by its identifier. The bucket has no identifier of its own -- every
- * monitoring row carries a workflow id, and what makes one unknown is a
- * workflow name that was never recorded -- so it travels as a word instead.
+ * named by its identifier. It lives in `runtime/shared/`, because the server
+ * and a UI have to spell it identically (#169).
  */
-export const UNKNOWN_WORKFLOW_SELECTION = 'unknown'
+export { UNKNOWN_WORKFLOW_SELECTION } from '../shared/unknownWorkflow'
 
 /**
  * The one workflow version that counts and trend are narrowed to, named by its

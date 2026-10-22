@@ -61,6 +61,13 @@ describe('module auto-imports', () => {
     expect(names).toContain('isInputStep')
   })
 
+  it('registers the shared token the usage statistics name the Unknown workflow by (#169)', () => {
+    // From `runtime/shared/` for the same reason. `@gaas/ui` keeps no copy of
+    // its own; unregistered, its usage pages would compare a selection with
+    // `undefined` and the Unknown workflow could never be selected.
+    expect(names).toContain('UNKNOWN_WORKFLOW_SELECTION')
+  })
+
   it('registers the rules each parameter\'s widget reads, which any UI renders with (#166)', () => {
     // From `runtime/app/utils/`, whose every export the directory scan
     // registers. `@gaas/ui`'s widgets reach them only through these names.
