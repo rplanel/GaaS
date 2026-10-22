@@ -101,10 +101,6 @@ export default defineAppConfig({
     //   }
     // }
   },
-  meilisearch: {
-    hostUrl: 'http://my-meilisearch-server.domain.com', // reqired
-    searchApiKey: '<your_search_key>', // reqired
-  },
 })
 
 // declare module '@nuxt/schema' {

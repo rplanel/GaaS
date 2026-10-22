@@ -9,13 +9,6 @@ export const NO_SUCCESS_RATE_LABEL = '—'
  */
 export const UNKNOWN_WORKFLOW_LABEL = 'Unknown workflow'
 
-/**
- * How that bucket names itself to the endpoint, having no identifier of its
- * own. A server contract, so it is written once and read everywhere rather
- * than spelt out wherever a selection is compared.
- */
-export const UNKNOWN_WORKFLOW = 'unknown'
-
 /** Explains, on hover, why a success rate has no value yet. */
 export const NO_COMPLETED_ANALYSES_EXPLANATION = 'No completed analyses yet'
 
@@ -123,7 +116,7 @@ export const COUNT_FIELDS = [
  * looking up a name under a key nothing ever stored.
  */
 export function workflowKey(usage: Pick<AnalysisMonitoringWorkflowUsage, 'workflowId'>): string {
-  return usage.workflowId === null ? UNKNOWN_WORKFLOW : String(usage.workflowId)
+  return usage.workflowId === null ? UNKNOWN_WORKFLOW_SELECTION : String(usage.workflowId)
 }
 
 export interface TrendSegment {

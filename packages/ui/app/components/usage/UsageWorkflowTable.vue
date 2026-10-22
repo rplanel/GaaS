@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { AnalysisMonitoringCounts, AnalysisMonitoringWorkflowUsage, WorkflowSelection } from 'nuxt-galaxy'
-import { COUNT_FIELDS, formatSuccessRate, UNKNOWN_WORKFLOW, workflowKey, workflowUsageLabel } from '../../utils/usageStatistics'
+import { COUNT_FIELDS, formatSuccessRate, workflowKey, workflowUsageLabel } from '../../utils/usageStatistics'
 import ColumnTableSort from '../ColumnTableSort.vue'
 import UsageOutcomeBar from './UsageOutcomeBar.vue'
 
@@ -46,7 +46,7 @@ function toggleSelection(clicked: WorkflowSelection) {
 // clicking the selected row again clears it, which is the other half of the
 // clear control the chip provides
 function toggleWorkflow(_event: Event, row: TableRow<AnalysisMonitoringWorkflowUsage>) {
-  toggleSelection(row.original.workflowId ?? UNKNOWN_WORKFLOW)
+  toggleSelection(row.original.workflowId ?? UNKNOWN_WORKFLOW_SELECTION)
 }
 
 /**
@@ -108,7 +108,7 @@ const columns = computed<TableColumn<AnalysisMonitoringWorkflowUsage>[]>(() => [
     accessorKey: 'name',
     header: ({ column }) => h(ColumnTableSort, { column, label: 'Workflow' }),
     cell: ({ row }) => {
-      const selected = (row.original.workflowId ?? UNKNOWN_WORKFLOW) === workflowSelection.value
+      const selected = (row.original.workflowId ?? UNKNOWN_WORKFLOW_SELECTION) === workflowSelection.value
       return h('div', {
         'class': 'flex items-center gap-2',
         // how the delegated key handler above finds which row was activated.

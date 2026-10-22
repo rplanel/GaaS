@@ -162,8 +162,8 @@ const MAX_WORKFLOW_ID = 2_147_483_647
  * bucket width already gives them the default.
  */
 export function workflowSelectionFromToken(token: unknown): WorkflowSelection | undefined {
-  if (token === UNKNOWN_WORKFLOW) {
-    return UNKNOWN_WORKFLOW
+  if (token === UNKNOWN_WORKFLOW_SELECTION) {
+    return UNKNOWN_WORKFLOW_SELECTION
   }
   if (typeof token !== 'string' || !WORKFLOW_ID.test(token)) {
     return undefined
