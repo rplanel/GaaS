@@ -33,9 +33,9 @@ describe('module auto-imports', () => {
     names = await loadAutoImportNames()
   })
 
-  it('registers the database composables the UI still calls', () => {
-    expect(names).toContain('useDatabaseAnalysisOutput')
-    expect(names).toContain('useDatabaseResultDatasets')
+  it('no longer registers the database composables nothing called (#169)', () => {
+    expect(names).not.toContain('useDatabaseAnalysisOutput')
+    expect(names).not.toContain('useDatabaseResultDatasets')
   })
 
   it('no longer registers the first-generation workflow composable', () => {

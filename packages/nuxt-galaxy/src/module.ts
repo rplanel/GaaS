@@ -359,9 +359,6 @@ export default defineNuxtModule<ModuleOptions>({
       // The results view that applies to a workflow (ADR 0003), looked up in
       // the registry `setupResultsViews` builds below.
       { name: 'useResultsView', path: './runtime/app/composables/useResultsView' },
-      // database composables
-      { name: 'useDatabaseAnalysisOutput', path: './runtime/app/composables/database/useDatabaseAnalysisOutput' },
-      { name: 'useDatabaseResultDatasets', path: './runtime/app/composables/database/useDatabaseResultDatasets' },
 
     ]
 
