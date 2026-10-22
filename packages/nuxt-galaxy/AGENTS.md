@@ -220,8 +220,12 @@ views outlive a swap of the UI layer (ADR 0003's 2026-10-19 amendment, #168).
   auto-imported. The results page reads the second, and the admin workflows
   page runs the first on the registry it imports.
 - `ResultsViewProps` is in `runtime/types/nuxt-galaxy.ts`. The module points
-  the `#nuxt-galaxy` alias at that file, because Vue resolves a
-  `defineProps` type only through an import in the SFC.
+  the `#nuxt-galaxy` alias at that file. A view needs an import because Vue
+  resolves a `defineProps` type only through an import in the SFC. The
+  alias, rather than the package name, is what a view imports: it is an
+  absolute path, so it resolves even where the app cannot resolve
+  `nuxt-galaxy` by name. Inside this workspace both resolve, because of
+  `shamefully-hoist`.
 - `@gaas/ui` keeps the page that hosts a view, the generic results view, and
   `resultsViewReading`, which the admin column uses to read a match as exact,
   fallback or none.

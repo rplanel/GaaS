@@ -383,9 +383,12 @@ export default defineNuxtModule<ModuleOptions>({
     // Results views (ADR 0003): every layer's `app/workflows/` is scanned
     // into the registry the results page imports. They are here, not in the
     // UI layer that hosts that page, so that an app's views outlive a swap of
-    // that layer (ADR 0009). A view imports its props type through
-    // `#nuxt-galaxy`, because Vue resolves a `defineProps` type only through
-    // an import in the file, and Nuxt hands auto-imported types to no SFC.
+    // that layer (ADR 0009). A view needs an import for its props type, since
+    // Vue resolves a `defineProps` type only through an import in the file.
+    // The alias is an absolute path into this module, so it resolves in any
+    // app that installs it, even one that reaches `nuxt-galaxy` only through
+    // a layer under a strict pnpm install, where the bare package name does
+    // not resolve from the app's own files (the gap #160 hit for the bins).
     await setupResultsViews(nuxt)
     nuxt.options.alias['#nuxt-galaxy'] = resolver.resolve('./runtime/types/nuxt-galaxy')
 

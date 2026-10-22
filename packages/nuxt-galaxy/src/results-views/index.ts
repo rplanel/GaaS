@@ -27,10 +27,6 @@ const REGISTRY_TYPES_FILENAME = `${REGISTRY_FILENAME.replace(/\.mjs$/, '')}.d.ts
  * file was shadowed. In development the registry follows the file system, so
  * a view created or removed while the server runs shows up on the next
  * navigation.
- *
- * It lives in this module rather than in the UI layer that hosts the results
- * page, so that an app's results views keep working when that layer is
- * replaced (ADR 0009).
  */
 export async function setupResultsViews(nuxt: Nuxt): Promise<void> {
   const appDirs = getLayerDirectories(nuxt).map(dirs => dirs.app)

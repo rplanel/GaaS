@@ -4,6 +4,10 @@ import type { ResultsViewMatch } from 'nuxt-galaxy'
  * How a match reads to an administrator: `exact` when a view names this
  * workflow, `fallback` when a name-level or app-wide view stands in for one,
  * `none` when the generic results view shows.
+ *
+ * The match moved to `nuxt-galaxy`; this reading stayed, because ADR 0003's
+ * 2026-10-19 amendment keeps the admin workflows page's column that reads a
+ * match as exact, fallback or none in this layer (#168).
  */
 export type ResultsViewReading = 'exact' | 'fallback' | 'none'
 
