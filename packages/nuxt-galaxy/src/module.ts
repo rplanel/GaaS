@@ -193,7 +193,8 @@ export default defineNuxtModule<ModuleOptions>({
     // the UI layer to. An app that lists either module itself gets it once.
     // The ranges are the `catalog:nuxt` ones package.json declares, and
     // `@pinia/nuxt`'s takes 1.x as well, on Pinia 4: nothing here imports
-    // `pinia`, and Pinia Colada accepts 4 from 1.4.1.
+    // `pinia`, and Pinia Colada accepts 4 from 1.4.1, below the `catalog:vue`
+    // floor.
     '@pinia/nuxt': {
       version: '^0.11.3 || ^1.0.0',
     },
