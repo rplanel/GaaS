@@ -101,7 +101,8 @@ describe('the modules nuxt-galaxy installs', () => {
 })
 
 describe('an app that sets @nuxtjs/supabase\'s database types itself', () => {
-  // `@gaas/ui` sets `false`, which leaves the client untyped.
+  // Here `false`, which leaves the client untyped. A layer's value is merged
+  // into the app's before nuxt-galaxy runs, so it is kept the same way.
   it('keeps its own', async () => {
     const { types, databaseTypes } = await withFixtureNuxt(async options => ({
       types: supabaseOptions(options).types,

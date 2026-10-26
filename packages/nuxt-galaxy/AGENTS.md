@@ -29,7 +29,8 @@ as a dependency of `nuxt-galaxy`)" when the package dependency is missing.
   `database.ts` in `src` and to the `database.js` the build ships beside
   its `.d.ts`. Naming the `.ts` typed the client `Database = unknown` in
   every app on the packed module, with a warning on each build (#193).
-  An app's own `types` win; `@gaas/ui` sets `false`.
+  An app's own `types` win, and so do a layer's. `@gaas/ui` sets none, so
+  an app on it gets these (#196).
 - `@pinia/nuxt` and `@pinia/colada-nuxt`, version-checked against
   `^0.11.3 || ^1.0.0` and `^1.0.1`, because the queries in
   `runtime/app/queries` are Pinia Colada query options. Nuxt skips a module
