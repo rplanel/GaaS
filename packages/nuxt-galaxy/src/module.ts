@@ -188,9 +188,14 @@ export default defineNuxtModule<ModuleOptions>({
     // The queries under `runtime/app/queries` are Pinia Colada query
     // options, so the module installs what runs them rather than relying on
     // the UI layer to. An app that lists either module itself gets it once.
-    // The ranges are the `catalog:nuxt` ones package.json declares.
+    // A `version` is checked against the app's own copy when the app lists
+    // the module, and a mismatch fails the build, so it is the range an app
+    // may list. `@pinia/colada-nuxt`'s is the `catalog:nuxt` one package.json
+    // declares. `@pinia/nuxt`'s also takes 1.x, on Pinia 4: nothing here
+    // imports `pinia`, and Pinia Colada accepts 4 (#191). An app that lists
+    // neither gets the catalog's 0.11.
     '@pinia/nuxt': {
-      version: '^0.11.3',
+      version: '^0.11.3 || ^1.0.0',
     },
     '@pinia/colada-nuxt': {
       version: '^1.0.1',
