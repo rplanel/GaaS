@@ -192,6 +192,10 @@ pnpm test:watch             # Watch mode
 - **Mocking**: Mock composables from nuxt-galaxy
 - **Visual Testing**: Playwright for visual regression (optional)
 - **E2E**: Use .playground/ for integration testing
+- **Type tests**: a `test/*.test-d.ts` file holds code that must or must not
+  compile, with `@ts-expect-error` for the second. `pnpm typecheck` checks
+  it against `.playground`, an app on the layer. Vitest does not run it, as
+  its typecheck mode is off
 
 ### Test File Pattern
 ```typescript

@@ -44,6 +44,8 @@ export default defineNuxtConfig({
     },
   },
   supabase: {
+    // No `types`: a value here would win over nuxt-galaxy's in every app on
+    // the layer. `test/supabaseClient.test-d.ts` checks the client (#196).
     // The sign-in redirects for this layer's pages, with its four public
     // pages; nuxt-galaxy sets none (ADR 0009, #162). Login and confirm read
     // the saved cookie to send the user back to the page they were on.
