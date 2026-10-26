@@ -97,7 +97,8 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
   ],
   supabase: {
-    types: false, // Use nuxt-galaxy types
+    // No `types`: a value here would win over nuxt-galaxy's in every app on
+    // the layer. `test/supabaseClient.test-d.ts` checks the client (#196).
     // The sign-in redirects for this layer's pages, with its four public
     // pages; nuxt-galaxy sets none (ADR 0009, #162).
     // `test/signInRedirects.test.ts` reads them back from the runtime config.
@@ -191,6 +192,10 @@ pnpm test:watch             # Watch mode
 - **Mocking**: Mock composables from nuxt-galaxy
 - **Visual Testing**: Playwright for visual regression (optional)
 - **E2E**: Use .playground/ for integration testing
+- **Type tests**: a `test/*.test-d.ts` file holds code that must or must not
+  compile, with `@ts-expect-error` for the second. `pnpm typecheck` checks
+  it against `.playground`, an app on the layer. Vitest does not run it, as
+  its typecheck mode is off
 
 ### Test File Pattern
 ```typescript
