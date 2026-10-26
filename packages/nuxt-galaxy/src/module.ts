@@ -219,17 +219,6 @@ export default defineNuxtModule<ModuleOptions>({
     syncRetryMaxDelayMs: 2000,
   },
 
-  // Shorthand sugar to register Nuxt hooks
-  hooks: {
-    'modules:before': function () {
-      const resolver = createResolver(import.meta.url)
-      // @ts-expect-error - supabase module options
-      this.options.supabase = defu(this.options.supabase || {}, {
-        types: resolver.resolve('./runtime/types/database.ts'),
-      })
-    },
-
-  },
   // The function holding your module logic, it can be asynchronous
   async setup(moduleOptions, nuxt) {
     // We create the `experimental` object if it doesn't exist yet
@@ -270,9 +259,13 @@ export default defineNuxtModule<ModuleOptions>({
       redact: _resolvedLogs.redact,
     })
 
-    // Also set supabase types in runtime config to ensure it's picked up
+    // The database types `@nuxtjs/supabase` types its client with. No
+    // extension: it resolves the path with Nuxt's extensions, which finds
+    // `database.ts` in `src` and the `database.js` the build ships in its
+    // place, next to its `.d.ts`. Naming the `.ts` left every app on the
+    // packed module with `Database = unknown` (#193).
     nuxt.options.supabase = defu(nuxt.options.supabase || {}, {
-      types: resolver.resolve('./runtime/types/database.ts'),
+      types: resolver.resolve('./runtime/types/database'),
     })
 
     // public runtime

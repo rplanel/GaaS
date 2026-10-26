@@ -1,3 +1,7 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { basename, join } from 'node:path'
+import { resolvePath } from '@nuxt/kit'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { withFixtureNuxt } from './loadFixture'
 
@@ -8,6 +12,20 @@ function installedModules(options: NuxtOptions) {
   return options._installedModules.map(({ entryPath, meta }) => entryPath ?? meta.name)
 }
 
+/** The `supabase` key, which Nuxt's own option types do not declare. */
+function supabaseOptions(options: NuxtOptions) {
+  return (options as unknown as { supabase: Record<string, unknown> }).supabase
+}
+
+type TemplateData = Parameters<NonNullable<NuxtOptions['build']['templates'][number]['getContents']>>[0]
+
+/** What `@nuxtjs/supabase` writes to `.nuxt/types/supabase-database.d.ts`. */
+async function supabaseDatabaseTypes(options: NuxtOptions) {
+  const template = options.build.templates.find(({ filename }) => filename === 'types/supabase-database.d.ts')
+  // It reads nothing it is handed.
+  return template?.getContents?.({} as TemplateData)
+}
+
 /**
  * What the module installs, and what it sets for the modules it installs, in
  * an app built on `nuxt-galaxy` alone. The fixture is such an app: it lists
@@ -15,15 +33,18 @@ function installedModules(options: NuxtOptions) {
  * not there (ADR 0009, #162).
  */
 async function loadResolvedConfig() {
-  return withFixtureNuxt(options => ({
+  return withFixtureNuxt(async options => ({
     // The `supabase` key as the app and the module dependencies left it.
     // `@nuxtjs/supabase` applies its own defaults to the options it is
     // handed, not to this key, so anything here came from them.
-    supabase: (options as unknown as { supabase: Record<string, unknown> }).supabase,
+    supabase: supabaseOptions(options),
     // What the app runs with: `@nuxtjs/supabase` copies the merged options
     // here, and its redirect plugin reads them from here.
     redirectOptions: options.runtimeConfig.public.supabase.redirectOptions,
     installed: installedModules(options),
+    // The extensions `@nuxtjs/supabase` resolves its `types` path with.
+    extensions: options.extensions,
+    databaseTypes: await supabaseDatabaseTypes(options),
   }))
 }
 
@@ -44,6 +65,27 @@ describe('the modules nuxt-galaxy installs', () => {
     expect(resolved.supabase.clientOptions).toEqual({ db: { schema: 'galaxy' } })
   })
 
+  it('has @nuxtjs/supabase type the client with nuxt-galaxy\'s database types', () => {
+    expect(resolved.databaseTypes).toMatch(/^export \* from '(?:\.\.\/)+src\/runtime\/types\/database\.ts'$/)
+  })
+
+  // The build turns `runtime/types/database.ts` into `database.js` and
+  // `database.d.ts` and ships no `.ts`, so a path naming the `.ts` resolves
+  // in this workspace and in no app that installs the module (#193).
+  it('names its database types so that they resolve in the packed module', async () => {
+    const shipped = await mkdtemp(join(tmpdir(), 'nuxt-galaxy-types-'))
+    try {
+      await writeFile(join(shipped, 'database.js'), '')
+      await writeFile(join(shipped, 'database.d.ts'), '')
+      const typesPath = join(shipped, basename(String(resolved.supabase.types)))
+
+      expect(await resolvePath(typesPath, { extensions: resolved.extensions })).toBe(join(shipped, 'database.js'))
+    }
+    finally {
+      await rm(shipped, { recursive: true, force: true })
+    }
+  })
+
   it('installs @nuxtjs/supabase', () => {
     expect(resolved.installed).toContain('@nuxtjs/supabase')
   })
@@ -55,6 +97,19 @@ describe('the modules nuxt-galaxy installs', () => {
   it('installs Pinia and Pinia Colada, which its queries run on', () => {
     expect(resolved.installed).toContain('@pinia/nuxt')
     expect(resolved.installed).toContain('@pinia/colada-nuxt')
+  })
+})
+
+describe('an app that sets @nuxtjs/supabase\'s database types itself', () => {
+  // `@gaas/ui` sets `false`, which leaves the client untyped.
+  it('keeps its own', async () => {
+    const { types, databaseTypes } = await withFixtureNuxt(async options => ({
+      types: supabaseOptions(options).types,
+      databaseTypes: await supabaseDatabaseTypes(options),
+    }), { supabase: { types: false } })
+
+    expect(types).toBe(false)
+    expect(databaseTypes).toBe('export type Database = unknown')
   })
 })
 

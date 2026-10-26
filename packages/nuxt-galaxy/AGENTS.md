@@ -24,6 +24,12 @@ as a dependency of `nuxt-galaxy`)" when the package dependency is missing.
   belong to whichever UI the app uses, and Nuxt concatenates a dependency's
   array defaults with the app's, so a public page set here is one no app
   could remove. `@gaas/ui` sets its own.
+  Its `types` default to `runtime/types/database`, named without an
+  extension: `@nuxtjs/supabase` resolves it with Nuxt's extensions, to
+  `database.ts` in `src` and to the `database.js` the build ships beside
+  its `.d.ts`. Naming the `.ts` typed the client `Database = unknown` in
+  every app on the packed module, with a warning on each build (#193).
+  An app's own `types` win; `@gaas/ui` sets `false`.
 - `@pinia/nuxt` and `@pinia/colada-nuxt`, version-checked against
   `^0.11.3 || ^1.0.0` and `^1.0.1`, because the queries in
   `runtime/app/queries` are Pinia Colada query options. Nuxt skips a module
