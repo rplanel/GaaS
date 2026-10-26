@@ -24,12 +24,27 @@ as a dependency of `nuxt-galaxy`)" when the package dependency is missing.
   belong to whichever UI the app uses, and Nuxt concatenates a dependency's
   array defaults with the app's, so a public page set here is one no app
   could remove. `@gaas/ui` sets its own.
-- `@pinia/nuxt` and `@pinia/colada-nuxt`, version-checked against `^0.11.3`
-  and `^1.0.1`, the `catalog:nuxt` ranges package.json declares, because the
-  queries in `runtime/app/queries` are Pinia Colada query options. Nuxt skips
-  a module dependency the app already lists, so an app that lists either
-  itself gets it once.
+- `@pinia/nuxt` and `@pinia/colada-nuxt`, version-checked against
+  `^0.11.3 || ^1.0.0` and `^1.0.1`, because the queries in
+  `runtime/app/queries` are Pinia Colada query options. Nuxt skips a module
+  dependency the app already lists, so an app that lists either itself gets
+  it once. `@pinia/nuxt` takes 0.11 on Pinia 3 and 1.x on Pinia 4; the
+  package dependency stays the `catalog:nuxt` `^0.11.3`.
 - Not `@nuxt/content`: only the UI layer's wiki reads it (ADR 0008).
+
+Nuxt checks a `version` against the copy it loads: the app's own when the
+app lists the module, and this package's dependency otherwise. A mismatch
+fails the build, so a range must hold both. Until #191 `@pinia/nuxt` was
+checked against `^0.11.3` alone, and every app that listed 1.x stopped with
+"Module `@pinia/nuxt` version (`1.0.3`) does not satisfy `^0.11.3`
+(requested by `nuxt-galaxy`)". On Pinia 4, pnpm also warns that this
+package's own `@pinia/nuxt` 0.11.3 wants `pinia ^3.0.4`. That copy is never
+loaded, because the app lists 1.x.
+
+A check inside the workspace cannot see a range that is too narrow: the
+lockfile holds one version of each, and the playground and the fixture both
+run it. Prove a widened or narrowed range on the packed module, installed in
+an app outside the repo that lists the version in question (#191).
 
 ### Package Dependencies
 - `blendtype`: workspace:* (Galaxy API client)
@@ -248,7 +263,7 @@ export default defineNuxtModule<ModuleOptions>({
       version: '^2.0.3',
       defaults: { clientOptions: { db: { schema: 'galaxy' } } },
     },
-    '@pinia/nuxt': { version: '^0.11.3' },
+    '@pinia/nuxt': { version: '^0.11.3 || ^1.0.0' },
     '@pinia/colada-nuxt': { version: '^1.0.1' },
   },
   defaults: {

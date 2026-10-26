@@ -171,6 +171,9 @@ export default defineNuxtModule<ModuleOptions>({
       nuxt: '>=4.0.0',
     },
   },
+  // Nuxt checks a `version` against the copy it loads, which is the app's
+  // own when the app lists the module and this package's otherwise, and a
+  // mismatch fails the build. So a range must hold both (#191).
   moduleDependencies: {
     // No sign-in redirect options: the pages they name are the UI layer's,
     // and Nuxt concatenates a dependency's array defaults with the app's, so
@@ -188,9 +191,12 @@ export default defineNuxtModule<ModuleOptions>({
     // The queries under `runtime/app/queries` are Pinia Colada query
     // options, so the module installs what runs them rather than relying on
     // the UI layer to. An app that lists either module itself gets it once.
-    // The ranges are the `catalog:nuxt` ones package.json declares.
+    // The ranges are the `catalog:nuxt` ones package.json declares, and
+    // `@pinia/nuxt`'s takes 1.x as well, on Pinia 4: nothing here imports
+    // `pinia`, and Pinia Colada accepts 4 from 1.4.1, below the `catalog:vue`
+    // floor.
     '@pinia/nuxt': {
-      version: '^0.11.3',
+      version: '^0.11.3 || ^1.0.0',
     },
     '@pinia/colada-nuxt': {
       version: '^1.0.1',
