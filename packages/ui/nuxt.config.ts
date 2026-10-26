@@ -114,7 +114,6 @@ export default defineNuxtConfig({
         'zod',
         'jwt-decode',
         'effect',
-        '@vueuse/integrations/useJwt',
         '@tanstack/vue-table',
         'zod-validation-error',
         // 'shaders',

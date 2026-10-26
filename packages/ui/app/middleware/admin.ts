@@ -18,10 +18,9 @@ interface RoleClaim {
  * thing instead.
  *
  * The role is read from the access token rather than through `useUserRole`,
- * for two reasons. A route middleware has to decide now, and that composable
- * fills its ref from an `onAuthStateChange` callback, so it is `undefined` on
- * the first navigation and would refuse an administrator. And it decodes with
- * `@vueuse/integrations`, which this package does not depend on.
+ * because a route middleware has to decide now, and that composable fills its
+ * ref from an `onAuthStateChange` callback, so it is `undefined` on the first
+ * navigation and would refuse an administrator.
  *
  * The token is not trusted for anything but this. It decides what to *show*;
  * every endpoint behind the page checks the role again server-side, where the
