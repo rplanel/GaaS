@@ -10,6 +10,8 @@ type Nuxt = Awaited<ReturnType<typeof loadNuxt>>
 export interface FixtureOptions {
   /** Module options to put under `galaxy` in the fixture's config. */
   readonly galaxy?: Record<string, unknown>
+  /** Options to put under `supabase` in the fixture's config, over its own. */
+  readonly supabase?: Record<string, unknown>
   /** Modules the app lists itself, after this one. */
   readonly modules?: readonly string[]
   /** Layers the app extends, as absolute paths to their roots. */
@@ -30,7 +32,7 @@ export interface FixtureOptions {
  */
 export async function withFixtureNuxt<T>(
   read: (options: Nuxt['options']) => T | Promise<T>,
-  { galaxy = {}, modules = [], layers = [], before }: FixtureOptions = {},
+  { galaxy = {}, supabase = {}, modules = [], layers = [], before }: FixtureOptions = {},
 ): Promise<T> {
   const nuxt = await loadNuxt({
     cwd: fixtureDir,
@@ -40,6 +42,7 @@ export async function withFixtureNuxt<T>(
       ssr: false,
       test: true,
       galaxy,
+      supabase,
       // Added to the fixture's own list, not put in place of it. They install
       // after this module: Nuxt installs a layer's own list first, then these.
       modules: [...modules],
