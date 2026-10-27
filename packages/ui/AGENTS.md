@@ -90,7 +90,6 @@ export default defineNuxtConfig({
   $meta: { name: '@gaas/ui' },
   modules: [
     '@nuxt/ui',
-    '@nuxt/test-utils/module',
     '@nuxt/eslint',
     'nuxt-galaxy', // Galaxy integration
     '@pinia/colada-nuxt',
