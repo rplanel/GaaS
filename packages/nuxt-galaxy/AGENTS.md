@@ -24,13 +24,6 @@ as a dependency of `nuxt-galaxy`)" when the package dependency is missing.
   belong to whichever UI the app uses, and Nuxt concatenates a dependency's
   array defaults with the app's, so a public page set here is one no app
   could remove. `@gaas/ui` sets its own.
-  Its `types` default to `runtime/types/database`, named without an
-  extension: `@nuxtjs/supabase` resolves it with Nuxt's extensions, to
-  `database.ts` in `src` and to the `database.js` the build ships beside
-  its `.d.ts`. Naming the `.ts` typed the client `Database = unknown` in
-  every app on the packed module, with a warning on each build (#193).
-  An app's own `types` win, and so do a layer's. `@gaas/ui` sets none, so
-  an app on it gets these (#196).
 - `@pinia/nuxt` and `@pinia/colada-nuxt`, version-checked against
   `^0.11.3 || ^1.0.0` and `^1.0.1`, because the queries in
   `runtime/app/queries` are Pinia Colada query options. Nuxt skips a module
@@ -48,10 +41,14 @@ checked against `^0.11.3` alone, and every app that listed 1.x stopped with
 package's own `@pinia/nuxt` 0.11.3 wants `pinia ^3.0.4`. That copy is never
 loaded, because the app lists 1.x.
 
-A check inside the workspace cannot see a range that is too narrow: the
-lockfile holds one version of each, and the playground and the fixture both
-run it. Prove a widened or narrowed range on the packed module, installed in
-an app outside the repo that lists the version in question (#191).
+A check inside the workspace cannot see what only the packed module shows.
+The lockfile holds one version of each module listed above, and the
+playground and the fixture both run it, so a range too narrow passes (#191).
+Both load the module from `src`, and so does the `dist` stub that
+`dev:prepare` builds, so a path into `runtime/` that names a `.ts` file
+resolves in the workspace and in no packed module (#193). Prove a change to a
+range, or to such a path, on the packed module, installed in an app outside
+the repo; for a range, in an app that lists the version in question.
 
 ### Package Dependencies
 - `blendtype`: workspace:* (Galaxy API client)
