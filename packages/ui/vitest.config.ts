@@ -11,13 +11,11 @@ export default defineVitestConfig({
     environmentOptions: {
       nuxt: {
         overrides: {
-          studio: {
-            repository: {
-              owner: 'gaas',
-              repo: 'GaaS',
-              provider: 'gitlab',
-            },
-          },
+          // Not a repository: the layer's `$production` does not apply under
+          // Vitest (`NODE_ENV` is `test`), and without an override the Nuxt
+          // environment hits nuxt-studio's missing-repository throw (#200).
+          // `studio: false` skips the module instead.
+          studio: false,
         },
       },
     },

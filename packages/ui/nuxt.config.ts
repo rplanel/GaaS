@@ -22,6 +22,17 @@ export default defineNuxtConfig({
   $meta: {
     name: '@gaas/ui',
   },
+  // Studio is a dev tool: the docs promise it in dev only, and in production
+  // it needs a repository and authentication that only the app can name.
+  // nuxt-studio 1.7.0, which the workspace locks, otherwise throws
+  // "Repository owner and repository name are required" in a production
+  // build. Nuxt applies a layer's `$production` to the consuming app's
+  // production build, and `@nuxt/kit` skips a module whose config key is
+  // `false`. An app that wants Studio in production sets its own top-level
+  // `studio` object, which wins over this `false` (#200).
+  $production: {
+    studio: false,
+  },
   modules: [
     '@nuxt/ui',
     '@nuxt/eslint',
