@@ -61,6 +61,8 @@ export default defineNuxtConfig({
     // The sign-in redirects for this layer's pages, with its four public
     // pages; nuxt-galaxy sets none (ADR 0009, #162). Login and confirm read
     // the saved cookie to send the user back to the page they were on.
+    // `test/signInRedirects.test.ts` reads these redirects back from the
+    // runtime config.
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
