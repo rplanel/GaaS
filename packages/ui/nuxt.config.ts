@@ -24,7 +24,6 @@ export default defineNuxtConfig({
   },
   modules: [
     '@nuxt/ui',
-    '@nuxt/test-utils/module',
     '@nuxt/eslint',
     'nuxt-galaxy',
     '@pinia/nuxt',
