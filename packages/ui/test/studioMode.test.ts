@@ -8,10 +8,11 @@
  * promise Studio in dev only. The layer therefore sets
  * `$production: { studio: false }` in its `nuxt.config.ts`: Nuxt applies a
  * layer's `$production` to the consuming app's production build, and
- * `@nuxt/kit` skips a module whose config key is `false`. In dev the key is
- * left unset, so the module loads as before. An app that wants Studio in
- * production sets its own top-level `studio` object, which wins over the
- * layer's `false`.
+ * `@nuxt/kit` skips a module whose config key is `false`. `nuxi prepare` and
+ * `nuxi typecheck` default `NODE_ENV` to production, so they leave Studio out
+ * too. In dev the key is left unset, so the module loads as before. An app
+ * that wants Studio in production sets its own top-level `studio` object,
+ * which wins over the layer's `false`.
  *
  * Read through `loadNuxtConfig` on `.playground` — an app on the layer —
  * loaded for each environment the way `nuxi build` and `nuxi dev` load it.

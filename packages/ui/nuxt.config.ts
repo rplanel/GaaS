@@ -28,8 +28,10 @@ export default defineNuxtConfig({
   // "Repository owner and repository name are required" in a production
   // build. Nuxt applies a layer's `$production` to the consuming app's
   // production build, and `@nuxt/kit` skips a module whose config key is
-  // `false`. An app that wants Studio in production sets its own top-level
-  // `studio` object, which wins over this `false` (#200).
+  // `false`. `nuxi prepare` and `nuxi typecheck` default `NODE_ENV` to
+  // production too, so the types they generate leave Studio's server
+  // auto-imports out as well. An app that wants Studio in production sets
+  // its own top-level `studio` object, which wins over this `false` (#200).
   $production: {
     studio: false,
   },
