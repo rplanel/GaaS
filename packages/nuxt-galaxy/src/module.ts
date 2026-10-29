@@ -263,7 +263,8 @@ export default defineNuxtModule<ModuleOptions>({
     // extension: it resolves the path with Nuxt's extensions, which finds
     // `database.ts` in `src` and the `database.js` the build ships in its
     // place, next to its `.d.ts`. Naming the `.ts` left every app on the
-    // packed module with `Database = unknown` (#193).
+    // packed module with `Database = unknown`, and a warning on each build:
+    // "Database types configured at ... but file not found" (#193).
     nuxt.options.supabase = defu(nuxt.options.supabase || {}, {
       types: resolver.resolve('./runtime/types/database'),
     })

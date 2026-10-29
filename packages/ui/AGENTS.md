@@ -83,54 +83,6 @@ nuxt.config.ts              # Layer configuration, and the hook appending a wiki
 .playground/                # Development playground
 ```
 
-### Layer Configuration Pattern
-```typescript
-// nuxt.config.ts
-export default defineNuxtConfig({
-  $meta: { name: '@gaas/ui' },
-  modules: [
-    '@nuxt/ui',
-    '@nuxt/eslint',
-    'nuxt-galaxy', // Galaxy integration
-    '@pinia/colada-nuxt',
-    '@pinia/nuxt',
-  ],
-  supabase: {
-    // No `types`: a value here would win over nuxt-galaxy's in every app on
-    // the layer. `test/supabaseClient.test-d.ts` checks the client (#196).
-    // The sign-in redirects for this layer's pages, with its four public
-    // pages; nuxt-galaxy sets none (ADR 0009, #162).
-    // `test/signInRedirects.test.ts` reads them back from the runtime config.
-    redirectOptions: {
-      login: '/login',
-      callback: '/confirm',
-      saveRedirectToCookie: true,
-      exclude: ['/', '/login', '/signup', '/confirm'],
-    },
-  },
-  runtimeConfig: {
-    public: {
-      meilisearch: {
-        hostUrl: 'http://localhost:7700',
-        searchApiKey: 'MASTER_KEY',
-      },
-    },
-  },
-  css: [join(currentDir, './app/assets/css/main.css')],
-  vite: {
-    optimizeDeps: {
-      include: [
-        '@uwdata/mosaic-core',
-        '@uwdata/vgplot',
-        'd3',
-        'effect',
-        'zod',
-      ],
-    },
-  },
-})
-```
-
 ### Component Patterns
 ```vue
 <!-- Uses @nuxt/ui components like <UButton>, <UCard> -->
