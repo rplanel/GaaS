@@ -27,7 +27,7 @@ test:packages:
   # goes through `require()` of an ES module, which Node only allows unflagged
   # from 22.18; on 22.16 the suite fails with `default is not defined`. 24 is
   # what the project is developed against.
-  image: node:24-bookworm
+  image: node:24.22.2-bookworm
   # A new push supersedes the run it interrupts.
   interruptible: true
   variables:
@@ -84,7 +84,7 @@ publish:gaas-cli:
 deploy:docs:
   stage: deploy
   # Nuxt 4.6 requires node ^22.22.3 || ^24.15.0 || >=26; keep this pin at or above that floor
-  image: node:22.22.3-bookworm
+  image: node:22.23.4-bookworm
   # Functions that should be executed before the build script is run
   pages:
     publish: docs/.output/public

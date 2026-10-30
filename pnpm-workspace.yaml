@@ -33,149 +33,149 @@ packages:
 # honour for these, and `y-tiptap` versions independently and stays on its
 # own line.
 overrides:
-  '@tiptap/core': 3.28.0
-  '@tiptap/extension-blockquote': 3.28.0
-  '@tiptap/extension-bold': 3.28.0
-  '@tiptap/extension-bubble-menu': 3.28.0
-  '@tiptap/extension-bullet-list': 3.28.0
-  '@tiptap/extension-code': 3.28.0
-  '@tiptap/extension-code-block': 3.28.0
-  '@tiptap/extension-collaboration': 3.28.0
-  '@tiptap/extension-document': 3.28.0
-  '@tiptap/extension-drag-handle': 3.28.0
-  '@tiptap/extension-drag-handle-vue-3': 3.28.0
-  '@tiptap/extension-dropcursor': 3.28.0
-  '@tiptap/extension-floating-menu': 3.28.0
-  '@tiptap/extension-gapcursor': 3.28.0
-  '@tiptap/extension-hard-break': 3.28.0
-  '@tiptap/extension-heading': 3.28.0
-  '@tiptap/extension-horizontal-rule': 3.28.0
-  '@tiptap/extension-image': 3.28.0
-  '@tiptap/extension-italic': 3.28.0
-  '@tiptap/extension-link': 3.28.0
-  '@tiptap/extension-list': 3.28.0
-  '@tiptap/extension-list-item': 3.28.0
-  '@tiptap/extension-list-keymap': 3.28.0
-  '@tiptap/extension-mention': 3.28.0
-  '@tiptap/extension-node-range': 3.28.0
-  '@tiptap/extension-ordered-list': 3.28.0
-  '@tiptap/extension-paragraph': 3.28.0
-  '@tiptap/extension-placeholder': 3.28.0
-  '@tiptap/extension-strike': 3.28.0
-  '@tiptap/extension-text': 3.28.0
-  '@tiptap/extension-underline': 3.28.0
-  '@tiptap/extensions': 3.28.0
-  '@tiptap/markdown': 3.28.0
-  '@tiptap/pm': 3.28.0
-  '@tiptap/starter-kit': 3.28.0
-  '@tiptap/suggestion': 3.28.0
-  '@tiptap/vue-3': 3.28.0
-  '@tiptap/y-tiptap': 3.0.7
+  '@tiptap/core': 3.32.1
+  '@tiptap/extension-blockquote': 3.32.1
+  '@tiptap/extension-bold': 3.32.1
+  '@tiptap/extension-bubble-menu': 3.32.1
+  '@tiptap/extension-bullet-list': 3.32.1
+  '@tiptap/extension-code': 3.32.1
+  '@tiptap/extension-code-block': 3.32.1
+  '@tiptap/extension-collaboration': 3.32.1
+  '@tiptap/extension-document': 3.32.1
+  '@tiptap/extension-drag-handle': 3.32.1
+  '@tiptap/extension-drag-handle-vue-3': 3.32.1
+  '@tiptap/extension-dropcursor': 3.32.1
+  '@tiptap/extension-floating-menu': 3.32.1
+  '@tiptap/extension-gapcursor': 3.32.1
+  '@tiptap/extension-hard-break': 3.32.1
+  '@tiptap/extension-heading': 3.32.1
+  '@tiptap/extension-horizontal-rule': 3.32.1
+  '@tiptap/extension-image': 3.32.1
+  '@tiptap/extension-italic': 3.32.1
+  '@tiptap/extension-link': 3.32.1
+  '@tiptap/extension-list': 3.32.1
+  '@tiptap/extension-list-item': 3.32.1
+  '@tiptap/extension-list-keymap': 3.32.1
+  '@tiptap/extension-mention': 3.32.1
+  '@tiptap/extension-node-range': 3.32.1
+  '@tiptap/extension-ordered-list': 3.32.1
+  '@tiptap/extension-paragraph': 3.32.1
+  '@tiptap/extension-placeholder': 3.32.1
+  '@tiptap/extension-strike': 3.32.1
+  '@tiptap/extension-text': 3.32.1
+  '@tiptap/extension-underline': 3.32.1
+  '@tiptap/extensions': 3.32.1
+  '@tiptap/markdown': 3.32.1
+  '@tiptap/pm': 3.32.1
+  '@tiptap/starter-kit': 3.32.1
+  '@tiptap/suggestion': 3.32.1
+  '@tiptap/vue-3': 3.32.1
+  '@tiptap/y-tiptap': 3.0.11
 
 patchedDependencies:
   '@nuxt/image@1.11.0': patches/@nuxt__image@1.11.0.patch
   docus@5.12.3: patches/docus@5.12.3.patch
 
 catalog:
-  '@antfu/eslint-config': ^6.7.1
-  '@dagrejs/dagre': ^3.1.1
-  '@dotenvx/dotenvx': ^1.52.0
+  '@antfu/eslint-config': ^6.7.3
+  '@dagrejs/dagre': ^3.1.3
+  '@dotenvx/dotenvx': ^1.75.1
   '@iconify-json/eos-icons': ^1.2.4
-  '@iconify-json/ep': ^1.2.3
-  '@iconify-json/lucide': ^1.2.75
-  '@iconify-json/majesticons': ^1.2.4
-  '@iconify-json/material-symbols': ^1.2.48
+  '@iconify-json/ep': ^1.2.4
+  '@iconify-json/lucide': ^1.2.149
+  '@iconify-json/majesticons': ^1.2.5
+  '@iconify-json/material-symbols': ^1.2.97
   '@iconify-json/mdi': ^1.2.3
-  '@iconify-json/octicon': ^1.2.19
-  '@iconify-json/simple-icons': ^1.2.60
-  '@iconify-json/solar': ^1.2.5
+  '@iconify-json/octicon': ^1.2.40
+  '@iconify-json/simple-icons': ^1.2.101
+  '@iconify-json/solar': ^1.2.13
   '@iconify-json/stash': ^1.2.4
   '@iconify-json/streamline': ^1.2.5
   '@iconify-json/svg-spinners': ^1.2.4
-  '@iconify-json/tabler': ^1.2.23
-  '@iconify-json/vscode-icons': ^1.2.36
-  '@internationalized/date': ^3.12.2
-  '@types/node': ^24.1.0
+  '@iconify-json/tabler': ^1.2.43
+  '@iconify-json/vscode-icons': ^1.2.94
+  '@internationalized/date': ^3.12.4
+  '@types/node': ^24.19.2
   '@types/tus-js-client': ^2.1.0
-  '@unocss/eslint-plugin': ^66.5.10
+  '@unocss/eslint-plugin': ^66.12.0
   '@vue-flow/background': ^1.3.2
   '@vue-flow/controls': ^1.1.3
   '@vue-flow/core': ^1.48.2
-  '@vue/compiler-core': ^3.5.25
-  '@vueuse/core': ^14.1.0
-  apache-arrow: ^21.1.0
-  automd: ^0.4.2
-  citty: ^0.2.0
+  '@vue/compiler-core': ^3.5.44
+  '@vueuse/core': ^14.4.0
+  apache-arrow: ^21.2.0
+  automd: ^0.4.3
+  citty: ^0.2.2
   commit-and-tag-version: ^12.7.3
-  date-fns: ^4.1.0
-  defu: ^6.1.4
-  dotenv: ^17.2.3
-  drizzle-kit: ^1.0.0-beta.16
-  drizzle-orm: ^1.0.0-beta.16
-  effect: ^3.19.6
+  date-fns: ^4.4.0
+  defu: ^6.1.7
+  dotenv: ^17.4.2
+  drizzle-kit: ^1.0.0-rc.5-ab785fc
+  drizzle-orm: ^1.0.0-rc.5-ab785fc
+  effect: ^3.22.4
   embla-carousel: ^8.6.0
-  esbuild: ^0.27.0
-  eslint: ^9.39.1
-  eslint-config-unjs: ^0.5.0
-  eslint-plugin-format: ^1.0.2
-  evlog: ^2.22.3
+  esbuild: ^0.28.2
+  eslint: ^9.39.5
+  eslint-config-unjs: ^0.6.2
+  eslint-plugin-format: ^1.5.0
+  evlog: ^2.34.0
   h3: ^1.15.11
   htl: ^0.3.1
-  isomorphic-dompurify: ^3.4.0
-  jiti: ^2.6.1
+  isomorphic-dompurify: ^3.19.0
+  jiti: ^2.7.0
   jwt-decode: ^4.0.0
-  lint-staged: ^16.2.7
-  meilisearch: ^0.53.0
-  motion-v: ^2.2.0
+  lint-staged: ^16.4.0
+  meilisearch: ^0.62.0
+  motion-v: ^2.9.0
   ofetch: ^1.5.1
-  postgres: ^3.4.7
+  postgres: ^3.4.9
   seqparse: ^0.2.2
-  shaders: ^2.5.128
-  simple-git-hooks: ^2.13.1
-  supabase: ^2.72.8
+  shaders: ^2.5.135
+  simple-git-hooks: ^2.14.0
+  supabase: ^2.122.0
   tus-js-client: ^4.3.1
   typescript: ^5.9.3
-  ufo: ^1.6.1
+  ufo: ^1.6.4
   unbuild: ^3.6.1
-  uuid: ^13.0.0
+  uuid: ^13.0.2
   vue: ^3.5.44
   vue-router: ^5.4.0
-  vue-tsc: ^3.1.5
-  zod: ^4.3.6
+  vue-tsc: ^3.3.13
+  zod: ^4.6.7
   zod-validation-error: ^5.0.0
 
 catalogs:
   dataviz:
     '@observablehq/plot': ^0.6.17
     '@types/d3': ^7.4.3
-    '@uwdata/mosaic-core': ^0.26.0
-    '@uwdata/mosaic-sql': ^0.26.0
-    '@uwdata/vgplot': ^0.26.0
+    '@uwdata/mosaic-core': ^0.34.3
+    '@uwdata/mosaic-sql': ^0.34.3
+    '@uwdata/vgplot': ^0.34.3
     d3: ^7.9.0
     d3-dsv: ^3.0.1
   nuxt:
-    '@nuxt/content': ^3.11.2
+    '@nuxt/content': ^3.16.2
     '@nuxt/devtools': ^2.7.0
-    '@nuxt/eslint': ^1.10.0
+    '@nuxt/eslint': ^1.17.0
     '@nuxt/image': ^1.11.0
     '@nuxt/kit': ^4.6.2
     '@nuxt/module-builder': ^1.0.3
     '@nuxt/schema': ^4.6.2
-    '@nuxt/ui': ^4.6.1
-    '@nuxtjs/supabase': ^2.0.4
-    '@pinia/colada-nuxt': ^1.0.1
+    '@nuxt/ui': ^4.12.0
+    '@nuxtjs/supabase': ^2.1.0
+    '@pinia/colada-nuxt': ^1.2.0
     '@pinia/nuxt': ^0.11.3
-    docus: ^5.12.3
+    docus: ^5.15.0
     nuxt: ^4.6.2
-    nuxt-studio: ^1.1.0
+    nuxt-studio: ^1.8.0
   testing:
-    '@nuxt/test-utils': ^4.0.0
-    '@vitest/coverage-v8': ^4.1.0
+    '@nuxt/test-utils': ^4.3.4
+    '@vitest/coverage-v8': ^4.1.12
     '@vue/test-utils': ^2.5.1
-    happy-dom: ^20.4.0
-    msw: ^2.12.12
-    playwright-core: ^1.56.1
-    vitest: ^4.1.0
+    happy-dom: ^20.14.6
+    msw: ^2.15.0
+    playwright-core: ^1.64.1
+    vitest: ^4.1.12
   vue:
     '@pinia/colada': ^1.4.8
     pinia: ^3.0.4
