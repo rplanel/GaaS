@@ -3,7 +3,7 @@
   "@type": "SoftwareSourceCode",
   "name": "GaaS",
   "description": "Galaxy as a Service (GaaS) - A monorepo providing Galaxy API client libraries, Nuxt modules, UI components, and documentation for building Galaxy-integrated web applications.",
-  "version": "0.0.4-beta.8",
+  "version": "0.0.4-beta.9",
   "license": "https://spdx.org/licenses/MIT.html",
   "copyrightHolder": {
     "@id": "https://ror.org/0495fxg12",
@@ -12,7 +12,7 @@
   },
   "codeRepository": "https://gitlab.pasteur.fr/hub/GaaS",
   "issueTracker": "https://gitlab.pasteur.fr/hub/GaaS/-/issues",
-  "dateModified": "2026-10-19",
+  "dateModified": "2026-10-30",
   "author": [
     {
       "@id": "https://orcid.org/0000-0002-7826-3316",

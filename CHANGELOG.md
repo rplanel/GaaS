@@ -2,6 +2,77 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.4-beta.9](https://gitlab.pasteur.fr/gaas/GaaS/compare/v0.0.4-beta.8...v0.0.4-beta.9) (2026-10-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* @gaas/ui no longer auto-imports UNKNOWN_WORKFLOW.
+nuxt-galaxy auto-imports UNKNOWN_WORKFLOW_SELECTION, which has the same
+value.
+* nuxt-galaxy no longer auto-imports
+useDatabaseAnalysisOutput or useDatabaseResultDatasets. @gaas/ui's app
+config no longer has a meilisearch key; configure Meilisearch through
+runtimeConfig.public.meilisearch, as before. useAllIds and the table
+header util are gone from @gaas/ui; the header composables remain.
+* the #gaas/ui alias is removed. A results view imports
+its props type from #nuxt-galaxy, an alias nuxt-galaxy declares:
+`import type { ResultsViewProps } from '#nuxt-galaxy'`. The three
+analysis types #gaas/ui also exported, ResultsViewAnalysis,
+AnalysisInputWithDatasetAndTags and AnalysisOutputWithDatasetAndTags,
+come from #nuxt-galaxy as well. Nothing else about a view changes.
+* **nuxt-galaxy:** an app built on nuxt-galaxy without @gaas/ui no longer
+gets sign-in redirects from it, and runs on @nuxtjs/supabase's defaults:
+a signed-out visitor is sent to /login from every page but the login
+and callback pages, which @nuxtjs/supabase always lets through, and the
+page they were on is not saved. To keep the old behaviour, set
+`supabase.redirectOptions` in nuxt.config to `{ login: '/login',
+callback: '/confirm', saveRedirectToCookie: true, exclude: ['/',
+'/login', '/signup', '/confirm'] }`, or name your own pages. Such an app
+also no longer gets @nuxt/content installed; one that reads content
+lists '@nuxt/content' in its own modules. Apps on @gaas/ui are
+unaffected.
+* **nuxt-galaxy:** the nine query options that call this application's
+server take a required `requestFetch`: `galaxyWorkflowsListQuery`,
+`galaxyWorkflowRevisionsQuery`, `galaxyRevisionToolsQuery`,
+`galaxyWorkflowDescriptionQuery`, `galaxyHealthQuery`,
+`galaxyInstanceQuery`, `ownUsageStatisticsQuery`,
+`globalUsageStatisticsQuery` and `versionStateQuery`. Read
+`const requestFetch = useRequestFetch()` in setup and pass it in, as in
+`useQuery(() => galaxyHealthQuery({ requestFetch }))`. The usage statistics
+queries take it beside the range, granularity and workflow selection.
+
+* give the unknown-workflow token a single definition [#169](https://gitlab.pasteur.fr/gaas/GaaS/issues/169) ([67dfe68](https://gitlab.pasteur.fr/gaas/GaaS/commit/67dfe68ceb1b6dad756c692a0f64d70642a95aaf))
+* move the results-view convention into nuxt-galaxy and retire #gaas/ui [#168](https://gitlab.pasteur.fr/gaas/GaaS/issues/168) ([7716abb](https://gitlab.pasteur.fr/gaas/GaaS/commit/7716abbeb754ede27ab4a9308e3ca01a11b82fc9))
+* **nuxt-galaxy:** register what the module needs and nothing only the UI layer needs [#162](https://gitlab.pasteur.fr/gaas/GaaS/issues/162) ([4316cfd](https://gitlab.pasteur.fr/gaas/GaaS/commit/4316cfd67dd3e98941e9ff1aa49ae8565fea081a))
+* remove the code nothing calls [#169](https://gitlab.pasteur.fr/gaas/GaaS/issues/169) ([4776d0e](https://gitlab.pasteur.fr/gaas/GaaS/commit/4776d0e8caccbec2364a9b636c2afbbd6c9a9dde)), closes [#159](https://gitlab.pasteur.fr/gaas/GaaS/issues/159)
+
+
+### Features
+
+* **nuxt-galaxy:** offer a widget only for a parameter the saved bag names [#167](https://gitlab.pasteur.fr/gaas/GaaS/issues/167) ([ce0c8d2](https://gitlab.pasteur.fr/gaas/GaaS/commit/ce0c8d20ebc21545341e7dba48116e1a4214d871)), closes [#185](https://gitlab.pasteur.fr/gaas/GaaS/issues/185)
+* **nuxt-galaxy:** the per-type parameter rules a widget renders with [#166](https://gitlab.pasteur.fr/gaas/GaaS/issues/166) ([2214184](https://gitlab.pasteur.fr/gaas/GaaS/commit/2214184799ad22442fec67cbfefef942358a193b)), closes [#101](https://gitlab.pasteur.fr/gaas/GaaS/issues/101)
+
+
+### Bug Fixes
+
+* **deps:** keep the tiptap tree at one version in the playground ([b6fc357](https://gitlab.pasteur.fr/gaas/GaaS/commit/b6fc357dc458d97c9819896df12077dbc2178f68))
+* **deps:** raise the @pinia/colada floor to ^1.4.8, which accepts Pinia 4 [#191](https://gitlab.pasteur.fr/gaas/GaaS/issues/191) ([5485bd0](https://gitlab.pasteur.fr/gaas/GaaS/commit/5485bd036fabd4a4c91f472c0cd4bf062d074e1a))
+* **nuxt-galaxy:** accept @pinia/nuxt 1.x, so an app on current Pinia builds [#191](https://gitlab.pasteur.fr/gaas/GaaS/issues/191) ([c004434](https://gitlab.pasteur.fr/gaas/GaaS/commit/c004434bb3ab70ccd728bddfa812943d03709419))
+* **nuxt-galaxy:** decode the role with jwt-decode, so an app on the published module builds [#192](https://gitlab.pasteur.fr/gaas/GaaS/issues/192) ([0e77e30](https://gitlab.pasteur.fr/gaas/GaaS/commit/0e77e30af411f7a0a0c2fec4f4ed14a3f5b6dc7e))
+* **nuxt-galaxy:** hand the request's fetch to every query that calls the server [#139](https://gitlab.pasteur.fr/gaas/GaaS/issues/139) ([bac8f24](https://gitlab.pasteur.fr/gaas/GaaS/commit/bac8f24d683196e6948c9a511501fc8fd4e0496b))
+* **nuxt-galaxy:** leave galaxy.user to the server [#172](https://gitlab.pasteur.fr/gaas/GaaS/issues/172) ([4fb6b2f](https://gitlab.pasteur.fr/gaas/GaaS/commit/4fb6b2f7afcbe6c3dee4406de952cc3e34f50471))
+* **nuxt-galaxy:** name the Supabase types without an extension, so the packed module types the client [#193](https://gitlab.pasteur.fr/gaas/GaaS/issues/193) ([8f2120f](https://gitlab.pasteur.fr/gaas/GaaS/commit/8f2120fe3726c7fa2d2ad3ce81cfb842a91ba658))
+* show a select's options by their labels, and store their values [#183](https://gitlab.pasteur.fr/gaas/GaaS/issues/183) ([c6bc773](https://gitlab.pasteur.fr/gaas/GaaS/commit/c6bc77387acf04084c8da88e82e7639047334c6a))
+* **ui:** a conditional reads any saved value and never writes its test parameter [#182](https://gitlab.pasteur.fr/gaas/GaaS/issues/182) ([0acf437](https://gitlab.pasteur.fr/gaas/GaaS/commit/0acf4378f53944dfeda54378b570c3c3ac3c0cba)), closes [#111](https://gitlab.pasteur.fr/gaas/GaaS/issues/111)
+* **ui:** a conditional shows no widget for a case parameter the revision saved nothing for [#185](https://gitlab.pasteur.fr/gaas/GaaS/issues/185) ([eb7ba42](https://gitlab.pasteur.fr/gaas/GaaS/commit/eb7ba4276d0251ff4f10d308e89977d4c3cc50b3))
+* **ui:** a conditional writes an edit inside its case back as a new value [#182](https://gitlab.pasteur.fr/gaas/GaaS/issues/182) ([3910f22](https://gitlab.pasteur.fr/gaas/GaaS/commit/3910f225f62c6ccfee6630000f984b264cdf9642)), closes [#94](https://gitlab.pasteur.fr/gaas/GaaS/issues/94)
+* **ui:** drop @nuxt/test-utils/module from the layer, so an app on it can prepare [#198](https://gitlab.pasteur.fr/gaas/GaaS/issues/198) ([3408c84](https://gitlab.pasteur.fr/gaas/GaaS/commit/3408c841a6413fd69087eb3bb6a2322cc1f02b51))
+* **ui:** leave nuxt-studio out of a production build unless the app opts in [#200](https://gitlab.pasteur.fr/gaas/GaaS/issues/200) ([2f9ceb6](https://gitlab.pasteur.fr/gaas/GaaS/commit/2f9ceb6930fd5098f0c0f6d81f204e6c6fa635d7))
+* **ui:** leave the Supabase types to nuxt-galaxy, so an app on the layer gets a typed client [#196](https://gitlab.pasteur.fr/gaas/GaaS/issues/196) ([c2376dc](https://gitlab.pasteur.fr/gaas/GaaS/commit/c2376dcf89b024052712ff07327b07356a23bc6d))
+* **ui:** stop prebundling @vueuse/integrations/useJwt, which nothing imports, after review [#192](https://gitlab.pasteur.fr/gaas/GaaS/issues/192) ([9a70798](https://gitlab.pasteur.fr/gaas/GaaS/commit/9a70798ca12a18837c9b97e17610bf3d6a57bde6))
+* **ui:** the analysis page shares its three realtime channels with its history panel [#170](https://gitlab.pasteur.fr/gaas/GaaS/issues/170) ([238fe85](https://gitlab.pasteur.fr/gaas/GaaS/commit/238fe85759622ec4823a1ef5dba9a42d614edb38))
+
 ## [0.0.4-beta.8](https://gitlab.pasteur.fr/gaas/GaaS/compare/v0.0.4-beta.7...v0.0.4-beta.8) (2026-10-19)
 
 
