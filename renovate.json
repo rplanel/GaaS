@@ -3,6 +3,7 @@
   "extends": [
     "github>nuxt/renovate-config-nuxt"
   ],
+  "dependencyDashboardApproval": true,
   "postUpdateOptions": [
     "pnpmDedupe"
   ]
