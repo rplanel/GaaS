@@ -158,15 +158,15 @@ catalogs:
     '@nuxt/devtools': ^2.7.0
     '@nuxt/eslint': ^1.10.0
     '@nuxt/image': ^1.11.0
-    '@nuxt/kit': ^4.6.2
+    '@nuxt/kit': ^4.6.3
     '@nuxt/module-builder': ^1.0.3
-    '@nuxt/schema': ^4.6.2
+    '@nuxt/schema': ^4.6.3
     '@nuxt/ui': ^4.6.1
     '@nuxtjs/supabase': ^2.0.4
     '@pinia/colada-nuxt': ^1.0.1
     '@pinia/nuxt': ^0.11.3
     docus: ^5.12.3
-    nuxt: ^4.6.2
+    nuxt: ^4.6.3
     nuxt-studio: ^1.1.0
   testing:
     '@nuxt/test-utils': ^4.0.0
